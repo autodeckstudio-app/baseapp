@@ -26,8 +26,8 @@ export function RaisedTabBar({ state, descriptors, navigation, icons }: Props) {
   const scale = t.interpolate({ inputRange: [0, 1], outputRange: [1, 0.8] });
   const lift = t.interpolate({ inputRange: [0, 1], outputRange: [0, 10] });
   const glass = light
-    ? { backgroundColor: "rgba(251,248,243,0.62)", borderColor: "rgba(60,48,36,0.10)" }
-    : { backgroundColor: "rgba(48,51,56,0.88)", borderColor: "rgba(255,255,255,0.10)" };
+    ? { backgroundColor: "rgba(255,255,255,0.66)", borderColor: "rgba(20,22,26,0.07)" }
+    : { backgroundColor: "rgba(40,43,47,0.55)", borderColor: "rgba(255,255,255,0.10)" };
   return (
     <View
       pointerEvents="box-none"

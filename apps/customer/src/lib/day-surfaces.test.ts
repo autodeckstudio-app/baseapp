@@ -13,8 +13,8 @@ describe("Day surfaces are never the night colour", () => {
   it("glassPane has a light variant that is the warm card, not dark glass", () => {
     const g = read("lib/glass-pane.ts");
     const light = g.slice(g.indexOf("if (light)"), g.indexOf("if (Platform.OS !== \"web\")"));
-    expect(light).toContain('"#FFFFFF"');
-    expect(light).not.toMatch(/rgba\((24|28),/);
+    expect(light).toMatch(/"#FFFFFF"|rgba\(255,255,255,0\.[5-9]/);
+    expect(light).not.toMatch(/rgba\((24|28|34|40),/);
   });
   it("Home never calls glassPane without the mode", () => {
     expect(read("ui/HomeView.tsx")).not.toMatch(/glassPane\(\)/);

@@ -2,25 +2,29 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// Owner design choice for the customer app (Meet, 18 Oct iMessage, option 1:
-// white main buttons, orange reserved for active navigation and small
-// highlights), confirmed by the connected Instinct from its user's original
-// messages with locators (phonemsg-01M56KYTSGE053B53J9JR6PDST in
-// phoneconv-01M0NBXH0TC5NETW2EGQ3PEBST). The kit primary button must not fall
-// back to the charcoal fill. Night was softened by the owner on 7 Nov 2026.
+// Customer primary action contract. The owner first picked white main
+// buttons (18 Oct 2026), then on 8 Nov 2026 rejected the resulting flat look
+// and directed a glass language with orange as the action highlight, so the
+// primary button is now one matte brand-orange fill: no gradient, no colour
+// glow, dark ink label.
 const kit = readFileSync(join(__dirname, "..", "ui", "kit.tsx"), "utf8");
 
 describe("kit primary button", () => {
-  it("fills the primary button white in day mode", () => {
-    expect(kit).toContain('mode === "light" ? "#FFFFFF" : "#B9A58C"');
-  });
-  it("never uses the charcoal fill for the primary action", () => {
+  it("fills the primary button with one matte brand orange, both modes", () => {
     const inkLine = kit.split("\n").find((l) => l.includes("inkButton ="));
     expect(inkLine).toBeDefined();
-    // The white override must come after the inherited shadow recipe to win.
+    expect(inkLine).toContain('backgroundColor: "#EC8638"');
+    // The fill must come after the inherited shadow recipe to win.
     expect(inkLine).toMatch(/\.dark.*backgroundColor/);
   });
-  it("keeps the label readable with dark ink on the white button", () => {
+  it("stays matte: no gradient and no coloured glow on web", () => {
+    const inkLine = kit.split("\n").find((l) => l.includes("inkButton ="));
+    expect(inkLine).toContain('backgroundImage: "none"');
+    expect(inkLine).not.toContain("F7A257");
+    expect(inkLine).not.toMatch(/rgba\(236,134,56,0\.[4-9]/);
+  });
+  it("keeps the label readable with dark ink on the orange button", () => {
+    expect(kit).toContain('"#231E18"');
     expect(kit).not.toContain('name === "light" ? "#FFFFFF" : "#16181C"');
   });
 });

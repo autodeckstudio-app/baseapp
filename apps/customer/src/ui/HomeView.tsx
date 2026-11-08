@@ -10,6 +10,7 @@ import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import type { IconName } from "@autodeck/ui/theme";
 import type { NavIconName } from "./NavIcon";
 import { sceneImagery, serviceImagery } from "../lib/imagery";
+import { STUDIO_INFO } from "../lib/studio-info";
 import { raised } from "../lib/raised";
 import { metrics } from "../lib/metrics";
 import { glassPane } from "../lib/glass-pane";
@@ -183,12 +184,12 @@ function LeadCard({ live, pct, nudge, car, onBook }: { live: HomeLive | null; pc
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={press} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingLeft: 16, paddingRight: 10, opacity: pressed ? 0.9 : 1, ...glassPane(name === "light") })}>
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-        <Text numberOfLines={1} style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>{kicker}</Text>
+        <Text numberOfLines={1} style={{ color: n ? (name === "night" ? "#F5A25A" : colors.accentStrong) : colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>{kicker}</Text>
         <Text numberOfLines={2} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "800" }}>{title}</Text>
         {showDetail ? <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{detail}</Text> : null}
       </View>
-      <View style={{ borderRadius: 9999, paddingHorizontal: 16, paddingVertical: 9, backgroundColor: name === "light" ? "#1D1B26" : "#B9A58C" }}>
-        <Text style={{ color: name === "light" ? "#F4F1EC" : "#0B0B0D", fontSize: 13, fontWeight: "800" }}>{cta}</Text>
+      <View style={{ borderRadius: 9999, paddingHorizontal: 16, paddingVertical: 9, backgroundColor: "#EC8638", ...(Platform.OS === "web" ? ({ boxShadow: "0 6px 14px rgba(16,17,19,0.25), inset 0 1px 0 rgba(255,255,255,0.24)" } as object) : {}) }}>
+        <Text style={{ color: "#1A1410", fontSize: 13, fontWeight: "800" }}>{cta}</Text>
       </View>
     </Pressable>
   );
@@ -343,8 +344,9 @@ export function HomeView(p: HomeViewProps) {
               </View>
             ) : null}
             <View style={{ position: "absolute", left: 12, right: 12, bottom: 10, gap: 1 }}>
-              <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "800" }}>{p.studio.address}</Text>
-              <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.75)", fontSize: 11 }}>{p.studio.hours}</Text>
+              <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "800" }}>{STUDIO_INFO.name}</Text>
+              <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.82)", fontSize: 11 }}>{p.studio.address}</Text>
+              <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.68)", fontSize: 11 }}>{p.studio.hours}</Text>
             </View>
           </View>
         </Pressable>

@@ -604,7 +604,7 @@ import { DAY_ATMOSPHERE } from "@autodeck/ui/theme";
 describe("one Day background across the apps", () => {
   it("customer Day ground is the shared atmosphere, studio applies it, Home photo dissolves into it", () => {
     expect(read("src/lib/raised.ts")).toContain('canvas: "#FFFFFF"');
-    expect(read("src/lib/raised.ts")).toContain("rgba(236,134,56,0.025)");
+    expect(read("src/lib/raised.ts")).toContain("rgba(236,134,56,0.05)");
     expect(read("../studio/src/app/_layout.tsx")).toContain("rs.backgroundImage = DAY_ATMOSPHERE");
     const h = read("src/ui/HomeBackdrop.tsx");
     expect(h).toContain("maskImage");

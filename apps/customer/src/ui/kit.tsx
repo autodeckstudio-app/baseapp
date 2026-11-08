@@ -25,9 +25,9 @@ import {
 import { useRouter, useSegments, useFocusEffect } from "expo-router";
 import { glassSurface, glassQuiet } from "../lib/glass";
 import { raised } from "../lib/raised";
-// Owner design choice: customer main actions are white (orange stays on active
-// nav and small highlights). Day: white fill; night keeps the off-white fill.
-const inkButton = (mode: string): ViewStyle => ({ ...raised(mode as never).dark, backgroundColor: mode === "light" ? "#FFFFFF" : "#B9A58C" });
+// Primary action: one matte brand-orange fill, no gloss and no colour glow - a
+// restrained highlight on the glass ground. Secondary actions stay quiet glass.
+const inkButton = (mode: string): ViewStyle => ({ ...raised(mode as never).dark, backgroundColor: "#EC8638", ...(Platform.OS === "web" ? ({ backgroundImage: "none", boxShadow: "0 8px 18px rgba(16,17,19,0.28), inset 0 1px 0 rgba(255,255,255,0.24)" } as object) : {}) });
 import { Ambient as BaseAmbient, type GlassProps, useExperienceTheme, onTabPressed } from "@autodeck/ui/native";
 import { floatHero, fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
