@@ -1,3 +1,4 @@
+import type { InvoiceIssuer } from "../invoice-issuer.js";
 import type { VehicleSnapshot } from "./customer.js";
 export type PaymentMethod = "razorpay_payment_link" | "cash" | "upi_manual" | "bank_transfer";
 
@@ -84,7 +85,7 @@ export interface Payment {
 }
 
 export interface Invoice {
-  issuerSnapshot?: import("../invoice-issuer.js").InvoiceIssuer;
+  issuerSnapshot?: InvoiceIssuer;
   pdfStatus?: "ready" | "needs_office_review";
   pdfStoragePath?: string;
   pdfGeneratedAt?: string;

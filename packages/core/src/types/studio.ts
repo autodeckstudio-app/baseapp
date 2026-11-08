@@ -1,3 +1,4 @@
+import type { InvoiceIssuer } from "../invoice-issuer.js";
 import type { BayType } from "./service.js";
 
 export interface Bay {
@@ -17,7 +18,7 @@ export interface OperatingHours {
 }
 
 export interface StudioConfig {
-  invoiceIssuer?: import("../invoice-issuer.js").InvoiceIssuer;
+  invoiceIssuer?: InvoiceIssuer;
   id: string;
   tenantId: string;
   studioId: string;
