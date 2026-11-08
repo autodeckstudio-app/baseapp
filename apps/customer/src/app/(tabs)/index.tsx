@@ -238,7 +238,6 @@ export default function HomeScreen() {
         greeting={greetingFor(new Date(), m.customer.firstName)}
         initial={(m.customer.firstName ?? auth.user.displayName ?? "A").trim().charAt(0).toUpperCase() || "A"}
         progress={m.liveJob ? LIVE_PROGRESS[m.liveJob.status] ?? 10 : null}
-        stage={m.liveJob ? JOB_STAGE[m.liveJob.status] ?? "In the studio" : m.upcomingBooking ? `Next visit ${formatDateShort(m.upcomingBooking.scheduledDate)}` : "Parked, all good"}
         membership={m.membership && m.membership.status === "active" ? { title: `${Math.max(0, m.membership.washesTotal - m.membership.washesUsed)} washes`, detail: `left${m.membership.endDate ? `, until ${formatDateShort(m.membership.endDate)}` : ""}` } : null}
         studio={{ address: STUDIO_INFO.address.replace(", Gujarat", ""), hours: STUDIO_INFO.hours, openText: openStatus(liveInfo?.operatingHours, liveInfo?.holidays)?.text ?? null }}
         campaign={offerToCampaign(offers, (h) => router.push(h as never))}

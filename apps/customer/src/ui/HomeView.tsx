@@ -41,7 +41,6 @@ export type HomeViewProps = {
   live: HomeLive | null;
   /** 0 to 100 when a visit is under way, else null. */
   progress: number | null;
-  stage: string;
   membership: { title: string; detail: string } | null;
   studio: { address: string; hours: string; openText?: string | null; open?: boolean };
   /** What the car is due for, from its delivered visits. Null hides the card. */
