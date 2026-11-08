@@ -8,8 +8,8 @@ describe("Home studio, club and follow groups", () => {
     expect(v).not.toContain('title="The studio"');
     expect(v).not.toContain('title="Follow us"');
     expect(v).not.toContain('title="Studio and club"');
-    // the studio card's accessible label carries the full name, address and hours, then the action
-    expect(v).toContain('accessibilityLabel={`${STUDIO_INFO.name}, ${p.studio.address}, ${p.studio.hours}');
+    // The studio card keeps name/hours/action, with address hidden per current screenshot request.
+    expect(v).toContain('accessibilityLabel={`${STUDIO_INFO.name}, ${p.studio.hours}');
     expect(v).toContain('Open the studio page`}');
     expect(v).toContain("sceneImagery.studio");
     expect(v.match(/p\.quick\?\.length/g)?.length).toBe(1);
@@ -27,3 +27,5 @@ describe("Home studio, club and follow groups", () => {
   });
   it("legacy phone name maps to call, not the chat bubble", () => expect(read("ui/NavIcon.tsx")).toContain('name === "phone") return "call"'));
 });
+
+it("home studio card omits address only, canonical help/directions source remains",()=>{const home=read("ui/HomeView.tsx");expect(home).not.toContain("{p.studio.address}");expect(home).toContain("p.studio.hours");expect(home).toContain("onPress={q.onPress}");});
