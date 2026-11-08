@@ -8,7 +8,9 @@ describe("Home studio, club and follow groups", () => {
     expect(v).not.toContain('title="The studio"');
     expect(v).not.toContain('title="Follow us"');
     expect(v).not.toContain('title="Studio and club"');
-    expect(v).toContain('accessibilityLabel="Open the studio page"');
+    // the studio card's accessible label carries the full name, address and hours, then the action
+    expect(v).toContain('accessibilityLabel={`${STUDIO_INFO.name}, ${p.studio.address}, ${p.studio.hours}');
+    expect(v).toContain('Open the studio page`}');
     expect(v).toContain("sceneImagery.studio");
     expect(v.match(/p\.quick\?\.length/g)?.length).toBe(1);
     expect(v.match(/\(p\.social \?\? \[\]\)\.length/g)?.length).toBe(1);
