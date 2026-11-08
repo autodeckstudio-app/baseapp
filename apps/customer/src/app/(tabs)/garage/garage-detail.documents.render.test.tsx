@@ -219,6 +219,18 @@ describe("mounted document-add retry after a lost acknowledgement", () => {
     expect(textOf(el)).toContain("This number is already saved on one of your documents.");
   });
 
+  it("a raw network failure shows outcome-unknown copy, never 'Failed to fetch' and never a claim the save did not go through", async () => {
+    const el = await mount();
+    act(() => { switchTab(el, "Documents"); });
+    await act(async () => { press(el, "Add a document"); });
+    await act(async () => { typeReference(el, "POL-779"); });
+    h.submitMyPaper.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    await act(async () => { press(el, "Submit for verification"); await Promise.resolve(); });
+    expect(textOf(el)).toContain("Couldn't confirm the save. Check your documents, then retry if it isn't there.");
+    expect(textOf(el)).not.toContain("Failed to fetch");
+    expect(textOf(el)).not.toContain("did not go through"); // a lost response can follow a committed write
+  });
+
   it("a photo-only failure after the record saved says Photo did not upload, not a generic save failure", async () => {
     const el = await mount();
     act(() => { switchTab(el, "Documents"); });
