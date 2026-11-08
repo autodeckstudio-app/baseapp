@@ -23,6 +23,7 @@ import { greetingFor, type CustomerHomeModel } from "@autodeck/core";
 import { FadeUp, Icon, Logo, useExperienceTheme } from "@autodeck/ui/native";
 import { space } from "@autodeck/ui/theme";
 import { formatDateShort } from "@autodeck/ui";
+import { lastFinishedJob } from "../../lib/care-due";
 import { useAuth } from "../../hooks/useAuth";
 import { useCustomerHome } from "../../hooks/useCustomerHome";
 import { sceneImagery, serviceImagery } from "../../lib/imagery";
@@ -264,7 +265,7 @@ export default function HomeScreen() {
         onVisits={() => router.push("/(tabs)/bookings")}
         onShare={() => void Share.share({ message: referralShareMessage(myCode) }).catch(() => undefined)}
         unread={unread}
-        cars={vehicles.map((v) => ({ id: v.id, title: `${v.make} ${v.model}`, plate: v.registrationNumber, vehicle: { photoUrl: v.photoUrl, category: v.category, updatedAt: v.updatedAt }, category: v.category ?? null, hasPhoto: !!v.photoUrl }))}
+        cars={(() => { const last = lastFinishedJob(carJobs); const svc = last ? catalogue.find((x) => x.id === last.serviceId) : null; const story = last && svc ? `Last visit: ${svc.name} \u00b7 ${formatDateShort((last.sealedAt ?? last.createdAt).slice(0, 10))}` : null; return vehicles.map((v) => ({ id: v.id, title: `${v.make} ${v.model}`, plate: v.registrationNumber, vehicle: { photoUrl: v.photoUrl, category: v.category, updatedAt: v.updatedAt }, category: v.category ?? null, hasPhoto: !!v.photoUrl, story: v.id === m.activeVehicle?.id ? story : null })); })()}
         services={catalogue.map((s) => ({ id: s.id, category: s.category, name: s.name, price: servicePriceText(s, pricingVehicle.category, vehiclePrices) ?? "", brand: s.brand ?? null }))}
         reminders={reminders}
         live={live}

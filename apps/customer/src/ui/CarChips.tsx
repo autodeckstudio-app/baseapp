@@ -41,6 +41,7 @@ export function CarChips({ cars, active, onActive, onOpen, onAdd }: { cars: Home
               {seg ? <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{seg}</Text> : null}
               {!framed ? <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>Add a photo from the car page</Text> : null}
             </View>
+            {car.story ? <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{car.story}</Text> : null}
           </View>
         </View>
       </Pressable>

@@ -26,7 +26,7 @@ import { CarChips } from "./CarChips";
 import type { CarListingView } from "@autodeck/core";
 import type { Campaign } from "../lib/campaign";
 
-export type HomeCar = { id: string; title: string; plate: string; /** The vehicle record. Photo comes from the same source as Garage (CarThumb), for every car. */ vehicle?: Pick<Vehicle, "photoUrl" | "category"> & { updatedAt?: string }; category?: string | null; hasPhoto?: boolean };
+export type HomeCar = { id: string; title: string; plate: string; /** The vehicle record. Photo comes from the same source as Garage (CarThumb), for every car. */ vehicle?: Pick<Vehicle, "photoUrl" | "category"> & { updatedAt?: string }; category?: string | null; hasPhoto?: boolean; /** One real history line, e.g. the last delivered visit. Omitted when the car has none. */ story?: string | null };
 export type HomeService = { id: string; category: string; name: string; price: string; brand?: string | null };
 export type HomeReminder = { title: string; detail: string; chip: string; danger: boolean };
 export type HomeLive = { kicker: string; title: string; detail: string; onPress: () => void; idle?: boolean; /** Expected ready time, shown only when set and still ahead. */ ready?: string | null };
