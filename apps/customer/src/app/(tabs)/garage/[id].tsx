@@ -230,6 +230,10 @@ export default function VehicleDetailScreen() {
   }, [authKey, retryTick]);
 
   function resetDocForm() {
+    // The submission id survives a FAILED attempt so its retry replays the same operation;
+    // once a submission is done (saved, or its replay confirmed), the next add is a new
+    // operation with a fresh id - reusing the old one would collide with its op lock.
+    setDocSubmissionId(Crypto.randomUUID());
     setDocForm({ kind: "INSURANCE", reference: "", title: "", expiresOn: "" });
     setDocPhoto(null); setDocOpen(false); setDocEditing(null); setDocError(null); setNumberError(null); setCurrentDocImageUrl(null); setRemoveDocPhoto(false); setConfirmRemoveDocPhoto(false);
   }

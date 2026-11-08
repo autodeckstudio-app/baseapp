@@ -33,9 +33,9 @@ describe("documents helpers", () => {
 
 describe("docSaveErrorMessage", () => {
   it("translates raw network TypeErrors into safe-retry copy, keeps known and genuine messages", () => {
-    expect(docSaveErrorMessage(new TypeError("Failed to fetch"))).toBe("Could not reach the studio - check your connection and try again. The save did not go through, so retrying is safe.");
-    expect(docSaveErrorMessage(new TypeError("Load failed"))).toContain("retrying is safe");
-    expect(docSaveErrorMessage(new Error("Network request failed"))).toContain("retrying is safe");
+    expect(docSaveErrorMessage(new TypeError("Failed to fetch"))).toBe("Couldn't confirm the save. Check your documents, then retry if it isn't there.");
+    expect(docSaveErrorMessage(new TypeError("Load failed"))).toContain("Check your documents");
+    expect(docSaveErrorMessage(new Error("Network request failed"))).toContain("Check your documents");
     expect(docSaveErrorMessage(new Error("This number is already saved on one of your documents."))).toBe("This number is already saved on one of your documents.");
     expect(docSaveErrorMessage(new Error("Saved, but the photo did not upload (403)."))).toBe("Saved, but the photo did not upload (403).");
     expect(docSaveErrorMessage(new Error("permission-denied: not yours"))).toBe("permission-denied: not yours");
