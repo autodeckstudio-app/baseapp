@@ -541,7 +541,7 @@ export default function VehicleDetailScreen() {
     { label: "Colour", value: vehicle.color ? vehicle.color.charAt(0).toUpperCase() + vehicle.color.slice(1) : "-" },
     ...(vehicle.category ? [{ label: "Type", value: segmentLabel(vehicle.category) ?? "" }] : []),
     ...(vehicle.odometer !== null && vehicle.odometer !== undefined ? [{ label: "Odometer", value: `${vehicle.odometer.toLocaleString("en-IN")} km` }] : []),
-    ...(verifiedProtections.length > 0 ? [{ label: "Protection", value: `${verifiedProtections.length} on file` }] : []),
+    ...(verifiedProtections.length > 0 ? [{ label: "Protection", value: `${verifiedProtections.length} ${verifiedProtections.length === 1 ? "protection" : "protections"} on file` }] : []),
   ];
 
   return (
