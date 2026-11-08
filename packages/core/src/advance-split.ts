@@ -33,7 +33,11 @@ export function advanceSplit(
   if (!Number.isInteger(pickupTotalPaise) || pickupTotalPaise < 0) throw new Error("pickupTotalPaise must be a non-negative integer (paise)");
   const basePaise = basis === "service_total_plus_pickup" ? serviceTotalPaise + pickupTotalPaise : serviceTotalPaise;
   const raw = (basePaise * ADVANCE_PERCENT) / 100;
-  const advancePaise = rounding === "floor" ? Math.floor(raw) : rounding === "ceil" ? Math.ceil(raw) : Math.round(raw);
+  // ceil is the OWNER-ADOPTED mode (2 Nov 2026): round the advance UP TO THE
+  // NEXT WHOLE RUPEE, not the next paisa. 20% of Rs 1,768.82 = Rs 353.764 ->
+  // Rs 354.00 (35400 paise). round/floor stay paisa-level caller decisions;
+  // they are not the adopted policy.
+  const advancePaise = rounding === "floor" ? Math.floor(raw) : rounding === "ceil" ? Math.ceil(raw / 100) * 100 : Math.round(raw);
   // The studio balance is always the true remainder, never its own rounding of
   // 80% - so advance + balance always equals the full charge exactly.
   return { advancePaise, dueAtStudioPaise: basePaise - advancePaise, basis, rounding };

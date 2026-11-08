@@ -47,15 +47,30 @@ describe("buildAdvancePaymentRequest (owner-approved activation)", () => {
     expect(split.advancePaise + split.dueAtStudioPaise).toBe(118000);
   });
 
+  it("ceil rounds to the NEXT WHOLE RUPEE on fractional-GST totals (parity with the customer preview)", () => {
+    // service 149900 (no pickup/drop), taxed at 18% -> base 176882;
+    // 20% = 35376.4 -> 35400 (Rs 354.00), never 35377 (paisa-ceil).
+    // Matches apps/customer advancePreviewFromParts on the same inputs.
+    const split = computeAdvanceSplitFromBreakdown(
+      { ...booking.priceBreakdown, subtotal: 149900, pickupFee: 0, dropFee: 0 },
+      "service_total_only",
+      "ceil",
+    );
+    expect(split.advancePaise).toBe(35400);
+    expect(split.dueAtStudioPaise).toBe(141482);
+    expect(split.advancePaise + split.dueAtStudioPaise).toBe(176882);
+  });
+
   it("membership discount reduces the base before tax, matching applyMembershipBenefit", () => {
     const split = computeAdvanceSplitFromBreakdown(
       { ...booking.priceBreakdown, membershipDiscount: 10000 },
       "service_total_only",
       "ceil",
     );
-    // (100000 - 10000) = 90000, tax 16200, base 106200, advance ceil 20% = 21240
-    expect(split.advancePaise).toBe(21240);
-    expect(split.dueAtStudioPaise).toBe(84960);
+    // (100000 - 10000) = 90000, tax 16200, base 106200, 20% = 21240 paise
+    // = Rs 212.40, NOT a whole rupee -> advance rounds up to Rs 213.00.
+    expect(split.advancePaise).toBe(21300);
+    expect(split.dueAtStudioPaise).toBe(84900);
   });
 
   it("a fully covered wash yields a zero advance (nothing remains to advance)", () => {

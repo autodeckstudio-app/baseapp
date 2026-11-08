@@ -18,6 +18,20 @@ describe("advanceSplit", () => {
     expect(serviceOnly.advancePaise).toBe(20000);
     // neither is chosen here - the basis is a held owner decision
   });
+  it("ceil rounds UP TO THE NEXT WHOLE RUPEE (owner-adopted 2 Nov), never the next paisa", () => {
+    // 20% of Rs 1,768.82 = Rs 353.764 -> Rs 354.00; balance is the exact remainder.
+    const frac = advanceSplit(176882, 0, "service_total_only", "ceil");
+    expect(frac.advancePaise).toBe(35400);
+    expect(frac.dueAtStudioPaise).toBe(141482);
+    expect(frac.advancePaise + frac.dueAtStudioPaise).toBe(176882);
+    // A fractional-paise raw just over a rupee boundary moves to the next rupee.
+    expect(advanceSplit(100001, 0, "service_total_only", "ceil").advancePaise).toBe(20100); // raw 20000.2
+    // An already whole-rupee raw is unchanged (rounding up to the next whole
+    // rupee when already whole is a no-op).
+    expect(advanceSplit(118000, 0, "service_total_only", "ceil").advancePaise).toBe(23600); // raw 23600.0
+    // Fractional paise BELOW the next rupee still move up to it.
+    expect(advanceSplit(99999, 0, "service_total_only", "ceil").advancePaise).toBe(20000); // raw 19999.8
+  });
   it("exposes rounding as a caller decision and keeps the balance an exact remainder under every mode", () => {
     const base = 99999; // 20% = 19999.8 paise
     expect(advanceSplit(base, 0, "service_total_only", "round").advancePaise).toBe(20000);

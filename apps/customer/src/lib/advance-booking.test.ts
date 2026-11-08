@@ -37,14 +37,22 @@ describe("advancePreviewFromParts (display-only mirror of the server derivation)
   it("GST off (rate 0): 20% of the plain service price", () => {
     expect(advancePreviewFromParts(pb({ taxRatePercent: 0 }))).toEqual({ advancePaise: 20000, dueAtStudioPaise: 80000, serviceTotalPaise: 100000 });
   });
-  it("rounds the advance UP and keeps advance + balance equal to the total", () => {
+  it("rounds the advance UP TO THE NEXT WHOLE RUPEE (owner rule) and keeps advance + balance equal to the total", () => {
     const r = advancePreviewFromParts(pb({ subtotal: 100001, taxRatePercent: 0 }))!;
-    expect(r.advancePaise).toBe(20001);
+    // 20% of 100001 = 20000.2 paise -> next whole rupee is 20100, not 20001.
+    expect(r.advancePaise).toBe(20100);
     expect(r.advancePaise + r.dueAtStudioPaise).toBe(100001);
   });
+  it("fractional-GST total: 20% of Rs 1,768.82 advances Rs 354.00, matching the server derivation (parity)", () => {
+    const r = advancePreviewFromParts(pb({ subtotal: 149900, taxRatePercent: 18 }))!;
+    expect(r.serviceTotalPaise).toBe(176882);
+    expect(r.advancePaise).toBe(35400);
+    expect(r.dueAtStudioPaise).toBe(141482);
+  });
   it("membership discount reduces the base before tax", () => {
-    // 100000 - 20000 = 80000; +18% = 94400; 20% = 18880
-    expect(advancePreviewFromParts(pb({ membershipDiscount: 20000 }))).toEqual({ advancePaise: 18880, dueAtStudioPaise: 75520, serviceTotalPaise: 94400 });
+    // 100000 - 20000 = 80000; +18% = 94400; 20% = 18880 paise = Rs 188.80,
+    // which is NOT a whole rupee -> advance rounds up to Rs 189.00.
+    expect(advancePreviewFromParts(pb({ membershipDiscount: 20000 }))).toEqual({ advancePaise: 18900, dueAtStudioPaise: 75500, serviceTotalPaise: 94400 });
   });
   it("pickup and drop are excluded from the advance but stay in the balance (with their GST)", () => {
     // service 100000 + pickup 10000 folded into subtotal; grand total 110000*1.18 = 129800
