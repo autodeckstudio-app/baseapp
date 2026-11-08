@@ -182,7 +182,13 @@ export default function CatalogueScreen() {
             path={path}
             query={q}
             onPath={navigate}
-            onOpen={(s) => router.push(`/(tabs)/catalogue/${s.id}`)}
+            onOpen={(s) =>
+              // Dev-only fixture chain: inside a preview route the real leaf is
+              // auth-gated, so open the equivalent fixture detail instead.
+              __DEV__ && selfPath.startsWith("/preview")
+                ? router.push({ pathname: "/preview-service" as never, params: { id: s.id } })
+                : router.push(`/(tabs)/catalogue/${s.id}`)
+            }
             onReference={(r) =>
               router.push({
                 pathname: "/(tabs)/catalogue/enquiry",

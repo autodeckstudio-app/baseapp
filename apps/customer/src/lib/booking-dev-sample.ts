@@ -1,11 +1,12 @@
 // Dev preview only. Sample data for /preview-booking?mock=1. Not real bookings, not used in production builds.
 import type { Booking } from "@autodeck/core";
 
-// Tomorrow 10:00 to 11:30 India time, built so the start, the studio date and the end all agree.
+// Today 10:00 to 11:30 India time: the ACTIVE sample shows the car at the studio,
+// so the visit must be today's - a future date would be a false live status.
 const IST_MS = 5.5 * 3600_000;
-const tomorrow = new Date(Date.now() + IST_MS + 24 * 3600_000).toISOString().slice(0, 10);
-const date = tomorrow;
-const iso = new Date(`${tomorrow}T10:00:00Z`).getTime() - IST_MS;
+const today = new Date(Date.now() + IST_MS).toISOString().slice(0, 10);
+const date = today;
+const iso = new Date(`${today}T10:00:00Z`).getTime() - IST_MS;
 const startIso = new Date(iso).toISOString();
 const endIso = new Date(iso + 90 * 60_000).toISOString();
 
