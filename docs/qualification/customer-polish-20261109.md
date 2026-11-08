@@ -40,3 +40,7 @@ https://www.nngroup.com/articles/icon-usability/
 -Actual components inspected at320/390/820px in day/night.24 app-component scenarios plus contact/pressed states, no horizontal overflow. Profile edit exercised in a local fixture only. No production field/upload/save/contact action.
 
 Prior source db909fb0 exact hosted validate and emulator both succeeded in run42529501383. Preserved earlier696b20cf emulator failure was one refund-reservation concurrency code3 closed-transaction error (1157pass/1fail/1skip). No refund code was changed here, so later success is not claimed as a refund fix. Current consolidated source requires its own CI and live promotion checks after push.
+
+## Final spacing steering
+
+Owner's04:15 follow-up requested the five contact icons be evenly distanced. Replaced the centered fixed-gap row with full-width space-evenly distribution, no other behavior or target changes. Repeated990unit/218render/types/full customer lint0errors; actual320/390/820 day/night pixels inspected, single line and no overflow. This explicit follow-up is incremental to the earlier consolidated push, not a hidden feature batch.

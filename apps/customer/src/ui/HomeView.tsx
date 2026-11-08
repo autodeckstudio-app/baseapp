@@ -368,7 +368,7 @@ export function HomeView(p: HomeViewProps) {
             </View>
           </View>
         </Pressable>
-        <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 2, padding: 8 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-evenly", alignItems: "center", paddingVertical: 8 }}>
           {p.quick?.length ? p.quick.map((q) => {
             const tone = q.icon === "whatsapp" ? (name === "light" ? "#17643D" : "#8DE0AE") : q.icon === "directions" ? (name === "light" ? "#245A89" : "#9CCEF9") : (name === "light" ? "#88420E" : "#F8B982");
             const wash = q.icon === "whatsapp" ? (name === "light" ? "#E1F2E7" : "#223D30") : q.icon === "directions" ? (name === "light" ? "#E5EFFA" : "#253746") : (name === "light" ? "#FAEADB" : "#443226");
