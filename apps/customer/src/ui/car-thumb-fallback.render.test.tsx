@@ -42,6 +42,21 @@ describe("CarThumb saved-photo fallback", () => {
     expect(JSON.stringify(el.toJSON())).not.toContain("cover.jpg?");
   });
 
+  it("pending resolution shows a labelled loading state, never a blank frame", async () => {
+    resolveMock.mockImplementation(() => new Promise<string>(() => {}));
+    const el = await renderThumb({ car, height: 120 });
+    expect(JSON.stringify(el.toJSON())).toContain("Loading photo");
+    expect(textOf(el)).toContain("Loading photo"); // hero-size frames show the caption visibly
+    expect(textOf(el)).not.toContain("PHOTO UNAVAILABLE"); // never lies unavailable while the promise is active
+  });
+
+  it("small pending frames show only the spinner (accessibility label, no caption)", async () => {
+    resolveMock.mockImplementation(() => new Promise<string>(() => {}));
+    const el = await renderThumb({ car, height: 60 });
+    expect(JSON.stringify(el.toJSON())).toContain('aria-label":"Loading photo');
+    expect(textOf(el)).not.toContain("Loading photo");
+  });
+
   it("genuine no-photo still says NO PHOTO YET", async () => {
     const el = await renderThumb({ car: { photoUrl: null, category: null }, height: 120 });
     expect(textOf(el)).toContain("NO PHOTO YET");

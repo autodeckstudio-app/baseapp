@@ -1,6 +1,6 @@
 // Car photo with explicit loading/error states: the customer's photo when there is one, otherwise a category placeholder.
 import { useEffect, useRef, useState } from "react";
-import { Text, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 import { FadeImage } from "@autodeck/ui/native";
 import type { Vehicle } from "@autodeck/core";
 import { resolveVehiclePhotoUrl } from "../lib/vehicle-service";
@@ -70,6 +70,9 @@ export function CarThumb({ car, height, width, radius = 16 }: { car: Car | undef
   const pending = !!car?.photoUrl && !uri && !failed;
   return (
     <View style={{ width: width ?? "100%", height, borderRadius: radius, overflow: "hidden" }}>
+      {/* While a saved photo is resolving, say so: a labelled loading state on the
+          photo-slot background, never an ambiguous blank frame over a dark hero. */}
+      {pending ? <View accessibilityLabel="Loading photo" style={{ width: "100%", height: "100%", alignItems: "center", justifyContent: "center", backgroundColor: height >= 100 ? "#23232A" : "rgba(127,127,135,0.14)" }}><ActivityIndicator color="#B4B2BB" />{height >= 100 ? <Text style={{ marginTop: 8, fontSize: 12, color: "#B4B2BB" }}>Loading photo</Text> : null}</View> : null}
       {!pending && hasPhoto ? <FadeImage key={`${key}:${uri}:${gen}`} source={{ uri: uri as string }} resizeMode="cover" onError={() => onImgError(uri as string, gen)} style={{ width: "100%", height: "100%" }} /> : null}
       {!pending && !hasPhoto ? <View style={{ width: "100%", height: "100%", alignItems: "center", justifyContent: height >= 100 ? "flex-start" : "center", paddingTop: height >= 100 ? Math.round(height * 0.2) : 0, gap: 4, backgroundColor: height >= 100 ? "#23232A" : "rgba(127,127,135,0.14)" }}>{height >= 100 ? <Text style={{ color: "#B4B2BB", fontSize: 12, fontWeight: "700", letterSpacing: 1.2 }}>{unavailable ? "PHOTO UNAVAILABLE" : "NO PHOTO YET"}</Text> : <Icon name="car" color="#8A8A92" size={Math.max(18, Math.min(34, height / 3))} />}</View> : null}
     </View>
