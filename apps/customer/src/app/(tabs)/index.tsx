@@ -150,7 +150,7 @@ export default function HomeScreen() {
     return () => { alive = false; };
   }, [owner]);
   const [liveInfo, setLiveInfo] = useState<{ operatingHours: Array<{ dayOfWeek: number; open: string; close: string; closed: boolean }>; holidays: string[] } | null>(null);
-  const [carJobs, setCarJobs] = useState<Array<{ serviceId: string; status: string; createdAt: string; sealedAt?: string | null }>>([]);
+  const [carJobs, setCarJobs] = useState<Array<{ serviceId: string; serviceName?: string; status: string; createdAt: string; sealedAt?: string | null }>>([]);
   useEffect(() => {
     setLiveInfo(null);if (!ready) return;
     let alive = true;
@@ -265,7 +265,7 @@ export default function HomeScreen() {
         onVisits={() => router.push("/(tabs)/bookings")}
         onShare={() => void Share.share({ message: referralShareMessage(myCode) }).catch(() => undefined)}
         unread={unread}
-        cars={(() => { const last = lastFinishedJob(carJobs); const svc = last ? catalogue.find((x) => x.id === last.serviceId) : null; const story = last && svc ? `Last visit: ${svc.name} \u00b7 ${formatDateShort((last.sealedAt ?? last.createdAt).slice(0, 10))}` : null; return vehicles.map((v) => ({ id: v.id, title: `${v.make} ${v.model}`, plate: v.registrationNumber, vehicle: { photoUrl: v.photoUrl, category: v.category, updatedAt: v.updatedAt }, category: v.category ?? null, hasPhoto: !!v.photoUrl, story: v.id === m.activeVehicle?.id ? story : null })); })()}
+        cars={(() => { const last = lastFinishedJob(carJobs); const name = last ? last.serviceName ?? catalogue.find((x) => x.id === last.serviceId)?.name ?? null : null; const story = last && name ? `Last visit: ${name}${last.sealedAt ? ` \u00b7 ${formatDateShort(last.sealedAt.slice(0, 10))}` : ""}` : null; return vehicles.map((v) => ({ id: v.id, title: `${v.make} ${v.model}`, plate: v.registrationNumber, vehicle: { photoUrl: v.photoUrl, category: v.category, updatedAt: v.updatedAt }, category: v.category ?? null, hasPhoto: !!v.photoUrl, story: v.id === m.activeVehicle?.id ? story : null })); })()}
         services={catalogue.map((s) => ({ id: s.id, category: s.category, name: s.name, price: servicePriceText(s, pricingVehicle.category, vehiclePrices) ?? "", brand: s.brand ?? null }))}
         reminders={reminders}
         live={live}
