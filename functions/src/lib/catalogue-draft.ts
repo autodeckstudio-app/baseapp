@@ -17,7 +17,7 @@ export function buildCatalogueDraft({id,tenantId,actor,now,input,existing}:{id:s
 }
 export function reviewCatalogueDraft(draft:CatalogueDraft,{actor,role='admin',now,expectedVersion,currentServiceUpdatedAt,trustedPublicRowHash=null,trustedNewRow=null,trustedMissingRow=false}:{actor:string;role?:string;now:string;expectedVersion:number;currentServiceUpdatedAt:string|null;trustedPublicRowHash?:string|null;trustedNewRow?:{serviceId:string;tabHash:string}|null;/** Server-side only: the trusted sheet scan proved this existing service has no public row, so the frozen tab append preimage is bound to the existing canonical id. Callers must never forward a client-supplied flag here. */trustedMissingRow?:boolean}):CatalogueDraft{
  if(trustedNewRow&&!((!draft.serviceId&&/^svc_[a-f0-9]{32}$/.test(trustedNewRow.serviceId))||(trustedMissingRow&&draft.serviceId===trustedNewRow.serviceId)))throw Error('Trusted new row required');
- if(trustedMissingRow&&(!trustedNewRow||!draft.serviceId||draft.publicDestination==null||trustedPublicRowHash!==null))throw Error('Trusted new row required');
+ if(trustedMissingRow&&(!trustedNewRow||!draft.serviceId||(draft.publicDestination===null||draft.publicDestination===undefined)||trustedPublicRowHash!==null))throw Error('Trusted new row required');
  if(trustedNewRow&&(!draft.publicDestination||!/^[a-f0-9]{64}$/.test(trustedNewRow.tabHash)))throw Error('Trusted new row required');
  if(trustedPublicRowHash!==null&&!/^[a-f0-9]{64}$/.test(trustedPublicRowHash))throw Error('Trusted public row version required');
  if(!['admin','superadmin'].includes(role))throw Error('Reviewer role denied');

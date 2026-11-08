@@ -1,4 +1,4 @@
-import{onCall,HttpsError,type CallableRequest}from'firebase-functions/v2/https';import{extractUser,assertRole}from'../../middleware/auth.js';import{enforceRateLimit,subjectFrom}from'../../middleware/rateLimit.js';import{catalogueController,type CatalogueControllerActor}from'../../lib/catalogue-controller.js';
+import{onCall,HttpsError,type CallableRequest}from'firebase-functions/v2/https';import{extractUser,assertRole}from'../../middleware/auth.js';import{enforceRateLimit,subjectFrom}from'../../middleware/rateLimit.js';import type{catalogueController,CatalogueControllerActor}from'../../lib/catalogue-controller.js';
 type Controller=ReturnType<typeof catalogueController>;type Operation=keyof Controller;
 /** Managed callable factory instantiated by catalogueRuntime.ts.
  * Requires independently approved private runtime identity+worker port and web
