@@ -29,3 +29,11 @@ Gtechniq remains text. https://gtechniq.com/terms-and-conditions/ explicitly res
 Home studio card address display and matching accessibility-label address removed, only at that card. Canonical studio address, Help, name/hours/open status and Directions/Call/WhatsApp actions remain unchanged. Mounted regression checks absence of the address and preserved contact callbacks. Final mounted/render count: 215 across 78 files.
 
 Hosted validation caught the new WebP declaration's import-type syntax against the actual locked ESLint preset. Replaced only that declaration syntax, no lint weakening. Full locked customer lint has zero errors. Types pass. Earlier substitute-config lint result was insufficient for this rule.
+
+## Dynamic studio contacts
+
+The studio card now has three distinct colored contact tiles (Call, WhatsApp, Directions) and two compact social cards. All five original callbacks and destinations are unchanged. Contact targets are80px high, social targets at least46px. Existing shared16px radius is retained. Press feedback changes opacity/border and applies a small scale only when reduced motion is off. Full accessibility labels include social channel/handle. No address, hours or open status change.
+
+Qualification:990 customer unit tests and217 mounted/render tests pass. The mounted test exercises all five callbacks, minimum target size and pressed transforms with reduced motion both on and off. Customer types pass. Full customer lint using the locked preset passes with zero errors. Actual component pixels inspected at320/390/820 in day/night, with keyboard-pressed feedback and no horizontal overflow. These are local fictional fixtures, not production writes.
+
+Prior696b20cf hosted validate passed, but emulator failed one existing money-refund concurrency case: the losing reserveRefund returned Firestore code3 "Transaction is invalid or closed." rather than the expected duplicate error.1157pass/1fail/1skip. No refund backend change or assertion weakening is included here. The earlier cancellation-specific recovery is not claimed to cover refunds. No backend deployment, payment activation or installed-native acceptance is implied.
