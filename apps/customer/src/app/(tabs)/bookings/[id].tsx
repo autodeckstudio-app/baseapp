@@ -531,7 +531,7 @@ export default function BookingDetailScreen() {
           ) : null}
           {booking.priceBreakdown.tax > 0 ? <Row title={booking.priceBreakdown.taxDescription} trailing={<T role="data">{rupees(booking.priceBreakdown.tax)}</T>} /> : null}
           <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(booking.priceBreakdown.total)}</T>} />
-          <Row detailTone="secondary" title="Payment" detail={membershipCoveredLabel(booking) ?? (payment?.status==='completed'&&job?.paymentStatus!=='paid'&&!(payment as Payment & {invoiceReviewNeeded?:boolean}).invoiceReviewNeeded?'Payment records syncing - do not pay again':customerPaymentLabel(payment,paymentIsCurrent?'ready':paymentOwnerCurrent&&paymentScope===currentPaymentScope?paymentRead:'loading'))} last />
+          <Row detailTone="secondary" title="Payment" detail={membershipCoveredLabel(booking) ?? (payment?.status==='completed'&&job?.paymentStatus!=='paid'&&!(payment as Payment & {invoiceReviewNeeded?:boolean}).invoiceReviewNeeded?'Payment records syncing - do not pay again':customerPaymentLabel(payment,paymentIsCurrent||isMock?'ready':paymentOwnerCurrent&&paymentScope===currentPaymentScope?paymentRead:'loading'))} last />
           {resumeAllowed?<View style={{gap:space.line,marginTop:space.line}}><Button label="Continue online payment" busy={payingNow} disabled={payingNow} onPress={()=>void resumePayment()}/><T role="caption" tone="secondary">Opens the existing payment link. Payment is confirmed only after server verification.</T></View>:null}
           {job?<Button label="Refresh recorded payment status" kind="quiet" onPress={()=>setPaymentRefresh(n=>n+1)}/>:null}
           {paymentIsCurrent && (payment?.invoiceId || job?.invoiceId || booking.invoiceId) && job ? (
