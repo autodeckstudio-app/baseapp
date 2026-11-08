@@ -295,7 +295,14 @@ export function HomeView(p: HomeViewProps) {
       <View style={{ marginHorizontal: -20, marginTop: -16 }}>
         <View style={{ height: 340, overflow: "hidden", borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
           <KenBurns source={sceneImagery.heroHome} />
-          <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...(Platform.OS === "web" ? ({ backgroundImage: `linear-gradient(180deg, rgba(8,9,10,0.34) 0%, rgba(8,9,10,0.05) 38%, rgba(8,9,10,0.42) 68%, ${name === "night" ? "rgba(36,38,42,1)" : "rgba(255,255,255,1)"} 100%)` } as object) : { backgroundColor: "rgba(8,9,10,0.26)" }) }} />
+          {Platform.OS === "web" ? (
+            <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: `linear-gradient(180deg, rgba(8,9,10,0.34) 0%, rgba(8,9,10,0.08) 34%, rgba(8,9,10,0.52) 58%, rgba(8,9,10,0.58) 92%, ${name === "night" ? "rgba(36,38,42,1)" : "rgba(255,255,255,1)"} 100%)` } as object) }} />
+          ) : (
+            <>
+              <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(8,9,10,0.2)" }} />
+              <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "55%", backgroundColor: "rgba(8,9,10,0.42)" }} />
+            </>
+          )}
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, paddingHorizontal: 20, paddingTop: 16 }}>
             <Pressable accessibilityRole="button" accessibilityLabel="Menu" onPress={() => (p.drawer?.length ? setMenu(true) : p.onAvatar())} style={({ pressed }) => ({ width: 46, height: 46, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(10,11,13,0.38)", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", opacity: pressed ? 0.85 : 1, ...(Platform.OS === "web" ? ({ backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)" } as object) : {}) })}>
               <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "800" }}>{p.initial}</Text>
@@ -305,8 +312,8 @@ export function HomeView(p: HomeViewProps) {
               {p.unread > 0 ? <View style={{ position: "absolute", top: 11, right: 12, width: 9, height: 9, borderRadius: 5, backgroundColor: "#EC8638" }} /> : null}
             </Pressable>
           </View>
-          <Rise delay={60} style={{ position: "absolute", left: 20, right: 20, bottom: 38, gap: 6 }}>
-            <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase" }}>{p.greeting}{car ? ` · ${p.stage}` : ""}</Text>
+          <Rise delay={60} style={{ position: "absolute", left: 20, right: 20, bottom: 44, gap: 6 }}>
+            <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase" }}>{p.greeting}{car ? ` · ${car.title}` : ""}</Text>
             <Text style={[textStyle("display"), { fontSize: 30, lineHeight: 34, color: "#FFFFFF", letterSpacing: -0.8 }]}>{"Complete car care.\nAll under one roof."}</Text>
           </Rise>
         </View>
@@ -343,7 +350,7 @@ export function HomeView(p: HomeViewProps) {
       <CampaignSlot campaign={p.campaign} />
       {p.carsList && p.carsList.length > 0 && p.onOpenCar && p.onBuyCar && p.onSellCar ? <CarsCard cars={p.carsList} onOpen={p.onOpenCar} onBuy={p.onBuyCar} onSell={p.onSellCar} /> : null}
       <View style={{ overflow: "hidden", ...glassPane(name === "light") }}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Open the studio page" onPress={p.onStudio} style={{ height: 132 }}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`${STUDIO_INFO.name}, ${p.studio.address}, ${p.studio.hours}${p.studio.openText ? `, ${p.studio.openText}` : ""}. Open the studio page`} onPress={p.onStudio} style={{ height: 132 }}>
           <Image source={sceneImagery.studio} resizeMode="cover" style={{ position: "absolute", width: "100%", height: "100%" }} />
           <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.78) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.3)" }) }}>
             {p.studio.openText ? (
@@ -354,7 +361,7 @@ export function HomeView(p: HomeViewProps) {
             ) : null}
             <View style={{ position: "absolute", left: 12, right: 12, bottom: 10, gap: 1 }}>
               <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "800" }}>{STUDIO_INFO.name}</Text>
-              <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.82)", fontSize: 11 }}>{p.studio.address}</Text>
+              <Text numberOfLines={2} style={{ color: "rgba(255,255,255,0.82)", fontSize: 11 }}>{p.studio.address}</Text>
               <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.68)", fontSize: 11 }}>{p.studio.hours}</Text>
             </View>
           </View>
