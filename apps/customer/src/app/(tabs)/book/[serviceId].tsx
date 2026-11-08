@@ -3,7 +3,7 @@ import { customerOfferingVisible } from '../../../lib/customer-offering-visibili
 import { CarThumb } from "../../../ui/CarThumb";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState, useEffect } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { View } from "react-native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { collapseStaleBookEntries } from "../../../lib/back-nav";
 import { doc, getDoc} from "firebase/firestore";
@@ -19,12 +19,9 @@ import { COLLECTIONS } from "@autodeck/database";
 // V1 is explicitly single-studio-per-tenant (seeded once) - FIRST_STUDIO_ID
 // is the correct, intentional value here, unlike tenantId which must always
 // come from the authenticated user's own claims (see Phase 3G HANDOFF).
-import { SERVICE_INCLUDES, servicesOverlap, CAR_SEGMENTS, FIRST_STUDIO_ID, normalizeSegment, segmentLabel } from "@autodeck/core";
+import { CAR_SEGMENTS, FIRST_STUDIO_ID, normalizeSegment, segmentLabel } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
-import { useExperienceTheme } from "@autodeck/ui/native";
 import { calculateServicePrice, getServiceCatalogue } from "../../../lib/catalogue-service";
-import { SWITCHED_NOTE, applyBundleUpgrade, bundleUpgradeNote, eligibleExtras, extrasFromParam, extrasToParam, offeredExtras, toggleExtra } from "../../../lib/visit-extras";
-import { GIFT_LIVE, takePendingGiftCode } from "../../../lib/gift";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 
@@ -33,7 +30,7 @@ const VEHICLE_CATEGORIES = CAR_SEGMENTS;
 const durationText = formatDuration;
 
 export default function BookServiceScreen() {
-  const { serviceId, extras: extrasParam, day, upgraded } = useLocalSearchParams<{ serviceId: string; extras?: string; day?: string; upgraded?: string }>();
+  const { serviceId, day } = useLocalSearchParams<{ serviceId: string; day?: string }>();
   const [dayMissed, setDayMissed] = useState(false);
   const router = useRouter();
   const navigation = useNavigation();
@@ -57,41 +54,12 @@ export default function BookServiceScreen() {
   const [vehiclesError,setVehiclesError] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [total, setTotal] = useState<number | null>(null);
-  const { colors, name: themeName } = useExperienceTheme();
 
   // More services in the same visit: same bay type only, so one slot fits them all. The server checks again.
   const [catalogue, setCatalogue] = useState<Service[]>([]);
-  // A claimed gift covers its wash alone (server blocks gift + extras), so extras stay hidden while a code is pending.
-  const [giftPending] = useState(() => (GIFT_LIVE ? takePendingGiftCode() !== null : false));
-  const [extraIdsState, setExtraIds] = useState<string[]>(() => extrasFromParam(extrasParam).filter((x) => !servicesOverlap(serviceId ?? "", x) && x !== serviceId));
-  // A combo is one fixed bundle: no options, no default selections, nothing added to price or time, and no extras are sent when booking.
+  // A combo is one fixed bundle: no options, no default selections, nothing added to price or time.
   const combo = comboFor(catalogue, serviceId);
-  const extraIds = combo ? [] : extraIdsState;
-  const [upgradeNote, setUpgradeNote] = useState<string | null>(null);
-  // The "switched" note is carried in the route param because the switch replaces the screen, and a combo page has no extras block to host it.
-  const shownNote = upgradeNote !== null ? (upgradeNote || null) : upgraded === "switched" ? SWITCHED_NOTE : null;
-  useEffect(() => { setExtraIds(extrasFromParam(extrasParam).filter((x) => !servicesOverlap(serviceId ?? "", x) && x !== serviceId)); }, [serviceId]);
-  const pickExtra = (id: string) => {
-    const next = toggleExtra(extraIds, id);
-    const up = applyBundleUpgrade(serviceId ?? "", next);
-    if (!up.upgradedTo) { setUpgradeNote(""); setExtraIds(next); return; }
-    setUpgradeNote(bundleUpgradeNote(serviceId ?? "", up));
-    if (up.primaryId !== serviceId) router.replace({ pathname: "/(tabs)/book/[serviceId]", params: { serviceId: up.primaryId, upgraded: "switched", ...(up.extras.length ? { extras: extrasToParam(up.extras) } : {}) } });
-    else setExtraIds(up.extras);
-  };
-  const [extraTotals, setExtraTotals] = useState<Record<string, number>>({});
   useEffect(() => { let alive = true; void getServiceCatalogue().then((c) => { if (alive) setCatalogue(c); }).catch(() => undefined); return () => { alive = false; }; }, []);
-  useEffect(() => {
-    if (!selectedCategory) return;
-    let alive = true;
-    for (const id of extraIds) void calculateServicePrice(id, selectedCategory).then(({ breakdown }) => { if (alive) setExtraTotals((t) => ({ ...t, [id]: breakdown.total })); }).catch(() => undefined);
-    return () => { alive = false; };
-  }, [extraIds.join(","), selectedCategory]);
-  const extraKey = extraIds.join(",");
-  const extraList = extraIds.map((id) => catalogue.find((c) => c.id === id)).filter((x): x is Service => Boolean(x));
-  const extraMinutes = extraList.reduce((m, e) => m + e.estimatedDurationMinutes, 0);
-  const extraPriced = extraIds.every((id) => extraTotals[id] !== undefined);
-  const visitTotal = total !== null && extraPriced ? total + extraIds.reduce((t, id) => t + (extraTotals[id] ?? 0), 0) : null;
 
   useEffect(() => {
     setTotal(null);
@@ -111,7 +79,7 @@ export default function BookServiceScreen() {
 
   useEffect(() => {
     if (!serviceId || !service) return;
-    const ids = extraKey ? extraKey.split(",") : [];
+    const ids: string[] = [];
     const warm = peekAvailability(serviceId, FIRST_STUDIO_ID, todayIST(), 7, ids);
     if (warm) setSlots(warm.filter(s=>Date.parse(s.startAt)>Date.now()));
     setSlotsLoading(!warm);
@@ -123,7 +91,7 @@ export default function BookServiceScreen() {
       .catch(() => { if (alive) setSlotsError(true); })
       .finally(() => { if (alive) setSlotsLoading(false); });
     return () => { alive = false; };
-  }, [serviceId, service, retryTick, extraKey]);
+  }, [serviceId, service, retryTick]);
 
   useEffect(()=>{
     const want = day ? pickDay([...new Set(slots.map(s=>s.date))], day, todayIST()) : null;
@@ -139,7 +107,6 @@ export default function BookServiceScreen() {
       pathname: "/(tabs)/book/confirm",
       params: {
         serviceId,
-        ...(extraIds.length ? { extras: extrasToParam(extraIds) } : {}),
         vehicleId: selectedVehicle.id,
         vehicleCategory: selectedCategory,
         scheduledDate: slot.date,
@@ -167,7 +134,7 @@ export default function BookServiceScreen() {
   if (!ownerKey) {
     // Resolution error is truthful unknown (retry), never an account denial.
     if (auth.customerDocResolution === "error") return <Screen><Notice title="Couldn't confirm your profile" body="Try again in a moment." action={<Button label="Try again" onPress={() => setRetryTick((n) => n + 1)} />} /></Screen>;
-    return <BookingRoleGate staff={auth.claims.role !== "customer"} onAccount={() => router.push("/(tabs)/profile")} onBrowse={() => router.push("/(tabs)/catalogue")} />;
+    return <BookingRoleGate staff={auth.claims.role !== "customer"} onAccount={() => router.navigate("/(tabs)/profile")} onBrowse={() => router.navigate("/(tabs)/catalogue")} />;
   }
   if (!service || service.active === false) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." /></Screen>;
 
@@ -177,7 +144,7 @@ export default function BookServiceScreen() {
   }, {});
 
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{service.name}</T>{service.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : total !== null ? <T role="bodyStrong" tone="accent">{visitTotal !== null ? rupees(visitTotal) : extraIds.length ? "" : rupees(total)} · {durationText(service.estimatedDurationMinutes + extraMinutes)}</T> : null}</View>}>
+    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{service.name}</T>{service.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : total !== null ? <T role="bodyStrong" tone="accent">{rupees(total)} · {durationText(service.estimatedDurationMinutes)}</T> : null}</View>}>
       <View style={{ borderRadius: 24, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}><ServicePhoto service={service} aspect={3} radius={0} /><View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0) 50%, rgba(5,5,6,0.7) 100%)" } as object) }} /></View>
       <View style={{ gap: space.line }}>
         <Kicker>Booking for</Kicker>
@@ -220,27 +187,6 @@ export default function BookServiceScreen() {
         </View>
       ) : null}
 
-      {!combo && service.priceOnRequest !== true && !giftPending && eligibleExtras(service, catalogue).length > 0 ? (
-        <View style={{ gap: space.hair }}>
-          <Kicker>Add to this visit</Kicker>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
-            {offeredExtras(eligibleExtras(service, catalogue), extraIds).map((e) => {
-              const on = extraIds.includes(e.id);
-              return (
-                <Pressable key={e.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => pickExtra(e.id)} style={{ borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 9, backgroundColor: on ? (colors.textPrimary) : "rgba(128,128,128,0.14)" }}>
-                  <T role="bodyStrong" style={{ color: on ? (themeName === "light" ? "#F4F1EC" : "#16181C") : colors.textPrimary, fontSize: 13 }}>{on ? "\u2713 " : "+ "}{e.name}</T>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-          {extraIds.flatMap((id) => (SERVICE_INCLUDES[id] ?? []).map((inc) => ({ big: id, inc }))).length > 0 ? (
-            <T role="caption" tone="tertiary">{extraIds.filter((id) => (SERVICE_INCLUDES[id] ?? []).length > 0).map((id) => `${catalogue.find((c) => c.id === id)?.name ?? "That service"} already includes ${(SERVICE_INCLUDES[id] ?? []).map((i) => catalogue.find((c) => c.id === i)?.name ?? "").filter(Boolean).join(" and ")}.`).join(" ")}</T>
-          ) : null}
-          {extraIds.length > 0 ? <T role="caption" tone="tertiary">One visit, one slot. Times below fit all {extraIds.length + 1} services.</T> : null}
-        </View>
-      ) : null}
-
-      {shownNote ? <T role="caption" tone="accent">{shownNote}</T> : null}
 
       <View style={{ gap: space.line }}>
         <Kicker>Pick a time</Kicker>

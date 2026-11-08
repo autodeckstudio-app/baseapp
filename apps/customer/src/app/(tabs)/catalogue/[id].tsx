@@ -95,7 +95,7 @@ export default function ServiceDetailScreen() {
     let alive=true;void getServiceReviews(service.id).then(r=>{if(alive)setReviews(r)}).catch(()=>{if(alive)setReviews(null)});return()=>{alive=false};
   }, [service]);
 
-  if(sourceHold) return <Screen appBar="Service enquiry"><T role="title">Ask the studio</T><T>Confirm the product and options for your car before booking.</T><Button label="Ask for a quote" onPress={()=>router.push("/(tabs)/help")} /></Screen>;
+  if(sourceHold) return <Screen appBar="Service enquiry"><T role="title">Ask the studio</T><T>Confirm the product and options for your car before booking.</T><Button label="Ask for a quote" onPress={()=>router.navigate("/(tabs)/help")} /></Screen>;
   return (
     <ServiceDetailView
       id={id}
@@ -146,7 +146,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
   const showBar = !!service && sheetBarVisible({ priceOnRequest: service.priceOnRequest === true, loading: priceLoading, hasTotal: priceBreakdown !== null, needsCarType, error: priceError !== null });
   if (loading) return <Loading label="Opening the menu" />;
   if (loadError) return <Screen><Notice title="Can't load this service" body="Check your connection and try again." action={<Button label="Try again" onPress={onRetry}/>} /></Screen>;
-  if (!service) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." action={<Button kind="quiet" label="Browse services" onPress={()=>router.push("/(tabs)/catalogue")}/>} /></Screen>;
+  if (!service) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." action={<Button kind="quiet" label="Browse services" onPress={()=>router.navigate("/(tabs)/catalogue")}/>} /></Screen>;
 
   const sc = showcaseFor(service);
   const faqs = FAQS[service.category] ?? FAQS.washing ?? [];
@@ -218,7 +218,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         <View style={{ gap: space.line }}>
           {H(service.category === "garage" ? "Price" : "Price for your car")}
 
-          <ServicePrice category={service.category} priceOnRequest={service.priceOnRequest === true} needsCarType={needsCarType} hasCar={!!pricingVehicle.vehicle} carSizeKnown={!!selectedCategory} loading={priceLoading} error={priceError} breakdown={priceBreakdown} onRetry={onRetry} onHelp={() => router.push("/(tabs)/help")} onGarage={() => router.push(pricingVehicle.vehicle ? `/(tabs)/garage/${pricingVehicle.vehicle.id}` : "/(tabs)/garage/add")} />
+          <ServicePrice category={service.category} priceOnRequest={service.priceOnRequest === true} needsCarType={needsCarType} hasCar={!!pricingVehicle.vehicle} carSizeKnown={!!selectedCategory} loading={priceLoading} error={priceError} breakdown={priceBreakdown} onRetry={onRetry} onHelp={() => router.navigate("/(tabs)/help")} onGarage={() => router.push(pricingVehicle.vehicle ? `/(tabs)/garage/${pricingVehicle.vehicle.id}` : "/(tabs)/garage/add")} />
         </View>
 
         </>

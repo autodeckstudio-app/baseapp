@@ -19,6 +19,9 @@ export default function TabsLayout() {
         headerShown: false,
         sceneStyle: { backgroundColor: "transparent" },
         animation: "fade",
+        // Keep visited tabs mounted: the default detaches them, which throws away
+        // scroll position, so Back would land on the top of the page again.
+        detachInactiveScreens: false,
       })}
     >
       <Tabs.Screen name="bookings" options={{ title: "Bookings" }} />

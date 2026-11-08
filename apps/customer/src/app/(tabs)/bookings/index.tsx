@@ -119,7 +119,7 @@ export default function BookingsScreen() {
 
   if(auth.status==="loading")return <Loading label="Checking your account" />;
   if(auth.status!=="ready")return <Screen><Notice title="Sign in to view your bookings" body="Your account session could not be verified." action={<Button label="Sign in" onPress={()=>router.push("/login")} />} /></Screen>;
-  if(!auth.customerDocId)return <Screen header={<PageHeader title="Bookings" />}><Notice title={auth.claims.role!=="customer"?"Bookings use a customer account":"Customer profile could not be verified"} body={auth.claims.role!=="customer"?"You are signed in with a staff or admin account. You can browse services here, but customer bookings need a customer account. Your staff access has not changed.":"We could not verify the customer profile linked to this sign-in. Your bookings have not been changed. Return to your account and try signing in again, or contact the studio."} action={<Button label="Go to your account" onPress={()=>router.push("/(tabs)/profile")} />} /><Button label="Browse services" kind="quiet" onPress={()=>router.push("/(tabs)/catalogue")} /></Screen>;
+  if(!auth.customerDocId)return <Screen header={<PageHeader title="Bookings" />}><Notice title={auth.claims.role!=="customer"?"Bookings use a customer account":"Customer profile could not be verified"} body={auth.claims.role!=="customer"?"You are signed in with a staff or admin account. You can browse services here, but customer bookings need a customer account. Your staff access has not changed.":"We could not verify the customer profile linked to this sign-in. Your bookings have not been changed. Return to your account and try signing in again, or contact the studio."} action={<Button label="Go to your account" onPress={()=>router.navigate("/(tabs)/profile")} />} /><Button label="Browse services" kind="quiet" onPress={()=>router.navigate("/(tabs)/catalogue")} /></Screen>;
   if (!bookings && !error) return <Loading label="Loading bookings" />;
   const all = [...(bookings ?? []), ...walkIns];
   const { inStudio, upcoming, past } = bookingSections(all);
@@ -240,7 +240,7 @@ export default function BookingsScreen() {
           <View style={{ padding: metrics.cardPad, gap: space.breath }}>
             <T role="heading">Nothing booked</T>
             <T tone="secondary">Pick a service and a time. The studio confirms it.</T>
-            <Button label="Book a service" onPress={() => router.push("/(tabs)/catalogue")} />
+            <Button label="Book a service" onPress={() => router.navigate("/(tabs)/catalogue")} />
           </View>
         </Pane>
       ) : null}

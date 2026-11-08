@@ -1,8 +1,7 @@
 import {bookingConfirmCopy}from"../../../lib/booking-confirm-copy";
 import { listOwnerKey } from "../../../lib/owner-key";
 import { formatServiceTime } from "../../../lib/duration";
-import { useState, useEffect, useMemo, useRef } from "react";
-import { extrasFromParam } from "../../../lib/visit-extras";
+import { useState, useEffect, useRef } from "react";
 import { Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
@@ -20,8 +19,6 @@ import { payOnline, payWithPaymentLink } from "../../../lib/razorpay-checkout";
 import { bookingPayOutcomeMessage } from "../../../lib/native-pay-core";
 import { space } from "@autodeck/ui/theme";
 import { Icon } from "@autodeck/ui/native";
-import { BookingReviewGuide } from "../../../ui/BookingReviewGuide";
-import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { MEMBERSHIP_WASH_LIVE, pickWash, todayInIndia, type WashDecision } from "../../../lib/membership-wash";
 import { getMyMemberships, getMembershipPlans } from "../../../lib/membership-service";
 import { memberSaving } from "../../../lib/member-save";
@@ -49,7 +46,6 @@ const PICKUP_KINDS: { value: "pickup" | "drop" | "both"; label: string }[] = [
 export default function BookingConfirmScreen() {
   const params = useLocalSearchParams<{
     serviceId: string;
-    extras?: string;
     vehicleId: string;
     vehicleCategory: VehicleCategory;
     scheduledDate: string;
@@ -78,6 +74,7 @@ export default function BookingConfirmScreen() {
   // Optional pickup/drop chosen here and sent with "Confirm booking" (round 8):
   // nothing is selected by default, and tapping the chosen chip again clears
   // the whole selection so nothing pickup-related is sent.
+  const [showTerms, setShowTerms] = useState(false);
   const [pickupKind, setPickupKind] = useState<"pickup" | "drop" | "both" | null>(null);
   const [pickupAddress, setPickupAddress] = useState("");
   const [pickupSlot, setPickupSlot] = useState("");
@@ -97,16 +94,14 @@ export default function BookingConfirmScreen() {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, [held]);
-  // More services in the same visit. The server prices them again; this is what the customer sees first.
-  const extraIds = useMemo(() => extrasFromParam(params.extras), [params.extras]);
-  const [extraRows, setExtraRows] = useState<Array<{ id: string; name: string; minutes: number; total: number; subtotal: number }>>([]);
-  const scopeKey=JSON.stringify([auth.status,auth.status==='ready'?auth.user.uid:null,auth.status==='ready'?auth.customerDocId:null,params.serviceId,params.vehicleId,params.vehicleCategory,params.extras,params.scheduledDate,params.scheduledTime]);
+  // One booking is one service: no extra-service selection (combos stay their own catalogue choices).
+  const scopeKey=JSON.stringify([auth.status,auth.status==='ready'?auth.user.uid:null,auth.status==='ready'?auth.customerDocId:null,params.serviceId,params.vehicleId,params.vehicleCategory,params.scheduledDate,params.scheduledTime]);
   const scopeRef=useRef(scopeKey);scopeRef.current=scopeKey;const actionGeneration=useRef(0),confirmBusy=useRef(false);
   const idempotencyKey=useRef(generateIdempotencyKey());
-  useEffect(()=>{actionGeneration.current++;confirmBusy.current=false;payBusy.current=false;idempotencyKey.current=generateIdempotencyKey();setBooking(false);setHeld(null);setFriendCode('');setUseWash(false);setWash(null);setPayAtStudio(false);setPickupKind(null);setPickupAddress('');setPickupSlot('');setPickupWhere(null);setPickupQuote(null);setPickupQuoteError(null);setLocating(false);return()=>{actionGeneration.current++}},[scopeKey]);
+  useEffect(()=>{actionGeneration.current++;confirmBusy.current=false;payBusy.current=false;idempotencyKey.current=generateIdempotencyKey();setBooking(false);setHeld(null);setFriendCode('');setUseWash(false);setWash(null);setPayAtStudio(false);setPickupKind(null);setPickupAddress('');setPickupSlot('');setPickupWhere(null);setPickupQuote(null);setPickupQuoteError(null);setLocating(false);setShowTerms(false);return()=>{actionGeneration.current++}},[scopeKey]);
 
   useEffect(() => {
-    let alive=true;setService(null);setVehicle(null);setBreakdown(null);setExtraRows([]);setBookError(null);setHeld(null);if (!params.serviceId || !params.vehicleId || !params.vehicleCategory) {setLoading(false);setLoadError(true);return;}
+    let alive=true;setService(null);setVehicle(null);setBreakdown(null);setBookError(null);setHeld(null);if (!params.serviceId || !params.vehicleId || !params.vehicleCategory) {setLoading(false);setLoadError(true);return;}
     setLoading(true);setLoadError(false);
     void (async () => {
       try {
@@ -119,20 +114,13 @@ export default function BookingConfirmScreen() {
         setService(serviceSnap.data() as Service);
         setVehicle(vehicleSnap.data() as Vehicle);
         setBreakdown(priceResult.breakdown);
-        const rows = await Promise.all(extraIds.map(async (id) => {
-          const [es, ep] = await Promise.all([getDoc(doc(db, COLLECTIONS.services(), id)), calculateServicePrice(id, params.vehicleCategory)]);
-          if (!es.exists()) throw new Error("Booking details unavailable");
-          const e = es.data() as Service;
-          return { id, name: e.name, minutes: e.estimatedDurationMinutes, total: ep.breakdown.total, subtotal: ep.breakdown.subtotal };
-        }));
-        if(alive)setExtraRows(rows);
       } catch {
         if(alive)setLoadError(true);
       } finally {
         if(alive)setLoading(false);
       }
     })();return()=>{alive=false};
-  }, [params.serviceId, params.vehicleId, params.vehicleCategory, extraIds.join(","), retryTick]);
+  }, [params.serviceId, params.vehicleId, params.vehicleCategory, retryTick]);
 
   // One included wash per booking, offered only when every rule passes (see lib/membership-wash.ts). Dark until the server can record it.
   useEffect(() => {
@@ -148,7 +136,7 @@ export default function BookingConfirmScreen() {
     void getMembershipPlans().then((p) => { if (alive) setPlans(p); }).catch(() => { if (alive) setPlans(null); });
     return () => { alive = false; };
   }, []);
-  const washOffer = MEMBERSHIP_WASH_LIVE && !giftCode && wash && wash.ok && extraIds.length === 0 ? wash : null;
+  const washOffer = MEMBERSHIP_WASH_LIVE && !giftCode && wash && wash.ok ? wash : null;
   const saving = !giftCode && wash && !wash.ok && wash.reason === "no_membership" ? memberSaving({ service, total: breakdown?.total, plans }) : null;
   const washOn = useWash && washOffer !== null;
 
@@ -157,7 +145,7 @@ export default function BookingConfirmScreen() {
   const payHow = service && breakdown ? bookingPayment(service, breakdown.total) : { online: false, studioChoice: false };
 
   const payNow = !giftCode && payHow.online && !payAtStudio && !washOn;
-  const advancePreview = ADVANCE_SPLIT_ENABLED && breakdown ? advancePreviewFromParts(breakdown, extraRows.map((r) => r.subtotal)) : null;
+  const advancePreview = ADVANCE_SPLIT_ENABLED && breakdown ? advancePreviewFromParts(breakdown, []) : null;
   const studioAdvanceAvailable = needsBookingAdvance({ enabled: ADVANCE_SPLIT_ENABLED, studioSelected: true,
     onlineAvailable: payHow.online, giftCovered: Boolean(giftCode), membershipCovered: washOn,
     priceOnRequest: service?.priceOnRequest === true, advancePaise: advancePreview?.advancePaise ?? null });
@@ -301,7 +289,6 @@ export default function BookingConfirmScreen() {
     try {
       const result = await createBooking({
         serviceId: params.serviceId,
-        ...(extraIds.length ? { extraServiceIds: extraIds } : {}),
         vehicleId: params.vehicleId,
         vehicleCategory: params.vehicleCategory,
         studioId: FIRST_STUDIO_ID,
@@ -362,30 +349,21 @@ export default function BookingConfirmScreen() {
     params.estimatedEndDate &&
     new Date(`${params.estimatedEndDate}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
 
-  const durationLabel = service ? formatServiceTime(service.estimatedDurationMinutes + extraRows.reduce((m, r) => m + r.minutes, 0)) : "-";
-  const visitTotal = breakdown ? breakdown.total + extraRows.reduce((t, r) => t + r.total, 0) : null;
+  const durationLabel = service ? formatServiceTime(service.estimatedDurationMinutes) : "-";
+  // Pickup/drop fee rides inside the shown total once the server quote exists; the fee
+  // itself is still paid at the studio (PICKUP_POLICY), never added to the online charge.
+  const pickupFeePaise = pickupQuoteInfo ? pickupQuoteInfo.feePaise : null;
+  const visitTotal = breakdown ? breakdown.total + (pickupFeePaise ?? 0) : null;
 
   return (
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Confirm</Kicker><T role="title">Review booking</T>{service?.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : null}</View>}>
-      {service ? (
-        <View style={{ borderRadius: 24, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
-          <ServicePhoto service={service} aspect={16 / 9} radius={0} />
-          <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0) 35%, rgba(5,5,6,0.85) 100%)" } as object) }} />
-          <View pointerEvents="none" style={{ position: "absolute", left: 18, right: 18, bottom: 14 }}>
-            <T role="heading" numberOfLines={2} style={{ color: "#FFFFFF" }}>{service.name.replace(/^Kovalent\s+/i, "")}</T>
-          </View>
-        </View>
-      ) : null}
       <Sheet>
-        {giftCode ? <SheetTotal label="Covered by your gift" value="Included" /> : washOn ? <SheetTotal label="Wash from your plan" value="Included" /> : service?.priceOnRequest !== true && breakdown ? <SheetTotal label="Total" value={rupees(visitTotal ?? breakdown.total)} /> : <SheetTotal label="Price" value="Quote" />}
-        <SheetDivider />
-        <SheetLine label="Service" value={service?.name ?? "-"} />
-        {extraRows.map((r) => <SheetLine key={r.id} label="Also" value={r.name} />)}
-        <SheetLine label="Car" value={vehicle ? `${vehicle.make} ${vehicle.model} · ${vehicle.registrationNumber}` : "-"} />
-        <SheetLine label="Date" value={displayDate ?? "-"} />
-        <SheetLine label="Time" value={params.scheduledTime ? `${params.scheduledTime}` : "-"} />
-        <SheetLine label="Duration" value={durationLabel} />
-        <SheetLine label="Expected ready" value={displayEndDate ? `${displayEndDate}${params.endTime ? `, ${params.endTime}` : ""}` : "-"} last />
+        <SheetLine small label="Service" value={service?.name ?? "-"} />
+        <SheetLine small label="Car" value={vehicle ? `${vehicle.make} ${vehicle.model} · ${vehicle.registrationNumber}` : "-"} />
+        <SheetLine small label="Date" value={displayDate ?? "-"} />
+        <SheetLine small label="Time" value={params.scheduledTime ? `${params.scheduledTime}` : "-"} />
+        <SheetLine small label="Duration" value={durationLabel} />
+        <SheetLine small label="Expected ready" value={displayEndDate ? `${displayEndDate}${params.endTime ? `, ${params.endTime}` : ""}` : "-"} last />
       </Sheet>
 
       {isMultiDay ? (
@@ -413,29 +391,7 @@ export default function BookingConfirmScreen() {
         </Pane>
       ) : null}
 
-      {!washOn && service?.priceOnRequest !== true && breakdown ? (
-        <Sheet>
-          <SheetLine small label="Base" value={rupees(breakdown.basePrice)} />
-          {breakdown.scopeAdjustment > 0 ? <SheetLine small label="Vehicle size adjustment" value={`+${rupees(breakdown.scopeAdjustment)}`} /> : null}
-          {breakdown.membershipDiscount !== null && breakdown.membershipDiscount > 0 ? <SheetLine small label="Membership discount" value={`-${rupees(breakdown.membershipDiscount)}`} /> : null}
-          {extraRows.map((r) => <SheetLine key={r.id} small label={r.name} value={rupees(r.total)} />)}
-          {breakdown.tax > 0 ? <SheetLine small label={breakdown.taxDescription} value={rupees(breakdown.tax)} /> : null}
-          {advanceDue && advancePreview ? (
-            <>
-              <SheetLine small label="Pay now (20% advance)" value={rupees(advancePreview.advancePaise)} />
-              <SheetLine small label={pickupKind ? "Pay at the studio (before pickup/drop fees)" : "Pay at the studio"} value={rupees(advancePreview.dueAtStudioPaise)} />
-            </>
-          ) : null}
-        </Sheet>
-      ) : null}
-
-      {saving !== null ? (
-        <Pane pad="gap">
-          <Row title={`Members save ${rupees(saving)} on this wash`} detail={<T role="caption" tone="secondary">Club plans include washes at a lower rate each.</T>} trailing={<Button kind="quiet" label="Join Club" onPress={() => router.push("/(tabs)/membership")} />} last />
-        </Pane>
-      ) : null}
-
-      <View style={{ gap: space.line }}>
+            <View style={{ gap: space.line }}>
         <Kicker>Pickup and drop (optional)</Kicker>
         <Pane pad="gap" style={{ gap: space.gap }}>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
@@ -475,6 +431,34 @@ export default function BookingConfirmScreen() {
           )}
         </Pane>
       </View>
+      {giftCode || washOn ? (
+        <Sheet>
+          {giftCode ? <SheetTotal label="Covered by your gift" value="Included" /> : <SheetTotal label="Wash from your plan" value="Included" />}
+        </Sheet>
+      ) : service?.priceOnRequest !== true && breakdown ? (
+        <Sheet>
+          <SheetTotal label="Total" value={rupees(visitTotal ?? breakdown.total)} />
+          <SheetDivider />
+          <SheetLine small label="Base" value={rupees(breakdown.basePrice)} />
+          {breakdown.scopeAdjustment > 0 ? <SheetLine small label="Vehicle size adjustment" value={`+${rupees(breakdown.scopeAdjustment)}`} /> : null}
+          {breakdown.membershipDiscount !== null && breakdown.membershipDiscount > 0 ? <SheetLine small label="Membership discount" value={`-${rupees(breakdown.membershipDiscount)}`} /> : null}
+          {breakdown.tax > 0 ? <SheetLine small label={breakdown.taxDescription} value={rupees(breakdown.tax)} /> : null}
+          {pickupKind ? <SheetLine small label="Pickup/drop" value={pickupFeePaise === null ? "After location check" : pickupFeePaise === 0 ? "Free" : `${rupees(pickupFeePaise)} · paid at the studio`} /> : null}
+          {payNow && pickupFeePaise ? <SheetLine small label="Pay online now" value={rupees(breakdown.total)} /> : null}
+          {advanceDue && advancePreview ? (
+            <>
+              <SheetLine small label="Pay now (20% advance)" value={rupees(advancePreview.advancePaise)} />
+              <SheetLine small label={pickupKind ? "Pay at the studio (before pickup/drop fees)" : "Pay at the studio"} value={rupees(advancePreview.dueAtStudioPaise)} />
+            </>
+          ) : null}
+        </Sheet>
+      ) : null}
+
+      {saving !== null ? (
+        <Pane pad="gap">
+          <Row title={`Members save ${rupees(saving)} on this wash`} detail={<T role="caption" tone="secondary">Club plans include washes at a lower rate each.</T>} trailing={<Button kind="quiet" label="Join Club" onPress={() => router.navigate("/(tabs)/membership")} />} last />
+        </Pane>
+      ) : null}
 
       {service?.priceOnRequest === true ? <Pane pad="gap"><Row title="Price" detail={<T role="caption" tone="secondary">Quote on request. The studio sets the price for your car and you approve it before work starts.</T>} last /></Pane> : null}
 
@@ -508,7 +492,18 @@ export default function BookingConfirmScreen() {
         </Pane>
       </View>}
 
-      <BookingReviewGuide payment={service?.priceOnRequest===true?'quote':giftCode?'gift':washOn?'membership':payNow?'online':advanceDue?'advance':'studio'} onHelp={()=>router.push('/(tabs)/help')}/>
+      <Pane pad="gap">
+        <Pressable accessibilityRole="button" accessibilityState={{ expanded: showTerms }} onPress={() => setShowTerms(!showTerms)}>
+          <Row title="Changes, cancellation and visit terms" detail={showTerms ? undefined : <T role="caption" tone="secondary">Change and cancellation options, pickup terms and help.</T>} trailing={<T role="bodyStrong" tone="accent">{showTerms ? "Hide" : "View"}</T>} last />
+        </Pressable>
+        {showTerms ? (
+          <View style={{ gap: space.line }}>
+            <T role="caption" tone="secondary">Need to change your visit? Open the booking for available change and cancellation options. A request is not a confirmed change. Any cancellation fee is shown before you cancel.</T>
+            <T role="caption" tone="secondary">Pickup and drop requests are separate from the booking. The studio agrees the exact time with you.</T>
+            <Pressable accessibilityRole="button" onPress={() => router.navigate("/(tabs)/help")}><T role="caption" tone="secondary">Questions before booking? <T role="caption" tone="accent">Open Help & contact.</T></T></Pressable>
+          </View>
+        ) : null}
+      </Pane>
 
       {bookError ? <Notice title={held ? "Payment pending" : "Could not confirm the request"} body={bookError} /> : null}
 

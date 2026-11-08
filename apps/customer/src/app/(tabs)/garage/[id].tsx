@@ -675,7 +675,7 @@ export default function VehicleDetailScreen() {
         return <CareTimeline title="Service due" count={countLabel(upcoming.length, "item", "items")} items={upcoming} empty="Nothing due yet. The care plan starts once the studio finishes a service on this car." />;
       })()}
 
-      <Button label="Book a service" onPress={() => router.push("/(tabs)/catalogue")} />
+      <Button label="Book a service" onPress={() => router.navigate("/(tabs)/catalogue")} />
       {!editing ? (
         <View style={{ gap: space.breath }}>
           <Button label="Edit vehicle" kind="quiet" onPress={() => setEditing(true)} />

@@ -69,3 +69,20 @@ describe("stale Book entries", () => {
     expect(collapseStaleBookEntries(undefined)).toBeNull();
   });
 });
+
+describe("tab roots are navigated, never pushed", () => {
+  it("no router.push to a single-segment tab root anywhere in the app", () => {
+    const { execSync } = require("node:child_process");
+    const out = execSync(
+      `grep -rEn 'router\\.push\\(["'"'"']/\\(tabs\\)/[a-z-]+["'"'"']\\)' src/app --include='*.tsx' --exclude='*test*' || true`,
+      { cwd: join(__dirname, "..") }
+    ).toString();
+    // A push stacks the tab over whatever its nested navigator preserved, so Back
+    // lands on a stale page (Home > Buy a car > Back wrongly opened Sell a car).
+    expect(out.trim()).toBe("");
+  });
+  it("visited tabs stay mounted so Back restores scroll position", () => {
+    const s = readFileSync(join(__dirname, "../app/(tabs)/_layout.tsx"), "utf8");
+    expect(s).toContain("detachInactiveScreens: false");
+  });
+});

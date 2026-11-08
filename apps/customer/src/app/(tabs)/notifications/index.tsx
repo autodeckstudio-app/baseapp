@@ -91,11 +91,11 @@ export default function NotificationsScreen() {
       return;
     }
     if (n.entityType === "Membership") {
-      router.push("/(tabs)/membership");
+      router.navigate("/(tabs)/membership");
       return;
     }
     if (n.entityType === "Gift") {
-      router.push("/(tabs)/gifts");
+      router.navigate("/(tabs)/gifts");
       return;
     }
     if (n.entityType === "Approval" && n.entityId) {

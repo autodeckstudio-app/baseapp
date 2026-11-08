@@ -215,7 +215,7 @@ export default function GarageScreen() {
       )}
       {list.length > 0 ? (
         <View style={{ gap: space.breath, marginTop: metrics.sectionGap }}>
-          <Button label="Book a service" onPress={() => router.push("/(tabs)/catalogue")} />
+          <Button label="Book a service" onPress={() => router.navigate("/(tabs)/catalogue")} />
           <Button label="Service history" kind="quiet" onPress={() => router.push(one ? { pathname: "/(tabs)/garage/history", params: { vehicleId: one.id } } : "/(tabs)/garage/history")} />
         </View>
       ) : null}
@@ -255,7 +255,7 @@ export default function GarageScreen() {
       ) : null}
       <GarageCarSheet car={sheet} onClose={() => setSheet(null)} onOpenRoom={openRoom} jobs={jobs} svcNames={Object.fromEntries(Object.values(svcMap).map((s) => [s.id, s.name]))} papers={sheetPapers} />
       {photoCleanupNote?<Notice title="Photo removal pending" body={photoCleanupNote} action={<Button label="Got it" kind="quiet" onPress={()=>setPhotoCleanupNote(null)}/>}/>:null}
-      {archiveActionError?<Notice title="Archived cars" body={archiveActionError} action={<View style={{gap:space.line}}>{archiveActionError.includes("booking")?<Button label="Open bookings to cancel" kind="quiet" onPress={()=>router.push("/(tabs)/bookings")}/>:null}<Button label="Retry" onPress={()=>{setArchiveActionError(null);setRetryTick(n=>n+1);}}/></View>}/>:null}
+      {archiveActionError?<Notice title="Archived cars" body={archiveActionError} action={<View style={{gap:space.line}}>{archiveActionError.includes("booking")?<Button label="Open bookings to cancel" kind="quiet" onPress={()=>router.navigate("/(tabs)/bookings")}/>:null}<Button label="Retry" onPress={()=>{setArchiveActionError(null);setRetryTick(n=>n+1);}}/></View>}/>:null}
       </View>
     </Screen>
   );

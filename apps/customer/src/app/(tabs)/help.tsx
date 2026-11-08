@@ -52,7 +52,7 @@ export default function HelpScreen() {
           {s.mapsUrl ? <Row title="Directions" detail="Open the studio in maps" onPress={() => void Linking.openURL(s.mapsUrl)} last /> : null}
         </Pane>
       ) : null}
-      <Pane pad="gap"><Kicker>Your visit</Kicker><Row title="Bookings and changes" detail="Open your booking for its current status, change options and cancellation review." onPress={()=>router.push('/(tabs)/bookings')}/><Row title="Quotes and approvals" detail="Review proposed work and prices before approving." onPress={()=>router.push('/(tabs)/quotes')} last/></Pane>
+      <Pane pad="gap"><Kicker>Your visit</Kicker><Row title="Bookings and changes" detail="Open your booking for its current status, change options and cancellation review." onPress={()=>router.navigate('/(tabs)/bookings')}/><Row title="Quotes and approvals" detail="Review proposed work and prices before approving." onPress={()=>router.navigate('/(tabs)/quotes')} last/></Pane>
       <Kicker>{t("Questions")}</Kicker>
       <Field label="Search questions" value={query} onChangeText={(v: string) => { setQuery(v); setOpen(null); }} placeholder="Type a few words" />
       {query.trim() ? <T role="caption" tone="secondary">Please do not type phone numbers or car plates here.</T> : null}

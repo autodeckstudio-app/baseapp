@@ -91,7 +91,7 @@ export default function YouScreen() {
       {actionMessage ? <Notice title="Account update" body={actionMessage} /> : null}
       <View style={{ ...glassPane(light), paddingHorizontal: 16 }}>
         <LicenceSection customerId={auth.status==="ready"?auth.customerDocId:null} scope={scopeKey} upload={uploadLicensePhoto} lock={saveLock} epoch={generation} />
-        <ListRow last icon="chat" title="Help & contact" detail="Call or WhatsApp the studio" onPress={() => router.push("/(tabs)/help")} />
+        <ListRow last icon="chat" title="Help & contact" detail="Call or WhatsApp the studio" onPress={() => router.navigate("/(tabs)/help")} />
       </View>
       <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.breath }}>
         <Kicker>Appearance</Kicker>

@@ -11,25 +11,20 @@ vi.mock('@autodeck/core',async(importOriginal)=>({...await importOriginal<any>()
 vi.mock('../../../ui/kit',()=>({Button:'Button',Chip:'Chip',Plate:'Plate',Skeleton:'Skeleton',Field:'Field',Kicker:'Kicker',Loading:'Loading',Notice:({title,body,action}:any)=>React.createElement('notice',{title,body},action),Pane:'Pane',Row:({title,detail,trailing}:any)=>React.createElement('row',null,title,detail,trailing),Screen:({header,children}:any)=>React.createElement('screen',null,header,children),T:'T',rupees:String}));vi.mock('../../../ui/Sheet',()=>({Sheet:'Sheet',SheetTotal:'SheetTotal',SheetLine:'SheetLine',SheetDivider:'SheetDivider'}));vi.mock('../../../ui/inputs',()=>({SelectField:'SelectField'}));
 import Page from'./confirm';import Entry from'./[serviceId]';beforeEach(()=>{h.params={serviceId:'menu-coat-kovalent-graphene'};h.create.mockReset();h.open.mockReset();h.pay.mockReset();h.replace.mockReset();h.job.mockReset();h.job.mockResolvedValue('job');h.pay.mockResolvedValue({paymentId:'p',paymentUrl:'https://example.invalid/pay'});h.open.mockResolvedValue('pending')});afterEach(()=>vi.useRealTimers());
 const button=(r:any,label:string)=>r.root.findAllByType('Button').find((x:any)=>x.props.label===label);const text=(r:any)=>JSON.stringify(r.toJSON());
-it('a coating add-on is offered on a ceramic booking, attaches, and reaches the server request; a rival coat is not offered',async()=>{
-  h.create.mockResolvedValue({id:'coat-with-addon',status:'CONFIRMED'});
+it('no extra-service selector on a ceramic booking: only the chosen service reaches the server',async()=>{
+  h.create.mockResolvedValue({id:'coat-no-addon',status:'CONFIRMED'});
   h.navigate.mockImplementation(v=>{h.params=v.params;r.update(<Page/>)});
   let r:any;await act(async()=>{r=create(<Entry/>)});
-  // Offered: the add-on. Not offered: the rival ceramic coat (exclusivity) and the main service itself.
-  expect(text(r)).toContain('Add to this visit');
-  expect(text(r)).toContain('Sample fabric coating');
+  // Nothing is offered: not the same-bay add-on, not the rival coat.
+  expect(text(r)).not.toContain('Add to this visit');
+  expect(text(r)).not.toContain('Sample fabric coating');
   expect(text(r)).not.toContain('Sample rival coat');
-  // Tap the add-on: it attaches (selected state, tick prefix).
-  const chip=r.root.findAll((x:any)=>typeof x.props.onPress==='function'&&x.props.accessibilityRole==='button'&&x.findAllByType('T').some((t:any)=>JSON.stringify(t.props.children).includes('Sample fabric coating')))[0]!;
-  await act(async()=>chip.props.onPress());
-  expect(text(r)).toContain('\u2713');
-  expect(text(r)).toContain('One visit, one slot');
-  // Through confirm into the server request.
   const slot=r.root.findAll((x:any)=>typeof x.props.onPress==='function'&&x.props.accessibilityLabel==='Time 10:00')[0]!;
   await act(async()=>slot.props.onPress());
   await act(async()=>button(r,'Continue with 10:00').props.onPress());
-  expect(h.navigate).toHaveBeenCalledWith(expect.objectContaining({params:expect.objectContaining({extras:'menu-coat-fabric'})}));
+  expect(h.navigate).toHaveBeenCalledWith(expect.objectContaining({params:expect.not.objectContaining({extras:expect.anything()})}));
   await act(async()=>button(r,'Confirm booking').props.onPress());
-  expect(h.create).toHaveBeenCalledWith(expect.objectContaining({serviceId:'menu-coat-kovalent-graphene',extraServiceIds:['menu-coat-fabric'],vehicleId:'car',payMode:'studio'}));
+  expect(h.create).toHaveBeenCalledWith(expect.objectContaining({serviceId:'menu-coat-kovalent-graphene',vehicleId:'car',payMode:'studio'}));
+  expect('extraServiceIds' in h.create.mock.calls[0]![0]).toBe(false);
   await act(async()=>r.unmount())
 });

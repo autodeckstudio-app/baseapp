@@ -14,8 +14,8 @@ describe("combos are one fixed bundle (round7 p15)", () => {
   it("a combo gets its contents as plain text; the booking page forces no extras for a combo", () => {
     expect(comboFor(catalogue, "menu-wash-exterior")?.parts.join(" ")).toContain("Foam wash");
     const src = readFileSync("src/app/(tabs)/book/[serviceId].tsx", "utf8");
-    expect(src).toContain("const extraIds = combo ? [] : extraIdsState;");
-    expect(src).toContain("{!combo && service.priceOnRequest !== true");
-    expect(src).toContain("...(extraIds.length ? { extras: extrasToParam(extraIds) } : {})");
+    expect(src).toContain("combo = comboFor(catalogue, serviceId)");
+    expect(src).not.toContain("Add to this visit");
+    expect(src).not.toContain("extrasToParam");
   });
 });

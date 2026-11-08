@@ -209,7 +209,7 @@ export default function HomeScreen() {
       case "addVehicle":
         return router.push("/(tabs)/garage/add");
       case "book":
-        return router.push("/(tabs)/catalogue");
+        return router.navigate("/(tabs)/catalogue");
       case "viewBooking":
       case "followVisit":
         return router.push(`/(tabs)/bookings/${a.targetId}`);
@@ -251,17 +251,17 @@ export default function HomeScreen() {
           ...(STUDIO_INFO.whatsapp ? [{ key: "wa", label: "WhatsApp", icon: "whatsapp" as const, onPress: () => void Linking.openURL(`https://wa.me/${STUDIO_INFO.whatsapp}`) }] : []),
           ...(STUDIO_INFO.mapsUrl ? [{ key: "map", label: "Directions", icon: "directions" as const, onPress: () => void Linking.openURL(STUDIO_INFO.mapsUrl) }] : []),
         ]}
-        onAvatar={() => router.push("/(tabs)/profile")}
+        onAvatar={() => router.navigate("/(tabs)/profile")}
         displayName={(m.customer.firstName ?? auth.user.displayName ?? "AutoDeck").trim()}
         carsList={homeCars(carListings)}
         onOpenCar={(id) => router.push(`/(tabs)/cars/${id}` as never)}
-        onBuyCar={() => router.push("/(tabs)/cars")}
-        onSellCar={() => router.push("/(tabs)/cars/sell")}
+        onBuyCar={() => router.navigate("/(tabs)/cars")}
+        onSellCar={() => router.navigate("/(tabs)/cars/sell")}
         drawer={buildDrawerItems((path) => router.push(path as never), myCode)}
-        onBook={() => router.push("/(tabs)/catalogue")}
-        onStudio={() => router.push("/(tabs)/studio")}
-        onMembership={() => router.push("/(tabs)/membership")}
-        onVisits={() => router.push("/(tabs)/bookings")}
+        onBook={() => router.navigate("/(tabs)/catalogue")}
+        onStudio={() => router.navigate("/(tabs)/studio")}
+        onMembership={() => router.navigate("/(tabs)/membership")}
+        onVisits={() => router.navigate("/(tabs)/bookings")}
         onShare={() => void Share.share({ message: referralShareMessage(myCode) }).catch(() => undefined)}
         unread={unread}
         cars={(() => { const last = lastFinishedJob(carJobs); const name = last ? last.serviceName ?? catalogue.find((x) => x.id === last.serviceId)?.name ?? null : null; const story = last && name ? `Last visit: ${name}${last.sealedAt ? ` \u00b7 ${formatDateShort(last.sealedAt.slice(0, 10))}` : ""}` : null; return vehicles.map((v) => ({ id: v.id, title: `${v.make} ${v.model}`, plate: v.registrationNumber, vehicle: { photoUrl: v.photoUrl, category: v.category, updatedAt: v.updatedAt }, category: v.category ?? null, hasPhoto: !!v.photoUrl, story: v.id === m.activeVehicle?.id ? story : null })); })()}
@@ -271,9 +271,9 @@ export default function HomeScreen() {
         rebook={(() => { const b = lastCompletedService(past); const sv = b ? catalogue.find((x) => x.id === b.serviceId) : undefined; return b && sv && !sv.priceOnRequest ? { serviceName: sv.name, onPress: () => router.push(`/(tabs)/book/${sv.id}`) } : null; })()}
         stories={groups.length > 0 ? <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, seenKeyOf(g)])); }} /> : null}
         banner={<>{home.error ? <Notice title="Some details are unavailable" body={home.error} action={<Button kind="quiet" label="Retry" onPress={home.refresh} />} /> : null}{rateB ? <RateCard key={rateB.id} bookingId={rateB.id} serviceName={catalogue.find((x) => x.id === rateB.serviceId)?.name ?? "visit"} /> : null}</>}
-        onSearch={() => router.push("/(tabs)/catalogue")}
-        onBell={() => router.push("/(tabs)/notifications")}
-        onAllServices={() => router.push("/(tabs)/catalogue")}
+        onSearch={() => router.navigate("/(tabs)/catalogue")}
+        onBell={() => router.navigate("/(tabs)/notifications")}
+        onAllServices={() => router.navigate("/(tabs)/catalogue")}
         onCategory={() => undefined}
         onService={(sv) => router.push(`/(tabs)/catalogue/${sv.id}`)}
         onCar={(c) => router.push(`/(tabs)/garage/${c.id}`)}
