@@ -85,12 +85,13 @@ describe("services type level", () => {
 it('owner-confirmed film brands appear as brand-level enquiries only; unconfirmed brands and named ranges stay absent',()=>{
   const eligible=all.filter(customerOfferingVisible);
   const ppf=buildTree(group('ppf'),eligible);
-  // Owner confirmation 8 Nov (iMessage): the seven confirmed film BRANDS each
-  // carry one brand-level enquiry under Film by brand; named ranges stay held.
+  // The confirmed film BRANDS each carry one brand-level enquiry under Film by
+  // brand; named ranges stay held. Rodim added per owner iMessage 8 Nov 2026
+  // (phonemsg-01M6X2TC77V8A9Q9JA99ZQ9SH9: "We also forgot to add Rodim in ppf").
   const film=ppf.find(n=>n.kind==='branch'&&n.key==='brand-film') as Extract<TreeNode,{kind:'branch'}>|undefined;
   expect(film).toBeTruthy();
   const brandBranches=film!.children;
-  expect(brandBranches.map(b=>b.kind==='branch'?b.label:'')).toEqual(['LLumar','Garware','XPEL','Avery Dennison','AVVYX','NAR','GSWF']);
+  expect(brandBranches.map(b=>b.kind==='branch'?b.label:'')).toEqual(['LLumar','Garware','XPEL','Avery Dennison','AVVYX','NAR','GSWF','Rodim']);
   for(const b of brandBranches){expect(b.kind).toBe('branch');if(b.kind==='branch')expect(b.children.map(c=>c.kind==='enquiry'?c.key:'')).toHaveLength(1);}
   // pps-spray is the confirmed, brand-less PPS service concept: enquiry-only, no stock/price.
   expect(ppf.filter(n=>n.kind==='enquiry').map(n=>n.kind==='enquiry'?n.key:'')).toEqual(['pps-spray']);

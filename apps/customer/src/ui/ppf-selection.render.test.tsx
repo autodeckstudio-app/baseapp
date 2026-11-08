@@ -6,9 +6,10 @@ it('confirmed film brands offer brand-level enquiries; injected old package rows
   // The XPEL package rows stay unconfirmed: no bookable product, no price, no service callback.
   expect(JSON.stringify(r.toJSON())).not.toContain('XPEL Full body');
   expect(service).not.toHaveBeenCalled();
-  // Brand rows for the seven owner-confirmed brands (8 Nov) plus the brand-less PPS concept.
+  // Brand rows for the owner-confirmed brands (Rodim added per owner iMessage
+  // 8 Nov 2026, phonemsg-01M6X2TC77V8A9Q9JA99ZQ9SH9) plus the brand-less PPS concept.
   const titles=()=>r.root.findAllByType('Row').map((x:any)=>x.props.title);
-  expect(titles()).toEqual(['LLumar','Garware','XPEL','Avery Dennison','AVVYX','NAR','GSWF','PPS - spray-on paint protection']);
+  expect(titles()).toEqual(['LLumar','Garware','XPEL','Avery Dennison','AVVYX','NAR','GSWF','Rodim','PPS - spray-on paint protection']);
   // Choosing a brand shows its one brand-level film entry plus the studio-confirm option.
   await act(async()=>r.root.findAllByType('Row').find((x:any)=>x.props.title==='Garware').props.onPress());
   expect(titles()).toEqual(['Garware PPF','Let the studio confirm the film']);

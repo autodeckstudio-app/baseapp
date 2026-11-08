@@ -150,7 +150,7 @@ it("connected home -> ceramic -> brand -> exact service, PPF/PPS honest empty st
   });
   const fullText = JSON.stringify(r.toJSON());
   expect(fullText).toContain("Choose a brand to see its current offerings.");
-  for (const b of ["LLumar", "Garware", "XPEL", "Avery Dennison", "AVVYX", "NAR", "GSWF"])
+  for (const b of ["LLumar", "Garware", "XPEL", "Avery Dennison", "AVVYX", "NAR", "GSWF", "Rodim"])
     expect(fullText).toContain(b);
   expect(fullText).not.toContain("Ultraguard");
   expect(fullText).not.toContain("SunTek");

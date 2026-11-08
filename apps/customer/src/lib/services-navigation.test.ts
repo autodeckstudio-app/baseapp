@@ -60,8 +60,9 @@ it("paint has all three service TYPES even with no confirmed film/spray stock, m
   expect(familyChoices("paint", [], [])).toEqual(["Ceramic", "PPF", "PPS"]);
   expect(familyChoices("modifications", [], [])).toContain("Colour PPF");
   // Film-group references: the confirmed brand-less PPS concept plus one
-  // brand-level entry per owner-confirmed film brand (8 Nov); named ranges stay held.
-  expect(referenceChoices([]).filter((r) => r.group === "ppf").map((r) => r.key)).toEqual(["pps-spray", "llumar-ppf", "garware-ppf", "xpel-ppf", "avery-dennison-ppf", "avvyx-ppf", "nar-ppf", "gswf-ppf"]);
+  // brand-level entry per owner-confirmed film brand; Rodim added per owner
+  // iMessage 8 Nov 2026 (phonemsg-01M6X2TC77V8A9Q9JA99ZQ9SH9); named ranges stay held.
+  expect(referenceChoices([]).filter((r) => r.group === "ppf").map((r) => r.key)).toEqual(["pps-spray", "llumar-ppf", "garware-ppf", "xpel-ppf", "avery-dennison-ppf", "avvyx-ppf", "nar-ppf", "gswf-ppf", "rodim-ppf"]);
   // Owner taxonomy (5 Nov): a colour/black film record places under
   // Modifications & Wraps > Colour PPF; a clear film record stays under Paint
   // Protection > PPF. Placement is structural, independent of visibility.
