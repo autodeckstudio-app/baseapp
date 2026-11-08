@@ -158,8 +158,8 @@ export default function BookingDetailScreen() {
 
   useEffect(() => {
     // Dev preview only (__DEV__ is false in production builds): show sample data, no network.
-    if (__DEV__ && devSample && mock === "1") { setBooking(devSample.DEV_SAMPLE_BOOKING); setSvc(devSample.DEV_SAMPLE_SERVICE); setSvcLoaded(true); setLoading(false); return; }
-    if (__DEV__ && devSample && mock === "2") { setBooking(devSample.DEV_SAMPLE_PREMIUM_BOOKING); setSvc(devSample.DEV_SAMPLE_PREMIUM_SERVICE); setSvcLoaded(true); setLoading(false); return; }
+    if (__DEV__ && devSample && mock === "1") { setBooking(devSample.DEV_SAMPLE_BOOKING); setSvc(devSample.DEV_SAMPLE_SERVICE); setSvcLoaded(true); setLoading(false); setPayment(null); setPaymentRead('ready'); return; }
+    if (__DEV__ && devSample && mock === "2") { setBooking(devSample.DEV_SAMPLE_PREMIUM_BOOKING); setSvc(devSample.DEV_SAMPLE_PREMIUM_SERVICE); setSvcLoaded(true); setLoading(false); setPayment(null); setPaymentRead('ready'); return; }
     if (!id) {setLoading(false);return;}
     let alive=true;setLoading(true);setFeedError(null);setJob(null);setPayment(null);setBooking(null);setActionError(null);
     setWalkIn(false);
@@ -187,7 +187,7 @@ export default function BookingDetailScreen() {
 
   useEffect(() => {
     if (!id || !booking || walkIn) return;
-    let alive=true;const stop=listenToJobForBooking(id, booking.tenantId, booking.customerId,j=>{if(alive)setJob(j)},()=>{if(alive){setJob(null);setPayment(null);setPaymentRead('error')}});return()=>{alive=false;stop()};
+    let alive=true;const stop=listenToJobForBooking(id, booking.tenantId, booking.customerId,j=>{if(alive)setJob(j)},()=>{if(alive){setJob(null);if(!isMock){setPayment(null);setPaymentRead('error')}}});return()=>{alive=false;stop()};
   }, [id, booking?.tenantId, booking?.customerId, walkIn]);
 
   useEffect(() => {
@@ -204,7 +204,7 @@ export default function BookingDetailScreen() {
   useEffect(()=>{let alive=true;setVerifiedOwner('');if(ownerKey&&job)void verifyMyCustomerDocId(job.customerId).then(ok=>{if(alive&&ok)setVerifiedOwner(ownerKey)}).catch(()=>{});return()=>{alive=false};},[ownerKey]);
   const ownerVerified=Boolean(ownerKey)&&verifiedOwner===ownerKey;
   useEffect(() => {
-    const generation=++paymentGeneration.current;resumeLock.current=false;setPayingNow(false);setPayment(null);setPaymentRead('loading');setPaymentScope('');
+    if(isMock)return;const generation=++paymentGeneration.current;resumeLock.current=false;setPayingNow(false);setPayment(null);setPaymentRead('loading');setPaymentScope('');
     if(!job||authB.status!=="ready"||job.tenantId!==authB.claims.tenantId||!ownerVerified||resolvedRoute!==id)return;
     const scope=[job.id,job.tenantId,job.customerId].join('|');
     const stop=listenToPaymentForJob(job.id,job.tenantId,job.customerId,p=>{if(paymentGeneration.current!==generation)return;if(p&&(p.jobId!==job.id||p.tenantId!==job.tenantId||p.customerId!==job.customerId)){setPayment(null);setPaymentRead('error');setPaymentScope(scope);return}setPayment(p);setPaymentRead('ready');setPaymentScope(scope)},()=>{if(paymentGeneration.current!==generation)return;setPayment(null);setPaymentRead('error');setPaymentScope(scope)});

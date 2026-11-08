@@ -46,16 +46,18 @@ export function FloorCar({ car: v, width, height, focused, onOpen, chip }: { car
   // overlay collisions, name and plate always fully readable. The full hero
   // height with the photo gradient is earned by a real photo.
   if (!v.photoUrl) {
+    // Compact identity row, same grammar as the Home car card: a small glyph tile
+    // beside name, plate and segment. No full-width grey slab pretending to be a photo.
     return (
       <SceneCard label={`Open ${name}`} onPress={() => onOpen(v)}>
         <View style={{ width, opacity: focused ? 1 : 0.72, transform: [{ scale: focused ? 1 : 0.94 }] }}>
-          <View style={{ borderRadius: 24, borderWidth:1, borderColor:"rgba(180,180,190,0.20)", overflow: "hidden", backgroundColor: "rgba(127,127,135,0.14)" }}>
-            <CarThumb car={v} height={88} radius={0} />
-            <View style={{ backgroundColor: "rgba(20,20,26,0.92)", paddingHorizontal: 14, paddingVertical: 12, gap: 6 }}>
+          <View style={{ borderRadius: 24, borderWidth:1, borderColor:"rgba(180,180,190,0.20)", backgroundColor: "rgba(20,20,26,0.92)", paddingHorizontal: 14, paddingVertical: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <CarThumb car={v} height={56} width={56} radius={16} />
+            <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
               <Text numberOfLines={2} style={{ color: "#FFFFFF", fontSize: 16, letterSpacing:-0.2, fontWeight: "700" }}>{name}</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}><Plate value={v.registrationNumber} />{segmentLabel(v.category) ? <Text style={{ color: "#E4E2DF", fontSize: 12 }}>{segmentLabel(v.category)}</Text> : null}</View>
             </View>
-            {chip ? <View style={{ position: "absolute", right: 12, top: 12 }}>{chip}</View> : null}
+            {chip ? <View>{chip}</View> : null}
           </View>
         </View>
       </SceneCard>
