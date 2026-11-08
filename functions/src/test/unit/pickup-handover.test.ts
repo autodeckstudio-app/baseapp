@@ -1,12 +1,12 @@
 import {beforeEach,it,expect,vi} from 'vitest';
-const h=vi.hoisted(()=>({rows:new Map<string,any>(),role:'studio',tenant:'t',studio:'s',writes:[]as any[],sign:[]as any[],meta:{size:'100',contentType:'image/jpeg',metadata:{studioid:'s'}}as any}));
+const h=vi.hoisted(()=>({rows:new Map<string,any>(),role:'studio',tenant:'t',studio:'s',reads:0,writes:[]as any[],sign:[]as any[],meta:{size:'100',contentType:'image/jpeg',metadata:{studioid:'s'}}as any}));
 vi.mock('../../middleware/rateLimit.js',()=>({enforceRateLimit:async()=>{},subjectFrom:()=>''}));
-vi.mock('firebase-admin/firestore',()=>({getFirestore:()=>{const snap=(key:string)=>({exists:h.rows.has(key),data:()=>h.rows.get(key)});return {collection:(c:string)=>({doc:(id:string)=>({key:c+'/'+id,get:async()=>snap(c+'/'+id)})}),runTransaction:async(fn:any)=>{let wrote=false;const writes:any[]=[];const result=await fn({get:async(r:any)=>{if(wrote)throw Error('read after write');return snap(r.key)},create:(r:any,v:any)=>{if(h.rows.has(r.key))throw Error('duplicate');wrote=true;writes.push([r.key,v])}});for(const[k,v]of writes){h.rows.set(k,v);h.writes.push([k,v]);}return result}}}}));
+vi.mock('firebase-admin/firestore',()=>({getFirestore:()=>{h.reads++;const snap=(key:string)=>({exists:h.rows.has(key),data:()=>h.rows.get(key)});return {collection:(c:string)=>({doc:(id:string)=>({key:c+'/'+id,get:async()=>snap(c+'/'+id)})}),runTransaction:async(fn:any)=>{let wrote=false;const writes:any[]=[];const result=await fn({get:async(r:any)=>{if(wrote)throw Error('read after write');return snap(r.key)},create:(r:any,v:any)=>{if(h.rows.has(r.key))throw Error('duplicate');wrote=true;writes.push([r.key,v])}});for(const[k,v]of writes){h.rows.set(k,v);h.writes.push([k,v]);}return result}}}}));
 vi.mock('firebase-admin/storage',()=>({getStorage:()=>({bucket:()=>({file:()=>({getMetadata:async()=>[h.meta],getSignedUrl:async(o:any)=>{h.sign.push(o);return['https://synthetic.invalid/evidence']}})})})}));
 import {recordPickupHandover,issuePickupHandoverPhotoUploadUrl,getPickupHandoverPhotos,getPickupHandover}from'../../functions/booking/pickupHandover.js';
 const req=(data:any)=>({data,auth:{uid:'staff',token:{role:h.role,tenantId:h.tenant,studioId:h.studio}}}as any);
 const evidence=()=>({requestId:'r',leg:'pickup',driverName:'Driver A',odometerKm:9000,photoPaths:['t/pickupProof/r/pickup/abc.jpg']});
-beforeEach(()=>{h.rows.clear();h.rows.set('bookings/b',{tenantId:'t',studioId:'s',status:'CONFIRMED'});h.rows.set('pickupRequests/r',{bookingId:'b',tenantId:'t',studioId:'s',status:'CONFIRMED',kind:'both'});h.role='studio';h.tenant='t';h.studio='s';h.writes=[];h.sign=[];h.meta={size:'100',contentType:'image/jpeg',metadata:{studioid:'s'}}});
+beforeEach(()=>{h.rows.clear();h.rows.set('bookings/b',{tenantId:'t',studioId:'s',status:'CONFIRMED'});h.rows.set('pickupRequests/r',{bookingId:'b',tenantId:'t',studioId:'s',status:'CONFIRMED',kind:'both'});h.reads=0;h.role='studio';h.tenant='t';h.studio='s';h.writes=[];h.sign=[];h.meta={size:'100',contentType:'image/jpeg',metadata:{studioid:'s'}}});
 it('sealed separate staff evidence, exact retry unchanged, never customer signature/progress/money',async()=>{await recordPickupHandover.run(req(evidence()));expect(h.writes).toHaveLength(1);expect(h.rows.get('pickupHandovers/r_pickup')).toMatchObject({driverName:'Driver A',attestation:'staff_recorded_not_customer_signature'});expect(h.rows.get('pickupRequests/r')).not.toHaveProperty('pickupHandover');await recordPickupHandover.run(req(evidence()));expect(h.writes).toHaveLength(1);await expect(recordPickupHandover.run(req({...evidence(),driverName:'Replacement'}))).rejects.toThrow('sealed');});
 it.each(['customer','accountant'])('rejects %s before reads/signatures/writes',async role=>{h.role=role;await expect(recordPickupHandover.run(req(evidence()))).rejects.toBeTruthy();expect(h.writes).toHaveLength(0);expect(h.sign).toHaveLength(0)});
 it('rejects foreign tenant/studio, wrong leg and closed request',async()=>{h.studio='other';await expect(recordPickupHandover.run(req(evidence()))).rejects.toBeTruthy();h.studio='s';h.tenant='other';await expect(recordPickupHandover.run(req(evidence()))).rejects.toBeTruthy();h.tenant='t';h.rows.get('pickupRequests/r').kind='drop';await expect(recordPickupHandover.run(req(evidence()))).rejects.toBeTruthy();h.rows.get('pickupRequests/r').kind='both';h.rows.get('pickupRequests/r').status='DONE';await expect(recordPickupHandover.run(req(evidence()))).rejects.toBeTruthy();expect(h.writes).toHaveLength(0)});
@@ -15,3 +15,20 @@ it('create-only short image PUT, no public token or overwrite; sealed prevents n
 it('completed request history is readable only through scoped summary and attached canonical photo paths',async()=>{await recordPickupHandover.run(req(evidence()));h.rows.get('pickupRequests/r').status='DONE';const summary:any=await getPickupHandover.run(req({requestId:'r',leg:'pickup'}));expect(summary.record.photoCount).toBe(1);expect(summary.record).not.toHaveProperty('photoPaths');await getPickupHandoverPhotos.run(req({requestId:'r',leg:'pickup'}));expect(h.sign[0].action).toBe('read');h.rows.get('pickupHandovers/r_pickup').photoPaths=['foreign/secret.jpg'];await expect(getPickupHandoverPhotos.run(req({requestId:'r',leg:'pickup'}))).rejects.toThrow('review');expect(h.sign).toHaveLength(1);h.rows.get('pickupHandovers/r_pickup').tenantId='foreign';await expect(getPickupHandover.run(req({requestId:'r',leg:'pickup'}))).rejects.toThrow('review');});
 
 it("canonical booking must exist in the same tenant/studio and remain open for new evidence",async()=>{for(const patch of[{tenantId:"foreign"},{studioId:"foreign"},{status:"CANCELLED"},{status:"EXPIRED"}]){h.rows.set("bookings/b",{tenantId:"t",studioId:"s",status:"CONFIRMED",...patch});await expect(recordPickupHandover.run(req(evidence()))).rejects.toThrow("review")}h.rows.delete("bookings/b");await expect(recordPickupHandover.run(req(evidence()))).rejects.toThrow("review");expect(h.writes).toHaveLength(0)});
+
+const privateEndpoints = [
+  ["issuePickupHandoverPhotoUploadUrl", issuePickupHandoverPhotoUploadUrl, {requestId:"r",leg:"pickup",contentType:"image/jpeg"}],
+  ["recordPickupHandover", recordPickupHandover, evidence()],
+  ["getPickupHandoverPhotos", getPickupHandoverPhotos, {requestId:"r",leg:"pickup"}],
+  ["getPickupHandover", getPickupHandover, {requestId:"r",leg:"pickup"}],
+] as const;
+it.each(privateEndpoints)("%s denies accountant/customer with valid or malformed input before any private effects", async (_name, endpoint, validData) => {
+  for (const role of ["accountant", "customer"]) {
+    h.role = role;
+    for (const data of [{}, validData]) {
+      await expect(endpoint.run(req(data))).rejects.toMatchObject({code:"permission-denied"});
+    }
+  }
+  await expect(endpoint.run({data:{}} as never)).rejects.toMatchObject({code:"unauthenticated"});
+  expect(h.reads).toBe(0);expect(h.writes).toHaveLength(0);expect(h.sign).toHaveLength(0);
+});
