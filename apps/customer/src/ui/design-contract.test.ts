@@ -749,11 +749,17 @@ describe("visit history rows: compact date block, subtle status badge and a smal
 });
 
 describe("Home: ambient light, slim book bar on top, car card below",()=>{
-  it("no photo behind the header; header text uses theme colours; the book bar comes before the car card",()=>{
+  it("photo hero carries the header: contrast veil, display tagline, search before services, reminders below services",()=>{
     const h=read("src/ui/HomeView.tsx");
-    expect(h).not.toContain('color: "#FFFFFF", fontSize: 17');
-    expect(h.indexOf("<LeadCard")).toBeLessThan(h.indexOf("<CarChips cars="));
-    expect(h).toContain("paddingTop: 20");
+    // the hero is the photo-led header, and the contrast veil sits between photo and header text
+    expect(h.indexOf("<KenBurns source={sceneImagery.heroHome}")).toBeGreaterThan(-1);
+    expect(h.indexOf("<KenBurns source={sceneImagery.heroHome}")).toBeLessThan(h.indexOf("rgba(8,9,10,0.34)"));
+    // the brand tagline is the hero statement in display type
+    expect(h).toContain("All under one roof.");
+    expect(h).toContain('textStyle("display")');
+    // one next action first: search before services; the experience before reminders and membership
+    expect(h.indexOf('accessibilityLabel="Search services"')).toBeLessThan(h.indexOf('title="Services for you"'));
+    expect(h.indexOf('title="Services for you"')).toBeLessThan(h.indexOf("<LeadCard"));
   });
 });
 

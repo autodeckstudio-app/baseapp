@@ -9,13 +9,14 @@ const at = (needle: string) => body.indexOf(needle);
 
 describe("merged Home", () => {
   it("renders blocks in the agreed order, each once", () => {
-    const order = ["<LeadCard", "{liveOn ? <LiveCard", 'title="Services for you"', '<Heading title="Club"', "<CarsCard", 'accessibilityLabel="Open the studio page"'];
+    const order = ["<KenBurns", 'accessibilityLabel="Search services"', "{liveOn ? <LiveCard", 'title="Services for you"', "<LeadCard", '<Heading title="Club"', "<CarsCard", 'accessibilityLabel="Open the studio page"'];
     const pos = order.map(at);
     expect(pos.every((x) => x > 0)).toBe(true);
     expect([...pos].sort((a, b) => a - b)).toEqual(pos);
     for (const o of order) expect(body.split(o).length - 1).toBe(1);
   });
-  it("has no big car hero, stat tiles or second book button", () => {
+  it("has exactly one photo hero, no stat tiles or second book button", () => {
+    expect(body.split("<KenBurns").length - 1).toBe(1);
     expect(body).not.toContain("<HeroStage");
     expect(body).not.toContain("<GarageCarousel");
     expect(body.split("onPress={p.onBook}").length - 1).toBeLessThanOrEqual(1);

@@ -14,7 +14,8 @@ import { STUDIO_INFO } from "../lib/studio-info";
 import { raised } from "../lib/raised";
 import { metrics } from "../lib/metrics";
 import { glassPane } from "../lib/glass-pane";
-import { Plate } from "./kit";
+import { Plate, textStyle } from "./kit";
+import { KenBurns, Rise } from "./Drift";
 import { NavIcon, navIconFor } from "./NavIcon";
 import { HomeBackdrop } from "./HomeBackdrop";
 import { SideDrawer, type DrawerItem } from "./SideDrawer";
@@ -288,30 +289,34 @@ export function HomeView(p: HomeViewProps) {
   const pct = p.progress;
   const liveOn = !!p.live && p.live.idle !== true;
   return (
-    <View style={{ gap: metrics.sectionGap, paddingTop: 20 }}>
+    <View style={{ gap: metrics.sectionGap }}>
       <HomeBackdrop />
       {p.drawer?.length ? <SideDrawer open={menu} onClose={() => setMenu(false)} name={p.displayName ?? "AutoDeck"} initial={p.initial} items={p.drawer} /> : null}
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Menu" onPress={() => (p.drawer?.length ? setMenu(true) : p.onAvatar())} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
-          <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "800" }}>{p.initial}</Text>
-        </Pressable>
-        <View style={{ flex: 1, alignItems: "center", minWidth: 0 }}>
-          <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "800" }}>{p.greeting}</Text>
-          <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{car ? p.stage : "Add your car to begin"}</Text>
+      <View style={{ marginHorizontal: -20, marginTop: -16 }}>
+        <View style={{ height: 340, overflow: "hidden", borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
+          <KenBurns source={sceneImagery.heroHome} />
+          <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...(Platform.OS === "web" ? ({ backgroundImage: `linear-gradient(180deg, rgba(8,9,10,0.34) 0%, rgba(8,9,10,0.05) 38%, rgba(8,9,10,0.42) 68%, ${name === "night" ? "rgba(36,38,42,1)" : "rgba(255,255,255,1)"} 100%)` } as object) : { backgroundColor: "rgba(8,9,10,0.26)" }) }} />
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, paddingHorizontal: 20, paddingTop: 16 }}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Menu" onPress={() => (p.drawer?.length ? setMenu(true) : p.onAvatar())} style={({ pressed }) => ({ width: 46, height: 46, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(10,11,13,0.38)", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", opacity: pressed ? 0.85 : 1, ...(Platform.OS === "web" ? ({ backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)" } as object) : {}) })}>
+              <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "800" }}>{p.initial}</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel={p.unread > 0 ? `Notifications, ${p.unread} unread` : "Notifications"} onPress={p.onBell} style={({ pressed }) => ({ width: 46, height: 46, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(10,11,13,0.38)", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", opacity: pressed ? 0.85 : 1, ...(Platform.OS === "web" ? ({ backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)" } as object) : {}) })}>
+              <NavIcon name="bell" color="#FFFFFF" size={22} cut="#18181C" />
+              {p.unread > 0 ? <View style={{ position: "absolute", top: 11, right: 12, width: 9, height: 9, borderRadius: 5, backgroundColor: "#EC8638" }} /> : null}
+            </Pressable>
+          </View>
+          <Rise delay={60} style={{ position: "absolute", left: 20, right: 20, bottom: 38, gap: 6 }}>
+            <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase" }}>{p.greeting}{car ? ` · ${p.stage}` : ""}</Text>
+            <Text style={[textStyle("display"), { fontSize: 30, lineHeight: 34, color: "#FFFFFF", letterSpacing: -0.8 }]}>{"Complete car care.\nAll under one roof."}</Text>
+          </Rise>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel={p.unread > 0 ? `Notifications, ${p.unread} unread` : "Notifications"} onPress={p.onBell} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
-          <NavIcon name="bell" color={colors.textPrimary} size={22} cut="#18181C" />
-          {p.unread > 0 ? <View style={{ position: "absolute", top: 11, right: 12, width: 9, height: 9, borderRadius: 5, backgroundColor: "#EC8638" }} /> : null}
-        </Pressable>
       </View>
 
-      <Pressable accessibilityRole="button" accessibilityLabel="Search services" onPress={p.onSearch} style={{minHeight:48,borderRadius:24,paddingHorizontal:16,flexDirection:'row',alignItems:'center',gap:12,...glassPane(name === "light")}}><NavIcon name="search" color={colors.textSecondary} size={20} cut="#18181C"/><Text style={{color:colors.textSecondary,fontSize:15}}>Search services</Text></Pressable>
+      <Rise delay={140} style={{ marginTop: -30 }}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Search services" onPress={p.onSearch} style={{minHeight:48,borderRadius:24,paddingHorizontal:16,flexDirection:'row',alignItems:'center',gap:12,...glassPane(name === "light")}}><NavIcon name="search" color={colors.textSecondary} size={20} cut="#18181C"/><Text style={{color:colors.textSecondary,fontSize:15}}>Search services</Text></Pressable>
+      </Rise>
 
       {p.stories}
-
-      <LeadCard live={liveOn ? null : p.live} pct={pct} nudge={pickIdleNudge({ reminder: p.reminders[0] ?? null, need: p.need, rebook: p.rebook, onReminder: p.onReminders })} car={car} onBook={p.onBook} />
-
-      {p.banner}
 
       {liveOn ? <LiveCard live={p.live!} pct={pct} car={car} /> : p.cars.length>0 ? <CarChips cars={p.cars} active={active} onActive={setActive} onOpen={(c) => p.onCar(c)} onAdd={p.onAddCar} /> : null}
 
@@ -319,10 +324,14 @@ export function HomeView(p: HomeViewProps) {
         <View style={{ gap: 12 }}>
           <Heading title="Services for you" action="All" onAction={p.onAllServices} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: TILE_GAP }}>
-            {top.map((t) => <View key={t.key} style={{ width: 204, height: 146 }}><TopPickCard pick={t} onPress={() => p.onService(t.service)} /></View>)}
+            {top.map((t, i) => <Rise key={t.key} delay={200 + i * 90}><View style={{ width: 232, height: 160 }}><TopPickCard pick={t} onPress={() => p.onService(t.service)} /></View></Rise>)}
           </ScrollView>
         </View>
       ) : null}
+
+      <LeadCard live={liveOn ? null : p.live} pct={pct} nudge={pickIdleNudge({ reminder: p.reminders[0] ?? null, need: p.need, rebook: p.rebook, onReminder: p.onReminders })} car={car} onBook={p.onBook} />
+
+      {p.banner}
 
       <View style={{ gap: 12 }}>
         <Heading title="Club" />
