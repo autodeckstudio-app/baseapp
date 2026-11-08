@@ -1,3 +1,4 @@
+import { ProfileVisitLinks } from "../../ui/ProfileVisitLinks";
 import { LicenceSection } from "../../ui/LicenceSection";
 import { ListRow } from "../../ui/ListRow";
 // You: account, membership, notifications, sign out.
@@ -93,6 +94,7 @@ export default function YouScreen() {
         <LicenceSection customerId={auth.status==="ready"?auth.customerDocId:null} scope={scopeKey} upload={uploadLicensePhoto} lock={saveLock} epoch={generation} />
         <ListRow last icon="chat" title="Help & contact" detail="Call or WhatsApp the studio" onPress={() => router.navigate("/(tabs)/help")} />
       </View>
+      <ProfileVisitLinks onQuotes={()=>router.navigate("/(tabs)/quotes")}/>
       <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.breath }}>
         <Kicker>Appearance</Kicker>
         <View style={{ flexDirection: "row", gap: 6, padding: 4, borderRadius: 9999, backgroundColor: "rgba(128,128,128,0.12)" }}>

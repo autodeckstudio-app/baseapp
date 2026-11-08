@@ -25,10 +25,8 @@ import {
 } from "react-native";
 import { useRouter, useSegments, useFocusEffect } from "expo-router";
 import { glassSurface, glassQuiet } from "../lib/glass";
-import { raised } from "../lib/raised";
-// Primary action: one matte brand-orange fill, no gloss and no colour glow - a
-// restrained highlight on the glass ground. Secondary actions stay quiet glass.
-const inkButton = (mode: string): ViewStyle => ({ ...raised(mode as never).dark, backgroundColor: "#EC8638", ...(Platform.OS === "web" ? ({ backgroundImage: "none", boxShadow: "0 8px 18px rgba(16,17,19,0.28), inset 0 1px 0 rgba(255,255,255,0.24)" } as object) : {}) });
+// Compact, labelled glass actions. Primary intent keeps a warm rim, never a large orange fill.
+const inkButton = (mode: string): ViewStyle => ({ ...glassQuiet, backgroundColor: mode === "light" ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.10)", borderColor: mode === "light" ? "rgba(130,78,36,0.40)" : "rgba(225,184,143,0.48)", ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(150deg,rgba(255,255,255,0.14),rgba(255,255,255,0.01))", boxShadow: "0 3px 9px rgba(16,17,19,0.12), inset 0 1px 0 rgba(255,255,255,0.20)" } as object) : {}) });
 import { Ambient as BaseAmbient, type GlassProps, useExperienceTheme, onTabPressed } from "@autodeck/ui/native";
 import { floatHero, fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
@@ -258,14 +256,16 @@ export function Button({
       style={({ pressed }) => [
         {
           minHeight: 48,
-          marginTop: primary ? layout.primaryActionGap : 0,
+          alignSelf: "flex-start",
+          marginTop: primary ? 8 : 0,
           borderRadius: radius.pill,
-          paddingHorizontal: space.inset,
+          paddingHorizontal: 18,
           alignItems: "center",
           justifyContent: "center",
           flexDirection: "row",
           gap: space.breath,
           ...(primary ? inkButton(name) : glassQuiet),
+          ...(Platform.OS === "web" && !primary ? ({ boxShadow: "0 2px 7px rgba(16,17,19,0.10), inset 0 1px 0 rgba(255,255,255,0.12)" } as object) : {}),
           ...(kind === "danger" ? { borderColor: colors.danger } : null),
           opacity: off ? 0.45 : 1,
           transform: pressed && !off ? [{ scale: 0.97 }] : [],
@@ -274,8 +274,8 @@ export function Button({
         style,
       ]}
     >
-      {busy ? <ActivityIndicator color={primary ? "#16181C" : colors.textPrimary} /> : null}
-      <T numberOfLines={1} role="bodyStrong" tone={primary ? "onAccent" : kind === "danger" ? "danger" : "primary"} style={[{textAlign:"center",flexShrink:1},primary?{color:name==="light"?"#16181C":"#231E18",fontWeight:"700"}:null]}>
+      {busy ? <ActivityIndicator color={colors.textPrimary} /> : null}
+      <T numberOfLines={1} role="bodyStrong" tone={kind === "danger" ? "danger" : "primary"} style={[{textAlign:"center",flexShrink:1},primary?{fontWeight:"700"}:null]}>
         {label}
       </T>
     </Pressable>

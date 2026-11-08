@@ -1,3 +1,4 @@
+import{useSegmentSwipe}from"../../../lib/segment-swipe";
 import { validAppliedDate, todayStudioDate } from "../../../lib/applied-date";
 import { listOwnerKey } from "../../../lib/owner-key";
 import { VISIT_FALLBACK, visitAlso, visitServices, visitTitle } from "../../../lib/visit-services";
@@ -167,6 +168,8 @@ export default function VehicleDetailScreen() {
   // Garage is split into three flat tabs (Gauri basket item 10, per the liked mockup):
   // Upcoming (default), History, Documents. Nothing renders in two places.
   const [tab, setTab] = useState<"upcoming" | "history" | "documents">("upcoming");
+  const tabRef=useRef(tab);tabRef.current=tab;
+  const detailSwipe=useSegmentSwipe(["upcoming","history","documents"]as const,()=>tabRef.current,setTab);
 
   useEffect(() => {
     if (mockDetail) {
@@ -580,6 +583,7 @@ export default function VehicleDetailScreen() {
         </View>
       }
     >
+      <View testID="garage-detail-swipe-area" {...(!editing&&!docOpen&&!docEditing&&!protEdit?detailSwipe.handlers:{})} style={[{gap:20,minHeight:360},!editing&&!docOpen&&!docEditing&&!protEdit?detailSwipe.style:null]}>
       {!editing ? <TabPills tabs={[{ key: "upcoming", label: "Upcoming" }, { key: "history", label: "History" }, { key: "documents", label: "Documents" }]} value={tab} onChange={setTab} /> : null}
       {tab === "upcoming" ? (
       <>
@@ -955,6 +959,7 @@ export default function VehicleDetailScreen() {
       </>
       ) : null}
 
+      </View>
     </Screen>
   );
 }

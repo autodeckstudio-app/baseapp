@@ -214,8 +214,8 @@ export default function GarageScreen() {
         </View>
       )}
       {list.length > 0 ? (
-        <View style={{ gap: space.breath, marginTop: metrics.sectionGap }}>
-          <Button label="Book a service" onPress={() => router.navigate("/(tabs)/catalogue")} />
+        <View style={{ gap: 20 }}>
+          <Button label="Book a service" style={{marginTop:0}} onPress={() => router.navigate("/(tabs)/catalogue")} />
           <Button label="Service history" kind="quiet" onPress={() => router.push(one ? { pathname: "/(tabs)/garage/history", params: { vehicleId: one.id } } : "/(tabs)/garage/history")} />
         </View>
       ) : null}

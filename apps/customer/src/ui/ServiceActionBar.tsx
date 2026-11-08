@@ -3,12 +3,14 @@ import { Button, T } from "./kit";
 export function ServiceActionBar({
   car,
   price,
+  hidePrice = false,
   label,
   disabled,
   onPress,
 }: {
   car: string;
   price: string;
+  hidePrice?: boolean;
   label: string;
   disabled: boolean;
   onPress: () => void;
@@ -28,9 +30,9 @@ export function ServiceActionBar({
         <T role="caption" tone="tertiary" numberOfLines={1}>
           {car}
         </T>
-        <T role="heading" numberOfLines={1}>
+        {hidePrice?null:<T role="heading" numberOfLines={1}>
           {price}
-        </T>
+        </T>}
       </View>
       <Button
         label={label}

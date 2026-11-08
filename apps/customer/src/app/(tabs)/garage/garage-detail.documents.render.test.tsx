@@ -284,3 +284,5 @@ it('editing uses only one selected cover preview, compact controls and cancellin
  await act(async()=>press(el,'Cancel'));expect(textOf(el)).toContain('Book a service');expect(h.cover).not.toHaveBeenCalled();
  await act(async()=>el.unmount());
 });
+
+it("garage detail mounts shared swipe handlers on its tab content",async()=>{const el=await mount();const area=()=>el.root.findByProps({testID:"garage-detail-swipe-area"});expect(area().props.onMoveShouldSetResponder).toBeDefined();const handler=area().props.onMoveShouldSetResponder;expect(typeof handler).toBe('function');expect(textOf(el)).toContain('Upcoming');await act(async()=>el.unmount())});

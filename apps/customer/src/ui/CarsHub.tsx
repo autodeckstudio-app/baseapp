@@ -186,7 +186,7 @@ export function CarsHub({ all, mine, error, initialTab = "buy", onRetry, onOpen,
     <View style={{ gap: 14 }}>
       <TabSwitch tab={tab} onChange={setTab} />
       {tab === "sell" ? <SellHub mine={mine} onSell={onSell} onOpen={onOpen} /> : null}
-      {tab === "buy" ? <View style={{ gap: 2 }}><T role="bodyStrong" style={{ fontSize: 18 }}>Cars for sale</T><T role="caption" tone="secondary" style={{ fontSize: 12, lineHeight: 16 }}>Explore cars listed through AutoDeck. Clear facts, real photos, enquiries handled by the studio.</T></View> : null}
+      {tab === "buy" ? <View style={{ gap: 2 }}><T role="bodyStrong" style={{ fontSize: 18 }}>Cars for sale</T><T role="caption" tone="secondary" style={{ fontSize: 12, lineHeight: 16 }}>Find a car. Enquire with the studio.</T></View> : null}
       {tab === "buy" && all && all.length > 0 ? (
         <View style={{ gap: 8 }}>
           <SearchBox value={query} onChange={setQuery} />

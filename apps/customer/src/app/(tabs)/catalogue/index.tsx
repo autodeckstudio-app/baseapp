@@ -133,12 +133,7 @@ export default function CatalogueScreen() {
           )
         }
       />
-      {pricingVehicle.label ? (
-        <T role="caption" tone="secondary">
-          For your {pricingVehicle.vehicle?.make}{" "}
-          {pricingVehicle.vehicle?.model} · {pricingVehicle.label}{GST_ENABLED ? " · incl. GST" : ""}
-        </T>
-      ) : null}
+
     </View>
   );
   return (

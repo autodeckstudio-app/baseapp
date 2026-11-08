@@ -152,7 +152,7 @@ it("takes hero heights from metrics on car and booking detail",()=>{expect(read(
 it("uses the card padding rule on list cards",()=>{for(const f of ["bookings/index","membership/index","garage/index"])expect(read(`src/app/(tabs)/${f}.tsx`)).toContain("padding: metrics.cardPad")});
 it("shows the price total on the booking confirm screen",()=>{const s=read("src/app/(tabs)/book/confirm.tsx");expect(s).toContain("breakdown.total");expect(s).toContain("breakdown.tax")});
 it("keeps the service price bar on the card edges, hides empty story circles, and names walk-in visits",()=>{
-    const svc=read("src/app/(tabs)/catalogue/[id].tsx");expect(svc).toContain("left: 0, right: 0, bottom: 92");expect(svc).toContain("maxWidth: layout.readingMeasure, paddingHorizontal: width < 360 ? layout.screenInsetCompact : layout.screenInset"); // the bar wrapper mirrors the Screen column: same cap, gutter inside, so card edges match page content at every widthexpect(svc).toContain("padding: space.gap");expect(svc).not.toContain('width: "92%"');expect(svc).not.toContain("maxWidth: 480");expect(svc).toContain("height: showBar ? barH + 116 : 0");expect(svc).toContain("onLayout={(e) => setBarH(e.nativeEvent.layout.height)}"); // the spacer tracks the measured bar so the last line scrolls clear at 320px
+    const svc=read("src/app/(tabs)/catalogue/[id].tsx");expect(svc).toContain('showBar ? <Pane pad="inset">');expect(svc).not.toContain('bottom: 92');expect(svc).not.toContain('setBarH');expect(svc.indexOf('<ServiceActionBar')).toBeLessThan(svc.indexOf('<ServiceScope'));
     expect(read("src/ui/StoryCircles.tsx")).toContain("if (shown.length === 0) return null;"); // no groups, no row; a group without a photo shows its initial
     expect(read("src/app/(tabs)/bookings/index.tsx")).toContain("visitTitle(nameOf(");expect(read("src/app/(tabs)/bookings/index.tsx")).not.toContain('?? "Service"');
   });
@@ -204,7 +204,7 @@ describe("booking flow guardrails", () => {
   it("GST is one switch and no screen prints GST or a tax row unless it is on", () => {
     expect(read("packages/core/src/constants.ts".replace(/^/, "../../"))).toMatch(/export const GST_ENABLED = false/);
     expect(rd("app/(tabs)/catalogue/[id].tsx")).toMatch(/GST_ENABLED \? " · incl\. GST"/);
-    expect(rd("app/(tabs)/catalogue/index.tsx")).toMatch(/GST_ENABLED \? " · incl\. GST"/);
+    expect(rd("app/(tabs)/catalogue/index.tsx")).not.toContain("incl. GST");
     for (const f of ["ui/ServicePrice.tsx", "app/(tabs)/book/confirm.tsx", "app/(tabs)/bookings/[id].tsx", "app/(tabs)/bookings/invoice.tsx"]) {
       expect(rd(f)).toMatch(/\.tax > 0/);
       expect(rd(f)).not.toMatch(/[^_]incl\. GST[^"]/);

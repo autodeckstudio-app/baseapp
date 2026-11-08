@@ -1,3 +1,4 @@
+import {useEffect,useState} from "react";
 import{FactHighlights}from "./FactHighlights";
 import { View } from "react-native";
 import { space } from "@autodeck/ui/theme";
@@ -23,6 +24,8 @@ export type ServicePriceProps = {
 /** The price block of a service page. The car size is never chosen here: it is the selected car's saved type. */
 export function ServicePrice(p: ServicePriceProps) {
   const { breakdown: priceBreakdown } = p;
+  const [detailsOpen,setDetailsOpen]=useState(false);
+  useEffect(()=>setDetailsOpen(false),[priceBreakdown]);
   return (
     <>
           {p.priceOnRequest ? (
@@ -40,8 +43,10 @@ export function ServicePrice(p: ServicePriceProps) {
               {priceErrorInfo(p.error).retry ? <Button label="Try again" kind="quiet" onPress={() => p.onRetry()} /> : p.onHelp ? <Button label="Get help" kind="quiet" onPress={p.onHelp} /> : null}
             </View>
           ) : priceBreakdown !== null ? (
-            <Pane pad="gap">
-              <Row title="Base" trailing={<T role="data">{rupees(priceBreakdown.basePrice)}</T>} />
+            <Pane pad="inset" style={{gap:12}}>
+              <FactHighlights facts={[{value:rupees(priceBreakdown.total),label:"Total for your car"}]}/>
+              <Row title={detailsOpen?"Hide price breakdown":"View price breakdown"} onPress={()=>setDetailsOpen(!detailsOpen)} last/>
+              {detailsOpen?<View><Row title="Base" trailing={<T role="data">{rupees(priceBreakdown.basePrice)}</T>} />
               {priceBreakdown.scopeAdjustment > 0 ? (
                 <Row title="Vehicle size adjustment" trailing={<T role="data">+{rupees(priceBreakdown.scopeAdjustment)}</T>} />
               ) : null}
@@ -52,7 +57,7 @@ export function ServicePrice(p: ServicePriceProps) {
                 <Row title="Membership discount" trailing={<T role="data" tone="premium">-{rupees(priceBreakdown.membershipDiscount)}</T>} />
               ) : null}
               {priceBreakdown.tax > 0 ? <Row title={priceBreakdown.taxDescription} trailing={<T role="data">{rupees(priceBreakdown.tax)}</T>} /> : null}
-              <FactHighlights facts={[{value:rupees(priceBreakdown.total),label:"Total for your car"},...(priceBreakdown.membershipDiscount!==null&&priceBreakdown.membershipDiscount>0?[{value:rupees(priceBreakdown.membershipDiscount),label:"Membership saving"}]:[])]}/>
+</View>:null}
             </Pane>
           ) : null}
     </>

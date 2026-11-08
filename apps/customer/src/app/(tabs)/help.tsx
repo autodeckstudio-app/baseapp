@@ -1,6 +1,6 @@
 // Help: call, WhatsApp, location, hours and a short FAQ.
 import { useEffect, useState } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { Linking, View } from "react-native";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
@@ -10,11 +10,10 @@ import { FAQ, STUDIO_INFO, formatHours, isOpenNow, type LiveStudioInfo } from ".
 import { getStudioInfo } from "../../lib/booking-service";
 import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { Field, Kicker, Notice, Pane, Row, Screen, T } from "../../ui/kit";
-import { StudioMapCanvas } from "../../ui/StudioMapCanvas";
+import { StudioContactDetails } from "../../ui/StudioContactDetails";
 import { searchFaq } from "../../lib/faq-search";
 
 export default function HelpScreen() {
-  const router=useRouter();
   const { colors, name } = useExperienceTheme();
   const cut = name === "light" ? "#FFFFFF" : "#18181C";
   const { t } = useLang();
@@ -44,15 +43,8 @@ export default function HelpScreen() {
         <Notice title="Studio contact unavailable" body="Contact details could not load. Your requests and bookings have not changed." />
       )}
       {s.address ? (
-        <Pane pad="gap">
-          <StudioMapCanvas onPress={() => void Linking.openURL(s.mapsUrl)} />
-          {openNow !== null ? <T role="label" tone="accent">{openNow ? "OPEN NOW" : "CLOSED NOW"}</T> : null}
-          <Row title="AutoDeck Studio" detail={s.address} last={!s.hours && !s.mapsUrl} {...(s.mapsUrl ? { onPress: () => void Linking.openURL(s.mapsUrl) } : {})} />
-          {s.hours ? <Row title="Opening hours" detail={s.hours} last={!s.mapsUrl} /> : null}
-          {s.mapsUrl ? <Row title="Directions" detail="Open the studio in maps" onPress={() => void Linking.openURL(s.mapsUrl)} last /> : null}
-        </Pane>
+        <StudioContactDetails address={s.address} hours={s.hours} openNow={openNow} onDirections={s.mapsUrl?()=>void Linking.openURL(s.mapsUrl):undefined}/>
       ) : null}
-      <Pane pad="gap"><Kicker>Your visit</Kicker><Row title="Bookings and changes" detail="Open your booking for its current status, change options and cancellation review." onPress={()=>router.navigate('/(tabs)/bookings')}/><Row title="Quotes and approvals" detail="Review proposed work and prices before approving." onPress={()=>router.navigate('/(tabs)/quotes')} last/></Pane>
       <Kicker>{t("Questions")}</Kicker>
       <Field label="Search questions" value={query} onChangeText={(v: string) => { setQuery(v); setOpen(null); }} placeholder="Type a few words" />
       {query.trim() ? <T role="caption" tone="secondary">Please do not type phone numbers or car plates here.</T> : null}

@@ -54,3 +54,5 @@ describe("swipeable booking tabs", () => {
     }
   });
 });
+
+describe('Garage detail swipe tabs',()=>{const k=['upcoming','history','documents']as const;it('moves both ways without wrapping or capturing vertical drags',()=>{expect(swipeTarget(k,'upcoming',-100,4)).toBe('history');expect(swipeTarget(k,'history',-100,4)).toBe('documents');expect(swipeTarget(k,'documents',100,4)).toBe('history');expect(swipeTarget(k,'upcoming',100,4)).toBeNull();expect(swipeTarget(k,'documents',-100,4)).toBeNull();expect(swipeTarget(k,'history',20,120)).toBeNull();});it('screen wires taps and swipes to same state, disables gestures for edit forms, before any loading return',()=>{const src=readFileSync(join(__dirname,'../app/(tabs)/garage/[id].tsx'),'utf8');expect(src).toContain('useSegmentSwipe(["upcoming","history","documents"]as const,()=>tabRef.current,setTab)');expect(src).toContain('!editing&&!docOpen&&!docEditing&&!protEdit?detailSwipe.handlers:{}');expect(src.indexOf('useSegmentSwipe([')).toBeLessThan(src.indexOf('return <Loading'));expect(src).toContain('value={tab} onChange={setTab}');});});

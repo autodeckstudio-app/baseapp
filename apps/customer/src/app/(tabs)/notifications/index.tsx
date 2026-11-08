@@ -1,3 +1,4 @@
+import {useSegmentSwipe} from "../../../lib/segment-swipe";
 import { inChip, type NotificationChip } from "../../../lib/notification-groups";
 import { TabPills } from "../../../ui/CarOverview";
 import { glassInner } from "../../../lib/glass";
@@ -110,6 +111,7 @@ export default function NotificationsScreen() {
   }
 
   const [chip, setChip] = useState<NotificationChip>("all");
+  const notificationSwipe=useSegmentSwipe(["all","bookings","papers","club"] as const,()=>chip,setChip);
   const shown = inChip(visibleNotifications(notifications, hidden), chip);
   const canClear = chip === "all" && clearable(shown).length > 0;
 
@@ -124,6 +126,7 @@ export default function NotificationsScreen() {
 
   return (
     <Screen header={<PageHeader kicker="Updates" title="Notifications" />}>
+      <View testID="notification-tab-swipe" {...notificationSwipe.handlers} style={[{gap:20,minHeight:320},notificationSwipe.style]}>
       <TabPills tabs={[{ key: "all", label: "All" }, { key: "bookings", label: "Bookings" }, { key: "papers", label: "Papers" }, { key: "club", label: "Club" }]} value={chip} onChange={setChip} />
       {canClear ? <Button kind="quiet" label="Clear all" onPress={() => hide(clearable(shown))} /> : null}
       {pushState === "prompt" && pushPermission() === "prompt" ? (
@@ -169,6 +172,7 @@ export default function NotificationsScreen() {
           })}
         </View>
       )}
+      </View>
     </Screen>
   );
 }

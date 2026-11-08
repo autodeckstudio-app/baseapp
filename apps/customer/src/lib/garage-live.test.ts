@@ -35,7 +35,7 @@ describe("garage showroom guards", () => {
   });
   it("uses only allowed radii and no emoji", () => { expect(s).not.toMatch(/borderRadius: (?!12|16|24|9999|0\b)\d+/); });
   it("hero fade is a gradient, not a hard band, and the page clears the tab bar", () => { expect(s).toContain("linear-gradient"); expect(g).not.toContain("paddingBottom: 100"); });
-  it("sections of the selected car are spaced by the section gap, one value for all", () => { expect(g).toContain("gap: metrics.sectionGap }}"); expect(g).toContain("marginTop: metrics.sectionGap"); expect(g).not.toMatch(/gap: space\.breath, paddingBottom/); });
+  it("sections of the selected car are spaced by the section gap, one value for all", () => { expect(g).toContain("gap: metrics.sectionGap }}"); expect(g).not.toContain("marginTop: metrics.sectionGap");expect(g).toContain('style={{ gap: 20 }}'); expect(g).not.toMatch(/gap: space\.breath, paddingBottom/); });
   it("Home, Garage and the booking screen agree on the step for every live status (Garage once showed Ready during Final checks)", () => {
     for (const st of ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"]) {
       expect(liveStep(LIVE_PROGRESS[st]!)).toBe(jobStage(st)!.index); expect(jobStep(st)).toBe(jobStage(st)!.index);

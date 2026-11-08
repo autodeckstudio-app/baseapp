@@ -1,4 +1,3 @@
-import {BrandIdentity} from "./BrandIdentity";
 import { Image, View, Pressable, type ImageSourcePropType } from "react-native";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import {
@@ -10,7 +9,7 @@ import {
 import { SceneCard } from "./SceneCard";
 import { ServicePackageCard } from "./ServicePackageCard";
 import { ServicePhoto } from "./ServicePhoto";
-import { SceneIntro } from "./SceneIntro";
+import {ServicePageHeader}from"./ServicePageHeader";
 import { Button, Pane, T } from "./kit";
 import { serviceTypeImage } from "../lib/service-type-images";
 import { useState } from "react";
@@ -140,7 +139,7 @@ export function ReferencePackageCard({
           />
         </View>
         <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
-          <BrandIdentity brand={item.brand}/>
+
           <T role="bodyStrong">{item.name}</T>
           <T role="caption" tone="secondary" numberOfLines={3}>
             {item.note}
@@ -205,12 +204,8 @@ export function ServicesExplorer({
         .includes(query.trim().toLowerCase()),
     );
     return (
-      <View style={{ gap: 18 }}>
-        <SceneIntro
-          compact
-          eyebrow="All Services"
-          title={`Results for “${query.trim()}”`}
-        />
+      <View style={{ gap: 20 }}>
+        <ServicePageHeader title={`Results for "${query.trim()}"`} crumbs={[{title:"All services",onPress:()=>onPath({})}]}/>
         {found.length + rr.length ? (
           products(found, rr)
         ) : (
@@ -223,17 +218,14 @@ export function ServicesExplorer({
             />
           </Pane>
         )}
+        <T role="caption" tone="tertiary">Service visuals are illustrative, not product or completed-job photos.</T>
       </View>
     );
   }
   if (!home)
     return (
       <View style={{ gap: 16 }}>
-        <SceneIntro
-          compact
-          eyebrow="AutoDeck care"
-          title="Explore services"
-        />
+        <ServicePageHeader context="AutoDeck care" title="Explore services"/>
         {SERVICE_HOMES.map((h) => (
           <SceneCard
             key={h.key}
@@ -342,53 +334,15 @@ export function ServicesExplorer({
           ? "full-body protection"
           : (workLabel ?? family);
   return (
-    <View style={{ gap: 18 }}>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-        {[
-          { title: "All services", p: {} },
-          { title: home.label, p: { home: home.key } },
-          ...(family ? [{ title: family, p: { home: home.key, family } }] : []),
-          ...(workLabel
-            ? [
-                {
-                  title: workLabel,
-                  p: {
-                    home: home.key,
-                    family: family ?? undefined,
-                    work: path.work,
-                  },
-                },
-              ]
-            : []),
-        ].map((c, i) => (
-          <Pressable
-            key={i}
-            accessibilityRole="button"
-            onPress={() => onPath(c.p)}
-          >
-            <T role="caption" tone="secondary">
-              {i ? "› " : ""}
-              {c.title}
-            </T>
-          </Pressable>
-        ))}
-      </View>
-      <SceneIntro
-        compact
-        eyebrow={
-          activeBrand && (family ?? home.label).toLowerCase() !== (activeBrand ?? "").toLowerCase()
-            ? (family ?? home.label)
-            : ""
-        }
-        title={activeBrand ?? workLabel ?? family ?? home.label}
-      />
+    <View style={{ gap: 20 }}>
+      <ServicePageHeader title={activeBrand ?? workLabel ?? family ?? home.label} detail={!family?HOME_COPY[home.key]:family==="PPF"&&!path.work?FAMILY_COPY.PPF:FAMILY_COPY[family]} context={activeBrand&&(family??home.label).toLowerCase()!==activeBrand.toLowerCase()?(family??home.label):undefined} crumbs={[
+        {title:"All services",onPress:()=>onPath({})},
+        {title:home.label,onPress:()=>onPath({home:home.key})},
+        ...(family?[{title:family,onPress:()=>onPath({home:home.key,family})}]:[]),
+        ...(workLabel?[{title:workLabel,onPress:()=>onPath({home:home.key,family:family??undefined,work:path.work})}]:[]),
+      ]}/>
       {!family ? (
         <>
-          <T tone="secondary">{HOME_COPY[home.key]}</T>
-          <T role="caption" tone="tertiary">
-            Service visuals are illustrative, not product or completed-job
-            photos.
-          </T>
           {families.map((f) => {
             const count =
               mine.filter((s) => servicePlacement(s)?.family === f).length +
@@ -411,7 +365,6 @@ export function ServicesExplorer({
         </>
       ) : family === "PPF" && !path.work ? (
         <>
-          <T tone="secondary">{FAMILY_COPY.PPF}</T>
           {PPF_CUSTOMER_OPTIONS.map((w) => (
             <ServiceChoiceCard
               key={w.key}
@@ -427,9 +380,6 @@ export function ServicesExplorer({
         </>
       ) : (
         <>
-          {FAMILY_COPY[family] ? (
-            <T tone="secondary">{FAMILY_COPY[family]}</T>
-          ) : null}
           {chooseBrands ? (
             <>
               <T role="caption" tone="secondary">
@@ -490,6 +440,7 @@ export function ServicesExplorer({
           onPress={() => onPath(parentPath(path))}
         />
       ) : null}
+      <T role="caption" tone="tertiary">Service visuals are illustrative, not product or completed-job photos.</T>
     </View>
   );
 }
