@@ -8,7 +8,7 @@
  * membership.emulator.test.ts / walkin-financial.emulator.test.ts.
  */
 import { describe, it, expect, beforeAll, vi } from "vitest";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, Transaction, Query } from "firebase-admin/firestore";
 import type { StudioConfig, Service, Vehicle, Booking, ServiceJob } from "@autodeck/core";
 import { MAX_CUSTOMER_RESCHEDULES } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -156,6 +156,47 @@ describe("Customer booking reschedule", () => {
     service = await seedService(uid("svc-wash"));
     customerId = uid("cust");
     vehicle = await seedVehicle(uid("veh"), customerId);
+  });
+
+  it("closed transaction job read retries inside SDK before one cancellation commit", async () => {
+    const booking = await makeBooking(customerId, service, vehicle);
+    const original = Transaction.prototype.get;
+    let injected = 0;
+    const spy = vi.spyOn(Transaction.prototype, "get").mockImplementation(function(this: Transaction, target: any, ...args: any[]): any {
+      if (target instanceof Query && (target as any)._queryOptions.collectionId === "jobs" && injected === 0) {
+        injected++;
+        return Promise.reject(Object.assign(new Error("3 INVALID_ARGUMENT: Transaction is invalid or closed."), {code:3,details:"Transaction is invalid or closed."}));
+      }
+      return (original as any).call(this, target, ...args);
+    });
+    try {
+      await cancelBooking.run({data:{bookingId:booking.id,reason:"deterministic closed transaction read"},auth:customerAuth(customerId)} as never);
+    } finally { spy.mockRestore(); }
+    expect(injected).toBe(1);
+    const finalJob = await getJobForBooking(booking.id);
+    expect(finalJob.status).toBe("CANCELLED");
+    expect(finalJob.statusHistory.filter(h=>h.status==="CANCELLED")).toHaveLength(1);
+    expect((await db.collection("bookings").doc(booking.id).get()).data()?.status).toBe("CANCELLED");
+    expect((await db.collection("auditLog").where("entityId","==",booking.id).where("action","==","booking.cancelled").get()).size).toBe(1);
+  });
+
+  it("closed transaction exhaustion keeps existing SDK bound and makes no cancellation writes", async () => {
+    const booking = await makeBooking(customerId, service, vehicle);
+    const original = Transaction.prototype.get;
+    let attempts = 0;
+    const spy = vi.spyOn(Transaction.prototype, "get").mockImplementation(function(this: Transaction, target: any, ...args: any[]): any {
+      if (target instanceof Query && (target as any)._queryOptions.collectionId === "jobs") {
+        attempts++;
+        return Promise.reject(Object.assign(new Error("3 INVALID_ARGUMENT: Transaction is invalid or closed."), {code:3,details:"Transaction is invalid or closed."}));
+      }
+      return (original as any).call(this, target, ...args);
+    });
+    try { await expect(cancelBooking.run({data:{bookingId:booking.id,reason:"bounded failure fixture"},auth:customerAuth(customerId)} as never)).rejects.toMatchObject({code:10}); }
+    finally { spy.mockRestore(); }
+    expect(attempts).toBe(5);
+    expect((await getJobForBooking(booking.id)).status).toBe("PENDING_VEHICLE");
+    expect((await db.collection("bookings").doc(booking.id).get()).data()?.status).not.toBe("CANCELLED");
+    expect((await db.collection("auditLog").where("entityId","==",booking.id).where("action","==","booking.cancelled").get()).size).toBe(0);
   });
 
   it("reschedules successfully, preserving price and incrementing rescheduleCount", async () => {

@@ -1,3 +1,4 @@
+import { transactionRead } from "../../lib/transaction-read.js";
 import {cancelOfflineVisit} from "../../lib/offline-cancel.js";
 import { requestWaitingCancel, unresolvedCancel } from "../../lib/waiting-cancel.js";
 // Admin-only cancel for a booking, with the fee and any refund decided here on the server.
@@ -200,7 +201,7 @@ export async function runCancel(
       if (fresh.tenantId !== booking.tenantId || fresh.studioId !== booking.studioId) {
         throw new HttpsError("failed-precondition", "The booking's studio changed. Reload and try again.");
       }
-      const jobs = await tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId", "==", data.bookingId).limit(2));
+      const jobs = await transactionRead(() => tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId", "==", data.bookingId).limit(2)));
       // Ambiguity fails closed: a second job for the same booking is a
       // data-integrity stop, never a silent pick.
       if (jobs.size > 1) throw new HttpsError("failed-precondition", "This booking has more than one job. Cancel it by hand.");

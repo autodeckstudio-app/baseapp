@@ -14,6 +14,7 @@ import { db } from "../../../lib/firebase";
 import { STUDIO_INFO } from "../../../lib/studio-info";
 import { Button, Chip, Pane, Loading, Notice, Screen, T, rupees } from "../../../ui/kit";
 import { amountInWords } from "../../../lib/amount-words";
+import { InvoiceExportAction } from "../../../ui/InvoiceExportAction";
 import { HorizonInvoice } from "../../../ui/HorizonInvoice";
 
 // Ivory invoice palette: off-white paper, one orange accent, thin separators.
@@ -236,6 +237,7 @@ export default function InvoiceScreen() {
         ) : null}
       </View>
 
+      {auth.status === "ready" && listOwnerKey(auth)?.key === invoice.customerId && auth.claims.tenantId === invoice.tenantId ? <InvoiceExportAction key={`${auth.status === "ready" ? auth.user.uid : ""}:${invoice.id}`} html={buildInvoiceHtml(docInput)} /> : null}
       <Button label="Go back" kind="quiet" onPress={() => router.back()} />
     </Screen>
   );
