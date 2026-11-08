@@ -32,10 +32,10 @@ const pb = (o: Partial<Parameters<typeof advancePreviewFromParts>[0]> = {}) => (
 
 describe("advancePreviewFromParts (display-only mirror of the server derivation)", () => {
   it("20% of the service incl GST, balance is the exact remainder of the grand total", () => {
-    expect(advancePreviewFromParts(pb())).toEqual({ advancePaise: 23600, dueAtStudioPaise: 94400 });
+    expect(advancePreviewFromParts(pb())).toEqual({ advancePaise: 23600, dueAtStudioPaise: 94400, serviceTotalPaise: 118000 });
   });
   it("GST off (rate 0): 20% of the plain service price", () => {
-    expect(advancePreviewFromParts(pb({ taxRatePercent: 0 }))).toEqual({ advancePaise: 20000, dueAtStudioPaise: 80000 });
+    expect(advancePreviewFromParts(pb({ taxRatePercent: 0 }))).toEqual({ advancePaise: 20000, dueAtStudioPaise: 80000, serviceTotalPaise: 100000 });
   });
   it("rounds the advance UP and keeps advance + balance equal to the total", () => {
     const r = advancePreviewFromParts(pb({ subtotal: 100001, taxRatePercent: 0 }))!;
@@ -44,17 +44,21 @@ describe("advancePreviewFromParts (display-only mirror of the server derivation)
   });
   it("membership discount reduces the base before tax", () => {
     // 100000 - 20000 = 80000; +18% = 94400; 20% = 18880
-    expect(advancePreviewFromParts(pb({ membershipDiscount: 20000 }))).toEqual({ advancePaise: 18880, dueAtStudioPaise: 75520 });
+    expect(advancePreviewFromParts(pb({ membershipDiscount: 20000 }))).toEqual({ advancePaise: 18880, dueAtStudioPaise: 75520, serviceTotalPaise: 94400 });
   });
   it("pickup and drop are excluded from the advance but stay in the balance (with their GST)", () => {
     // service 100000 + pickup 10000 folded into subtotal; grand total 110000*1.18 = 129800
     const r = advancePreviewFromParts(pb({ subtotal: 110000, pickupFee: 10000 }))!;
     expect(r.advancePaise).toBe(23600);
     expect(r.dueAtStudioPaise).toBe(129800 - 23600);
+    // The popup's service rows exclude pickup/drop: service total is the
+    // discounted service incl GST only; its balance is the exact remainder.
+    expect(r.serviceTotalPaise).toBe(118000);
+    expect(r.serviceTotalPaise - r.advancePaise).toBe(94400);
   });
   it("extra services are folded in PRE-TAX and taxed once with the main service (as addExtrasToBreakdown does)", () => {
     // (100000 + 50000) * 1.18 = 177000; service = same; 20% = 35400
-    expect(advancePreviewFromParts(pb(), [50000])).toEqual({ advancePaise: 35400, dueAtStudioPaise: 177000 - 35400 });
+    expect(advancePreviewFromParts(pb(), [50000])).toEqual({ advancePaise: 35400, dueAtStudioPaise: 177000 - 35400, serviceTotalPaise: 177000 });
     // rounding: two extras of 1 paisa each taxed once, not per row
     expect(advancePreviewFromParts(pb({ subtotal: 3, taxRatePercent: 18 }), [3, 3])).toEqual(advancePreviewFromParts(pb({ subtotal: 9, taxRatePercent: 18 })));
   });

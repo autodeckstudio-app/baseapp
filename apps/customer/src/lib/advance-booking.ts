@@ -22,7 +22,7 @@ export function advanceDisclosureLines(): { split: string; noShow: string; noSho
   };
 }
 
-export type AdvancePreview = { advancePaise: number; dueAtStudioPaise: number };
+export type AdvancePreview = { advancePaise: number; dueAtStudioPaise: number; serviceTotalPaise: number };
 
 const okMoney = (n: unknown): n is number => typeof n === "number" && Number.isSafeInteger(n) && n >= 0;
 
@@ -60,7 +60,10 @@ export function advancePreviewFromParts(
     const split = advanceSplit(serviceTotal, pb.pickupFee + pb.dropFee, "service_total_only", "ceil");
     const due = grandTotal - split.advancePaise;
     if (!okMoney(split.advancePaise) || due < 0) return null;
-    return { advancePaise: split.advancePaise, dueAtStudioPaise: due };
+    // serviceTotalPaise: the discounted service price including GST, excluding
+    // pickup/drop - the popup's "Service total" row and the basis of its
+    // "Balance at studio (80%)" row (serviceTotalPaise - advancePaise).
+    return { advancePaise: split.advancePaise, dueAtStudioPaise: due, serviceTotalPaise: serviceTotal };
   } catch {
     return null;
   }

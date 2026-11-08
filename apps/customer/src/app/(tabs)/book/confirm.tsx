@@ -21,6 +21,7 @@ import { bookingPayOutcomeMessage } from "../../../lib/native-pay-core";
 import { space } from "@autodeck/ui/theme";
 import { Icon } from "@autodeck/ui/native";
 import { BookingReviewGuide } from "../../../ui/BookingReviewGuide";
+import { AdvancePaymentSheet } from "../../../ui/AdvancePaymentSheet";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { MEMBERSHIP_WASH_LIVE, pickWash, todayInIndia, type WashDecision } from "../../../lib/membership-wash";
 import { getMyMemberships, getMembershipPlans } from "../../../lib/membership-service";
@@ -89,6 +90,7 @@ export default function BookingConfirmScreen() {
   const [locating, setLocating] = useState(false);
   // Pay online holds the slot for 15 minutes. The booking exists (pending) while the customer pays or retries.
   const [held, setHeld] = useState<{ bookingId: string; paymentJobId: string | null; expiresAt: number; pickupSent: boolean; advance?: boolean } | null>(null);
+  const [advanceSheet, setAdvanceSheet] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const heldOver = held !== null && now >= held.expiresAt;
   const payBusy = useRef(false);
@@ -489,7 +491,7 @@ export default function BookingConfirmScreen() {
               <Row title="Pay online" detail={<T role="caption" tone="secondary">Confirm below to open secure payment. The slot is held for 15 minutes after your request.</T>} trailing={!payAtStudio ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last={false} />
             </Pressable>
           ) : null}
-          <Pressable accessibilityRole="button" accessibilityState={{ selected: payAtStudio || !payHow.online }} onPress={() => { if (!held) setPayAtStudio(true); }}>
+          <Pressable accessibilityRole="button" accessibilityState={{ selected: payAtStudio || !payHow.online }} onPress={() => { if (!held) { setPayAtStudio(true); if (studioAdvanceAvailable) setAdvanceSheet(true); } }}>
             <Row title="Pay at studio" detail={<T role="caption" tone="secondary">{studioAdvanceAvailable ? "Pay 20% advance online to confirm. Slot held for 15 minutes; the rest at the studio." : "Confirm your slot below. Pay when you collect your car."}</T>} trailing={payAtStudio || !payHow.online ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last={!advanceDue && !payNow} />
           </Pressable>
           {/* Disclose the policy for the effective payment route only. */}
@@ -516,9 +518,21 @@ export default function BookingConfirmScreen() {
       {heldOver ? <Notice title="Time ran out" body="Payment was not completed in 15 minutes, so the slot was released. Pick a time again." action={<Button label="Pick a time" onPress={() => router.back()} />} /> : null}
 
       <View style={{ gap: space.breath }}>
-        {heldOver ? null : <Button label={service?.priceOnRequest === true ? "Request quote" : payNow || held ? "Pay & confirm" : advanceDue ? "Pay 20% advance" : "Confirm booking"} busy={booking} disabled={booking} onPress={() => void handleConfirm()} />}
+        {heldOver ? null : <Button label={service?.priceOnRequest === true ? "Request quote" : payNow || held ? "Pay & confirm" : advanceDue ? "Pay 20% advance" : "Confirm booking"} busy={booking} disabled={booking} onPress={() => { if (advanceDue && !held) { setAdvanceSheet(true); return; } void handleConfirm(); }} />}
         {held && !heldOver ? <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>Your booking is pending until the payment goes through.</T> : <Button label="Go back" kind="quiet" onPress={() => router.back()} />}
       </View>
+      {ADVANCE_SPLIT_ENABLED && advancePreview ? (
+        <AdvancePaymentSheet
+          visible={advanceSheet}
+          serviceTotalPaise={advancePreview.serviceTotalPaise}
+          advancePaise={advancePreview.advancePaise}
+          balancePaise={advancePreview.serviceTotalPaise - advancePreview.advancePaise}
+          pickupFees={breakdown ? breakdown.pickupFee + breakdown.dropFee > 0 : false}
+          busy={booking}
+          onPayAdvance={() => { setAdvanceSheet(false); void handleConfirm(); }}
+          onGoBack={() => setAdvanceSheet(false)}
+        />
+      ) : null}
     </Screen>
   );
 }
