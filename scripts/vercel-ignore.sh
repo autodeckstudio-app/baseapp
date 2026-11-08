@@ -171,6 +171,24 @@ if [ "${VERCEL_GIT_COMMIT_REF:-}" = "release/approved-web-20261104" ]; then
     *) printf 'reviewed web release: SKIP (%s)\n' "$app"; exit 0 ;;
   esac
 fi
+# One-shot reviewed wrap release (customer app + marketing site). Fires only
+# when HEAD's parent is exactly the reviewed wrap tip 19ca7ca5 AND HEAD itself
+# changes nothing but this script; any doubt falls through to the policies
+# below (exit 0 = SKIP, never an accidental build).
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ]; then
+  wrap_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  wrap_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  if [ -n "$wrap_root" ] && [ "$wrap_parent" = 19ca7ca50f5031dedce40a2880b7e59fee539ddb ]; then
+    cd "$wrap_root" || exit 0
+    wrap_changed="$(git diff --name-only "$wrap_parent" HEAD 2>/dev/null)" || exit 0
+    if [ "$wrap_changed" = scripts/vercel-ignore.sh ]; then
+      case "$app" in
+        customer|site) printf 'reviewed wrap release: BUILD (%s)\n' "$app"; exit 1 ;;
+        *) printf 'reviewed wrap release: SKIP (%s)\n' "$app"; exit 0 ;;
+      esac
+    fi
+  fi
+fi
 # Website releases fail closed. An app-only push must never rebuild the site
 # merely because its older successful base is missing from a shallow clone.
 if [ "$app" = site ]; then
