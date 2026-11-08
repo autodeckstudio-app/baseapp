@@ -2,6 +2,7 @@ import { validAppliedDate, todayStudioDate } from "../../../lib/applied-date";
 import { listOwnerKey } from "../../../lib/owner-key";
 import { VISIT_FALLBACK, visitAlso, visitServices, visitTitle } from "../../../lib/visit-services";
 import { lastFinishedJob } from "../../../lib/care-due";
+import { buildCarStory } from "../../../lib/car-story";
 import { buildCarePlan } from "../../../lib/care-plan";
 import { glassSurface, glassInner, glassOrange } from "../../../lib/glass";
 import { FileUploader, DateField, SelectField } from "../../../ui/inputs"; // DateField: calendar-valid date choice, no free-text dates // DateField: calendar-valid date choice, no free-text dates
@@ -684,6 +685,19 @@ export default function VehicleDetailScreen() {
 
       {tab === "history" ? (
       <>
+      {(() => {
+        const story = buildCarStory(jobs, currentProtections.map((p) => ({ title: protectionRecordTitle(p), detail: protectionDetail(p, formatDate) })), formatDate);
+        return story ? (
+        <Pane pad="gap">
+          <Kicker>Your car&apos;s story</Kicker>
+          {story.since ? <Row title="With AutoDeck since" detail={story.since} /> : null}
+          {story.visits > 0 ? <Row title="Visits completed" detail={String(story.visits)} /> : null}
+          {story.protections.map((sp, i) => (
+            <Row key={sp.title} title={sp.title} detail={sp.detail || undefined} last={i === story.protections.length - 1} />
+          ))}
+        </Pane>
+        ) : null;
+      })()}
       {(() => {
         const past = buildHistory(jobs.map((j) => ({ id: j.id, title: visitTitle(visitServices(j, invoices.find((x) => x.jobId === j.id), serviceNames)), also: [visitAlso(visitServices(j, invoices.find((x) => x.jobId === j.id), serviceNames))].filter(Boolean).join(" "), at: j.sealedAt ?? j.createdAt, status: j.status })));
         const bookingOf = (jobId?: string) => jobs.find((j) => j.id === jobId)?.bookingId;
