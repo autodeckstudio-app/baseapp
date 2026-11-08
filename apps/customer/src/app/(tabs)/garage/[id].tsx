@@ -712,13 +712,14 @@ export default function VehicleDetailScreen() {
           ))}
           {(() => {
             // Shareable export, safe by construction (see lib/share-story):
-            // verified protections and delivered visits only; never plate,
+            // verified protections and delivered visits only; no photo at all
+            // until pixel redaction (plate, people) is verified; never plate,
             // bills, contact details or inspection evidence. Web download for
             // now; native share lands with the native verification pass.
             if (Platform.OS !== "web") return null;
             const shareProt = currentProtections.filter((pr) => pr.status === "verified").map((pr) => ({ title: protectionRecordTitle(pr), detail: protectionDetail(pr, formatDate) }));
             const shareVisits = jobs.filter((j) => j.status === "DELIVERED" && j.sealedAt).map((j) => ({ date: formatDate(j.sealedAt as string), service: visitTitle(visitServices(j, invoices.find((x) => x.jobId === j.id), serviceNames)) }));
-            const shareInput = { carTitle: `${vehicle.make} ${vehicle.model}`, subtitle: heroFacts.filter((f) => f.label !== "Odometer" && f.label !== "Protection" && f.value && f.value !== "-").map((f) => f.value).join(" · "), photoUrl: vehicle.photoUrl ?? null, visits: shareVisits, protections: shareProt, generatedOn: formatDate(todayStudioDate()) };
+            const shareInput = { carTitle: `${vehicle.make} ${vehicle.model}`, subtitle: heroFacts.filter((f) => f.label !== "Odometer" && f.label !== "Protection" && f.value && f.value !== "-").map((f) => f.value).join(" · "), visits: shareVisits, protections: shareProt, generatedOn: formatDate(todayStudioDate()) };
             if (!shareStoryReady(shareInput)) return null;
             return <LinkAction label="Share your car's story" testID="share-car-story" onPress={() => {
               const html = shareStoryHtml(shareInput);

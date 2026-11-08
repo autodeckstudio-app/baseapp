@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { shareStoryHtml, shareStoryReady } from "./share-story";
 
-const base = { carTitle: "BMW M340i", subtitle: "2023 · Black", photoUrl: null, visits: [{ date: "10 Sept 2026", service: "Foam wash" }], protections: [{ title: "Ceramic Coating", detail: "Kovalent" }], generatedOn: "8 Nov 2026" };
+const base = { carTitle: "BMW M340i", subtitle: "2023 · Black", visits: [{ date: "10 Sept 2026", service: "Foam wash" }], protections: [{ title: "Ceramic Coating", detail: "Kovalent" }], generatedOn: "8 Nov 2026" };
 
 describe("share story export", () => {
   it("renders visits and verified protections, escaping markup", () => {
@@ -11,9 +11,13 @@ describe("share story export", () => {
     expect(h).not.toContain("<b> car");
     expect(h).toContain("&lt;b&gt;");
   });
-  it("includes the photo only when one is recorded for the car", () => {
+  it("never renders an image: pixel redaction (plate, people) is unverified, so no photo ships", () => {
     expect(shareStoryHtml(base)).not.toContain("<img");
-    expect(shareStoryHtml({ ...base, photoUrl: "https://x/car.jpg" })).toContain("https://x/car.jpg");
+    expect(shareStoryHtml(base)).not.toContain("photoUrl");
+  });
+  it("carries no plate, invoice, odometer or contact field", () => {
+    const h = shareStoryHtml(base);
+    for (const banned of ["plate", "invoice", "odometer", "km", "phone", "address"]) expect(h.toLowerCase()).not.toContain(banned);
   });
   it("omits empty sections", () => {
     const h = shareStoryHtml({ ...base, visits: [], protections: [] });
@@ -21,7 +25,7 @@ describe("share story export", () => {
     expect(h).not.toContain("Protection on record");
   });
   it("is ready only when there is at least one shareable fact", () => {
-    expect(shareStoryReady({ photoUrl: null, visits: [], protections: [] })).toBe(false);
-    expect(shareStoryReady({ photoUrl: null, visits: base.visits, protections: [] })).toBe(true);
+    expect(shareStoryReady({ visits: [], protections: [] })).toBe(false);
+    expect(shareStoryReady({ visits: base.visits, protections: [] })).toBe(true);
   });
 });
