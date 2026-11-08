@@ -499,7 +499,7 @@ describe("referral code stays dark", () => {
 describe("care map is gone", () => {
   it("has no Care map code, route or label in the customer app", () => {
     const { execSync } = require("node:child_process");
-    const hits = execSync(`grep -rniE "care ?map|CareMap|Car3D" src --include=*.ts --include=*.tsx -l || true`, { cwd: process.cwd() }).toString().split("\n").filter((f: string) => f && !f.endsWith("design-contract.test.ts") && !f.endsWith("bookings-view.test.ts"));
+    const hits = execSync(`grep -rniE "care ?map|CareMap|Car3D" src --include=*.ts --include=*.tsx -l || true`, { cwd: resolve(__dirname, "../..") }).toString().split("\n").filter((f: string) => f && !f.endsWith("design-contract.test.ts") && !f.endsWith("bookings-view.test.ts"));
     expect(hits).toEqual([]);
   });
 });

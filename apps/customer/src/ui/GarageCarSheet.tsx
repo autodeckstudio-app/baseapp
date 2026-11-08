@@ -54,7 +54,7 @@ export function GarageCarSheet({ car, onClose, onOpenRoom, jobs, svcNames, paper
   const details: Array<[string, string]> = ([
     car.year ? ["Year", String(car.year)] : null,
     car.color ? ["Colour", car.color] : null,
-    car.odometer != null ? ["Odometer", `${Number(car.odometer).toLocaleString("en-IN")} km`] : null,
+    car.odometer !== null && car.odometer !== undefined ? ["Odometer", `${Number(car.odometer).toLocaleString("en-IN")} km`] : null,
   ] as Array<[string, string] | null>).filter((d): d is [string, string] => d !== null);
   return (
     <Modal transparent visible animationType={reduce ? "none" : "fade"} onRequestClose={onClose} statusBarTranslucent>

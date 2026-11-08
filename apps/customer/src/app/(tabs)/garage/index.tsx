@@ -103,7 +103,7 @@ export default function GarageScreen() {
   useEffect(() => { if(mock)return;setPlan(null);if (!uid || !tenantId) return;let alive=true;const stop=listenToMyMemberships(tenantId, uid, (ms) => {if(alive)setPlan(ms.find((m) => m.status === "active") ?? null)}, () => undefined);return()=>{alive=false;stop()}; }, [uid, tenantId, retryTick]);
   useEffect(() => { if (mock) return; void getServiceCatalogue().then((all) => { const m: Record<string, { id: string; name: string; category: string }> = {}; for (const x of all) m[x.id] = { id: x.id, name: x.name, category: x.category }; setSvcMap(m); }).catch(() => undefined); }, [retryTick]);
   useEffect(()=>{if(mock)return;setArchived([]);setShowArchived(false);if(!uid||!tenantId)return;let alive=true;const stop=listenToMyArchivedVehicles(uid,tenantId,v=>{if(alive)setArchived(v)},()=>{if(alive)setArchiveActionError("Could not load archived cars. Retry before restoring or deleting.")});return()=>{alive=false;stop()};},[uid,tenantId,retryTick]);
-  async function restore(v:Vehicle){if(archiveLock.current)return;const owner=ownerKey,gen=archiveGeneration.current;const current=()=>ownerRef.current===owner&&archiveGeneration.current===gen;archiveLock.current=true;setArchiveActionBusy(v.id);setArchiveActionError(null);try{await restoreVehicle(v.id);}catch(e){if(current())setArchiveActionError(e instanceof Error?e.message:"The restore was not confirmed. Refresh before trying again.");}finally{if(current()){archiveLock.current=false;setArchiveActionBusy(null);}}}
+  async function restore(v:Vehicle){if(archiveLock.current)return;const scopeOwner=ownerKey,gen=archiveGeneration.current;const current=()=>ownerRef.current===scopeOwner&&archiveGeneration.current===gen;archiveLock.current=true;setArchiveActionBusy(v.id);setArchiveActionError(null);try{await restoreVehicle(v.id);}catch(e){if(current())setArchiveActionError(e instanceof Error?e.message:"The restore was not confirmed. Refresh before trying again.");}finally{if(current()){archiveLock.current=false;setArchiveActionBusy(null);}}}
 
   // Watchdog: if the vehicles stream never delivers (no data, no error),
   // show the connection notice instead of spinning forever.
@@ -136,7 +136,7 @@ export default function GarageScreen() {
   };
   async function confirmDeletePermanently() {
     if (!deleting||archiveLock.current) return;
-    const owner=ownerKey,gen=archiveGeneration.current;const current=()=>ownerRef.current===owner&&archiveGeneration.current===gen;archiveLock.current=true;
+    const scopeOwner=ownerKey,gen=archiveGeneration.current;const current=()=>ownerRef.current===scopeOwner&&archiveGeneration.current===gen;archiveLock.current=true;
     setArchiveActionBusy(deleting.id);
     setArchiveActionError(null);
     try {

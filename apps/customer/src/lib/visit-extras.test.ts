@@ -79,7 +79,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { SWITCHED_NOTE, ADDED_NOTE } from "./visit-extras";
 describe("bundle upgrade note is visible on the page it lands on", () => {
-  const page = readFileSync(join(process.cwd(), "src/app/(tabs)/book/[serviceId].tsx"), "utf8");
+  const page = readFileSync(join(__dirname, "../app/(tabs)/book/[serviceId].tsx"), "utf8");
   it("note constants match the helper output", () => {
     expect(bundleUpgradeNote("menu-wash-exterior", { primaryId: "menu-wash-full", upgradedTo: "menu-wash-full" })).toBe(SWITCHED_NOTE);
     expect(bundleUpgradeNote("menu-wash-foam", { primaryId: "menu-wash-foam", upgradedTo: "menu-wash-full" })).toBe(ADDED_NOTE);

@@ -17,21 +17,21 @@ vi.mock('@autodeck/ui/native', async () => {
 });
 // Real illustrative assets as file:// URIs so headless Chrome paints actual pixels.
 const { A, HOME_IMG, TYPE_IMG, PRODUCT_IMG } = vi.hoisted(() => {
-const A = (rel: string) => ({ uri: new URL('../../../../apps/customer/assets/' + rel, import.meta.url).href });
-const HOME_IMG: Record<string, any> = {
-  paint: A('imagery/optimized/paint-protection.jpg'),
-  detailing: A('imagery/optimized/detailing.jpg'),
-  washing: A('imagery/optimized/wash-and-care.jpg'),
-  garage: A('imagery/optimized/garage.jpg'),
-  modifications: A('imagery/optimized/modifications.jpg'),
+const assetFor = (rel: string) => ({ uri: new URL('../../../../apps/customer/assets/' + rel, import.meta.url).href });
+const homeImages: Record<string, any> = {
+  paint: assetFor('imagery/optimized/paint-protection.jpg'),
+  detailing: assetFor('imagery/optimized/detailing.jpg'),
+  washing: assetFor('imagery/optimized/wash-and-care.jpg'),
+  garage: assetFor('imagery/optimized/garage.jpg'),
+  modifications: assetFor('imagery/optimized/modifications.jpg'),
 };
-const TYPE_IMG: Record<string, any> = {
-  PPF: A('imagery/service-types/ppf.jpg'),
-  PPS: A('imagery/service-types/pps.jpg'),
-  'Colour PPF': A('imagery/service-types/colour-ppf.jpg'),
-  'Accessories & styling': A('imagery/service-types/accessories.jpg'),
+const typeImages: Record<string, any> = {
+  PPF: assetFor('imagery/service-types/ppf.jpg'),
+  PPS: assetFor('imagery/service-types/pps.jpg'),
+  'Colour PPF': assetFor('imagery/service-types/colour-ppf.jpg'),
+  'Accessories & styling': assetFor('imagery/service-types/accessories.jpg'),
 };
-const PRODUCT_IMG: Record<string, string> = {
+const productImages: Record<string, string> = {
   'borophene': 'kovalent-borophene.png',
   'graphene-matrix': 'kovalent-graphene-matrix.png',
   'graphene': 'kovalent-graphene.png',
@@ -40,19 +40,19 @@ const PRODUCT_IMG: Record<string, string> = {
   'prolong': 'kovalent-prolong.png',
   'powershield': 'kovalent-powershield.png',
 };
-return { A, HOME_IMG, TYPE_IMG, PRODUCT_IMG };
+return { A: assetFor, HOME_IMG: homeImages, TYPE_IMG: typeImages, PRODUCT_IMG: productImages };
 });
 // RN-web's SSR Image drops file:// sources; swap Image for a plain <img> in
 // this visual harness only so real asset pixels reach the screenshot.
 vi.mock('react-native', async (importOriginal) => {
   const mod = await importOriginal<any>();
-  const React = await import('react');
+  const reactModule = await import('react');
   return {
     ...mod,
     Image: (props: any) => {
       const flat = mod.StyleSheet?.flatten ? mod.StyleSheet.flatten(props.style) : (props.style ?? {});
       const { position, top, left, right, bottom, width, height, borderRadius, ...rest } = flat ?? {};
-      return React.createElement('img', {
+      return reactModule.createElement('img', {
         src: props?.source?.uri ?? '',
         style: { position: position ?? 'absolute', top: top ?? 0, left: left ?? 0, width: width ?? '100%', height: height ?? '100%', borderRadius: borderRadius ?? 0, objectFit: 'cover' },
       });
@@ -64,7 +64,7 @@ vi.mock('../lib/service-type-images', () => ({
 }));
 vi.mock('../lib/service-home-images', () => ({ serviceHomeImages: HOME_IMG }));
 vi.mock('./ServicePhoto', async () => {
-  const React = await import('react');
+  const reactModule = await import('react');
   const { Image } = await import('react-native');
   return {
     ServicePhoto: (props: any) => {
@@ -80,7 +80,7 @@ vi.mock('./ServicePhoto', async () => {
         : cat === 'pickup' ? A('imagery/generated/pickup.jpg')
         : cat === 'coating' || cat === 'washing' ? HOME_IMG[cat === 'coating' ? 'detailing' : 'washing']
         : HOME_IMG.paint;
-      return React.createElement(Image, { source: src, style: { width: props?.width ?? 88, height: props?.height ?? 108, borderRadius: 16 } });
+      return reactModule.createElement(Image, { source: src, style: { width: props?.width ?? 88, height: props?.height ?? 108, borderRadius: 16 } });
     },
   };
 });
