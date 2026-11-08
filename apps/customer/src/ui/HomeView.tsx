@@ -4,7 +4,7 @@
 import { CarThumb } from "./CarThumb";
 import { liveStep } from "../lib/live-step";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Image, Platform, Pressable, ScrollView, Text, View, type ImageSourcePropType, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
+import { Image, Platform, Pressable, ScrollView, Text, View, useWindowDimensions, type ImageSourcePropType, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import { pickTopServices, type TopPick } from "../lib/top-services";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import type { IconName } from "@autodeck/ui/theme";
@@ -280,6 +280,8 @@ export function isCompactCarRow(cars: HomeCar[]): boolean { return cars.length =
 
 export function HomeView(p: HomeViewProps) {
   const { name, colors } = useExperienceTheme();
+  const { width } = useWindowDimensions();
+  const heroHeight = width < 380 ? 224 : width < 600 ? 240 : 280;
   const r = raised(name);
   const top = pickTopServices(p.services);
   const [active, setActive] = useState(0);
@@ -292,7 +294,7 @@ export function HomeView(p: HomeViewProps) {
       <HomeBackdrop />
       {p.drawer?.length ? <SideDrawer open={menu} onClose={() => setMenu(false)} name={p.displayName ?? "AutoDeck"} initial={p.initial} items={p.drawer} /> : null}
       <View style={{ marginHorizontal: -20, marginTop: -16 }}>
-        <View style={{ height: 340, overflow: "hidden", borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
+        <View style={{ height: heroHeight, overflow: "hidden", borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
           <KenBurns source={sceneImagery.heroHome} />
           {Platform.OS === "web" ? (
             <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: `linear-gradient(180deg, rgba(8,9,10,0.34) 0%, rgba(8,9,10,0.08) 34%, rgba(8,9,10,0.52) 58%, rgba(8,9,10,0.58) 92%, ${name === "night" ? "rgba(36,38,42,1)" : "rgba(255,255,255,1)"} 100%)` } as object) }} />
@@ -313,7 +315,7 @@ export function HomeView(p: HomeViewProps) {
           </View>
           <Rise delay={60} style={{ position: "absolute", left: 20, right: 20, bottom: 44, gap: 6 }}>
             <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase" }}>{p.greeting}{car ? ` · ${car.title}` : ""}</Text>
-            <Text style={[textStyle("display"), { fontSize: 30, lineHeight: 34, color: "#FFFFFF", letterSpacing: -0.8 }]}>{"Complete car care.\nAll under one roof."}</Text>
+            <Text style={[textStyle("display"), { fontSize: width < 380 ? 26 : 30, lineHeight: width < 380 ? 30 : 34, color: "#FFFFFF", letterSpacing: -0.8 }]}>{"Complete car care.\nAll under one roof."}</Text>
           </Rise>
         </View>
       </View>

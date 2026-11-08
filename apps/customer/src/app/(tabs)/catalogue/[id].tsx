@@ -1,3 +1,4 @@
+import {BrandIdentity} from "../../../ui/BrandIdentity";
 import { SERVICE_HOMES } from "@autodeck/core";
 import { servicePlacement } from "../../../lib/services-navigation";
 import { SceneIntro } from "../../../ui/SceneIntro";
@@ -165,7 +166,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
           <View style={{ gap: space.hair }}>
             <SceneIntro compact eyebrow={[SERVICE_HOMES.find(h=>h.key===servicePlacement(service)?.home)?.label,servicePlacement(service)?.family].filter(Boolean).join(" · ") || "Service"} title={service.name} />
             {pricingVehicle.label ? <T role="caption" tone="accent">{service.priceOnRequest === true ? "Quote" : "Prices"} for your {pricingVehicle.vehicle?.make} {pricingVehicle.vehicle?.model} · {pricingVehicle.label}</T> : null}
-            {service.brand === "Add-ons" ? <T role="caption" tone="secondary">Optional extra, added along with a main service</T> : service.brand !== null ? <T role="caption" tone="secondary">{service.brand}</T> : null}
+            {service.brand === "Add-ons" ? <T role="caption" tone="secondary">Optional extra, added along with a main service</T> : service.brand !== null ? <BrandIdentity brand={service.brand}/> : null}
           </View>
         }
       >

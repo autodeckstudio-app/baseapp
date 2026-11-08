@@ -84,7 +84,7 @@ vi.mock('./ServicePhoto', async () => {
     },
   };
 });
-vi.mock('../lib/imagery', () => ({
+vi.mock('../lib/brand-logos', () => ({
   BRAND_LOGOS: {
     Kovalent: { src: A('imagery/brands/kovalent-logo.png'), background: '#15171B' },
     Fireball: { src: A('imagery/brands/fireball-logo.png'), background: '#FFFFFF' },

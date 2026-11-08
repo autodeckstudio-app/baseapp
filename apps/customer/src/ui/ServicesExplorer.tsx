@@ -1,3 +1,4 @@
+import {BrandIdentity} from "./BrandIdentity";
 import { Image, View, Pressable, type ImageSourcePropType } from "react-native";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import {
@@ -14,7 +15,7 @@ import { Button, Pane, T } from "./kit";
 import { serviceTypeImage } from "../lib/service-type-images";
 import { useState } from "react";
 import { serviceHomeImages } from "../lib/service-home-images";
-import { BRAND_LOGOS } from "../lib/imagery";
+import { BRAND_LOGOS } from "../lib/brand-logos";
 import {
   currentServices,
   referenceChoices,
@@ -77,6 +78,7 @@ export function ServiceChoiceCard({
             }}
           >
             <Image
+              accessibilityLabel={`${title} logo`}
               source={logo.src}
               resizeMode="contain"
               style={{ width: "100%", height: "100%" }}
@@ -138,9 +140,7 @@ export function ReferencePackageCard({
           />
         </View>
         <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
-          <T role="caption" tone="secondary">
-            {item.brand}
-          </T>
+          <BrandIdentity brand={item.brand}/>
           <T role="bodyStrong">{item.name}</T>
           <T role="caption" tone="secondary" numberOfLines={3}>
             {item.note}

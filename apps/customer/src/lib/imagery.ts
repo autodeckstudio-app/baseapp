@@ -203,16 +203,4 @@ export function typePhoto(key: string): ImageSourcePropType | null {
   return Array.isArray(t) ? pooledPhoto(t[0], t[1]) ?? null : TOPICS[t] ?? null;
 }
 
-/** Official brand marks, contained without recolouring, distortion or crop. */
-export const BRAND_LOGOS: Record<string, {src: ImageSourcePropType; background: string}> = {
-  GSWF:{src:require('../../assets/imagery/brands/gswf-logo.webp'),background:'#15171B'},
-  NAR:{src:require('../../assets/imagery/brands/nar-logo.png'),background:'#15171B'},
-  AVVYX:{src:require('../../assets/imagery/brands/avvyx-logo.png'),background:'#15171B'},
-  "AutoDeck Care": {src: require("../../assets/brand/icon-512.png"), background: "#FFFFFF"},
-  XPEL: {src: require('../../assets/imagery/brands/xpel-logo.png'), background: '#FFFFFF'},
-  '3M': {src: require('../../assets/imagery/brands/3m-logo.jpg'), background: '#FFFFFF'},
-  LLumar: {src: require('../../assets/imagery/brands/llumar-logo.png'), background: '#FFFFFF'},
-  Garware: {src: require('../../assets/imagery/brands/garware-logo.png'), background: '#15171B'},
-  Fireball: {src: require('../../assets/imagery/brands/fireball-logo.png'), background: '#FFFFFF'},
-  Kovalent: {src: require('../../assets/imagery/brands/kovalent-logo.png'), background: '#15171B'},
-};
+export {BRAND_LOGOS} from "./brand-logos";

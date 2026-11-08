@@ -1,3 +1,5 @@
+import {writeFileSync} from "node:fs";
+import {StyleSheet} from "react-native";
 import type * as PaperService from "../../../lib/paper-service";
 // Mounted-screen proof for the document-add retry path: the REAL
 // VehicleDetailScreen with only IO seams mocked. A submit whose acknowledgement
@@ -265,3 +267,20 @@ it('native valid expiry Save without blur persists exact new draft',async()=>{h.
 it('actual garage canonical paper owner and old car snapshots ignored after route change',async()=>{const el=await mount();expect(h.owners.at(-1)).toBe('canonical-profile');const old=h.vehicleCb;__params.current={id:'v2'};await act(async()=>el.update(createElement(VehicleDetailScreen)));await act(async()=>h.vehicleCb?.({exists:()=>true,metadata:{fromCache:false},data:()=>({...vehicle,id:'v2',make:'NEW-CAR'})}));await act(async()=>old?.({exists:()=>true,metadata:{fromCache:false},data:()=>({...vehicle,make:'PRIVATE-OLD'})}));expect(textOf(el)).not.toContain('PRIVATE-OLD');expect(textOf(el)).toContain('NEW-CAR');await act(async()=>el.unmount())});
 
 it('actual private job/invoice listeners canonical owner and old callbacks cannot repopulate new car',async()=>{const el=await mount();expect(h.privateOwners).toContainEqual(['jobs','canonical-profile']);expect(h.privateOwners).toContainEqual(['invoices','canonical-profile']);const jobs=h.jobCb,inv=h.invoiceCb;__params.current={id:'other'};await act(async()=>el.update(createElement(VehicleDetailScreen)));await act(async()=>h.vehicleCb?.({exists:()=>true,metadata:{fromCache:false},data:()=>({...vehicle,id:'other',make:'NEW'})}));await act(async()=>{jobs([{id:'old-job',vehicleId:'v1',status:'DELIVERED',createdAt:'2026-01-01',services:[{serviceName:'PRIVATE-OLD-JOB'}]}]);inv([{id:'old-invoice',vehicleId:'v1',status:'issued',jobId:'old-job',lineItems:[{description:'PRIVATE-OLD-INVOICE'}]}])});act(()=>switchTab(el,'History'));expect(textOf(el)).not.toContain('PRIVATE-OLD');expect(textOf(el)).toContain('0 visits');await act(async()=>el.unmount())});
+
+
+it('editing uses only one selected cover preview, compact controls and cancelling restores saved cover',async()=>{
+ const el=await mount();await act(async()=>h.vehicleCb?.({exists:()=>true,metadata:{fromCache:false},data:()=>({...vehicle,photoUrl:'vehicles/v1/cover.jpg'})}));
+ await act(async()=>press(el,'Edit vehicle'));
+ expect(textOf(el)).toContain('Edit vehicle');expect(textOf(el)).not.toContain('Book a service');
+ const uploader=()=>el.root.findAll(n=>n.props.label==='Replace car photo'&&typeof n.props.onChange==='function')[0]!;
+ expect(uploader().props.compact).toBe(true);writeFileSync('/tmp/ad-ui15/edit-saved-tree.json',JSON.stringify(el.toJSON()));
+ const blob=new Blob(['fixture'],{type:'image/jpeg',lastModified:0});
+ await act(async()=>uploader().props.onChange([{blob,type:'image/jpeg'}]));
+ expect(el.root.findAll(n=>n.type==='img'&&n.props.alt==='New car photo')).toHaveLength(0);
+ expect(el.root.findAll(n=>n.type==='img'&&n.props.alt==='Selected image')).toHaveLength(1);
+ expect(el.root.findAll(n=>n.props.label==='Save changes'&&typeof n.props.onPress==='function')[0]!.props.style.minHeight).toBe(44);
+ expect(h.cover).not.toHaveBeenCalled();writeFileSync('/tmp/ad-ui15/edit-selected-tree.json',JSON.stringify(el.toJSON()));writeFileSync('/tmp/ad-ui15/rnw.css',(StyleSheet as any).getSheet().textContent);
+ await act(async()=>press(el,'Cancel'));expect(textOf(el)).toContain('Book a service');expect(h.cover).not.toHaveBeenCalled();
+ await act(async()=>el.unmount());
+});

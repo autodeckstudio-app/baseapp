@@ -552,7 +552,7 @@ export default function VehicleDetailScreen() {
     <Screen
       header={
         <View style={{ gap: space.breath }}>
-          {(newPhoto || vehicle.photoUrl) ? (
+          {!editing && (newPhoto || vehicle.photoUrl) ? (
           <CarHero
             photo={newPhoto ? (Platform.OS === "web" ? createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: metrics.heroTall, objectFit: "cover", display: "block" } }) : <Image source={{uri:newPhoto.previewUrl}} accessibilityLabel="New car photo" style={{width:"100%",height:metrics.heroTall}} resizeMode="cover" />) : <CarThumb car={vehicle} height={metrics.heroTall} radius={0} />}
             title={`${vehicle.make} ${vehicle.model}`}
@@ -568,7 +568,8 @@ export default function VehicleDetailScreen() {
              stand-in above the real name and records. */
           <Pane pad="gap">
             <View style={{ gap: space.line }}>
-              <T role="title">{`${vehicle.make} ${vehicle.model}`}</T>
+              <T role="title">{editing ? "Edit vehicle" : `${vehicle.make} ${vehicle.model}`}</T>
+              {editing ? <T role="bodyStrong">{`${vehicle.make} ${vehicle.model}`}</T> : null}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 {mockDetail ? null : <Plate value={vehicle.registrationNumber} />}
                 <T role="caption" tone="secondary">{heroFacts.filter((f) => f.value && f.value !== "-").map((f) => f.value).join("  ·  ")}</T>
@@ -579,13 +580,13 @@ export default function VehicleDetailScreen() {
         </View>
       }
     >
-      <TabPills tabs={[{ key: "upcoming", label: "Upcoming" }, { key: "history", label: "History" }, { key: "documents", label: "Documents" }]} value={tab} onChange={setTab} />
+      {!editing ? <TabPills tabs={[{ key: "upcoming", label: "Upcoming" }, { key: "history", label: "History" }, { key: "documents", label: "Documents" }]} value={tab} onChange={setTab} /> : null}
       {tab === "upcoming" ? (
       <>
-      {expiredDocs.length > 0 ? (
+      {!editing && expiredDocs.length > 0 ? (
         <Notice title={`${countLabel(expiredDocs.length, "document", "documents")} expired`} body="Renew it and add the new document so the car stays covered." action={<Button label="Review" kind="quiet" onPress={() => setTab("documents")} />} />
       ) : null}
-      {upcomingBookings.length > 0 ? (
+      {!editing && upcomingBookings.length > 0 ? (
         <View style={{ gap: space.breath }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
             <Kicker>Bookings</Kicker>
@@ -605,7 +606,7 @@ export default function VehicleDetailScreen() {
           </Pane>
         </View>
       ) : null}
-      {!vehicle.category ? (
+      {!editing && !vehicle.category ? (
         <Pane pad="inset">
           <View style={{ gap: space.line }}>
             <Kicker>Add car type</Kicker>
@@ -616,19 +617,15 @@ export default function VehicleDetailScreen() {
         </Pane>
       ) : null}
         <>
-          <CarOverview
+          {!editing ? <CarOverview
             due={due}
             last={null}
             reminders={reminders}
-          />
+          /> : null}
 
-          {vehicle && editing ? (
-            <View style={{ borderRadius: 16, overflow: "hidden" }}>
-              {newPhoto ? (
-                (Platform.OS === "web" ? createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: 200, objectFit: "cover", display: "block" } }) : <Image source={{uri:newPhoto.previewUrl}} accessibilityLabel="New car photo" style={{width:"100%",height:200}} resizeMode="cover" />)
-              ) : (
-                <CarThumb car={vehicle} height={200} radius={0} />
-              )}
+          {editing && !newPhoto && vehicle.photoUrl ? (
+            <View style={{ borderRadius: 12, overflow: "hidden" }}>
+              <CarThumb car={vehicle} height={160} radius={0} />
             </View>
           ) : null}
 
@@ -637,7 +634,7 @@ export default function VehicleDetailScreen() {
               <>
                 <View style={{ gap: space.hair }}>
                   <Kicker>Car photo</Kicker>
-                  <FileUploader label={vehicle.photoUrl ? "Replace car photo" : "Add car photo"} files={newPhoto && !(newPhoto.blob instanceof Uint8Array)?[{blob:newPhoto.blob,type:newPhoto.contentType}]:[]} nativeEnabled nativeFileCount={newPhoto?1:0} onNativeChange={fs=>{const f=fs[0];setNewPhoto(f?{blob:f.bytes,contentType:f.type,previewUrl:f.previewUri}:null);}} onChange={fs=>{const f=fs[0];setNewPhoto(f?{blob:f.blob,contentType:f.type,previewUrl:URL.createObjectURL(f.blob)}:null);}}/>
+                  <FileUploader label={vehicle.photoUrl ? "Replace car photo" : "Add car photo"} compact files={newPhoto && !(newPhoto.blob instanceof Uint8Array)?[{blob:newPhoto.blob,type:newPhoto.contentType}]:[]} nativeEnabled nativeFileCount={newPhoto?1:0} onNativeChange={fs=>{const f=fs[0];setNewPhoto(f?{blob:f.bytes,contentType:f.type,previewUrl:f.previewUri}:null);}} onChange={fs=>{const f=fs[0];setNewPhoto(f?{blob:f.blob,contentType:f.type,previewUrl:URL.createObjectURL(f.blob)}:null);}}/>
 
                   {VEHICLE_IMAGE_REMOVE_ENABLED && vehicle.photoUrl && !newPhoto ? <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><IconAction kind="delete" label="Remove car photo" onPress={() => setRemoveImage("cover")} /><T role="caption" tone="tertiary">Remove the saved car photo</T></View> : null}
                   <T role="caption" tone="tertiary">{newPhoto ? "New photo ready. It uploads when you save." : "Choose a JPEG, PNG or WebP to replace the photo."}</T>
@@ -646,7 +643,7 @@ export default function VehicleDetailScreen() {
               <>
                 <View style={{ gap: space.hair }}>
                   <Kicker>RC photo</Kicker>
-                  <FileUploader label={vehicle.rcPhotoUrl ? "Replace RC photo" : "Add RC photo"} files={newRc && !(newRc.blob instanceof Uint8Array) ? [{ blob: newRc.blob, type: newRc.contentType }] : []} nativeEnabled nativeFileCount={newRc?1:0} onNativeChange={fs=>{const f=fs[0];setNewRc(f?{blob:f.bytes,contentType:f.type}:null);}} onChange={(fs) => { const f = fs[0]; setNewRc(f ? { blob: f.blob, contentType: f.type } : null); }} />
+                  <FileUploader label={vehicle.rcPhotoUrl ? "Replace RC photo" : "Add RC photo"} compact files={newRc && !(newRc.blob instanceof Uint8Array) ? [{ blob: newRc.blob, type: newRc.contentType }] : []} nativeEnabled nativeFileCount={newRc?1:0} onNativeChange={fs=>{const f=fs[0];setNewRc(f?{blob:f.bytes,contentType:f.type}:null);}} onChange={(fs) => { const f = fs[0]; setNewRc(f ? { blob: f.blob, contentType: f.type } : null); }} />
                   {VEHICLE_IMAGE_REMOVE_ENABLED && vehicle.rcPhotoUrl && !newRc ? <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><IconAction kind="delete" label="Remove RC photo" onPress={() => setRemoveImage("rc")} /><T role="caption" tone="tertiary">Remove the saved RC photo</T></View> : null}
                   <T role="caption" tone="tertiary">{newRc ? "RC photo ready. It uploads when you save." : vehicle.rcPhotoUrl ? "An RC photo is on file. Choose a JPEG, PNG or WebP to replace it." : "Add a clear photo of the registration certificate (JPEG, PNG or WebP)."}</T>
                 </View>
@@ -656,9 +653,9 @@ export default function VehicleDetailScreen() {
               <Field label="Colour" value={form.color} onChangeText={(v) => setForm((p) => ({ ...p, color: v }))} autoCapitalize="words" />
               <SelectField label="Car type" value={form.category} placeholder="Choose type" options={VEHICLE_SIZES} onChange={(v) => setForm((p) => ({ ...p, category: v as VehicleCategory }))} />
               <Field label="Odometer (km)" value={form.odometer} onChangeText={(v) => setForm((p) => ({ ...p, odometer: v }))} keyboardType="numeric" />
-              <View style={{ gap: space.breath }}>
-                <Button label="Save changes" busy={saving} onPress={() => void handleSave()} />
-                <Button label="Cancel" kind="quiet" onPress={() => { setNewPhoto(null); setNewRc(null); setEditing(false); }} />
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
+                <Button label="Save changes" style={{ minHeight: 44, marginTop: 0, paddingHorizontal: 18 }} busy={saving} onPress={() => void handleSave()} />
+                <Button label="Cancel" style={{ minHeight: 44, paddingHorizontal: 18 }} kind="quiet" onPress={() => { setNewPhoto(null); setNewRc(null); setEditing(false); }} />
               </View>
             </View>
           ) : null}
@@ -670,16 +667,16 @@ export default function VehicleDetailScreen() {
 
         </>
 
-      {(() => {
+      {!editing ? (() => {
         const svc: Record<string, { id: string; name: string; category: string }> = {};
         for (const j of jobs) if (serviceNames[j.serviceId]) svc[j.serviceId] = { id: j.serviceId, name: serviceNames[j.serviceId]!, category: serviceCats[j.serviceId] ?? "" };
         const plan = buildCarePlan({ jobs, services: svc, warranties: activeWarranties.map((w) => ({ label: w.warrantyLabel, endDate: w.endDate })) });
         const upcoming = buildUpcoming({ plan: { ...plan, warranties: [] }, papers: [] });
         if (upcoming.length === 0) return null;
         return <CareTimeline title="Service due" count={countLabel(upcoming.length, "item", "items")} items={upcoming} empty="Nothing due yet. The care plan starts once the studio finishes a service on this car." />;
-      })()}
+      })() : null}
 
-      <Button label="Book a service" onPress={() => router.navigate("/(tabs)/catalogue")} />
+      {!editing ? <Button label="Book a service" onPress={() => router.navigate("/(tabs)/catalogue")} /> : null}
       {!editing ? (
         <View style={{ gap: space.breath }}>
           <Button label="Edit vehicle" kind="quiet" onPress={() => setEditing(true)} />

@@ -7,7 +7,7 @@ vi.mock("../lib/service-type-images", () => ({
 }));
 vi.mock("./ServicePhoto", () => ({ ServicePhoto: () => null }));
 vi.mock("../lib/service-home-images", () => ({ serviceHomeImages: {} }));
-vi.mock("../lib/imagery", () => ({ BRAND_LOGOS: {} }));
+vi.mock("../lib/brand-logos", () => ({ BRAND_LOGOS: {} }));
 vi.mock("./kit", () => ({
   Button: ({ label, onPress }: any) => (
     <Pressable accessibilityLabel={label} onPress={onPress}>
