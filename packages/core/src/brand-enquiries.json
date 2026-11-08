@@ -96,6 +96,69 @@
     "note": "Spray-on paint protection. Ask the studio about product and coverage."
   },
   {
+    "key": "llumar-ppf",
+    "brand": "LLumar",
+    "name": "LLumar PPF",
+    "group": "ppf",
+    "level": "brand",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://llumar.com/en/paint-protection-film"
+  },
+  {
+    "key": "garware-ppf",
+    "brand": "Garware",
+    "name": "Garware PPF",
+    "group": "ppf",
+    "level": "brand",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://www.garwareppf.com/"
+  },
+  {
+    "key": "xpel-ppf",
+    "brand": "XPEL",
+    "name": "XPEL PPF",
+    "group": "ppf",
+    "level": "brand",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://www.xpel.com/"
+  },
+  {
+    "key": "avery-dennison-ppf",
+    "brand": "Avery Dennison",
+    "name": "Avery Dennison PPF",
+    "group": "ppf",
+    "level": "brand",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://graphics.averydennison.com/eu-en/home/graphics-products/vehicle-wrapping-films/spf-dir-series.html"
+  },
+  {
+    "key": "avvyx-ppf",
+    "brand": "AVVYX",
+    "name": "AVVYX PPF",
+    "group": "ppf",
+    "level": "brand",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://avvyx.com/"
+  },
+  {
+    "key": "nar-ppf",
+    "brand": "NAR",
+    "name": "NAR PPF",
+    "group": "ppf",
+    "level": "brand",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://www.narppf.com/"
+  },
+  {
+    "key": "gswf-ppf",
+    "brand": "GSWF",
+    "name": "GSWF PPF",
+    "group": "ppf",
+    "level": "brand",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://gswf.com/"
+  },
+  {
     "key": "garware-plus-exact",
     "brand": "Garware",
     "name": "Plus PPF",

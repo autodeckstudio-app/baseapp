@@ -127,8 +127,8 @@ it("connected home -> ceramic -> brand -> exact service, PPF/PPS honest empty st
   await press(r, "Ask the studio");
   expect(help).toHaveBeenCalledWith("Paint Protection · PPF · Remove existing film");
   await act(async () => r.unmount());
-  // Full-body fitting: film ranges stay held until the owner confirms sourcing,
-  // so there is no brand chooser - the studio confirms the work directly.
+  // Full-body fitting: owner-confirmed film BRANDS (8 Nov) show as a brand
+  // chooser; each brand carries one brand-level enquiry. Named ranges stay held.
   help.mockClear();
   function FullBodyApp() {
     const [p, setP] = useState<ServicesPath>({ home: "paint", family: "PPF", work: "full_body" });
@@ -149,13 +149,22 @@ it("connected home -> ceramic -> brand -> exact service, PPF/PPS honest empty st
     r = create(<FullBodyApp />);
   });
   const fullText = JSON.stringify(r.toJSON());
-  expect(fullText).toContain('"Ask the studio about ","full-body protection"');
-  expect(fullText).not.toContain("Choose a brand");
-  expect(fullText).not.toContain("Garware");
+  expect(fullText).toContain("Choose a brand to see its current offerings.");
+  for (const b of ["LLumar", "Garware", "XPEL", "Avery Dennison", "AVVYX", "NAR", "GSWF"])
+    expect(fullText).toContain(b);
+  expect(fullText).not.toContain("Ultraguard");
+  expect(fullText).not.toContain("SunTek");
+  expect(fullText).not.toContain("3M");
   expect(fullText).not.toContain("\u20b9");
-  await press(r, "Ask the studio");
-  expect(help).toHaveBeenCalledWith("Paint Protection · PPF · Full-body protection");
-  expect(ppfReference).not.toHaveBeenCalled();
+  await press(r, "Garware");
+  const gText = JSON.stringify(r.toJSON());
+  expect(gText).toContain("Garware PPF");
+  expect(gText).toContain("Ask the studio about the right coverage");
+  expect(gText).not.toContain("Premium PPF");
+  expect(gText).not.toContain("\u20b9");
+  await press(r, "View Garware PPF");
+  expect((ppfReference.mock.calls.at(-1)![0] as any).key).toBe("garware-ppf");
+  expect(help).not.toHaveBeenCalled();
   await act(async () => r.unmount());
   // Colour PPF lives under Modifications & Wraps > Colour PPF (owner taxonomy,
   // 5 Nov), not under Paint Protection. Colour film ranges are held too, so the

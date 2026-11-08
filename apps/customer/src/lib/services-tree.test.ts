@@ -34,10 +34,16 @@ describe("services type level", () => {
     const years = leafServices({ kind: "branch", key: "x", label: "x", children: t.filter((n) => n.kind === "branch") }).filter((s) => /year/i.test(s.warrantyLabel ?? ""));
     expect(years.every((s) => /^menu-coat-(autodeck|fireball|kovalent)/.test(s.id))).toBe(true);
   });
-  it("ppf: colour is a film type, never a brand; brands are the four real ones", () => {
+  it("ppf: colour is a film type, never a brand; service brands are the four real ones", () => {
     const t = buildTree(group("ppf"), all);
-    const film = resolvePath(t, ["brand-film"]).nodes.map((n) => (n.kind === "branch" ? n.label : ""));
-    expect(film).toEqual(["Garware", "XPEL", "LLumar", "3M"]);
+    const nodes = resolvePath(t, ["brand-film"]).nodes;
+    // Brand-level enquiry entries merge into brand branches; only branches
+    // with bookable leaves count as service brands.
+    const serviceBrands = nodes
+      .filter((n) => n.kind === "branch" && leafServices(n).length > 0)
+      .map((n) => (n.kind === "branch" ? n.label : ""));
+    expect(serviceBrands).toEqual(["Garware", "XPEL", "LLumar", "3M"]);
+    const film = nodes.map((n) => (n.kind === "branch" ? n.label : ""));
     expect(film).not.toContain("Colour films");
     expect(t.some((n) => n.kind === "branch" && n.key === "colour")).toBe(true);
   });
@@ -76,16 +82,25 @@ describe("services type level", () => {
   });
 });
 
-it('unconfirmed film brands and generic product enquiry fallbacks are absent; the confirmed brand-less PPS concept is the only film-group enquiry',()=>{
+it('owner-confirmed film brands appear as brand-level enquiries only; unconfirmed brands and named ranges stay absent',()=>{
   const eligible=all.filter(customerOfferingVisible);
+  const ppf=buildTree(group('ppf'),eligible);
+  // Owner confirmation 8 Nov (iMessage): the seven confirmed film BRANDS each
+  // carry one brand-level enquiry under Film by brand; named ranges stay held.
+  const film=ppf.find(n=>n.kind==='branch'&&n.key==='brand-film') as Extract<TreeNode,{kind:'branch'}>|undefined;
+  expect(film).toBeTruthy();
+  const brandBranches=film!.children;
+  expect(brandBranches.map(b=>b.kind==='branch'?b.label:'')).toEqual(['LLumar','Garware','XPEL','Avery Dennison','AVVYX','NAR','GSWF']);
+  for(const b of brandBranches){expect(b.kind).toBe('branch');if(b.kind==='branch')expect(b.children.map(c=>c.kind==='enquiry'?c.key:'')).toHaveLength(1);}
   // pps-spray is the confirmed, brand-less PPS service concept: enquiry-only, no stock/price.
-  expect(buildTree(group('ppf'),eligible).map(n=>n.kind==='enquiry'?n.key:n.kind)).toEqual(['pps-spray']);
+  expect(ppf.filter(n=>n.kind==='enquiry').map(n=>n.kind==='enquiry'?n.key:'')).toEqual(['pps-spray']);
   const tree=buildTree(group('coatings'),eligible);
   for(const key of ['tyre','dashboard','matte','ppf-coat','maintenance-coating']) {
     expect(tree.some(n=>n.kind==='enquiry'&&n.key===key)).toBe(false);
   }
   expect(JSON.stringify(tree)).not.toContain('PowerShield');
-  expect(JSON.stringify(buildTree(group('ppf'),all))).not.toMatch(/GSWF|NAR|AVVYX|Matte and satin film/);
+  const ppfText=JSON.stringify(buildTree(group('ppf'),all));
+  for(const held of ['Ultraguard','SunTek','Defender','ULTIMATE','Premium PPF','Matte and satin film'])expect(ppfText).not.toContain(held);
 });
 
 it('every confirmed reference remains an enquiry and all 23 ordinary services remain visible',()=>{

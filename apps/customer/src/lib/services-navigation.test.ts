@@ -59,8 +59,9 @@ it("film aftercare is not film installation, surface coatings never become ceram
 it("paint has all three service TYPES even with no confirmed film/spray stock, modifications retains colour-film service type", () => {
   expect(familyChoices("paint", [], [])).toEqual(["Ceramic", "PPF", "PPS"]);
   expect(familyChoices("modifications", [], [])).toContain("Colour PPF");
-  // The only film-group reference is the confirmed brand-less PPS service concept.
-  expect(referenceChoices([]).filter((r) => r.group === "ppf").map((r) => r.key)).toEqual(["pps-spray"]);
+  // Film-group references: the confirmed brand-less PPS concept plus one
+  // brand-level entry per owner-confirmed film brand (8 Nov); named ranges stay held.
+  expect(referenceChoices([]).filter((r) => r.group === "ppf").map((r) => r.key)).toEqual(["pps-spray", "llumar-ppf", "garware-ppf", "xpel-ppf", "avery-dennison-ppf", "avvyx-ppf", "nar-ppf", "gswf-ppf"]);
   // Owner taxonomy (5 Nov): a colour/black film record places under
   // Modifications & Wraps > Colour PPF; a clear film record stays under Paint
   // Protection > PPF. Placement is structural, independent of visibility.
