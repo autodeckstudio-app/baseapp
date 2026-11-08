@@ -1,3 +1,4 @@
+import { useReduceMotion } from "../lib/reduce-motion";
 // One full-screen viewer for Today and highlights. Never nests the catalogue player.
 import {useCallback,useEffect,useRef,useState} from "react";
 import {ActivityIndicator,AppState,Image,Modal,Pressable,View} from "react-native";
@@ -11,6 +12,7 @@ const PHOTO_MS=5000;
 
 export function StoryViewer({group,identityKey,onClose,onNextGroup,onPrevGroup}:{group:StoryGroup|null;identityKey?:string|null;onClose:()=>void;onNextGroup?:()=>void;onPrevGroup?:()=>void}){
  const insets=useSafeAreaInsets();
+  const reduce = useReduceMotion();
  const [i,setI]=useState(0),[progress,setProgress]=useState(0),[held,setHeld]=useState(false),[background,setBackground]=useState(false),[muted,setMuted]=useState(true),[ready,setReady]=useState(false),[failed,setFailed]=useState(false),[blocked,setBlocked]=useState(false),[resume,setResume]=useState(0);
  const gesture=useRef<{x:number;y:number;at:number;swiped:boolean}|null>(null),skipTap=useRef(false),advanced=useRef(false);
   const gate = useRef(createStoryRefreshGate());
@@ -67,7 +69,7 @@ export function StoryViewer({group,identityKey,onClose,onNextGroup,onPrevGroup}:
   const up=(e:any)=>{const g=gesture.current;setHeld(false);if(!g)return;const p=point(e),dy=p.pageY-g.y,dx=p.pageX-g.x;skipTap.current=g.swiped||Date.now()-g.at>220;if(dy>90&&Math.abs(dy)>Math.abs(dx)){skipTap.current=true;onClose();}else if(Math.abs(dx)>75&&Math.abs(dx)>Math.abs(dy)){skipTap.current=true;if(dx<0)onNextGroup?.();else onPrevGroup?.();}gesture.current=null;};
   const tap=(action:()=>void)=>{if(!skipTap.current)action();skipTap.current=false;gesture.current=null;};
   if(!group)return null;
-  return <Modal visible transparent={false} animationType="fade" statusBarTranslucent onRequestClose={onClose}>
+  return <Modal visible transparent={false} animationType={reduce ? "none" : "fade"} statusBarTranslucent onRequestClose={onClose}>
    <View style={{flex:1,backgroundColor:'#000',alignItems:'center'}}>
     <View style={{flex:1,width:'100%',maxWidth:480,backgroundColor:'#000'}}>
      {item&&!failed?(isVideo?<StoryMedia key={item.id+item.url+resume} uri={item.url} paused={paused} muted={muted} onProgress={mediaProgress} onEnded={next} onError={mediaError} onReady={mediaReady} onBlocked={mediaBlocked}/>:<Image key={item.id+item.url} source={{uri:item.url}} resizeMode="cover" onLoad={mediaReady} onError={mediaError} style={{position:'absolute',width:'100%',height:'100%'}}/>):null}

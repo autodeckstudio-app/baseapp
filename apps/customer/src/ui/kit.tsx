@@ -1,4 +1,5 @@
 import { SceneMotion } from "./SceneMotion";
+import { useReduceMotion } from "../lib/reduce-motion";
 // Customer app building blocks on the AutoDeck experience theme: the dark
 // studio ground, one warm amber light, glass panes for the raised layer.
 // Screens compose these instead of styling raw views.
@@ -334,21 +335,21 @@ export function Row({
 /** Photographic banner with the theme's hero-settle motion: one quiet
  *  scale-and-fade as it lands. Reduced-motion users get the still frame. */
 export function HeroImage({ source, aspect = 21 / 9 }: { source: ImageSourcePropType; aspect?: number }) {
-  const progress = useRef(new Animated.Value(0)).current;
-  const [still, setStill] = useState(false);
+  const progress = useRef(new Animated.Value(1)).current;
+  const still = useReduceMotion();
   useEffect(() => {
-    const mm = (globalThis as { matchMedia?: (q: string) => { matches: boolean } }).matchMedia;
-    if (Platform.OS === "web" && mm?.("(prefers-reduced-motion: reduce)").matches) {
-      setStill(true);
-      return;
-    }
-    Animated.timing(progress, {
+    progress.stopAnimation();
+    progress.setValue(still ? 1 : 0);
+    if (still) return;
+    const entrance = Animated.timing(progress, {
       toValue: 1,
       duration: motion.duration.scene,
       easing: Easing.bezier(0.22, 1, 0.36, 1),
       useNativeDriver: true,
-    }).start();
-  }, [progress]);
+    });
+    entrance.start();
+    return () => { entrance.stop(); progress.stopAnimation(); };
+  }, [progress, still]);
   const scale = progress.interpolate({ inputRange: [0, 1], outputRange: [motion.heroSettle.scale, 1] });
   return (
     <View style={{ width: "100%", aspectRatio: aspect, overflow: "hidden" }}>

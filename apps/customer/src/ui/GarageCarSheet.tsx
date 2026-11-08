@@ -1,3 +1,4 @@
+import { useReduceMotion } from "../lib/reduce-motion";
 // Garage car preview pop-up: tapping a stacked card opens this sheet with the
 // car's photo, details, documents and service history. Tapping outside the
 // sheet (or the close control) dismisses it. "Open full details" leads to the
@@ -26,7 +27,8 @@ function expiryLine(p: MyPaper): string {
 }
 
 function SectionLabel({ children }: { children: string }) {
-  return <Text style={{ color: "#EC8638", fontSize: 11, fontWeight: "800", letterSpacing: 1.2 }}>{children.toUpperCase()}</Text>;
+  const { colors, name } = useExperienceTheme();
+  return <Text style={{ color: name === "light" ? colors.accentStrong : colors.accent, fontSize: 11, fontWeight: "800", letterSpacing: 1.2 }}>{children.toUpperCase()}</Text>;
 }
 
 export function GarageCarSheet({ car, onClose, onOpenRoom, jobs, svcNames, papers }: {
@@ -38,6 +40,7 @@ export function GarageCarSheet({ car, onClose, onOpenRoom, jobs, svcNames, paper
   papers: MyPaper[] | null; // null = still loading
 }) {
   const { colors: ink, name: themeName } = useExperienceTheme();
+  const reduce = useReduceMotion();
   const { height: winH, width: winW } = useWindowDimensions();
   if (!car) return null;
   const light = themeName === "light";
@@ -54,7 +57,7 @@ export function GarageCarSheet({ car, onClose, onOpenRoom, jobs, svcNames, paper
     car.odometer != null ? ["Odometer", `${Number(car.odometer).toLocaleString("en-IN")} km`] : null,
   ] as Array<[string, string] | null>).filter((d): d is [string, string] => d !== null);
   return (
-    <Modal transparent visible animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+    <Modal transparent visible animationType={reduce ? "none" : "fade"} onRequestClose={onClose} statusBarTranslucent>
       <Pressable accessibilityRole="button" accessibilityLabel="Close car preview" onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(10,10,14,0.55)", alignItems: "center", justifyContent: "center", padding: 16 }}>
         <View onStartShouldSetResponder={() => true} style={{ width: Math.min(winW - 32, 480), maxHeight: Math.round(winH * 0.86), borderRadius: 24, overflow: "hidden", backgroundColor: light ? "#F6F4F1" : "#17171C", borderWidth: 1, borderColor: "rgba(180,180,190,0.25)" }}>
           <ScrollView bounces={false}>

@@ -2,19 +2,22 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { Animated, Easing, Image, Platform, View, type ImageSourcePropType, type ViewStyle } from "react-native";
 
-export const reducedMotion = (): boolean => Platform.OS === "web" && !!(globalThis as { matchMedia?: (q: string) => { matches: boolean } }).matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+import { useReduceMotion } from "../lib/reduce-motion";
 
 function useLoop(ms: number): Animated.Value {
   const v = useRef(new Animated.Value(0)).current;
+  const reduce = useReduceMotion();
   useEffect(() => {
-    if (reducedMotion()) return;
+    v.stopAnimation();
+    v.setValue(0);
+    if (reduce) return;
     const l = Animated.loop(Animated.sequence([
       Animated.timing(v, { toValue: 1, duration: ms, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== "web" }),
       Animated.timing(v, { toValue: 0, duration: ms, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== "web" }),
     ]));
     l.start();
-    return () => l.stop();
-  }, [v, ms]);
+    return () => { l.stop(); v.stopAnimation(); };
+  }, [v, ms, reduce]);
   return v;
 }
 
@@ -38,11 +41,17 @@ export function Orb({ size, color, x, y, dx = 30, dy = 24, ms = 9000 }: { size: 
 
 /** Rises and fades in once on mount. */
 export function Rise({ children, delay = 0, style }: { children: ReactNode; delay?: number; style?: ViewStyle }) {
-  const v = useRef(new Animated.Value(0)).current;
+  const v = useRef(new Animated.Value(1)).current;
+  const reduce = useReduceMotion();
   useEffect(() => {
-    Animated.timing(v, { toValue: 1, duration: 700, delay, easing: Easing.out(Easing.cubic), useNativeDriver: Platform.OS !== "web" }).start();
-  }, [v, delay]);
-  return <Animated.View style={[{ opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [26, 0] }) }] }, style]}>{children}</Animated.View>;
+    v.stopAnimation();
+    v.setValue(reduce ? 1 : 0);
+    if (reduce) return;
+    const entrance = Animated.timing(v, { toValue: 1, duration: 700, delay, easing: Easing.out(Easing.cubic), useNativeDriver: Platform.OS !== "web" });
+    entrance.start();
+    return () => { entrance.stop(); v.stopAnimation(); };
+  }, [v, delay, reduce]);
+  return <Animated.View style={[{ opacity: reduce ? 1 : v, transform: reduce ? [] : [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [26, 0] }) }] }, style]}>{children}</Animated.View>;
 }
 
 export const VEIL = (a: number, b: number): object => Platform.OS === "web" ? ({ backgroundImage: `linear-gradient(180deg, rgba(5,5,6,${a}) 0%, rgba(5,5,6,${b}) 100%)` } as object) : { backgroundColor: `rgba(5,5,6,${(a + b) / 2})` };

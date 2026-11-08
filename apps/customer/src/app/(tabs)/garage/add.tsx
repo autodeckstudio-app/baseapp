@@ -1,3 +1,4 @@
+import { useReduceMotion } from "../../../lib/reduce-motion";
 import { SceneIntro } from "../../../ui/SceneIntro";
 import { validAppliedDate, todayStudioDate } from "../../../lib/applied-date";
 import { DateField, FileUploader, SelectField } from "../../../ui/inputs";
@@ -74,6 +75,7 @@ function validApplied(v: string): boolean {
 
 export default function AddVehicleScreen() {
   const router = useRouter();
+  const reduce = useReduceMotion();
   const auth = useAuth();
   const [form, setForm] = useState<FormState>({
     registrationNumber: "",
@@ -565,7 +567,7 @@ export default function AddVehicleScreen() {
 
 
         {dupOpen && savedId ? (
-          <Modal transparent animationType="fade" visible onRequestClose={() => setDupOpen(false)}>
+          <Modal transparent animationType={reduce ? "none" : "fade"} visible onRequestClose={() => setDupOpen(false)}>
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space.inset, backgroundColor: "rgba(0,0,0,.5)" }}>
               <View style={{ width: "100%", maxWidth: 380 }}>
                 <ModalCard title="This car is already in your garage" body="A car with this registration number is already saved, so it can't be added again.">

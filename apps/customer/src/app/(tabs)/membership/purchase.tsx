@@ -1,3 +1,4 @@
+import { useReduceMotion } from "../../../lib/reduce-motion";
 import { useState, useEffect, useRef } from "react";
 import { View, Modal } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -20,6 +21,7 @@ import { upgradeConfirmCopy } from "../../../lib/upgrade-copy";
 export default function PurchaseMembershipScreen() {
   const { planId } = useLocalSearchParams<{ planId: string }>();
   const router = useRouter();
+  const reduce = useReduceMotion();
   const auth = useAuth();
   const { colors } = useExperienceTheme();
   const [plan, setPlan] = useState<MembershipPlan | null>(null);
@@ -142,7 +144,7 @@ export default function PurchaseMembershipScreen() {
         <T role="caption" tone="tertiary">Your {active.tier} plan ends when the upgrade is paid. Unused washes and pickups do not carry over. {upgradePaysFullPrice(active) ? "You have used part of this plan, so the full new price applies." : "Nothing used yet, so you pay only the difference."} The new plan runs 30 days from the day it starts.</T>
         {error ? <Notice title="Upgrade failed" body={error} /> : null}
         <Button label="Upgrade" busy={purchasing} onPress={() => setAskUpgrade(true)} />
-        <Modal visible={askUpgrade} transparent animationType="fade" onRequestClose={() => setAskUpgrade(false)}>
+        <Modal visible={askUpgrade} transparent animationType={reduce ? "none" : "fade"} onRequestClose={() => setAskUpgrade(false)}>
           <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 24 }}>
             <View style={{ width: "100%", maxWidth: 420, borderRadius: 24, padding: 20, gap: 14, backgroundColor: colors.surface }}>
               <T role="heading">{copy.title}</T>

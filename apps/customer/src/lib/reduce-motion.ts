@@ -8,12 +8,21 @@ import { combineReduce } from "./reduce-motion-core";
 type MQ = { matches: boolean; addEventListener?: (t: string, f: () => void) => void; removeEventListener?: (t: string, f: () => void) => void };
 
 export function useReduceMotion(): boolean {
-  const [device, setDevice] = useState(false);
-  const [media, setMedia] = useState(false);
+  // Stay still until the native preference is known; web media is available synchronously.
+  const [device, setDevice] = useState(Platform.OS !== "web");
+  const [media, setMedia] = useState(() => {
+    const w = globalThis as unknown as { matchMedia?: (q: string) => MQ };
+    return Platform.OS === "web" && !!w.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  });
   useEffect(() => {
     let alive = true;
-    void AccessibilityInfo.isReduceMotionEnabled().then((v) => { if (alive) setDevice(v); }).catch(() => undefined);
-    const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", (v) => setDevice(v));
+    let changed = false;
+    void AccessibilityInfo.isReduceMotionEnabled().then((v) => { if (alive && !changed) setDevice(v); }).catch(() => undefined);
+    const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", (v) => {
+      if (!alive) return;
+      changed = true;
+      setDevice(v);
+    });
     const w = globalThis as unknown as { matchMedia?: (q: string) => MQ };
     let mq: MQ | null = null;
     const onMq = () => { if (mq) setMedia(mq.matches); };

@@ -3,6 +3,7 @@ import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import type { IconName } from "@autodeck/ui/theme";
 import { NavIcon, navIconFor } from "./NavIcon";
 import { metrics } from "../lib/metrics";
+import { useReduceMotion } from "../lib/reduce-motion";
 
 export type DrawerItem = { key: string; label: string; sub?: string; icon: IconName; onPress: () => void };
 
@@ -10,9 +11,10 @@ export type DrawerItem = { key: string; label: string; sub?: string; icon: IconN
 export function SideDrawer({ open, onClose, name, initial, items }: { open: boolean; onClose: () => void; name: string; initial: string; items: DrawerItem[] }) {
   const { colors, name: mode } = useExperienceTheme();
   const day = mode === "light";
+  const reduce = useReduceMotion();
   const bg = day ? "#FFFFFF" : "#15161A";
   return (
-    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={open} transparent animationType={reduce ? "none" : "fade"} onRequestClose={onClose}>
       <View style={{ flex: 1, flexDirection: "row" }}>
         <View accessibilityViewIsModal style={{ width: 296, maxWidth: "82%", backgroundColor: bg, paddingTop: 56, paddingBottom: 24, paddingHorizontal: metrics.cardPad, gap: metrics.innerGap, borderTopRightRadius: metrics.cardRadius, borderBottomRightRadius: metrics.cardRadius }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingBottom: metrics.innerGap }}>
