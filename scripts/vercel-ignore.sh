@@ -206,6 +206,23 @@ if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ]; then
     fi
   fi
 fi
+# One-shot customer-only redeploy for the advance-payment exclusion revert.
+# Fires only when HEAD's parent is exactly 0cdf414c AND HEAD changes nothing
+# but this script; doubt falls through to the policies below.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ]; then
+  rev_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  rev_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  if [ -n "$rev_root" ] && [ "$rev_parent" = 0cdf414cd5c8488600f9308d956682cff6aeaf54 ]; then
+    cd "$rev_root" || exit 0
+    rev_changed="$(git diff --name-only "$rev_parent" HEAD 2>/dev/null)" || exit 0
+    if [ "$rev_changed" = scripts/vercel-ignore.sh ]; then
+      case "$app" in
+        customer) printf 'advance exclusion revert: BUILD (%s)\n' "$app"; exit 1 ;;
+        *) printf 'advance exclusion revert: SKIP (%s)\n' "$app"; exit 0 ;;
+      esac
+    fi
+  fi
+fi
 # Website releases fail closed. An app-only push must never rebuild the site
 # merely because its older successful base is missing from a shallow clone.
 if [ "$app" = site ]; then
