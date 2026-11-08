@@ -23,3 +23,9 @@ Gtechniq remains text. https://gtechniq.com/terms-and-conditions/ explicitly res
 - Actual components rendered locally at 320, 390, 820 px in day and night. Saved cover, replacement preview and Cancel exercised with a fictional image. Zero horizontal overflow. No field/image was saved to an external service.
 - Home 320 px overlap caught and corrected before release. Responsive hero heights 224/240/280 px; exact official tagline retained, smaller 26 px type at narrow widths.
 - Native export and backend runtime boundaries from preceding qualification remain unchanged. This UI release does not install a rebuilt native binary or deploy held functions.
+
+## Incremental screenshot steering
+
+Home studio card address display and matching accessibility-label address removed, only at that card. Canonical studio address, Help, name/hours/open status and Directions/Call/WhatsApp actions remain unchanged. Mounted regression checks absence of the address and preserved contact callbacks. Final mounted/render count: 215 across 78 files.
+
+Hosted validation caught the new WebP declaration's import-type syntax against the actual locked ESLint preset. Replaced only that declaration syntax, no lint weakening. Full locked customer lint has zero errors. Types pass. Earlier substitute-config lint result was insufficient for this rule.
