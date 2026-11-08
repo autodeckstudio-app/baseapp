@@ -36,7 +36,7 @@ import { PROTECTION_KIND_LABELS, protectionChip, protectionChipFor,
 import { listenToVehicleWarranties } from "../../../lib/warranty-service";
 import { listenToVehiclePapers, listenToCustomerPapers, submitMyPaper, updateMyPaper, deleteMyPaper, daysUntil, resolvePaperEvidenceUrl, type MyPaper, type PaperPhotoPayload } from "../../../lib/paper-service";
 import { PAPER_EDIT_ENABLED, VEHICLE_IMAGE_REMOVE_ENABLED } from "../../../lib/backend-features";
-import { paperName, numberClash } from "../../../lib/documents";
+import { paperName, numberClash, docSaveErrorMessage } from "../../../lib/documents";
 import { limitRegistrationInput, REG_RAW_MAX } from "../../../lib/registration-input";
 import { IconAction } from "../../../ui/IconAction";
 import { invoiceHref } from "../../../lib/invoice-display";
@@ -324,8 +324,8 @@ export default function VehicleDetailScreen() {
       }
       if(ctxRef.current===scope)resetDocForm();
     } catch (e) {
-      if(ctxRef.current!==scope)return;const msg = e instanceof Error ? e.message : "";
-      setDocError(/already saved/i.test(msg) ? "This number is already saved on one of your documents." : msg || "Could not save the document.");
+      if(ctxRef.current!==scope)return;
+      setDocError(docSaveErrorMessage(e));
     } finally {
       if(ctxRef.current===scope){mutationBusy.current=false;setDocBusy(false);}
     }

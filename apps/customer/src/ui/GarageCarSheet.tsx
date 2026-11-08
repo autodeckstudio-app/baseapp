@@ -42,10 +42,12 @@ export function GarageCarSheet({ car, onClose, onOpenRoom, jobs, svcNames, paper
   if (!car) return null;
   const light = themeName === "light";
   const name = `${car.make ?? ""} ${car.model ?? ""}`.trim() || car.registrationNumber;
+  // History preview: only the two most recent visits here; the complete history stays
+  // one tap away via Open full details (the car room). No records are removed.
   const visits = jobs
     .filter((j) => j.vehicleId === car.id)
     .sort((a, b) => (b.sealedAt ?? b.createdAt).localeCompare(a.sealedAt ?? a.createdAt))
-    .slice(0, 4);
+    .slice(0, 2);
   const details: Array<[string, string]> = ([
     car.year ? ["Year", String(car.year)] : null,
     car.color ? ["Colour", car.color] : null,

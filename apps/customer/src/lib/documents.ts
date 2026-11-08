@@ -39,6 +39,18 @@ export function numberClash(all: DocLike[], reference: string, exceptId?: string
   return all.some((p) => p.id !== exceptId && !(exceptSubmissionId && p.submissionId === exceptSubmissionId) && !p.supersededAt && numberKey(p.reference ?? "") === key) ? "This number is already saved on one of your documents." : null;
 }
 
+/** Customer-facing text for a failed document save. Known cases keep their exact meaning; a raw
+ * browser/network TypeError ("Failed to fetch", "Load failed", "Network request failed") never
+ * reaches the customer untranslated - it means the request did not complete, so the copy says
+ * the save did not go through and retrying is safe (the save is idempotent per submission).
+ * Unknown genuine failures still show their real message. */
+export function docSaveErrorMessage(err: unknown): string {
+  const msg = err instanceof Error ? err.message : "";
+  if (/already saved/i.test(msg)) return "This number is already saved on one of your documents.";
+  if (/failed to fetch|load failed|network request failed|networkerror/i.test(msg)) return "Could not reach the studio - check your connection and try again. The save did not go through, so retrying is safe.";
+  return msg || "Could not save the document.";
+}
+
 export function daysLeftLabel(days: number): string {
   return days < 0 ? "Expired" : days === 0 ? "Expires today" : `${days} day${days === 1 ? "" : "s"} left`;
 }
