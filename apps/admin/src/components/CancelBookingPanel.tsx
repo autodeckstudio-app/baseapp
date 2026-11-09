@@ -11,7 +11,7 @@ import { formatPaise } from "../lib/format";
 const CANCELLABLE = ["PENDING_VEHICLE", "STANDBY", "VEHICLE_RECEIVED"];
 
 /** Admin-only cancel with the fee and refund shown before anything happens, and the fee settle buttons after. */
-export function CancelBookingPanel({ booking, job }: { booking: Booking; job: ServiceJob | null }) {
+export function CancelBookingPanel({ booking, job, compact = false }: { booking: Booking; job: ServiceJob | null; compact?: boolean }) {
   const [reason, setReason] = useState("");
   const [feeAction, setFeeAction] = useState<"charge" | "waive">("charge");
   const [preview, setPreview] = useState<CancelSummary | null>(null);
@@ -92,6 +92,7 @@ export function CancelBookingPanel({ booking, job }: { booking: Booking; job: Se
     );
   }
   if (closed) return null;
+  if (compact && started) return <details className="ax-panel ax-job-disclosure"><summary>Cancellation unavailable</summary><p className="ax-status-msg">Work has started on this job, so it cannot be cancelled from here.</p></details>;
 
   return (
     <section className="ax-panel">

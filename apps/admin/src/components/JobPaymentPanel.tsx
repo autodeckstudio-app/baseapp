@@ -10,6 +10,7 @@ const METHOD_LABEL: Record<string, string> = { cash: "Cash", upi_manual: "UPI", 
 
 export function JobPaymentPanel({
   job,
+  compact = false,
   booking,
   payment,
   invoice,
@@ -30,6 +31,7 @@ export function JobPaymentPanel({
   onRefreshPayment,
 }: {
   job: ServiceJob;
+  compact?: boolean;
   booking: Booking | null;
   payment: Payment | null | undefined;
   invoice: Invoice | null;
@@ -70,9 +72,11 @@ export function JobPaymentPanel({
   if(job.offlineSettlement && job.paymentStatus!=="paid")return <section className="ax-panel"><span className="ax-label">Offline receipt balance</span><p className="ax-note">Actual receipts already exist. Use the receipt register to record only new money actually received. Do not collect or record the full invoice total again.</p><div className="kv"><span>Balance due</span><span>{formatPaise(job.status==="CANCELLED"?0:Math.max(0,job.totalAmount-job.offlineSettlement.appliedPaise))}</span></div></section>;
   if (coveredSettlePanelVisible(job, booking)) return null;
 
+  const settled=compact&&job.paymentStatus==="paid"&&payment?.status==="completed"&&!(payment as Payment & {invoiceReviewNeeded?:boolean}).invoiceReviewNeeded;
+  const Panel=settled?"details":"section";
   return (
-          <section className="ax-panel">
-            <span className="ax-label">Payment</span>
+          <Panel className="ax-panel ax-job-payment">
+            {settled?<summary>Payment details · Paid</summary>:<span className="ax-label">Payment</span>}
             {payment?.status==="completed"&&job.paymentStatus!=="paid"&&!(payment as Payment & {invoiceReviewNeeded?:boolean}).invoiceReviewNeeded?<p className="ax-note">Payment records are syncing. Do not collect another payment. Delivery stays on hold until the job is marked paid.</p>:null}
             {status && <p className="ax-status-msg" role="status">{status}</p>}
             {paymentPanelMode(payment) === "loading" ? (
@@ -144,6 +148,6 @@ export function JobPaymentPanel({
                 </button>
               </div>
             )}
-          </section>
+          </Panel>
   );
 }

@@ -4,11 +4,12 @@ import { statusLabel } from "../lib/status-label";
 
 export const JOB_STAGES = ["PENDING_VEHICLE", "VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY", "DELIVERED"] as const;
 
-export function StageTrack({ current, stages = JOB_STAGES }: { current: string; stages?: readonly string[] }) {
+export function StageTrack({ current, stages = JOB_STAGES, compact = false }: { current: string; stages?: readonly string[]; compact?: boolean }) {
   const at = stages.indexOf(current);
   if (at < 0) {
     return <p className="ax-track-off">{statusLabel(current)}</p>;
   }
+  if(compact) return <div className="ax-job-progress"><div className="ax-job-progress-label"><span>Stage {at+1} of {stages.length}</span><span>{at<stages.length-1?`Next: ${statusLabel(stages[at+1]!)}`:"Delivered"}</span></div><ol className="ax-track ax-track--compact" aria-label="Progress">{stages.map((stage,i)=><li key={stage} title={statusLabel(stage)} className={i<at?"is-done":i===at?"is-now":""} aria-current={i===at?"step":undefined}><span className="ax-track-dot" aria-hidden="true"/><span className="ax-sr-only">{statusLabel(stage)}</span></li>)}</ol></div>;
   return (
     <ol className="ax-track" aria-label="Progress">
       {stages.map((s, i) => (

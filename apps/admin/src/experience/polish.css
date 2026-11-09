@@ -121,3 +121,58 @@ html:root:root .ax-shell .ax-list .ax-row-actions button, html:root:root .ax-she
 /* ---- File pickers: same field look as every other input, with a pill button ---- */
 html:root:root .ax-shell input[type="file"] { width: 100%; box-sizing: border-box; min-height: 44px; padding: 6px 10px; font-size: 14px; color: var(--ad-text-secondary, #6b6b6b); }
 html:root:root .ax-shell input[type="file"]::file-selector-button { margin-right: 12px; min-height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: rgba(0, 0, 0, .08); color: inherit; font: inherit; font-weight: 600; cursor: pointer; }
+
+
+/* People detail: one inset and real rows, including the compact Latest list.
+   Explicit reset is needed because the global button surface otherwise wins. */
+html:root:root .ax-shell .ax-customer .ax-panel > .ax-label { display: block; margin: 0 0 12px; }
+html:root:root .ax-shell .ax-customer .ax-panel .ax-crow {
+  background: transparent !important; border: 0 !important;
+  border-bottom: 1px solid var(--gl-divider) !important;
+  border-radius: 0 !important; box-shadow: none !important;
+  padding: 14px 0; min-height: 56px; column-gap: 12px; row-gap: 6px;
+  color: var(--gl-text); box-sizing: border-box;
+}
+html:root:root .ax-shell .ax-customer .ax-panel .ax-crow:last-child { border-bottom: 0 !important; }
+html:root:root .ax-shell .ax-customer .ax-panel .ax-crow:focus-visible { outline: 2px solid var(--ad-accent-strong); outline-offset: 3px; border-radius: 8px !important; }
+html:root:root .ax-shell .ax-customer .ax-panel .ax-crow:hover { background: rgba(128,128,128,.05) !important; }
+html:root:root .ax-shell .ax-customer-latest .ax-crow { grid-template-columns: minmax(0,1fr) auto; }
+html:root:root .ax-shell .ax-customer .ax-vrow-main { gap: 5px; overflow-wrap: anywhere; }
+html:root:root .ax-shell .ax-customer .ax-vrow-main strong { line-height: 1.4; }
+@media (max-width:860px) {
+  html:root:root .ax-shell .ax-tabbar { left: 12px; right: 12px; padding: 8px; gap: 6px; border-radius: 28px; box-sizing: border-box; }
+  html:root:root .ax-shell .ax-tabbar .ax-tab { flex: 1 1 0; min-width: 0; height: 52px !important; min-height: 44px; padding: 4px 0; gap: 4px !important; border-radius: 18px; box-sizing: border-box; }
+  html:root:root .ax-shell .ax-tabbar .ax-tab:not([aria-current="page"]) { background: transparent !important; border: 0 !important; box-shadow: none !important; }
+  html:root:root .ax-shell-frame > .ax-main { padding-bottom: calc(112px + env(safe-area-inset-bottom)) !important; }
+}
+
+
+/* Quick job: one current total, compact progress, reference detail on demand. */
+html:root:root .ax-shell .ax-job-page .ax-job-hero { gap: 16px; }
+html:root:root .ax-shell .ax-job-price-details { grid-column: 1 / -1; border-top: 1px solid var(--gl-divider); padding-top: 10px; width: 100%; }
+html:root:root .ax-shell .ax-job-page details > summary { cursor: pointer; font-size: 14px; font-weight: 600; line-height: 1.5; min-height: 28px; }
+html:root:root .ax-shell .ax-job-page details[open] > summary { margin-bottom: 12px; }
+html:root:root .ax-shell .ax-job-page details:not([open]) { min-height: 0; }
+html:root:root .ax-shell .ax-job-progress { padding: 14px 16px; background: var(--ad-glass-fallback); border-radius: 18px; }
+html:root:root .ax-shell .ax-job-progress-label { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; font-size: 12px; color: var(--ad-text-secondary); }
+html:root:root .ax-shell .ax-track--compact { display: flex; flex-direction: row; gap: 5px; margin: 12px 0 0; padding: 0; border: 0; background: none; box-shadow: none; min-height: 0; }
+html:root:root .ax-shell .ax-track--compact li { flex: 1 1 0; min-width: 0; display: block; padding: 0; }
+html:root:root .ax-shell .ax-track--compact li::before { display: none; }
+html:root:root .ax-shell .ax-track--compact .ax-track-dot { display: block; width: 100%; height: 5px; border-radius: 999px; box-shadow: none; border: 0; }
+.ax-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+html:root:root .ax-shell .ax-track--compact .is-done .ax-track-dot { background: var(--ad-premium, #B9A58C); }
+html:root:root .ax-shell .ax-track--compact .is-now .ax-track-dot { background: var(--ad-accent-strong, #B8500A); }
+html:root:root .ax-shell .ax-track--compact li:not(.is-done):not(.is-now) .ax-track-dot { background: var(--gl-divider); }
+@media (max-width:860px) {
+  html:root:root .ax-shell .ax-main:has(> .ax-job-page) > .ax-subtabs { flex-wrap: nowrap; overflow-x: auto; gap: 6px; padding: 0 0 4px; scrollbar-width: thin; }
+  html:root:root .ax-shell .ax-main:has(> .ax-job-page) > .ax-subtabs > .ax-subtab { flex: 0 0 auto; min-height: 40px; padding: 0 14px; }
+  html:root:root .ax-shell .ax-job-page .ax-job-summary { padding: 14px 16px; gap: 8px 14px; }
+}
+@media (max-width:860px) {
+  html:root:root .ax-shell .ax-main:has(> .ax-job-page) > .ax-subtabs { flex: 0 0 auto; min-height: 44px; }
+}
+html:root:root .ax-shell .ax-job-page > .ax-card { padding: 16px !important; gap: 12px !important; }
+html:root:root .ax-shell .ax-job-page > .ax-card > h2 { margin: 0; }
+html:root:root .ax-shell .ax-job-page .ax-job-hero h1 { margin-top: 0; margin-bottom: 0; }
+html:root:root .ax-shell .ax-job-page .ax-job-hero .ax-hero-sub { margin-bottom: 0; }
+html:root:root .ax-shell .ax-job-page :is(button, summary, input, select, a) { scroll-margin-top: 80px; scroll-margin-bottom: 112px; }

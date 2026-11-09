@@ -20,7 +20,7 @@ describe("visit: booking panels live on the Job page", () => {
   });
   it("the job page loads the booking and shows the panels for booked jobs", () => {
     expect(job).toContain("listenToBooking(bookingId");
-    expect(job).toContain("<BookingPanels booking={booking}");
+    expect(job).toContain("<BookingPanels compact booking={booking}");
     expect(job).not.toContain("Open booking");
   });
   it("the booking page uses the same panels and hands over to the job once it exists", () => {
@@ -28,6 +28,8 @@ describe("visit: booking panels live on the Job page", () => {
     expect(booking).toContain("replaceWithoutCounting(router, `/jobs/${job.id}`)");
   });
   it("the quote, slot and price sections all exist exactly once in the panels", () => {
-    for (const label of [">Slot<", ">Quote<", ">Price<"]) expect(panels.split(label).length - 1).toBe(1);
+    expect(panels).toContain('compact?"Original booking slot":"Slot"');
+    expect(panels).toContain('compact?"Original booking price":"Price"');
+    expect(panels.split(">Quote<").length - 1).toBe(1);
   });
 });

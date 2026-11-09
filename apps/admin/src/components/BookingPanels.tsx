@@ -13,7 +13,7 @@ import { NoShowPanel } from "./NoShowPanel";
 import { NO_SHOW_REVIEW_ENABLED } from "../lib/backend-features";
 import { formatPaise, formatDayLong, formatTime } from "../lib/format";
 
-export function BookingPanels({ booking, job, service, bayName, onError }: { booking: Booking; job: ServiceJob | null; service: Service | null; bayName: string; onError: (m: string | null) => void }) {
+export function BookingPanels({ booking, job, service, bayName, onError, compact = false }: { booking: Booking; job: ServiceJob | null; service: Service | null; bayName: string; onError: (m: string | null) => void; compact?: boolean }) {
   const setError = onError;
   const pb = booking.priceBreakdown;
   const [quoteRupees, setQuoteRupees] = useState("");
@@ -60,14 +60,13 @@ export function BookingPanels({ booking, job, service, bayName, onError }: { boo
 
   return (
     <>
-      <section className="ax-panel">
-        <span className="ax-label">Slot</span>
+      <BookingReference compact={compact} title={compact?"Original booking slot":"Slot"}>
         <div className="kv"><span>Date</span><span>{formatDayLong(booking.scheduledDate)}</span></div>
         <div className="kv"><span>Time</span><span>{formatTime(booking.scheduledAt)} to {formatTime(booking.estimatedEndAt)}</span></div>
         <div className="kv"><span>Length</span><span>{formatDuration(booking.durationMinutes)}</span></div>
         <div className="kv"><span>Bay</span><span>{bayName || "Assigned bay"}</span></div>
         {booking.rescheduleCount > 0 && <div className="kv"><span>Rescheduled</span><span>{booking.rescheduleCount} {booking.rescheduleCount === 1 ? "time" : "times"}</span></div>}
-      </section>
+      </BookingReference>
 
       {booking.rescheduleRequest ? (
         <section className="ax-panel">
@@ -88,7 +87,7 @@ export function BookingPanels({ booking, job, service, bayName, onError }: { boo
         </section>
       ) : null}
 
-      <CancelBookingPanel booking={booking} job={job} />
+      <CancelBookingPanel booking={booking} job={job} compact={compact} />
 
       {NO_SHOW_REVIEW_ENABLED && booking.status === "CANCELLED" && (booking as { missedAt?: string }).missedAt ? <NoShowPanel booking={booking} onError={onError} /> : null}
 
@@ -108,8 +107,7 @@ export function BookingPanels({ booking, job, service, bayName, onError }: { boo
         </section>
       )}
 
-      <section className="ax-panel">
-        <span className="ax-label">Price</span>
+      <BookingReference compact={compact} title={compact?"Original booking price":"Price"}>
         {!pb ? (
           <>
             <div className="kv"><span>Price breakdown</span><span className="ax-data">Not available</span></div>
@@ -128,8 +126,10 @@ export function BookingPanels({ booking, job, service, bayName, onError }: { boo
         {booking.membershipDiscountApplied && (
           <p className="ax-note">{booking.membershipWashUsed ? "Paid with a membership wash credit." : "Membership discount applied."}</p>
         )}
-      </section>
+      </BookingReference>
 
     </>
   );
 }
+
+function BookingReference({compact,title,children}:{compact:boolean;title:string;children:React.ReactNode}){return compact?<details className="ax-panel ax-job-disclosure"><summary>{title}</summary>{children}</details>:<section className="ax-panel"><span className="ax-label">{title}</span>{children}</section>;}

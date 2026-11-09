@@ -138,7 +138,7 @@ export function CustomerView({ d, services, onBack, onOpen, onSave, onSaveVehicl
   ].sort((a, b) => (b.at ?? "").localeCompare(a.at ?? ""));
 
   return (
-    <div className="ax-page">
+    <div className="ax-page ax-customer">
       <button type="button" className="ax-back" onClick={onBack} style={{ background: "none", border: "none", padding: 0, minHeight: 0 }}>‹ Back</button>
       <div className="ax-hero">
         <div>
@@ -264,10 +264,12 @@ export function CustomerView({ d, services, onBack, onOpen, onSave, onSaveVehicl
             </section>
             <section className="ax-panel">
               <span className="ax-label">Latest</span>
+              <div className="ax-customer-latest">
               {timeline.slice(0, 3).map((t) => (
                 <Row key={t.id} onClick={() => onOpen(t.href)}><span className="ax-vrow-main"><strong>{t.services}</strong><span className="ax-sub">{formatDate(t.at)}</span></span><StatusBadge label={t.status} /></Row>
               ))}
               {timeline.length === 0 && <p className="ax-note" style={{ marginTop: 0 }}>No visits yet.</p>}
+              </div>
             </section>
           </aside>
         </div>

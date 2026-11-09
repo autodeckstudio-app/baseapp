@@ -159,7 +159,7 @@ export default function JobDetailPage() {
   const car = vehicle ? `${vehicle.make} ${vehicle.model}` : "";
 
   return (
-    <div className="ax-page">
+    <div className="ax-page ax-job-page">
       <button type="button" className="ax-back" onClick={() => goBackOrTo(router, "/jobs")}>‹ Back</button>
 
       <header className="ax-hero ax-job-hero">
@@ -172,18 +172,19 @@ export default function JobDetailPage() {
           <span className="ax-label">Job stage</span><StatusBadge label={job.status} />
           <span className="ax-label">Job total</span><span className="ax-hero-total">{formatPaise(job.totalAmount)}</span>
           <span className="ax-label">Payment</span><StatusBadge label={membershipCoveredLabel(job) ?? ((payment as (Payment & {invoiceReviewNeeded?:boolean})|null)?.invoiceReviewNeeded ? "Received - needs review" : (payment?.status==="completed"&&job.paymentStatus!=="paid")||(job.paymentStatus==="paid"&&payment?.status!=="completed") ? "Payment records syncing" : job.paymentStatus)} />
+          <details className="ax-job-price-details"><summary>Price breakdown</summary><div className="kv"><span>Service</span><span>{typeof job.priceBreakdown?.total==="number"?formatPaise(job.priceBreakdown.total):"Not available"}</span></div>{job.additionalWorkDelta!==0?<div className="kv"><span>Extra work</span><span>{formatPaise(job.additionalWorkDelta)}</span></div>:null}<p className="ax-note">Original booking prices and payment receipts are listed separately below.</p></details>
         </div>
       </header>
 
-      <StageTrack current={job.status} />
+      <StageTrack current={job.status} compact />
       <JobControls job={job} routeId={id} />
       <MembershipSettlement job={job} booking={booking ?? null} />
 
       <div className="ax-detail">
         <div className="ax-detail-main">
-          {booking ? <BookingPanels booking={booking} job={job} service={service} bayName={bayName} onError={setError} /> : null}
-          <section className="ax-panel">
-            <span className="ax-label">Timeline</span>
+          {booking ? <BookingPanels compact booking={booking} job={job} service={service} bayName={bayName} onError={setError} /> : null}
+          <details className="ax-panel ax-job-disclosure">
+            <summary>Stage history ({job.statusHistory.length})</summary>
             <ol className="ax-timeline">
               {[...job.statusHistory].reverse().map((h, i) => (
                 <li key={i}>
@@ -196,7 +197,7 @@ export default function JobDetailPage() {
                 </li>
               ))}
             </ol>
-          </section>
+          </details>
 
           {inspection && (
             <section className="ax-panel">
@@ -241,8 +242,8 @@ export default function JobDetailPage() {
             </section>
           )}
 
-          <section className="ax-panel">
-            <span className="ax-label">Job activity</span>
+          <details className="ax-panel ax-job-disclosure">
+            <summary>Job activity ({audit.length})</summary>
             {audit.length === 0 ? (
               <p className="ax-note" style={{ marginTop: 0 }}>No recorded changes yet.</p>
             ) : (
@@ -256,12 +257,12 @@ export default function JobDetailPage() {
                 ))}
               </ol>
             )}
-          </section>
+          </details>
         </div>
 
         <aside className="ax-detail-side">
-          <section className="ax-panel">
-            <span className="ax-label">Car and owner</span>
+          <details className="ax-panel ax-job-disclosure">
+            <summary>Car and owner</summary>
             <div className="kv"><span>Customer</span><span>{customer?.name ?? "-"}</span></div>
             {customer?.phone && <div className="kv"><span>Phone</span><span><a href={`tel:${customer.phone}`}>{customer.phone}</a></span></div>}
             <div className="kv"><span>Vehicle</span><span>{car || "-"}</span></div>
@@ -269,10 +270,10 @@ export default function JobDetailPage() {
             <div className="ax-panel-actions">
               {customer?.id && <button type="button" className="ax-button" onClick={() => router.push(`/customers/${customer.id}`)}>Open customer</button>}
             </div>
-          </section>
+          </details>
 
-          <section className="ax-panel">
-            <span className="ax-label">Bay and timing</span>
+          <details className="ax-panel ax-job-disclosure">
+            <summary>Bay and timing</summary>
             <div className="kv"><span>Bay</span><span>{job.status === "STANDBY" ? "No bay reserved" : bayName || "Assigned bay"}</span></div>
             <div className="kv"><span>Starts</span><span>{job.status === "STANDBY" ? "Waiting - no slot reserved" : formatDateTime(job.scheduledAt)}</span></div>
             <div className="kv"><span>Est. finish</span><span>{formatDateTime(job.estimatedEndAt)}</span></div>
@@ -288,17 +289,11 @@ export default function JobDetailPage() {
               <p className="ax-note">Multi-day job. The bay is held {formatDate(job.scheduledDate)} to {formatDate(job.estimatedEndDate)}.</p>
             )}
             {job.sealedAt && <div className="kv"><span>Sealed</span><span>{formatDateTime(job.sealedAt)}</span></div>}
-          </section>
+          </details>
 
-          <section className="ax-panel">
-            <span className="ax-label">Price</span>
-            <div className="kv"><span>Service</span><span className="ax-data">{formatPaise(job.priceBreakdown?.total as number)}</span></div>
-            <div className="kv"><span>Extra work</span><span className="ax-data">{formatPaise(job.additionalWorkDelta)}</span></div>
-            <div className="kv"><span>Total</span><span className="ax-data" style={{ color: "var(--ad-text-primary)" }}>{formatPaise(job.totalAmount)}</span></div>
-          </section>
 
           {OFFLINE_RECEIPT_REGISTER_ENABLED && currentScope && currentPayment !== undefined ? <OfflineReceiptPanel key={[job.id,user?.uid,claims?.tenantId].join("|")} jobId={job.id}/> : null}
-          <JobPaymentPanel onRefreshPayment={()=>{setPayment(undefined);setStatus("Refreshing AutoDeck payment record. This does not charge or record money.");setAttempt(n=>n+1)}}
+          <JobPaymentPanel compact onRefreshPayment={()=>{setPayment(undefined);setStatus("Refreshing AutoDeck payment record. This does not charge or record money.");setAttempt(n=>n+1)}}
             job={job}
             booking={booking}
             payment={currentPayment}
