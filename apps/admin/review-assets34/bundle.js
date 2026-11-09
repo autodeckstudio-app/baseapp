@@ -34449,7 +34449,7 @@ var global=globalThis;var process={env:{NODE_ENV:"production",EXPO_PUBLIC_FIREBA
   }
 
   // pixel-tmp/cars25/pending.ts
-  var readPendingListing = async () => new URLSearchParams(location.search).get("screen") === "pending" ? { operationId: "sample-immutable-operation-123", make: "Sample", model: "Car", year: 2024, kmDriven: 12e3, fuel: "petrol", gearbox: "manual", bodyType: null, owners: 1, colour: "Blue", area: "Sample city", askingPrice: 5e7, description: null, insuranceValidTill: null, photoPaths: ["sample/1", "sample/2", "sample/3"], sellerName: "Sample owner", sellerPhone: "9999999999", registrationNumber: "SAMPLE" } : null;
+  var readPendingListing = async () => ({ operationId: "sample-immutable-operation-123", make: "Sample", model: "Car", year: 2024, kmDriven: 12e3, fuel: "petrol", gearbox: "manual", bodyType: null, owners: 1, colour: "Blue", area: "Sample city", askingPrice: 5e7, description: null, insuranceValidTill: null, photoPaths: ["sample/1", "sample/2", "sample/3"], sellerName: "Sample owner", sellerPhone: "9999999999", registrationNumber: "SAMPLE" });
   var writePendingListing = async () => {
   };
   var clearPendingListing = async () => {
