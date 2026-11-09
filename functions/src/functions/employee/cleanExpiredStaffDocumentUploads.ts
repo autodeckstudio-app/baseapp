@@ -1,10 +1,12 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
+import { staffDocumentsEnabled } from "../../lib/staff-documents-enabled.js";
 /** Remove expired unsubmitted uploads and superseded copies, never the current employee submission. */
 export const cleanExpiredStaffDocumentUploadsScheduled = onSchedule(
   { region: "asia-south1", schedule: "every 60 minutes" },
   async () => {
+    if (!staffDocumentsEnabled()) return;
     const db = getFirestore(),
       now = new Date().toISOString();
     let cursor: any = null;

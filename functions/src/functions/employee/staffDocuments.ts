@@ -10,6 +10,7 @@ import {
   assertRole,
   assertTenant,
 } from "../../middleware/auth.js";
+import { staffDocumentsEnabled } from "../../lib/staff-documents-enabled.js";
 import { validate } from "../../middleware/validate.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 const options = {
@@ -47,6 +48,10 @@ async function employee(request: any, employeeId: string, selfOnly = false) {
 }
 export const issueStaffDocumentUpload = onCall(options, async (request) => {
   assertRole(extractUser(request), "studio", "admin", "superadmin");
+      if (!staffDocumentsEnabled())
+        throw new HttpsError("failed-precondition", "Staff documents are not available yet.", {
+          reason: "staff_documents_disabled",
+        });
   const d = validate(
       z
         .object({
@@ -94,6 +99,10 @@ export const issueStaffDocumentUpload = onCall(options, async (request) => {
 });
 export const submitStaffDocument = onCall(options, async (request) => {
   assertRole(extractUser(request), "studio", "admin", "superadmin");
+      if (!staffDocumentsEnabled())
+        throw new HttpsError("failed-precondition", "Staff documents are not available yet.", {
+          reason: "staff_documents_disabled",
+        });
   const d = validate(
       z
         .object({ employeeId: id, uploadId: id, consent: z.literal(true) })
@@ -191,6 +200,10 @@ export const submitStaffDocument = onCall(options, async (request) => {
 });
 export const getStaffDocument = onCall(options, async (request) => {
   assertRole(extractUser(request), "studio", "admin", "superadmin");
+      if (!staffDocumentsEnabled())
+        throw new HttpsError("failed-precondition", "Staff documents are not available yet.", {
+          reason: "staff_documents_disabled",
+        });
   const d = validate(
       z.object({ employeeId: id, open: z.boolean().optional() }).strict(),
       request.data,
@@ -236,6 +249,10 @@ export const getStaffDocument = onCall(options, async (request) => {
 });
 export const reviewStaffDocument = onCall(options, async (request) => {
   assertRole(extractUser(request), "studio", "admin", "superadmin");
+      if (!staffDocumentsEnabled())
+        throw new HttpsError("failed-precondition", "Staff documents are not available yet.", {
+          reason: "staff_documents_disabled",
+        });
   const d = validate(
       z
         .object({

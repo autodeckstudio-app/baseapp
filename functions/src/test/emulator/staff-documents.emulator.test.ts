@@ -1,4 +1,7 @@
 import { beforeEach, it, expect, vi } from "vitest";
+// Staff documents are gated default-OFF (lib/staff-documents-enabled.ts);
+// this file proves the authorized-ON behavior in the emulator only.
+process.env["STAFF_DOCUMENTS_ENABLED"] = "true";
 import { getFirestore } from "firebase-admin/firestore";
 const storage = vi.hoisted(() => ({
   meta: new Map<string, any>(),

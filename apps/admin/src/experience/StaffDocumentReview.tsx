@@ -21,7 +21,8 @@ export function StaffDocumentReview({
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null),
     [url, setUrl] = useState<string | null>(null),
-    [confirmed, setConfirmed] = useState(false);
+    [confirmed, setConfirmed] = useState(false),
+    [off, setOff] = useState(false);
   const lock = useRef(false),
     generation = useRef(0),
     opened = useRef<string | null>(null);
@@ -35,10 +36,18 @@ export function StaffDocumentReview({
         setDocument(r.data.document);
         setLoaded(true);
       }
-    } catch {
+    } catch (e) {
       if (n === generation.current) {
+        if (
+          (e as { details?: { reason?: string } })?.details?.reason ===
+          "staff_documents_disabled"
+        ) {
+          setOff(true);
+          setError(null);
+        } else {
+          setError("Document unavailable. Retry.");
+        }
         setLoaded(true);
-        setError("Document unavailable. Retry.");
       }
     }
   }
@@ -50,6 +59,7 @@ export function StaffDocumentReview({
     setConfirmed(false);
     opened.current = null;
     setError(null);
+    setOff(false);
     void load(n);
     return () => {
       generation.current++;
@@ -118,7 +128,9 @@ export function StaffDocumentReview({
       <span className="ax-sub">
         {!loaded
           ? "Loading document status…"
-          : document
+          : off
+            ? "Staff document review isn't available yet."
+            : document
             ? document.status === "reviewed"
               ? "Aadhaar: Admin reviewed ✓"
               : document.status === "needs_resubmission"

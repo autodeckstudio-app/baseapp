@@ -16,7 +16,8 @@ export function StaffDocument({
     [file, setFile] = useState<Blob | null>(null),
     [busy, setBusy] = useState(false),
     [consent, setConsent] = useState(false),
-    [note, setNote] = useState<string | null>(null);
+    [note, setNote] = useState<string | null>(null),
+    [off, setOff] = useState(false);
   const lock = useRef(false),
     generation = useRef(0),
     fileInput=useRef<{click:()=>void}|null>(null);
@@ -79,9 +80,17 @@ export function StaffDocument({
                   : "No document submitted",
           );
       })
-      .catch(() => {
-        if (n === generation.current)
+      .catch((e) => {
+        if (n !== generation.current) return;
+        if (
+          (e as { details?: { reason?: string } })?.details?.reason ===
+          "staff_documents_disabled"
+        ) {
+          setOff(true);
+          setStatus("Document upload isn't available yet.");
+        } else {
           setStatus("Status unavailable. Reopen Account to retry.");
+        }
       });
     return () => {
       generation.current++;
@@ -156,6 +165,7 @@ export function StaffDocument({
       <Text style={{ ...typography.caption, color: colors.textMuted }}>
         Not government verification or a sign-in requirement.
       </Text>
+      {!off ? (
       <>
         {Platform.OS === "web" ? (
           createElement("input", {
@@ -196,6 +206,7 @@ export function StaffDocument({
           onPress={() => void submit()}
         />
       </>
+      ) : null}
       {note ? (
         <Text
           accessibilityRole="alert"
