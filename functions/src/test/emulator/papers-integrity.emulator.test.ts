@@ -44,13 +44,15 @@ describe("document integrity (emulator)", () => {
   it("concurrent RC submits on one car: one RC; a later RC is refused until edited in place", async () => {
     const me = uid("cust"); const v = await car(me);
     const r = await Promise.allSettled([
-      submit(me, { vehicleId: v, kind: "RC", reference: "GJ01AB1111" }),
-      submit(me, { vehicleId: v, kind: "RC", reference: "GJ01AB2222" }),
+      submit(me, { vehicleId: v, kind: "RC", reference: "GJ01AB1234" }),
+      submit(me, { vehicleId: v, kind: "RC", reference: "gj 01 ab 1234" }),
     ]);
     expect(r.filter((x) => x.status === "fulfilled")).toHaveLength(1);
     const rcs = (await papersOf(me)).filter((p) => p.kind === "RC");
     expect(rcs).toHaveLength(1);
-    await expect(submit(me, { vehicleId: v, kind: "RC", reference: "GJ01AB3333" })).rejects.toMatchObject({ code: "already-exists" });
+    await expect(submit(me, { vehicleId: v, kind: "RC", reference: "GJ01AB1234" })).rejects.toMatchObject({ code: "already-exists" });
+    await expect(update(me, {paperId:rcs[0]!.id,reference:"GJ01AB3333"})).rejects.toMatchObject({code:"failed-precondition"});
+    await db.collection("vehicles").doc(v).update({registrationNumber:"GJ01AB3333"});
     const out: any = await update(me, { paperId: rcs[0]!.id, reference: "gj 01 ab 3333", expiresOn: "2027-05-01" });
     expect(out.id).toBe(rcs[0]!.id);
     const after = (await papersOf(me)).filter((p) => p.kind === "RC");
@@ -95,14 +97,14 @@ describe("document integrity (emulator)", () => {
 
   it("delete removes only that paper (and frees its number and RC slot); the car and other papers stay; retry is safe", async () => {
     const me = uid("cust"); const v = await car(me);
-    await submit(me, { vehicleId: v, kind: "RC", reference: "GJ05CD4444" });
+    await submit(me, { vehicleId: v, kind: "RC", reference: "GJ01AB1234" });
     await submit(me, { vehicleId: v, kind: "INSURANCE", reference: "KEEP-1" });
     const rc = (await papersOf(me)).find((p) => p.kind === "RC")!;
     await del(me, rc.id);
     expect((await papersOf(me)).map((p) => p.reference)).toEqual(["KEEP-1"]);
     expect((await db.collection("vehicles").doc(v).get()).exists).toBe(true);
     await expect(del(me, rc.id)).rejects.toMatchObject({ code: "not-found" });
-    await submit(me, { vehicleId: v, kind: "RC", reference: "GJ05CD4444" }); // number and RC slot are free again
+    await submit(me, { vehicleId: v, kind: "RC", reference: "GJ01AB1234" }); // number and RC slot are free again
     const audits = await db.collection("auditLog").where("entityId", "==", rc.id).get();
     expect(audits.docs.some((d) => d.data().action === "paper.deleted")).toBe(true);
   });
@@ -114,9 +116,11 @@ describe("document integrity (emulator)", () => {
     ["OTHER", "OTH-K1", "OTH-K2", "Warranty card"],
   ])("per kind %s: edit changes number and expiry, returns a verified paper to review, then delete removes only it", async (kind, ref1, ref2, title) => {
     const me = uid("cust"); const v = await car(me);
+    if(kind === "RC") await db.collection("vehicles").doc(v).update({registrationNumber:ref1});
     await submit(me, { vehicleId: v, kind, reference: ref1, ...(title ? { title } : {}) });
     const first = (await papersOf(me))[0]!;
     await db.collection("papers").doc(first.id).update({ status: "VERIFIED" });
+    if(kind === "RC") await db.collection("vehicles").doc(v).update({registrationNumber:ref2});
     await update(me, { paperId: first.id, reference: ref2, expiresOn: "2028-02-02", ...(title ? { title: "Updated name" } : {}) });
     const after = (await db.collection("papers").doc(first.id).get()).data()!;
     expect(after.reference).toBe(ref2);
@@ -164,7 +168,7 @@ describe("document integrity (emulator)", () => {
 
   it("editing only the expiry with the SAME number does not flag itself, in each kind (self-exclusion)", async () => {
     const me = uid("cust"); const v = await car(me);
-    const specs: Array<[string, string, string | undefined]> = [["RC", "GJ01AB7777", undefined], ["INSURANCE", "SAME-I1", undefined], ["PUC", "SAME-P1", undefined], ["OTHER", "SAME-O1", "Warranty card"]];
+    const specs: Array<[string, string, string | undefined]> = [["RC", "GJ01AB1234", undefined], ["INSURANCE", "SAME-I1", undefined], ["PUC", "SAME-P1", undefined], ["OTHER", "SAME-O1", "Warranty card"]];
     for (const [kind, reference, title] of specs) await submit(me, { vehicleId: v, kind, reference, ...(title ? { title } : {}) });
     for (const p of await papersOf(me)) {
       await update(me, { paperId: p.id, reference: p.reference, expiresOn: "2029-03-03" });

@@ -113,6 +113,7 @@ export const recordManualPayment = onCall({ region: "asia-south1" , enforceAppCh
     }
 
     // Amount ALWAYS from the job's server-computed snapshot â NEVER from client
+    if(job.combinedPayment)throw new HttpsError("failed-precondition","Use actual receipts for a combined booking balance.");
     const amount = job.totalAmount;
     // A job with no valid amount can never be recorded as paid (nothing changes for jobs with a real amount).
     if (typeof amount !== "number" || !Number.isInteger(amount) || amount < 0) {

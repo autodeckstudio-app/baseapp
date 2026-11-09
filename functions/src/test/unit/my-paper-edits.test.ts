@@ -24,7 +24,7 @@ const req = (uid: string, data: any): any => ({ data, auth: { uid, token: { role
 const paper = (id: string, o: any = {}) => ({ id, tenantId: "t", studioId: "s", vehicleId: "v1", customerId: "me", kind: "INSURANCE", reference: `REF-${id}`, status: "VERIFIED", evidencePath: `t/vehicles/v1/paper-${id}.jpg`, ...o });
 beforeEach(() => {
   h.rows.clear(); h.writes.length = 0; h.deleted.length = 0; h.audit.length = 0; h.storageDeleted.length = 0; h.storageFail = false; h.txFail = false; h.txMutate = null;
-  h.rows.set("vehicles/v1", { ownerId: "me", tenantId: "t" });
+  h.rows.set("vehicles/v1", { ownerId: "me", tenantId: "t", registrationNumber: "GJ01AB1234" });
   h.rows.set("vehicles/v2", { ownerId: "other", tenantId: "t" });
   h.rows.set("papers/a", paper("a"));
   h.rows.set("papers/b", paper("b", { vehicleId: "v1" }));
@@ -103,8 +103,10 @@ describe("updateMyPaper (points 5, 6)", () => {
   it("RC edits keep the RC format", async () => {
     h.rows.set("papers/rc", paper("rc", { kind: "RC", reference: "GJ01AB1234" }));
     await expect(updateMyPaper.run(req("me", { paperId: "rc", reference: "BAD" }))).rejects.toMatchObject({ code: "invalid-argument" });
-    await updateMyPaper.run(req("me", { paperId: "rc", reference: "gj 05 cd 9999" }));
-    expect(h.writes[0].d.reference).toBe("GJ05CD9999");
+    await expect(updateMyPaper.run(req("me", { paperId: "rc", reference: "gj 05 cd 9999" }))).rejects.toMatchObject({ code: "failed-precondition" });
+    expect(h.writes).toHaveLength(0);
+    await updateMyPaper.run(req("me", { paperId: "rc", reference: "gj 01 ab 1234" }));
+    expect(h.writes[0].d.reference).toBe("GJ01AB1234");
   });
   it("a photo edit stages the replacement as pendingEvidencePath and preserves the current evidence until finalize (Oct 29 fix)", async () => {
     const r: any = await updateMyPaper.run(req("me", { paperId: "a", contentType: "image/png", contentMd5: MD5 }));

@@ -194,7 +194,7 @@ export { markNotificationRead } from "./functions/notification/markNotificationR
 export { healthCheck } from "./functions/health.js";
 
 // âââ Cars for sale (studio stock + customer submissions behind approval) âââ
-export { issueListingPhotoUploadUrl, adminSaveListing, approveListingPhoto, submitMyListing, reviewListing, markMyListingSold, removeMyListingPhoto, replaceMyListingPhoto, listCarListings, listPublicCarListings, expressInterest, listCarLeads, setCarLeadStatus } from "./functions/carsale/carsale.js";
+export { issueListingPhotoUploadUrl, adminSaveListing, approveListingPhoto, submitMyListing, getMyListingSubmission, reviewListing, markMyListingSold, removeMyListingPhoto, replaceMyListingPhoto, listCarListings, listPublicCarListings, expressInterest, listCarLeads, setCarLeadStatus } from "./functions/carsale/carsale.js";
 export { publicListingPhoto } from "./functions/carsale/listing-photo.js";
 
 // âââ Push (web, OFF until PUSH_ENABLED=true) ââââââââââââââââââââââââââââââââââ
@@ -231,3 +231,13 @@ export {issuePickupHandoverPhotoUploadUrl,recordPickupHandover,getPickupHandover
 
 export {getInvoicePdfUrl} from './functions/invoice/getInvoicePdfUrl.js';
 export {onInvoiceCreatedPdf} from './functions/invoice/onInvoiceCreatedPdf.js';
+
+// Performed-work history is separate from delivery, billing and warranty issuance.
+export { getMyJobWorkCoverage, getStaffJobWorkCoverage } from './functions/work/getJobWorkCoverage.js';
+export { recordJobPerformedWork, getWorkRecordReceipt } from './functions/work/recordJobPerformedWork.js';
+
+export {issueStaffDocumentUpload,submitStaffDocument,getStaffDocument,reviewStaffDocument}from'./functions/employee/staffDocuments.js';
+
+export {cleanExpiredStaffDocumentUploads}from'./functions/employee/cleanExpiredStaffDocumentUploads.js';
+
+export {getCombinedReturnReview,approveCombinedReturn,settleCombinedManualReturn}from'./functions/payment/combinedReturnReview.js';

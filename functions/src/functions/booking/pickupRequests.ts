@@ -67,9 +67,11 @@ interface PickupRequestDoc {
   bookingId?: string;
   feePaise?: number | null;
   feeBilled?: boolean;
+  billingVersion?:number;
   customerId?: string;
   /** Set when a member free pickup paid for this request: the fee is waived and the membership is charged one pickup. */
   memberMembershipId?: string | null;
+  memberBenefitState?: 'reserved'|'consumed'|undefined;
   /** Server-stamped when staff marked the pickup leg (car collected) done. Null until then; never unset once set. */
   pickupCompletedAt?: string | null;
   /** Server-stamped when staff marked the drop leg (car returned) done. Null until then; never unset once set. */
@@ -286,6 +288,17 @@ export const updatePickupRequest = onCall({ region: "asia-south1" , enforceAppCh
       return { requestId: data.requestId, status: data.status, idempotent: true, pickupCompletedAt, dropCompletedAt };
     }
 
+    // Version2 pricing was already bound/consumed atomically with booking and payment.
+    // Logistics may progress, but decline/fee edits need the reviewed adjustment/refund workflow.
+    if(cur.billingVersion===2){
+      if(cur.memberMembershipId){
+        const held=(await tx.get(db.collection(COLLECTIONS.memberships()).doc(cur.memberMembershipId))).data()as Membership|undefined;
+        if(!held||held.tenantId!==cur.tenantId||held.customerId!==cur.customerId||held.status!=="active"||!Number.isSafeInteger(held.pickupsUsed)||held.pickupsUsed!<1)throw new HttpsError("failed-precondition","The reserved transport plan needs Admin review. No new fee or refund was applied.");
+      }
+      if(data.status==='DECLINED'||data.feePaise!==undefined)throw new HttpsError('failed-precondition','Combined billed transport needs a reviewed adjustment before it can be declined or repriced.');
+      tx.update(ref,{status:data.status,staffNote,agreedPickupAt,agreedDropAt,pickupCompletedAt,dropCompletedAt,...(cur.memberMembershipId?{memberBenefitState:"consumed"}:{}),updatedAt:now});
+      return{requestId:data.requestId,status:data.status,idempotent:false,feeBilled:true,feeUnbilled:false,pickupCompletedAt,dropCompletedAt};
+    }
     // Fee on the visit's price. Added when the studio confirms, taken off if it is declined. Never touches a job that already
     // has a live invoice or any payment: those amounts are fixed, so the fee is flagged "not billed" for the studio to handle.
     let feeBilled = cur.feeBilled ?? false;

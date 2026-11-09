@@ -176,3 +176,59 @@ html:root:root .ax-shell .ax-job-page > .ax-card > h2 { margin: 0; }
 html:root:root .ax-shell .ax-job-page .ax-job-hero h1 { margin-top: 0; margin-bottom: 0; }
 html:root:root .ax-shell .ax-job-page .ax-job-hero .ax-hero-sub { margin-bottom: 0; }
 html:root:root .ax-shell .ax-job-page :is(button, summary, input, select, a) { scroll-margin-top: 80px; scroll-margin-bottom: 112px; }
+
+/* Scoped job header: identity and three factual highlights without a tall side card. */
+html:root:root .ax-shell .ax-job-page .ax-job-hero {display:flex;flex-direction:column;align-items:stretch;gap:14px;padding:18px 20px;border-radius:22px;background:var(--ad-glass-fallback);}
+html:root:root .ax-shell .ax-job-page .ax-job-hero h1 {font-size:clamp(26px,3.2vw,40px)!important;line-height:1.12!important;letter-spacing:.5px!important;}
+html:root:root .ax-shell .ax-job-page .ax-job-hero .ax-hero-sub {display:flex;align-items:center;gap:8px;font-size:14px;}
+html:root:root .ax-shell .ax-job-page .ax-job-summary {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:14px 0 0;min-width:0;width:100%;background:none;border-radius:0;box-shadow:none;border-top:1px solid var(--gl-divider);justify-items:stretch;}
+html:root:root .ax-shell .ax-job-page .ax-job-highlight {display:flex;gap:9px;align-items:flex-start;min-width:0;}
+html:root:root .ax-shell .ax-job-page .ax-job-highlight>svg {flex:0 0 auto;margin-top:2px;color:var(--ad-text-secondary);}
+html:root:root .ax-shell .ax-job-page .ax-job-highlight>div {display:grid;gap:6px;min-width:0;}
+html:root:root .ax-shell .ax-job-page .ax-job-highlight .ax-label {font-size:11px;letter-spacing:1px;}
+html:root:root .ax-shell .ax-job-page .ax-job-summary .ax-hero-total {font-size:24px;line-height:1.2;}
+html:root:root .ax-shell .ax-job-page .ax-job-price-details {padding-top:10px;}
+@media(max-width:600px){html:root:root .ax-shell .ax-job-page .ax-job-hero{padding:16px;gap:12px;}html:root:root .ax-shell .ax-job-page .ax-job-summary{grid-template-columns:1fr 1fr;gap:14px 10px;}html:root:root .ax-shell .ax-job-page .ax-job-highlight:last-of-type{grid-column:1/-1;}html:root:root .ax-shell .ax-job-page .ax-job-hero h1{font-size:28px!important;}}
+
+html:root:root .ax-shell .ax-job-page .ax-job-price-details>summary {display:flex;align-items:center;justify-content:space-between;gap:12px;list-style:none;min-height:36px;}
+html:root:root .ax-shell .ax-job-page .ax-job-price-details>summary::-webkit-details-marker {display:none;}
+html:root:root .ax-shell .ax-job-page .ax-job-price-details[open]>summary>svg {transform:rotate(180deg);}
+
+/* Pickup requests fit their content; no stretched cards or floating bottom actions. */
+html:root:root .ax-shell .ax-pu-grid {align-items:start;gap:14px;}
+html:root:root .ax-shell .ax-pu-card {height:auto;min-height:0;gap:10px;padding:16px 18px;align-self:start;}
+html:root:root .ax-shell .ax-pu-card .ax-pu-foot {margin-top:0;padding-top:6px;gap:10px;}
+html:root:root .ax-shell .ax-pu-card .ax-pu-form {gap:8px;padding-top:10px;}
+html:root:root .ax-shell .ax-pu-card .ax-pu-facts {padding-top:10px;gap:8px 16px;}
+html:root:root .ax-shell .ax-pu-card .ax-pu-times input,html:root:root .ax-shell .ax-pu-card .ax-pu-form input,html:root:root .ax-shell .ax-pu-card .ax-pu-note {min-height:44px;padding:10px 12px;}
+
+html:root:root .ax-shell .ax-rw-simple {padding:16px 18px;}
+html:root:root .ax-shell .ax-rw-simple> * {margin-left:0;margin-right:0;}
+html:root:root .ax-shell .ax-rw-simple-head {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;}
+html:root:root .ax-shell .ax-return-title {display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+html:root:root .ax-shell .ax-return-note {display:grid;gap:10px;padding:16px 18px;margin-bottom:14px;}
+html:root:root .ax-shell .ax-return-guard {display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ad-text-secondary);}
+html:root:root .ax-shell .ax-return-note summary,html:root:root .ax-shell .ax-rw-details summary {cursor:pointer;min-height:32px;display:flex;align-items:center;gap:8px;font-size:13px;}
+html:root:root .ax-shell .ax-rw-details summary::after,html:root:root .ax-shell .ax-return-note summary::after {content:'⌄';font-size:18px;}
+html:root:root .ax-shell .ax-rw-details {max-width:100%;}
+html:root:root .ax-shell .ax-rw-details[open] {flex-basis:100%;}
+html:root:root .ax-shell .ax-rw-details p {overflow-wrap:anywhere;font-size:13px;line-height:1.5;}
+html:root:root .ax-shell .ax-rw-send {padding-top:12px;border-top:1px solid var(--gl-divider);}
+
+html:root:root .ax-shell .ax-quote-filters {display:grid;grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) auto;gap:14px;align-items:end;padding:16px 18px;margin-bottom:14px;}
+html:root:root .ax-shell .ax-quote-filters .ax-form-row {margin:0;display:grid;gap:7px;font-size:12px;color:var(--ad-text-secondary);min-width:0;}
+html:root:root .ax-shell .ax-quote-filters select {appearance:auto;width:100%;min-height:44px;border:1px solid var(--ad-border-subtle);padding:10px 12px;border-radius:12px;background:var(--ad-glass-fallback);color:var(--ad-text-primary);}
+html:root:root .ax-shell .ax-quote-count {font-size:12px;padding-bottom:12px;white-space:nowrap;color:var(--ad-text-secondary);}
+html:root:root .ax-shell .ax-quote-empty {display:grid;gap:8px;padding:20px;}
+@media(max-width:600px){html:root:root .ax-shell .ax-quote-filters{grid-template-columns:1fr;gap:12px;}html:root:root .ax-shell .ax-quote-count{padding:0;}}
+
+/* Portal editor: native file control shares the form baseline, without changing upload semantics. */
+html:root:root .ax-service-editor .ax-service-file {display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box;min-height:44px;padding:0;border:1px solid var(--ad-border-subtle);border-radius:12px;font:inherit;font-size:14px!important;line-height:42px;background:var(--ad-glass-fallback);color:var(--ad-text-primary);}
+html:root:root .ax-service-editor .ax-service-file::file-selector-button {height:42px;margin:0 8px 0 0;padding:0 8px;border:0;border-right:1px solid var(--ad-border-subtle);font:inherit;font-weight:600;line-height:42px;background:transparent;color:inherit;vertical-align:middle;cursor:pointer;}
+html:root:root .ax-service-editor .ax-form-row>span,html:root:root .ax-service-editor .ax-form-section {font-size:12px;line-height:1.5;}
+html:root:root .ax-service-editor .ax-sub,html:root:root .ax-service-editor .ax-note,html:root:root .ax-service-editor small {font-size:12px;line-height:1.5;margin:0;}
+
+@media(max-width:600px){html:root:root .ax-shell .ax-quote-filters select{min-width:0;font-size:14px;padding:10px 6px;}html:root:root .ax-shell .ax-quote-count{grid-column:1/-1;}}
+
+/* Pricing is one section followed by review, not a full-height stand-alone page. */
+html:root:root .ax-shell-frame > .ax-main > .ax-pricing-page{flex:0 0 auto;}

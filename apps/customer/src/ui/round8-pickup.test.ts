@@ -27,7 +27,7 @@ describe("round 8 fixes 3-4: pickup/drop is chosen while booking and sent with C
     expect(confirm).toContain("This is your preference, not a confirmed slot. The studio agrees the exact time with you by phone call.");
   });
   it("the pickup request goes with the new booking id right after create, before the payment step, never by a separate Send button", () => {
-    expect(confirm).toContain("const pickupSent = await sendPickupRequest(result.id);");
+    expect(confirm).toContain("const pickupSent = combinedMode?true:await sendPickupRequest(result.id);");
     const create = confirm.indexOf("await createBooking(");
     const request = confirm.indexOf("sendPickupRequest(result.id)");
     const pay = confirm.indexOf("await payHeld(h)");

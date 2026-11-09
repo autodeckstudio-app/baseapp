@@ -3,7 +3,7 @@ import { pickupFeeLabel, confirmBlockReason, checkAgreedTime } from "./pickup-fo
 
 describe("pickup fee label", () => {
   it("says so when there is no price", () => expect(pickupFeeLabel(null)).toMatch(/admin sets it/));
-  it("labels a both-ways fee as a total with each leg", () => expect(pickupFeeLabel(20000, null, "both")).toBe("Rs 200 total (Rs 100 each way)"));
+  it("labels a both-ways fee as a total with each leg", () => expect(pickupFeeLabel(20000, null, "both")).toBe("Rs 200 total"));
   it("formats paise", () => { expect(pickupFeeLabel(15000)).toBe("Rs 150"); expect(pickupFeeLabel(0)).toBe("Free"); expect(pickupFeeLabel(15000, "m1")).toBe("Free with membership"); });
 });
 describe("confirm gate", () => {

@@ -2,10 +2,18 @@
 import { createElement } from "react";
 import { Image, Platform } from "react-native";
 
-export type NavIconName = "home" | "services" | "bookings" | "garage" | "profile" | "club" | "gift" | "bell" | "pin" | "chat" | "wash" | "ceramic" | "tools" | "search" | "check" | "call" | "whatsapp" | "instagram" | "channel" | "directions" | "proceed";
+export type NavIconName = "home" | "services" | "bookings" | "garage" | "profile" | "club" | "gift" | "bell" | "pin" | "chat" | "wash" | "ceramic" | "tools" | "search" | "check" | "call" | "whatsapp" | "instagram" | "channel" | "directions" | "proceed" | "refresh" | "download" | "share" | "edit" | "delete" | "close" | "history" | "back";
 
 // body: the main silhouette (filled when active). detail: strokes drawn on top, in the cut-out colour when filled.
 const ART: Record<NavIconName, { body: string; detail: string }> = {
+  back: {body:'<path d="M15 6l-6 6 6 6"/>',detail:""},
+  refresh: {body:'<path d="M20 7v5h-5M4 17v-5h5M6.1 7a7 7 0 0 1 11.5-1L20 9M4 15l2.4 3A7 7 0 0 0 17.9 17"/>',detail:""},
+  download: {body:'<path d="M12 3v12M7 10l5 5 5-5M4 16v4h16v-4"/>',detail:""},
+  share: {body:'<path d="M12 15V3M7 8l5-5 5 5M5 12v8h14v-8"/>',detail:""},
+  edit: {body:'<path d="M4 20l1-5L16 4a2.1 2.1 0 0 1 3 3L8 18zM14 6l4 4"/>',detail:""},
+  delete: {body:'<path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/>',detail:""},
+  close: {body:'<path d="M6 6l12 12M18 6 6 18"/>',detail:""},
+  history: {body:'<path d="M3 5v5h5M3 10a9 9 0 1 1 1.3 7M12 7v6l4 2"/>',detail:""},
   proceed: {body:'<path d="M5 12h14M13 6l6 6-6 6"/>',detail:""},
   home: { body: '<path d="M3.5 10.8 12 3.5l8.5 7.3V19.5a1 1 0 0 1-1 1H15v-5.8H9v5.8H4.5a1 1 0 0 1-1-1z"/>', detail: "" },
   services: { body: '<path d="M10.5 4.5 12.3 10l5.500 1.800-5.500 1.800-1.800 5.500-1.800-5.500L3.200 11.800 8.700 10z"/>', detail: '<path d="M18 3.500v4M16 5.500h4M18.500 16v3.500M16.800 17.800h3.400"/>' },

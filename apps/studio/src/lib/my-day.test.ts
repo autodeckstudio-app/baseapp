@@ -12,7 +12,7 @@ describe("my day actions", () => {
     expect(dayActions(rec({ checkInAt: "2026-10-26T04:00:00Z" }))).toEqual({ in: false, bs: false, be: false, out: true });
   });
   it("on break: only end break", () => {
-    expect(dayActions(rec({ checkInAt: "x", breaks: [{ startedAt: "y" }] }))).toEqual({ in: false, bs: false, be: true, out: false });
+    expect(dayActions(rec({ checkInAt: "x", breaks: [{ startedAt: "y" }] }))).toEqual({ in: false, bs: false, be: false, out: true });
   });
   it("checked out: nothing", () => {
     expect(dayActions(rec({ checkInAt: "x", checkOutAt: "z" }))).toEqual({ in: false, bs: false, be: false, out: false });
@@ -23,7 +23,7 @@ import { readFileSync } from "node:fs";
 describe("Account attendance rows use the same gating as Today (source guard only)", () => {
   it("disables each row from dayActions", () => {
     const src = readFileSync(new URL("../app/(tabs)/account.tsx",import.meta.url), "utf8");
-    for (const k of ["in", "be", "out"]) expect(src).toContain(`!acts.${k}`);
+    for (const k of ["in", "out"]) expect(src).toContain(`!acts.${k}`);
     // Start break is gone from the codebase, not merely gated off (peer final UI,
     // 2 Nov basket item 3). "End break" stays only while a break is open so a
     // mid-break day can still be finished and checked out.
@@ -48,8 +48,8 @@ type Rec = { checkInAt: string | null; checkOutAt: string | null; breaks: { star
 const server = {
   in: (r: Rec) => r === null,
   bs: (r: Rec) => r !== null && r.checkOutAt === null && !r.breaks.some((b) => b.endedAt === null),
-  be: (r: Rec) => r !== null && r.breaks.some((b) => b.endedAt === null),
-  out: (r: Rec) => r !== null && r.checkOutAt === null && !r.breaks.some((b) => b.endedAt === null),
+  be: (_r: Rec) => false,
+  out: (r: Rec) => r !== null && r.checkOutAt === null,
 };
 describe("buttons match what the server would accept (source-derived model)", () => {
   const states: [string, Rec][] = [
@@ -66,7 +66,7 @@ describe("buttons match what the server would accept (source-derived model)", ()
       // accepts it - the backend and history are intentionally untouched. The other buttons
       // keep matching what the server would accept, including "End break" for an open break.
       expect(ui.bs, `${name} / bs`).toBe(false);
-      for (const k of ["in", "be", "out"] as const) {
+      for (const k of ["in", "out"] as const) {
         const serverOk = server[k](r);
         expect(ui[k], `${name} / ${k}`).toBe(serverOk);
       }

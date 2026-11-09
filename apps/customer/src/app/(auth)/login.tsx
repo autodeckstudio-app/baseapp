@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Platform, View } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import { signInWithNativeGoogle } from "../../lib/native-google-signin";
@@ -19,7 +19,8 @@ WebBrowser.maybeCompleteAuthSession();
 
 function friendly(err: unknown): string {
   const code = (err as { code?: string } | null)?.code ?? "";
-  if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return "Sign-in was cancelled.";
+  if (code === "auth/popup-closed-by-user") return "The Google window closed before sign-in finished. Try again.";
+  if (code === "auth/cancelled-popup-request") return "Another sign-in interrupted this attempt. Try again.";
   if (code === "auth/popup-blocked") return "Your browser blocked the Google window. Allow pop-ups and try again.";
   if (code === "auth/unauthorized-domain") return "This address isn't allowed to sign in yet.";
   return "Couldn't sign you in. Please try again.";
@@ -41,21 +42,25 @@ export default function LoginScreen() {
 
 function WebGoogleButton({ onError }: { onError: (m: string | null) => void }) {
   const [busy, setBusy] = useState(false);
+  const inFlight = useRef(false);
   return (
     <AuthButton dark soft
       testID="google-sign-in"
       label="Continue with Google"
       busy={busy}
       onPress={() => {
+        if (inFlight.current) return;
+        inFlight.current = true;
         setBusy(true);
         onError(null);
         // On success keep the button busy: the navigation guard replaces this
         // screen once the session is ready, so the login screen does not
         // flash back. The timer releases the button if that never happens.
         signInWithGooglePopup()
-          .then(() => { setTimeout(() => setBusy(false), 10000); })
+          .then(() => { setTimeout(() => { inFlight.current = false; setBusy(false); }, 10000); })
           .catch((e: unknown) => {
             onError(friendly(e));
+            inFlight.current = false;
             setBusy(false);
           });
       }}

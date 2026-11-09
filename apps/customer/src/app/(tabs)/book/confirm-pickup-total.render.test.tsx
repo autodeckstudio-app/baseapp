@@ -30,15 +30,18 @@ vi.mock('@autodeck/core', async (importOriginal) => ({ ...await importOriginal<R
 vi.mock('../../../ui/kit', () => ({ Button: 'Button', Field: 'Field', Kicker: 'Kicker', Loading: 'Loading', Notice: ({ title, body, action }: any) => React.createElement('notice', { title, body }, action), Pane: 'Pane', Row: ({ title, detail, trailing }: any) => React.createElement('row', null, title, detail, trailing), Screen: ({ header, children }: any) => React.createElement('screen', null, header, children), T: 'T', rupees: String }));
 vi.mock('../../../ui/Sheet', () => ({ Sheet: 'Sheet', SheetTotal: 'SheetTotal', SheetLine: 'SheetLine', SheetDivider: 'SheetDivider' }));
 vi.mock('../../../ui/inputs', () => ({ SelectField: 'SelectField' }));
+import{pickupDraftScope,updatePickupDraft}from'../../../lib/pickup-draft';
 import Page from './confirm';
 
+const draftScope=pickupDraftScope({uid:'auth',customerId:'canonical',tenantId:'t'},'svc');
 beforeEach(() => {
+  updatePickupDraft(draftScope,{kind:null,address:'',where:null,quote:null});
   h.quote.mockReset();
   h.quote.mockResolvedValue({ quoteId: 'q1', kind: 'pickup', legs: [{ leg: 'pickup', km: 5.2, feePaise: 5500 }], feePaise: 5500, freeMeters: 3000, expiresAt: new Date(Date.now() + 1800000).toISOString() });
 });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const button = (r: any, label: string) => r.root.findAllByType('Button').find((x: { props: { label?: string } }) => x.props.label === label);
+const button = (r: any, label: string) => r.root.findAll((x: { props: { label?: string; accessibilityLabel?: string; onPress?: unknown } }) => !!x.props.onPress && (x.props.label === label || x.props.accessibilityLabel === label))[0];
 
 it('a quoted pickup fee rides inside the shown Total while Pay online now excludes it and the fee is marked paid at the studio', async () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -60,3 +63,5 @@ it('a quoted pickup fee rides inside the shown Total while Pay online now exclud
   expect(online.props.value).toBe('10000'); // the online charge never includes the fee
   await act(async () => r.unmount());
 });
+
+it('booking-review transport draft survives remount without clearing its exact directed quote',async()=>{updatePickupDraft(draftScope,{kind:'both',address:'Reviewed sample address',where:{lat:23,lng:72},quote:{quoteId:'asymmetric',kind:'both',legs:[{leg:'pickup',km:4,feePaise:2500},{leg:'drop',km:5,feePaise:5000}],feePaise:7500,freeMeters:3000,expiresAt:new Date(Date.now()+1800000).toISOString()}});let r:any;await act(async()=>{r=create(<Page/>)});const total=r.root.findAllByType('SheetTotal').find((x:any)=>x.props.label==='Total');expect(total.props.value).toBe('17500');expect(button(r,'Both').props.accessibilityState.selected).toBe(true);await act(async()=>r.unmount());});

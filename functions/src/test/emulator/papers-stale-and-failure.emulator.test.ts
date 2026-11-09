@@ -96,7 +96,7 @@ describe("stale edit + failed finalize (emulator)", () => {
     const me = uid("cust"); const staff = uid("staff"); const v = await car(me);
     const sub: any = await submit(me, { vehicleId: v, kind: "INSURANCE", reference: "XPR-1", expiresOn: "2026-12-31" });
     // Customer form/view opened on revision 0; staff verifies meanwhile (revision 1).
-    await review(staff, { paperId: sub.id, decision: "VERIFIED" });
+    await review(staff, { paperId: sub.id, decision: "VERIFIED", inspectedPlate: "GJ01AB1234", originalInspected: true });
     expect((await paperDoc(sub.id)).revision).toBe(1);
     await expect(update(me, { paperId: sub.id, expectedRevision: 0, expiresOn: "2030-01-01" })).rejects.toMatchObject({ code: "aborted" });
     await expect(del(me, { paperId: sub.id, expectedRevision: 0 })).rejects.toMatchObject({ code: "aborted" });

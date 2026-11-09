@@ -1,3 +1,4 @@
+import { warrantyDisplay } from "@autodeck/core";
 import{useSegmentSwipe}from"../../../lib/segment-swipe";
 import { validAppliedDate, todayStudioDate } from "../../../lib/applied-date";
 import { listOwnerKey } from "../../../lib/owner-key";
@@ -134,7 +135,7 @@ export default function VehicleDetailScreen() {
   // so StrictMode's probe cleanup does not leave the flow permanently dead.
   useEffect(() => {
     protFlow.current?.revive();
-    return () => protFlow.current?.dispose();
+  return () => protFlow.current?.dispose();
   }, []);
   const [protForm, setProtForm] = useState({ brand: "", years: "", applied: "", notes: "" });
   const [protBusy, setProtBusy] = useState(false);
@@ -165,6 +166,7 @@ export default function VehicleDetailScreen() {
   const [docNotice, setDocNotice] = useState<string | null>(null); // post-save note shown outside the form
   const [upcomingBooking, setUpcomingBooking] = useState<Booking | null>(null);
   const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([]);
+  const [bookingsReady,setBookingsReady]=useState<string|null>(null);
   // Garage is split into three flat tabs (Gauri basket item 10, per the liked mockup):
   // Upcoming (default), History, Documents. Nothing renders in two places.
   const [tab, setTab] = useState<"upcoming" | "history" | "documents">("upcoming");
@@ -290,7 +292,7 @@ export default function VehicleDetailScreen() {
     if (!id||mutationBusy.current) return;
     const scope=contextKey;
     setDocError(null);
-    const validationError=validateDocument(docForm.kind,docForm.reference,docForm.expiresOn);
+    const validationError=validateDocument(docForm.kind,docForm.reference,docForm.expiresOn,vehicle?.registrationNumber ?? "");
     if(validationError){setDocError(validationError);return;}
     if (docForm.kind === "OTHER" && !docForm.title.trim()) { setDocError("Give this document a name."); return; }
     const clash = numberClash(allPapers, documentReference(docForm.kind, docForm.reference), docEditing, docEditing ? null : docSubmissionId);
@@ -364,14 +366,14 @@ export default function VehicleDetailScreen() {
   }, [retryTick]);
 
   useEffect(() => {
-    if (mockDetail) { setUpcomingBookings(mockDetail.upcomingBookings); setUpcomingBooking(mockDetail.upcomingBookings[0] ?? null); return; }
+    if (mockDetail) { setBookingsReady(contextKey);setUpcomingBookings(mockDetail.upcomingBookings); setUpcomingBooking(mockDetail.upcomingBookings[0] ?? null); return; }
     if (!id || auth.status !== "ready" || !ownerId) return;
-    setUpcomingBookings([]);setUpcomingBooking(null);let alive=true;void getMyBookings(ownerId, auth.claims.tenantId)
+    setBookingsReady(null);setUpcomingBookings([]);setUpcomingBooking(null);let alive=true;void getMyBookings(ownerId, auth.claims.tenantId)
       .then((bookings) => {
         if(!alive)return;const upcoming = bookings
           .filter((b) => b.vehicleId === id && (b.status === "PENDING" || b.status === "CONFIRMED" || b.status === "ACTIVE"))
           .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
-        setUpcomingBookings(upcoming);
+        setBookingsReady(contextKey);setUpcomingBookings(upcoming);
         setUpcomingBooking(upcoming[0] ?? null);
       })
       .catch(()=>{if(alive)setFeedError("Could not load some car records. Check your connection and retry.")});return()=>{alive=false};
@@ -448,9 +450,9 @@ export default function VehicleDetailScreen() {
     }finally{if(ctxRef.current===scope)mutationBusy.current=false}
   }
 
-  if (feedError) return <Screen><Notice title="Car records unavailable" body={feedError} action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
+  if (feedError) return <Screen><Notice title="Car records unavailable" body={feedError} action={<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
   if (loading) return <Loading label="Opening the room" />;
-  if (!vehicle) return <Screen><Notice title="Vehicle not found" body="It may have been removed from your garage. Its service history and invoices are still kept." action={<Button label="View service history" onPress={() => router.push({ pathname: "/(tabs)/garage/history", params: { vehicleId: id } })} />} /></Screen>;
+  if (!vehicle) return <Screen><Notice title="Vehicle not found" body="It may have been removed from your garage. Its service history and invoices are still kept." action={<Button icon="history" label="View service history" onPress={() => router.push({ pathname: "/(tabs)/garage/history", params: { vehicleId: id } })} />} /></Screen>;
 
   // Current vs history: superseded/removed records are kept as history
   // (never deleted) but are excluded from every current-state display, the
@@ -551,6 +553,7 @@ export default function VehicleDetailScreen() {
     ...(verifiedProtections.length > 0 ? [{ label: "Protection", value: `${verifiedProtections.length} ${verifiedProtections.length === 1 ? "protection" : "protections"} on file` }] : []),
   ];
 
+  const bookServiceAction = <Button label="Book a service" style={{marginTop:0,marginBottom:0}} onPress={()=>router.navigate("/(tabs)/catalogue")}/>;
   return (
     <Screen
       header={
@@ -583,7 +586,7 @@ export default function VehicleDetailScreen() {
         </View>
       }
     >
-      <View testID="garage-detail-swipe-area" {...(!editing&&!docOpen&&!docEditing&&!protEdit?detailSwipe.handlers:{})} style={[{gap:20,minHeight:360},!editing&&!docOpen&&!docEditing&&!protEdit?detailSwipe.style:null]}>
+      <View testID="garage-detail-swipe-area" {...(!editing&&!docOpen&&!docEditing&&!protEdit?detailSwipe.handlers:{})} style={[{gap:20},!editing&&!docOpen&&!docEditing&&!protEdit?detailSwipe.style:null]}>
       {!editing ? <TabPills tabs={[{ key: "upcoming", label: "Upcoming" }, { key: "history", label: "History" }, { key: "documents", label: "Documents" }]} value={tab} onChange={setTab} /> : null}
       {tab === "upcoming" ? (
       <>
@@ -609,7 +612,7 @@ export default function VehicleDetailScreen() {
             ))}
           </Pane>
         </View>
-      ) : null}
+      ) : !editing ? bookingsReady===contextKey ? <Notice title="No upcoming bookings" body="Choose a service for your next visit." action={bookServiceAction} /> : <T role="caption" tone="secondary">Loading upcoming bookings...</T> : null}
       {!editing && !vehicle.category ? (
         <Pane pad="inset">
           <View style={{ gap: space.line }}>
@@ -621,7 +624,7 @@ export default function VehicleDetailScreen() {
         </Pane>
       ) : null}
         <>
-          {!editing ? <CarOverview
+          {!editing && reminders.length>0 ? <CarOverview
             due={due}
             last={null}
             reminders={reminders}
@@ -680,26 +683,14 @@ export default function VehicleDetailScreen() {
         return <CareTimeline title="Service due" count={countLabel(upcoming.length, "item", "items")} items={upcoming} empty="Nothing due yet. The care plan starts once the studio finishes a service on this car." />;
       })() : null}
 
-      {!editing ? <Button label="Book a service" onPress={() => router.navigate("/(tabs)/catalogue")} /> : null}
-      {!editing ? (
-        <View style={{ gap: space.breath }}>
-          <Button label="Edit vehicle" kind="quiet" onPress={() => setEditing(true)} />
-          {confirmingArchive ? (
-            <Notice
-              title="Remove from your garage?"
-              body="Service history stays on record."
-              action={
-                <View style={{ gap: space.breath }}>
-                  <Button label="Yes, remove" kind="danger" onPress={() => void handleArchiveConfirmed()} />
-                  <Button label="Keep it" kind="quiet" onPress={() => setConfirmingArchive(false)} />
-                </View>
-              }
-            />
-          ) : (
-            <Button label="Remove from garage" kind="danger" onPress={() => setConfirmingArchive(true)} />
-          )}
+      {!editing ? <>
+        <View testID="garage-detail-actions" style={{flexDirection:"row",alignItems:"center",flexWrap:"wrap",gap:12}}>
+          {upcomingBookings.length>0?bookServiceAction:null}
+          <LinkAction label="Edit vehicle" onPress={()=>setEditing(true)}/>
+          <LinkAction label="Remove from garage" onPress={()=>setConfirmingArchive(true)}/>
         </View>
-      ) : null}
+        {confirmingArchive?<Notice title="Remove from your garage?" body="Service history stays on record." action={<View style={{flexDirection:"row",flexWrap:"wrap",gap:12}}><Button label="Yes, remove" kind="danger" onPress={()=>void handleArchiveConfirmed()}/><Button label="Keep it" kind="quiet" onPress={()=>setConfirmingArchive(false)}/></View>}/>:null}
+      </>:null}
       </>
       ) : null}
 
@@ -937,10 +928,11 @@ export default function VehicleDetailScreen() {
         <Pane pad="gap">
           {warranties.map((w, i) => {
             const left = daysUntil(w.endDate);
-            const state = w.revokedAt ? "Revoked" : w.endDate === null ? "Lifetime" : left !== null && left < 0 ? "Expired" : "Active";
+            const warrantyView = warrantyDisplay(w, new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }));
+            const state = warrantyView.status;
             const safeDate = (iso?: string | null) => { if (!iso) return null; const t = Date.parse(iso); return Number.isNaN(t) ? null : formatDate(iso); };
             const start = safeDate(w.startDate), end = safeDate(w.endDate);
-            const range = start && (end || w.endDate === null) ? `${start} to ${end ?? "Lifetime"}` : (end ?? null);
+            const range = start && (end || w.endDate === null) ? `${start} to ${end ?? "End date not recorded"}` : (end ?? null);
             const countdown = w.revokedAt || w.endDate === null ? null : left === null ? null : left < 0 ? (end ? `Ended ${end}` : "Expired") : left === 0 ? "Ends today" : left <= 60 ? `${left} day${left === 1 ? "" : "s"} left` : `${Math.floor(left / 30)} months left`;
             const terms = w.coverageTerms && w.coverageTerms.trim().toLowerCase() !== w.warrantyLabel.trim().toLowerCase() ? w.coverageTerms : null;
             return (
@@ -948,7 +940,7 @@ export default function VehicleDetailScreen() {
                 key={w.id}
                 title={w.warrantyLabel}
                 detail={[w.serviceName, range, terms].filter(Boolean).join(" · ")}
-                trailing={<Chip label={countdown && state === "Active" ? countdown : state} tone={state === "Active" || state === "Lifetime" ? "premium" : state === "Revoked" ? "danger" : "neutral"} />}
+                trailing={<Chip label={countdown && state === "Within recorded dates" ? countdown : state} tone={state === "Within recorded dates" ? "premium" : state === "Revoked" ? "danger" : "neutral"} />}
                 last={i === warranties.length - 1}
               />
             );

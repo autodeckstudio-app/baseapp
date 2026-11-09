@@ -535,9 +535,14 @@ service cloud.firestore {
     // Studio staff read their tenant's papers; the vehicle owner reads their
     // own via denormalized customerId. Function-only writes.
     match /papers/{paperId} {
-      allow read: if isStudioOrAbove() && ownTenant(resource.data)
+      allow read: if (isStudioOrAbove() && ownTenant(resource.data)
+                      && (isAdminOrAbove() || ownStudio(resource.data)))
                   || (isAuthenticated() && ownTenant(resource.data)
-                      && ownsCustomerRef(resource.data.customerId));
+                      && ownsCustomerRef(resource.data.customerId)
+                      && exists(/databases/$(database)/documents/vehicles/$(resource.data.vehicleId))
+                      && ownTenant(get(/databases/$(database)/documents/vehicles/$(resource.data.vehicleId)).data)
+                      && get(/databases/$(database)/documents/vehicles/$(resource.data.vehicleId)).data.ownerId == resource.data.customerId
+                      && get(/databases/$(database)/documents/vehicles/$(resource.data.vehicleId)).data.get("deletedAt", null) == null);
       allow write: if false;
     }
 
@@ -561,6 +566,9 @@ service cloud.firestore {
 
     // Server-only abuse-limiter windows for guest shop endpoints. No client
     // reads or writes — the functions hold the only access.
+    match /staffDocuments/{employeeId} { allow read, write: if false; }
+    match /staffDocumentUploads/{uploadId} { allow read, write: if false; }
+
     match /shopRateLimits/{key} {
       allow read, write: if false;
     }

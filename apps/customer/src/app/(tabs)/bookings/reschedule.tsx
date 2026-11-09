@@ -48,9 +48,9 @@ export default function RescheduleBookingScreen() {
   },[booking,svcCategory]);
   useEffect(()=>{loadSlots();return()=>{slotGeneration.current++}},[loadSlots]);
   if(loading)return <Loading label="Opening your booking"/>;
-  if(loadFailed||!booking)return <Screen><Notice title="Booking not found" body="Check your connection and try again." action={<Button label="Retry" onPress={loadBooking}/>}/></Screen>;
+  if(loadFailed||!booking)return <Screen><Notice title="Booking not found" body="Check your connection and try again." action={<Button icon="refresh" label="Retry" onPress={loadBooking}/>}/></Screen>;
   if(!svcLoaded)return <Loading label="Opening service terms"/>;
-  if(!svcCategory)return <Screen><Notice title="Service terms unavailable" body="This service's current reschedule terms could not be verified. Refresh before choosing a new time." action={<Button label="Retry" onPress={loadBooking}/>}/></Screen>;
+  if(!svcCategory)return <Screen><Notice title="Service terms unavailable" body="This service's current reschedule terms could not be verified. Refresh before choosing a new time." action={<Button icon="refresh" label="Retry" onPress={loadBooking}/>}/></Screen>;
 
   // Premium (pay-at-studio) bookings use the request-and-approve flow (item 6,
   // PREVIEW): the customer sends a request and the studio confirms. The callable
@@ -151,7 +151,7 @@ export default function RescheduleBookingScreen() {
       {slotsLoading ? (
         <T role="caption" tone="tertiary">Checking the studio's calendar...</T>
       ) : slotsError ? (
-        <Notice title="Can't load times" body={slotsError} action={<Button label="Retry" kind="quiet" onPress={loadSlots} />} />
+        <Notice title="Can't load times" body={slotsError} action={<Button icon="refresh" label="Retry" kind="quiet" onPress={loadSlots} />} />
       ) : Object.keys(slotsByDate).length === 0 ? (
         <Notice title="No free times" body="Nothing available in the next 14 days. Try again tomorrow or call the studio." />
       ) : (

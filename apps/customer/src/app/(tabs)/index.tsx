@@ -270,7 +270,7 @@ export default function HomeScreen() {
         live={live}
         rebook={(() => { const b = lastCompletedService(past); const sv = b ? catalogue.find((x) => x.id === b.serviceId) : undefined; return b && sv && !sv.priceOnRequest ? { serviceName: sv.name, onPress: () => router.push(`/(tabs)/book/${sv.id}`) } : null; })()}
         stories={groups.length > 0 ? <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, seenKeyOf(g)])); }} /> : null}
-        banner={<>{home.error ? <Notice title="Some details are unavailable" body={home.error} action={<Button kind="quiet" label="Retry" onPress={home.refresh} />} /> : null}{rateB ? <RateCard key={rateB.id} bookingId={rateB.id} serviceName={catalogue.find((x) => x.id === rateB.serviceId)?.name ?? "visit"} /> : null}</>}
+        banner={<>{home.error ? <Notice title="Some details are unavailable" body={home.error} action={<Button kind="quiet" icon="refresh" label="Retry" onPress={home.refresh} />} /> : null}{rateB ? <RateCard key={rateB.id} bookingId={rateB.id} serviceName={catalogue.find((x) => x.id === rateB.serviceId)?.name ?? "visit"} /> : null}</>}
         onSearch={() => router.navigate("/(tabs)/catalogue")}
         onBell={() => router.navigate("/(tabs)/notifications")}
         onAllServices={() => router.navigate("/(tabs)/catalogue")}

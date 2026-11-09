@@ -22,7 +22,8 @@ vi.mock("firebase/auth", () => ({
   PhoneMultiFactorGenerator: class {},
   RecaptchaVerifier: class {},
 }));
-vi.mock("./firebase", () => ({ auth: {}, db: {}, functions: {}, storage: {} }));
+const client=vi.hoisted(()=>({currentUser:null as any}));
+vi.mock("./firebase", () => ({ auth: client, db: {}, functions: {}, storage: {} }));
 vi.mock("./mfa", () => ({ isMultiFactorRequiredError: () => false, pickPhoneHint: () => null }));
 vi.mock("./browser", () => ({ currentUserAgent: () => "test", isInAppBrowser: () => false, isIosBrowser: () => false, shouldFallBackToRedirect: () => false }));
 
@@ -98,7 +99,7 @@ beforeEach(() => {
 });
 
 describe("AdminAuthProvider token observation", () => {
-  it("subscribes with onIdTokenChanged and revalidates on a same-uid token refresh with new claims", async () => {
+  it("subscribes with onIdTokenChanged and revalidates on a same-uid token refresh with new Admin claims after rejected Studio credentials", async () => {
     let el!: any; // eslint-disable-line @typescript-eslint/no-explicit-any
     act(() => { el = create(createElement(AdminAuthProvider, null, createElement(Probe))); });
     expect(tokenListener).not.toBeNull();
@@ -106,7 +107,8 @@ describe("AdminAuthProvider token observation", () => {
     cookieClaims = { uid: "u1", role: "studio", tenantId: "t", studioId: "s1" };
     await act(async () => { tokenListener?.(user); });
     await flush();
-    expect(textOf(el)).toContain("role:studio");
+    expect(textOf(el)).toContain("anon");
+    expect(signOutMock).toHaveBeenCalledTimes(1);
     const callsAfterFirst = fetchCalls.length;
     // Same uid, refreshed token, server session now carries a new role:
     // onAuthStateChanged would NOT fire here; onIdTokenChanged must.
@@ -121,10 +123,10 @@ describe("AdminAuthProvider token observation", () => {
   it("sign-out observed through the token listener clears claims", async () => {
     let el!: any; // eslint-disable-line @typescript-eslint/no-explicit-any
     act(() => { el = create(createElement(AdminAuthProvider, null, createElement(Probe))); });
-    cookieClaims = { uid: "u1", role: "studio", tenantId: "t", studioId: "s1" };
-    await act(async () => { tokenListener?.(mkUser("u1", { role: "studio", tenantId: "t", studioId: "s1" })); });
+    cookieClaims = { uid: "u1", role: "admin", tenantId: "t", studioId: "s1" };
+    await act(async () => { tokenListener?.(mkUser("u1", { role: "admin", tenantId: "t", studioId: "s1" })); });
     await flush();
-    expect(textOf(el)).toContain("role:studio");
+    expect(textOf(el)).toContain("role:admin");
     await act(async () => { tokenListener?.(null); });
     await flush();
     expect(textOf(el)).toContain("anon");
@@ -241,11 +243,13 @@ describe("AdminAuthProvider token observation", () => {
     // The cookie's scope matches the token exactly, but it was minted for
     // another account: claims without a matching uid prove nothing - the
     // provider must re-exchange and publish claims bound to THIS uid.
-    cookieClaims = { uid: "u9", role: "studio", tenantId: "t", studioId: "s1" };
-    exchangeClaims = { uid: "u1", role: "studio", tenantId: "t", studioId: "s1" };
-    await act(async () => { tokenListener?.(mkUser("u1", { role: "studio", tenantId: "t", studioId: "s1" })); });
+    cookieClaims = { uid: "u9", role: "admin", tenantId: "t", studioId: "s1" };
+    exchangeClaims = { uid: "u1", role: "admin", tenantId: "t", studioId: "s1" };
+    await act(async () => { tokenListener?.(mkUser("u1", { role: "admin", tenantId: "t", studioId: "s1" })); });
     await flush();
     expect(fetchCalls).toContain("POST /api/session"); // re-exchanged
-    expect(textOf(el)).toContain("role:studio");
+    expect(textOf(el)).toContain("role:admin");
   });
 });
+
+it('an already open tab loses Admin surface after focus recheck rejects its host session, without account-wide signout',async()=>{let focus:()=>void=()=>{},timer:any;vi.stubGlobal('window',{addEventListener:(_n:string,cb:any)=>{focus=cb},removeEventListener:vi.fn(),setInterval:(cb:any)=>{timer=cb;return 1},clearInterval:vi.fn()});vi.stubGlobal('document',{visibilityState:'visible',addEventListener:vi.fn(),removeEventListener:vi.fn()});const user=mkUser('focus-user',{role:'admin',tenantId:'t',studioId:null});client.currentUser=user;cookieClaims={uid:'focus-user',role:'admin',tenantId:'t',studioId:null};let r:any;await act(async()=>{r=create(createElement(AdminAuthProvider,null,createElement(Probe)))});await act(async()=>{tokenListener?.(user)});await flush();expect(textOf(r)).toContain('role:admin');cookieClaims={uid:'focus-user',role:'studio',tenantId:'t',studioId:'s'};await act(async()=>focus());await flush();expect(textOf(r)).toContain('anon');expect(signOutMock).not.toHaveBeenCalled();await act(async()=>r.unmount());client.currentUser=null;delete(globalThis as any).window;delete(globalThis as any).document});

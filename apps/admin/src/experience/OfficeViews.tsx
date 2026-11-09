@@ -5,6 +5,7 @@
 import { customerMatches, plateIndex } from "../lib/customer-search";
 import Link from "next/link";
 import { auditActor, auditTarget, auditVerb } from "../lib/audit-display";
+import{JobSummaryIcon}from"../components/JobSummaryIcon";
 import { useState } from "react";
 import type { AuditLog, Customer, Invoice, InvoiceStatus, Payment, PaymentStatus, ServiceJob } from "@autodeck/core";
 import { PageHead, Toolbar, Segmented, ListPane, Drawer, type Column } from "./Office";
@@ -216,9 +217,7 @@ export function PaymentsView(p: {
         <input className="ax-search" type="search" aria-label="Search payments" placeholder="Search customer, job or booking" value={p.search} onChange={(e) => p.onSearch(e.target.value)} />
       </Toolbar>
       {p.message && <p className="ax-status-msg">{p.message}</p>}
-      {p.payments.some((x) => x.externalReturnRecordId) && <div className="ax-panel" role="note" style={{ padding: 16, marginBottom: 12, color: "var(--ad-text-primary, #222)" }}>
-        Returned outside Razorpay (owner reported). Linked payments share one return record; no individual split is recorded. Provider capture and refund amounts are unchanged. Further provider refunds are blocked pending reconciliation.
-      </div>}
+      {p.payments.some((x)=>x.externalReturnRecordId)&&<section className="ax-panel ax-return-note" role="note"><div className="ax-return-title"><JobSummaryIcon name="payments"/><strong>Returned outside Razorpay</strong><StatusBadge label="Reported by owner"/></div><span className="ax-return-guard"><JobSummaryIcon name="shield"/>Check return before refunding</span><details><summary>Details</summary><p className="ax-note">Linked payments share one return record; no individual split is recorded. Provider capture and refund amounts are unchanged. Further provider refunds are blocked pending reconciliation.</p></details></section>}
       <ListPane
         rows={rows}
         columns={cols}
@@ -376,141 +375,20 @@ export function AuditView(p: {
 
 /* ---------------- Refund recovery work ---------------- */
 
-const REFUND_STATUS_LABEL: Record<string, string> = {
-  reserved: "reserved",
-  submitting: "submitting",
-  submitted: "sent to provider",
-  accepted: "accepted",
-  ambiguous: "needs review",
-  failed: "held",
-};
-
-export function RefundWorkPanel(p: {
-  work: RefundWork | null;
-  loading: boolean;
-  error: string | null;
-  running: boolean;
-  reconciling?: boolean;
-  /** False in production until the backend activation review lifts the
-   * server-side refusal: the actions render disabled with the truthful
-   * reason instead of working-looking controls that would only error. */
-  actionsEnabled: boolean;
-  names?: Names;
-  onRun: () => void;
-  onReconcile?: () => void;
-  /** List-only: advances the retained-claim scan WITHOUT reconciling
-   * (no provider evidence projection, no claim release). */
-  onContinueScan?: () => void;
-  onOpenInvoice: (id: string) => void;
-}) {
-  if (p.error) {
-    return (
-      <div className="ax-panel ax-empty" role="alert">
-        <p className="ax-title">Refund work unavailable</p>
-        <p>{p.error}</p>
-      </div>
-    );
-  }
-  if (p.loading || !p.work) {
-    return <div className="ax-panel" role="status">Checking refund work...</div>;
-  }
-  const { requests, reviewPayments, legacyClaims, legacyScanComplete } = p.work;
-  if (requests.length === 0 && reviewPayments.length === 0 && legacyClaims.length === 0 && legacyScanComplete) return null;
-  return (
-    <details className="ax-panel ax-rw" aria-label="Refund work" open={requests.length > 0 || reviewPayments.length > 0}>
-      <summary className="ax-rw-sum">
-        <span className="ax-title">Refund work</span>
-        <span className="ax-muted">{requests.length} {requests.length === 1 ? "request" : "requests"} - {legacyClaims.length} retained {legacyClaims.length === 1 ? "claim" : "claims"}{legacyScanComplete ? "" : " so far"}</span>
-        {reviewPayments.length > 0 && <span className="ax-muted"> - {reviewPayments.length} {reviewPayments.length === 1 ? "payment needs" : "payments need"} review, not settled</span>}
-      </summary>
-      <div className="ax-rw-head">
-        <span className="ax-rw-act">
-          <span className="ax-muted">
-            {p.actionsEnabled
-              ? "Sends reserved refunds to the provider"
-              : "Not yet activated in production - held for activation review"}
-          </span>
-          <button type="button" className="ax-button" disabled={p.running || !p.actionsEnabled} onClick={p.onRun}>
-            {p.running ? "Running" : "Run outbox now"}
-          </button>
-        </span>
-      </div>
-      {requests.length > 0 && (
-        <div>
-          {requests.map((r) => (
-            <div key={r.id} className="ax-rw-row">
-              <span>
-                <StatusBadge label={REFUND_STATUS_LABEL[r.status] ?? r.status} />{" "}
-                <strong>{(r.amountPaise !== null && r.amountPaise !== undefined) ? formatPaise(r.amountPaise) : "-"}</strong>{" "}
-                <span className="ax-muted">{r.updatedAt ? formatDateTime(r.updatedAt) : ""}</span>
-                {r.lastError && <span className="ax-muted"> - {r.lastError}</span>}
-              </span>
-              <span className="ax-row-actions">
-                {r.providerRefundId && <span className="ax-muted">{r.providerRefundId}</span>}
-                {r.bookingId && <Link className="ax-button" href={`/bookings/${r.bookingId}`}>Booking</Link>}
-                {!r.bookingId && r.jobId && <Link className="ax-button" href={`/jobs/${r.jobId}`}>Job</Link>}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-      {(legacyClaims.length > 0 || !legacyScanComplete) && (
-        <div className="ax-rw-sec">
-          <div className="ax-rw-head">
-            <p className="ax-title">Retained refund claims</p>
-            {p.onReconcile && (
-              <span className="ax-rw-act">
-                <span className="ax-muted">
-                {p.actionsEnabled
-                  ? "Reconciliation-only: checks the provider read-only; never submits a new refund"
-                  : "Not yet activated in production - held for activation review"}
-              </span>
-                <button type="button" className="ax-button" disabled={p.reconciling || !p.actionsEnabled} onClick={p.onReconcile}>
-                  {p.reconciling ? "Reconciling" : "Reconcile retained refunds"}
-                </button>
-              </span>
-            )}
-          </div>
-          {!legacyScanComplete && p.onContinueScan && (
-            <div className="ax-rw-row">
-              <span className="ax-muted">Scanning older records - {legacyClaims.length} shown so far, more may exist.</span>
-              <button type="button" className="ax-button" disabled={p.reconciling} onClick={p.onContinueScan}>
-                Continue scan
-              </button>
-            </div>
-          )}
-          {legacyClaims.map((c) => (
-            <div key={c.paymentId} className="ax-rw-row">
-              <span>
-                <StatusBadge label={c.reconcileState === "held" ? "held" : "retained"} />{" "}
-                <strong>{(c.amount !== null && c.amount !== undefined) ? formatPaise(c.amount) : "-"}</strong>{" "}
-                <span className="ax-muted">
-                  claimed {c.claimedAt ? formatDateTime(c.claimedAt) : "earlier"} - payment {c.paymentStatus ?? "unknown"}
-                </span>
-                {c.reconcileNote && <span className="ax-muted"> - {c.reconcileNote}</span>}
-              </span>
-              <Link className="ax-button" href={`/payments?search=${c.paymentId}`}>Payment</Link>
-            </div>
-          ))}
-        </div>
-      )}
-      {reviewPayments.length > 0 && (
-        <div className="ax-rw-sec">
-          <p className="ax-title">Invoices to review</p>
-          {reviewPayments.map((x) => (
-            <div key={x.id} className="ax-rw-row">
-              <span>
-                <strong>{(x.refundAmount !== null && x.refundAmount !== undefined) ? formatPaise(x.refundAmount) : "-"}</strong>{" "}
-                <span className="ax-muted">
-                  refunded{(x.refundAmount !== null && x.refundAmount !== undefined) && (x.amount !== null && x.amount !== undefined) && x.refundAmount !== x.amount ? ` of ${formatPaise(x.amount)} captured` : ""}
-                  {x.customerId ? ` - ${p.names?.[x.customerId] ?? "Customer"}` : ""}; {x.invoiceId ? "the linked invoice needs review" : "no linked invoice - review it, and refund from the payments list above if the money should be returned"}
-                </span>
-              </span>
-              {x.invoiceId && <button type="button" className="ax-button" onClick={() => p.onOpenInvoice(x.invoiceId ?? "")}>Invoice</button>}
-            </div>
-          ))}
-        </div>
-      )}
-    </details>
-  );
+const REFUND_STATUS_LABEL:Record<string,string>={reserved:"Ready to send",submitting:"Sending",submitted:"Sent to Razorpay",accepted:"Accepted by Razorpay",ambiguous:"Needs checking",failed:"On hold"};
+export function RefundWorkPanel(p:{work:RefundWork|null;loading:boolean;error:string|null;running:boolean;reconciling?:boolean;actionsEnabled:boolean;names?:Names;onRun:()=>void;onReconcile?:()=>void;onContinueScan?:()=>void;onOpenInvoice:(id:string)=>void}){
+ const[confirmSend,setConfirmSend]=useState(false);
+ if(p.error)return <div className="ax-panel" role="alert"><strong>Can't load refunds</strong><p>{p.error}</p></div>;
+ if(p.loading||!p.work)return <div className="ax-panel" role="status">Checking refunds…</div>;
+ const{requests,reviewPayments,legacyClaims,legacyScanComplete}=p.work;
+ if(!requests.length&&!reviewPayments.length&&!legacyClaims.length&&legacyScanComplete)return null;
+ const count=requests.length+reviewPayments.length+legacyClaims.length;
+ return <section className="ax-panel ax-rw ax-rw-simple" aria-label="Refunds"><header className="ax-rw-simple-head"><div className="ax-return-title"><JobSummaryIcon name="payments"/><strong>Refunds</strong><span className="ax-muted">{count}{legacyScanComplete?'':'+'} to review</span></div>{legacyClaims.length>0&&p.onReconcile?<button type="button" className="ax-button" disabled={p.reconciling||!p.actionsEnabled} onClick={p.onReconcile}>{p.reconciling?'Checking…':'Check status'}</button>:null}</header>
+ {requests.map(r=><div key={r.id} className="ax-rw-row"><div><strong>{(r.amountPaise===null||r.amountPaise===undefined)?'-':formatPaise(r.amountPaise)}</strong> <StatusBadge label={REFUND_STATUS_LABEL[r.status]??'Needs checking'}/></div><div className="ax-row-actions">{r.bookingId?<Link className="ax-button" href={`/bookings/${r.bookingId}`}>Booking</Link>:r.jobId?<Link className="ax-button" href={`/jobs/${r.jobId}`}>Job</Link>:null}<details className="ax-rw-details"><summary>Details</summary><span>{r.updatedAt?formatDateTime(r.updatedAt):''}</span>{r.lastError?<p>{r.lastError}</p>:null}{r.providerRefundId?<p>{r.providerRefundId}</p>:null}</details></div></div>)}
+ {legacyClaims.map(c=><div key={c.paymentId} className="ax-rw-row"><div><strong>{(c.amount===null||c.amount===undefined)?'-':formatPaise(c.amount)}</strong> <StatusBadge label={c.reconcileState==='held'?'On hold':'Check refund record'}/></div><div className="ax-row-actions"><Link className="ax-button" href={`/payments?search=${c.paymentId}`}>Payment</Link><details className="ax-rw-details"><summary>Details</summary><p>Payment status: {statusLabel(c.paymentStatus??'unknown')}</p><p>{c.claimedAt?formatDateTime(c.claimedAt):''}</p>{c.reconcileNote?<p>{c.reconcileNote}</p>:null}<p>Checks provider status; never submits a new refund.</p></details></div></div>)}
+ {reviewPayments.map(x=><div key={x.id} className="ax-rw-row"><div><strong>{(x.refundAmount===null||x.refundAmount===undefined)?'-':formatPaise(x.refundAmount)}</strong> <StatusBadge label="Check invoice"/></div><div className="ax-row-actions">{x.invoiceId?<button type="button" className="ax-button" onClick={()=>p.onOpenInvoice(x.invoiceId??'')}>Invoice</button>:<Link className="ax-button" href={`/payments?search=${x.id}`}>Payment</Link>}<details className="ax-rw-details"><summary>Details</summary><p>{(x.amount===null||x.amount===undefined)?'':`${formatPaise(x.amount)} captured`}</p><p>{x.customerId?p.names?.[x.customerId]??'Customer':''}</p><p>{x.invoiceId?'Linked invoice needs review.':'No linked invoice. Check the payment record.'}</p></details></div></div>)}
+ {!legacyScanComplete&&p.onContinueScan?<button type="button" className="ax-button" disabled={p.reconciling} onClick={p.onContinueScan}>Load older records</button>:null}
+ {requests.length>0?<div className="ax-rw-send">{confirmSend?<div className="ax-confirm-panel"><span>Send reserved refunds to Razorpay?</span><div className="ax-confirm-buttons"><button type="button" className="ax-button ax-button--danger" disabled={p.running||!p.actionsEnabled} onClick={()=>{setConfirmSend(false);p.onRun()}}>Confirm send refunds</button><button type="button" className="ax-button" onClick={()=>setConfirmSend(false)}>Go back</button></div></div>:<button type="button" className="ax-button" disabled={p.running||!p.actionsEnabled} onClick={()=>setConfirmSend(true)}>{p.running?'Sending…':'Send ready refunds'}</button>}</div>:null}
+ {!p.actionsEnabled?<span className="ax-muted">Refund actions unavailable</span>:null}
+ </section>;
 }

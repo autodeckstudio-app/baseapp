@@ -76,6 +76,7 @@ export const settleManualRefund = onCall({ region: "asia-south1", enforceAppChec
     if (booking.status !== "CANCELLED") {
       throw new HttpsError("failed-precondition", "The booking is not cancelled, so there is no cancel refund to settle.");
     }
+    if((booking as any).combinedReturn)throw new HttpsError("failed-precondition","Use the original-method combined return review, not a single-payment settlement.");
     const due = booking.manualRefundDuePaise;
     if (typeof due !== "number" || !Number.isSafeInteger(due) || due <= 0) {
       throw new HttpsError("failed-precondition", "This booking has no open manual refund obligation.");

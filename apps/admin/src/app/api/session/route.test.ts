@@ -42,7 +42,7 @@ describe("/api/session uid binding", () => {
   });
 
   it("GET with a different cookie uid returns THAT uid - never a guessed or missing principal", async () => {
-    admin.verifySessionCookie.mockResolvedValue({ ...decoded, uid: "u9", role: "studio", studioId: "s1" });
+    admin.verifySessionCookie.mockResolvedValue({ ...decoded, uid: "u9", role: "admin", studioId: null });
     const req = new NextRequest("http://localhost/api/session", { headers: { cookie: `${SESSION_COOKIE_NAME}=abc` } });
     const res = await GET(req);
     const body = (await res.json()) as { claims: Record<string, unknown> };
@@ -57,3 +57,5 @@ describe("/api/session uid binding", () => {
     expect((await GET(req)).status).toBe(403);
   });
 });
+
+it('Studio role cannot mint or resume any Admin session, without revoking its Studio credentials',async()=>{admin.verifyIdToken.mockResolvedValue({...decoded,role:'studio',studioId:'s1'});const req=new NextRequest('http://localhost/api/session',{method:'POST',body:JSON.stringify({idToken:'tok'})});expect((await POST(req)).status).toBe(403);expect(admin.createSessionCookie).not.toHaveBeenCalled();admin.verifySessionCookie.mockResolvedValue({...decoded,role:'studio',studioId:'s1'});expect((await GET(new NextRequest('http://localhost/api/session',{headers:{cookie:`${SESSION_COOKIE_NAME}=old`}}))).status).toBe(403)});

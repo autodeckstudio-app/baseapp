@@ -1,3 +1,4 @@
+import{readCombinedPaymentBasis}from "../../lib/combined-settlement.js";
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { getFirestore } from 'firebase-admin/firestore';
 import { z } from 'zod';
@@ -28,6 +29,7 @@ export const recordOfflineReceipt=onCall({region:'asia-south1',enforceAppCheck: 
   if(!['VEHICLE_RECEIVED','IN_PROGRESS','QUALITY_CHECK','READY_FOR_DELIVERY'].includes(job.status)||job.paymentStatus==='paid'||job.paymentStatus==='refunded'||job.settlementKind==='membership_covered')throw new HttpsError('failed-precondition','This job is not open for a receipt.');
   const booking=job.bookingId?(await tx.get(db.collection(COLLECTIONS.bookings()).doc(job.bookingId))).data():undefined;
   if(booking && (booking['id']!==job.bookingId||booking['tenantId']!==job.tenantId||booking['studioId']!==job.studioId||booking['customerId']!==job.customerId||booking['status']==='CANCELLED'||booking['status']==='EXPIRED'||!Number.isSafeInteger(booking['totalAmount'])))throw new HttpsError('failed-precondition','Linked booking scope needs office review.');
+  const combinedBasis=await readCombinedPaymentBasis(db,tx,job);
   const pendingWork=await tx.get(db.collection(COLLECTIONS.approvals()).where('jobId','==',job.id).where('status','==','pending').limit(1));
   if(!pendingWork.empty)throw new HttpsError('failed-precondition','An additional-work decision is pending. Review the exact total before recording money.');
   const quoteBinding=await readConsultPaymentBinding(db,tx,job,booking);
@@ -35,7 +37,7 @@ export const recordOfflineReceipt=onCall({region:'asia-south1',enforceAppCheck: 
   if(previousInvoice.docs.some(d=>d.data()["status"]!=="void"))throw new HttpsError("failed-precondition","An invoice already exists. Office review is required.");
   const active=await tx.get(db.collection(COLLECTIONS.payments()).where('jobId','==',job.id).where('status','in',['pending','processing','completed']).limit(1));
   if(!active.empty)throw new HttpsError('failed-precondition','An existing payment needs checking first. Do not collect twice.');
-  if(booking?.['advancePaymentId'])throw new HttpsError('failed-precondition','An advance payment already exists. Office review is required before another receipt path.');
+  if(booking?.['advancePaymentId']&&!combinedBasis?.advancePaymentId)throw new HttpsError('failed-precondition','An advance payment already exists. Office review is required before another receipt path.');
   if(booking?.cancelIntent?.state==='waiting'||booking?.cancelIntent?.state==='needs_review')throw new HttpsError('failed-precondition','Cancellation payment review is open.');
   const previous=job.offlineSettlement;
   if (previous && (!Number.isSafeInteger(previous.appliedPaise) || !Number.isSafeInteger(previous.officeReturnDuePaise) || previous.officeReturnDuePaise<0 || !Number.isSafeInteger(previous.receiptCount) || previous.receiptCount<1 || previous.receiptCount>=100)) throw new HttpsError("failed-precondition","Receipt history needs office review.");
@@ -43,7 +45,7 @@ export const recordOfflineReceipt=onCall({region:'asia-south1',enforceAppCheck: 
   if(journal.size>100||journal.size!==(previous?.receiptCount??0))throw new HttpsError('failed-precondition','Receipt history count needs office review.');
   let journalApplied=0;for(const row of journal.docs){const receipt=row.data();if(receipt['tenantId']!==job.tenantId||receipt['studioId']!==job.studioId||receipt['customerId']!==job.customerId||!Number.isSafeInteger(receipt['appliedPaise'])||receipt['appliedPaise']<0)throw new HttpsError('failed-precondition','Receipt history scope needs office review.');journalApplied+=receipt['appliedPaise'];}
   if(!Number.isSafeInteger(journalApplied)||journalApplied!==(previous?.appliedPaise??0))throw new HttpsError('failed-precondition','Receipt history balance needs office review.');
-  const allocation=allocateOfflineReceipt(job.totalAmount,previous?.appliedPaise??0,data.receivedPaise),now=new Date().toISOString();
+  const allocation=allocateOfflineReceipt(job.totalAmount,(combinedBasis?.advanceCapturedPaise??0)+(previous?.appliedPaise??0),data.receivedPaise),now=new Date().toISOString();
   const appliedPaise=(previous?.appliedPaise??0)+allocation.appliedNowPaise;
   const officeReturnDuePaise=(previous?.officeReturnDuePaise??0)+allocation.officeReturnDuePaise;
   if(!Number.isSafeInteger(officeReturnDuePaise))throw new HttpsError('failed-precondition','Receipt total needs office review.');
@@ -54,10 +56,11 @@ export const recordOfflineReceipt=onCall({region:'asia-south1',enforceAppCheck: 
   const invoiceId=prepared&&!prepared.existing?prepared.invoiceRef.id:null;
   const receipt={id:receiptRef.id,tenantId:job.tenantId,studioId:job.studioId,jobId:job.id,bookingId:job.bookingId,customerId:job.customerId,receivedPaise:data.receivedPaise,appliedPaise:allocation.appliedNowPaise,officeReturnDuePaise:allocation.officeReturnDuePaise,balanceDuePaise:allocation.balanceDuePaise,method:data.method,reference:data.reference,recordedBy:user.uid,createdAt:now};
   tx.create(receiptRef,receipt);
-  tx.update(jobRef,{offlineSettlement:{appliedPaise,officeReturnDuePaise,receiptCount:(previous?.receiptCount??0)+1},paymentStatus:final?'paid':'partial',updatedAt:now});
+  tx.update(jobRef,{offlineSettlement:{appliedPaise,officeReturnDuePaise,receiptCount:(previous?.receiptCount??0)+1},paymentStatus:final?'paid':'partial',...(combinedBasis?{combinedSettlement:{advancePaymentId:combinedBasis.advancePaymentId,advanceCapturedPaise:combinedBasis.advanceCapturedPaise,balanceDuePaise:allocation.balanceDuePaise,settlementPaymentId:final?paymentRef.id:null,settledAt:final?now:null}}:{}),updatedAt:now});
   if(job.bookingId)tx.update(db.collection(COLLECTIONS.bookings()).doc(job.bookingId),{paymentStatus:final?'paid':'partial',updatedAt:now});
   if(prepared&&!prepared.existing){
-   const p:Payment={id:paymentRef.id,tenantId:job.tenantId,studioId:job.studioId,targetType:'job',jobId:job.id,bookingId:job.bookingId,membershipId:null,customerId:job.customerId,amount:job.totalAmount,currency:job.priceBreakdown.currency,method:data.method,status:'completed',razorpayPaymentLinkId:null,razorpayPaymentId:null,razorpayOrderId:null,razorpayRefundId:null,refundAmount:null,manualReference:'Actual receipt register',recordedBy:user.uid,invoiceId,providerEventId:null,completedAt:now,failedAt:null,cancelledAt:null,refundedAt:null,createdAt:now,updatedAt:now};
+   if(combinedBasis?.advancePaymentId){prepared.invoice.paymentAllocation={advancePaymentId:combinedBasis.advancePaymentId,advancePaidPaise:combinedBasis.advanceCapturedPaise,settlementPaymentId:paymentRef.id,settlementPaidPaise:combinedBasis.balanceDuePaise};tx.update(db.collection(COLLECTIONS.payments()).doc(combinedBasis.advancePaymentId),{invoiceId:prepared.invoiceRef.id,updatedAt:now});}
+   const p:Payment={id:paymentRef.id,tenantId:job.tenantId,studioId:job.studioId,targetType:'job',jobId:job.id,bookingId:job.bookingId,membershipId:null,customerId:job.customerId,amount:combinedBasis?.balanceDuePaise??job.totalAmount,...(combinedBasis?{combinedBasis}:{}),currency:job.priceBreakdown.currency,method:data.method,status:'completed',razorpayPaymentLinkId:null,razorpayPaymentId:null,razorpayOrderId:null,razorpayRefundId:null,refundAmount:null,manualReference:'Actual receipt register',recordedBy:user.uid,invoiceId,providerEventId:null,completedAt:now,failedAt:null,cancelledAt:null,refundedAt:null,createdAt:now,updatedAt:now};
    tx.create(paymentRef,{...p,offlineReceiptSettlement:true,...(quoteBinding?{consultApprovalBindingHash:quoteBinding.approvalBindingHash}:{})});tx.set(prepared.invoiceRef,prepared.invoice);
   }
   if(allocation.officeReturnDuePaise>0)tx.create(db.collection('offlineReturnObligations').doc(receiptRef.id),{id:receiptRef.id,tenantId:job.tenantId,studioId:job.studioId,jobId:job.id,customerId:job.customerId,receiptId:receiptRef.id,amountPaise:allocation.officeReturnDuePaise,status:'due',createdAt:now});

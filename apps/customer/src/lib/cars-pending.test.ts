@@ -1,0 +1,10 @@
+import{it,expect,vi,beforeEach}from'vitest';
+const h=vi.hoisted(()=>({data:new Map<string,string>(),fail:false}));
+vi.mock('@react-native-async-storage/async-storage',()=>({default:{getItem:vi.fn(async(k:string)=>h.data.get(k)??null),setItem:vi.fn(async(k:string,v:string)=>{if(h.fail)throw Error('full');h.data.set(k,v)}),removeItem:vi.fn(async(k:string)=>{h.data.delete(k)})}}));
+import{readPendingListing,writePendingListing,clearPendingListing}from'./cars-pending';
+beforeEach(()=>{h.data.clear();h.fail=false});
+it('pending payload survives new reads, stays owner scoped and clears only its own scope',async()=>{const payload:any={make:'Sample',photoPaths:['uploaded/path'],sellerName:'Sample',sellerPhone:'9999999999'};await writePendingListing('tenant-owner-auth',payload);expect(await readPendingListing('tenant-owner-auth')).toEqual(payload);expect(await readPendingListing('other-owner')).toBeNull();await clearPendingListing('other-owner');expect(await readPendingListing('tenant-owner-auth')).toEqual(payload);await clearPendingListing('tenant-owner-auth');expect(await readPendingListing('tenant-owner-auth')).toBeNull()});
+it('storage write failure rejects so network create can remain unstarted',async()=>{h.fail=true;await expect(writePendingListing('a',{make:'Sample',photoPaths:['a']}as any)).rejects.toThrow('full');expect(await readPendingListing('a')).toBeNull()});
+it('corrupted pending journal blocks rather than looking like no pending create',async()=>{h.data.set('autodeck.pendingListing.v1:a','broken');await expect(readPendingListing('a')).rejects.toThrow()});
+
+it('operation key persists exactly through restart and corrupt keys fail closed',async()=>{const p:any={operationId:'key-restart-123456',make:'Sample',photoPaths:['one']};await writePendingListing('a',p);expect((await readPendingListing('a'))?.operationId).toBe(p.operationId);h.data.set('autodeck.pendingListing.v1:a',JSON.stringify({...p,operationId:'bad'}));await expect(readPendingListing('a')).rejects.toThrow('key needs review')});

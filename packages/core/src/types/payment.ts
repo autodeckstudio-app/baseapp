@@ -22,6 +22,7 @@ export type InvoiceStatus = "draft" | "issued" | "paid" | "void";
 export type PaymentTargetType = "job" | "membership" | "gift" | "booking";
 
 export interface Payment {
+  combinedBasis?:{version:2;totalPaise:number;advancePaymentId:string|null;advanceCapturedPaise:number;balanceDuePaise:number};
   /** Final invoice settlement projection only. Actual collections are in offlineReceipts. */
   offlineReceiptSettlement?: boolean;
   id: string;
@@ -85,6 +86,7 @@ export interface Payment {
 }
 
 export interface Invoice {
+  paymentAllocation?:{advancePaymentId:string;advancePaidPaise:number;settlementPaymentId:string;settlementPaidPaise:number};
   issuerSnapshot?: InvoiceIssuer;
   pdfStatus?: "ready" | "needs_office_review";
   pdfStoragePath?: string;

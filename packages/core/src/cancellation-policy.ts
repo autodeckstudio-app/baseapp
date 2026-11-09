@@ -41,6 +41,6 @@ export function cancellationLine(category: ServiceCategory | string | null | und
 }
 
 /** Both bands in one sentence pair, for FAQs. Same numbers as cancellationLine and the Terms page. */
-export function cancellationPolicySummary(): string {
-  return `For washes and other short jobs, cancelling is free until ${CANCEL_SHORT.freeUntilHours} hours before the start; after that, Rs ${CANCEL_SHORT.feePaise / 100} applies. For bigger services (coatings, paint protection film, garage repairs and inspections, mods and wraps), cancelling is free until ${CANCEL_BIGGER.freeUntilHours} hours before the start; after that, ${CANCEL_BIGGER.feePercent}% of the booking total applies.`;
+export function cancellationPolicySummary(combined=false): string {
+  return `For washes and other short jobs, cancelling is free until ${CANCEL_SHORT.freeUntilHours} hours before the start; after that, Rs ${CANCEL_SHORT.feePaise / 100} applies. For bigger services (coatings, paint protection film, garage repairs and inspections, mods and wraps), cancelling is free until ${CANCEL_BIGGER.freeUntilHours} hours before the start; after that, ${CANCEL_BIGGER.feePercent}% of ${combined?"the discounted service including GST applies, excluding unused pickup/drop":"the booking total applies"}.`;
 }

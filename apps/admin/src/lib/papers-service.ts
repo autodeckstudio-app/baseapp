@@ -77,7 +77,15 @@ export async function reviewPaper(input: {
   paperId: string;
   decision: "VERIFIED" | "REJECTED";
   rejectionReason?: string;
+  inspectedPlate?: string;
+  originalInspected?: boolean;
 }): Promise<{ id: string }> {
   const fn = httpsCallable<typeof input, { id: string }>(functions, "reviewPaper");
   return (await fn(input)).data;
+}
+
+/** Fresh, short-lived evidence read, never a stored public bearer URL. */
+export async function resolvePaperEvidence(paperId: string): Promise<string | null> {
+ const fn = httpsCallable<{kind:"paper";id:string},{url:string|null}>(functions,"getPrivateFileUrl");
+ return (await fn({kind:"paper",id:paperId})).data.url;
 }

@@ -1,8 +1,9 @@
+import{useBreakCheckoutConfirmation}from "../../hooks/useBreakCheckoutConfirmation";
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
 import { nightGroundStyle, floatCard } from "@autodeck/ui/theme";
 import { CanvasBackdrop, CanvasTitle } from "../../components/CanvasTitle";
-import { useEffect, useState } from "react";
+import { useEffect, useState,useRef } from "react";
 import { View, Text, Alert, Platform, Pressable, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { httpsCallable } from "firebase/functions";
@@ -14,6 +15,7 @@ import { auth, db, functions } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
 import { colors, isNightPalette, spacing, radius, typography, Avatar, LoadingState } from "@autodeck/ui";
 import { Icon } from "@autodeck/ui/native";
+import { StaffDocument } from "../../components/StaffDocument";
 import { dayActions } from "../../lib/my-day";
 
 type IconName = "home" | "wrench" | "calendar" | "search" | "profile" | "plus" | "check" | "pin" | "close" | "bell" | "users";
@@ -44,6 +46,7 @@ function Row({ icon, label, hint, onPress, disabled, last, danger }: { icon: Ico
 
 export default function AccountScreen() {
   const authState = useAuth();
+  const checkoutConfirmation=useBreakCheckoutConfirmation(authState.status==="ready"?authState.user.uid:null),runLock=useRef(false);
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -67,16 +70,19 @@ export default function AccountScreen() {
   const acts = me ? dayActions(today) : { in: false, bs: false, be: false, out: false };
 
   async function run(label: string, fn: string, done: string) {
-    if(busy) return;
+    if(busy||runLock.current) return;
+    runLock.current=true;
     setBusy(label);
     setNote(null);
     try {
-      await httpsCallable(functions, fn)({});
+      if(label==="out"&&onBreak&&!await checkoutConfirmation.confirm())return;
+      await httpsCallable(functions, fn)(label==="out"&&onBreak?{endOpenBreak:true}:{});
       setNote(done);
     } catch (e) {
       const m = e instanceof Error ? e.message : "";
       setNote(/already/i.test(m) ? m : "That did not go through. Try again.");
     } finally {
+      runLock.current=false;
       setBusy(null);
     }
   }
@@ -102,6 +108,7 @@ export default function AccountScreen() {
 
   return (
     <View style={{ flex: 1 }}>
+    {checkoutConfirmation.dialog}
     <CanvasBackdrop />
     <ScrollView style={{ flex: 1, backgroundColor: "transparent" }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, width: "100%", maxWidth: 1040, alignSelf: "center" }}>
       <CanvasTitle eyebrow="Signed in" title="Account" />
@@ -119,11 +126,12 @@ export default function AccountScreen() {
         <Text style={{ ...typography.caption, color: colors.textMuted, padding: spacing.md, paddingTop: spacing.xxs }}>{me ? `${me.email}${me.phone ? ` · ${me.phone}` : ""} · ${me.role === "admin" ? "Office" : "Studio"}. These details are shared with your admin.` : "Your admin has not linked your profile yet."}</Text>
       </Section>
 
+      {me?<Section title="Document"><StaffDocument employeeId={me.id} revisionKey={me.documentReview?`${me.documentReview.revision}:${me.documentReview.status}`:undefined}/></Section>:null}
+
       <Section title="My day">
         <Text style={{ ...typography.body, color: colors.textPrimary, padding: spacing.md }}>{dayState}</Text>
         <Row icon="check" label="Check in" onPress={() => void run("in", "checkInAttendance", "Checked in for today.")} disabled={busy !== null || !acts.in} />
-        <Row icon="bell" label="End break" onPress={() => void run("be", "endAttendanceBreak", "Break ended.")} disabled={busy !== null || !acts.be} />
-        <Row icon="close" label="Check out" onPress={() => void run("out", "checkOutAttendance", "Checked out. See you tomorrow.")} disabled={busy !== null || !acts.out} last />
+        <Row icon="close" label={onBreak?"End break & check out":"Check out"} onPress={() => void run("out", "checkOutAttendance", "Checked out. See you tomorrow.")} disabled={busy !== null || !acts.out} last />
         {note ? <Text style={{ ...typography.caption, color: colors.textMuted, padding: spacing.md }}>{note}</Text> : null}
       </Section>
 

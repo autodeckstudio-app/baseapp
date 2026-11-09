@@ -24,7 +24,7 @@ export function GiftCard({ code, expiresAt, buyerName, now = Date.now() }: { cod
       </View>
       <T tone="secondary">{giftValidityLine(expiresAt, now)}</T>
       {days <= 7 ? <T role="caption" tone="tertiary">Only {days} {days === 1 ? "day" : "days"} left.</T> : null}
-      <Button label="Share gift" onPress={() => void share()} />
+      <Button icon="share" label="Share gift" onPress={() => void share()} />
       {note ? <T role="caption" tone="tertiary">{note}</T> : null}
       <View style={{ marginTop: space.hair }}><T role="caption" tone="tertiary">{GIFT_TERMS.nonRefundable}</T></View>
     </Pane>

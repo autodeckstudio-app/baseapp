@@ -6,7 +6,8 @@ import { listenToPickupRequests, setPickupStatus, type PickupRequestRow } from "
 import { useAdminAuth } from "../../../lib/auth-context";
 import { doneLegLines, outstandingLegNote } from "../../../lib/pickup-leg-display";
 import { listenToBookings, BOOKINGS_LIST_LIMIT } from "../../../lib/bookings-service";
-import { pickupRowState, pickupCounts } from "../../../lib/pickup-booking-state";
+import { pickupRowState, pickupCounts, pickupTabCount } from "../../../lib/pickup-booking-state";
+import {PICKUP_FREE_ROAD_METERS,PICKUP_ROAD_RATE_PER_KM_PAISE}from"@autodeck/core";
 import { StatusBadge } from "../../../components/StatusBadge";
 
 type Status = PickupRequestRow["status"];
@@ -97,8 +98,8 @@ export default function PickupsPage() {
           <h1>Pickup and drop</h1>
         </div>
         <div className="ax-kpis" aria-label="At a glance">
-          <div><span className="ax-kpi-v ax-kpi-v--accent">{counts.REQUESTED}</span><span className="ax-label">Waiting</span></div>
-          <div><span className="ax-kpi-v">{counts.CONFIRMED}</span><span className="ax-label">Approved</span></div>
+          <div><span className="ax-kpi-v ax-kpi-v--accent">{pickupTabCount(counts,"REQUESTED")}</span><span className="ax-label">Waiting</span></div>
+          <div><span className="ax-kpi-v">{pickupTabCount(counts,"CONFIRMED")}</span><span className="ax-label">Approved</span></div>
           <div><span className="ax-kpi-v ax-kpi-v--premium">{counts.DONE}</span><span className="ax-label">Done</span></div>
           {needsClosure > 0 ? <div><span className="ax-kpi-v">{needsClosure}</span><span className="ax-label">Needs closure</span></div> : null}
         </div>
@@ -107,12 +108,13 @@ export default function PickupsPage() {
       <div className="ax-toolbar">
         <div className="ax-seg" role="group" aria-label="Show">
           {TABS.map((t) => (
-            <button key={t.id} type="button" aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>{t.label} {t.id === "ALL" ? counts.ALL : counts[t.id]}{t.id === "REQUESTED" && counts.closeRequested > 0 ? ` +${counts.closeRequested} to close` : ""}{t.id === "CONFIRMED" && counts.closeConfirmed > 0 ? ` +${counts.closeConfirmed} to close` : ""}</button>
+            <button key={t.id} type="button" aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>{t.label} {pickupTabCount(counts,t.id)}</button>
           ))}
         </div>
-        <p className="ax-pu-policy">Under 3 km is Rs 100 per leg, from 3 km is Rs 150 per leg (pickup and drop each, so both is two legs). Collected at the studio. Requests without a shared location need the distance and fee confirmed by phone.</p>
+        <p className="ax-pu-policy">First {PICKUP_FREE_ROAD_METERS/1000} road km free per leg, then ₹{PICKUP_ROAD_RATE_PER_KM_PAISE/100} per extra km. Preserve each request's quoted fee and check the bill before collecting. Missing road-distance checks need review.</p>
       </div>
 
+      {tab==="REQUESTED"||tab==="CONFIRMED"?<p className="ax-pu-hint" role="status">{counts[tab]} ready to review · {tab==="REQUESTED"?counts.closeRequested:counts.closeConfirmed} need booking review</p>:null}
       {loadError ? <p role="alert" className="ax-pu-error">{loadError}</p> : null}
       {error ? <p role="alert" className="ax-pu-error">{error}</p> : null}
 
@@ -131,7 +133,7 @@ export default function PickupsPage() {
             if (r.kind !== "drop" && askedPickup) asked.push([r.kind === "both" ? "Pickup" : "Time", askedPickup]);
             if (r.kind !== "pickup" && r.requestedDropTime) asked.push([r.kind === "both" ? "Drop" : "Time", r.requestedDropTime]);
             if (typeof r.feePaise === "number") {
-              const billing = r.feePaise > 0 && (r.status === "CONFIRMED" || r.status === "DONE") ? (r.feeBilled ? ", added to the bill" : ", NOT on the bill (already invoiced or paid): collect it separately") : "";
+              const billing = r.feePaise > 0 && (r.status === "CONFIRMED" || r.status === "DONE") ? (r.feeBilled ? ", added to the bill" : ", NOT on the bill (already invoiced or paid): review collection before proceeding") : "";
               asked.push(["Fee", `${r.feePaise === 0 ? "Free" : `Rs ${r.feePaise / 100}`}${typeof r.distanceKm === "number" ? ` (${r.distanceKm} km)` : ""}${billing}`]);
             }
             else asked.push(["Fee", "No location shared: confirm distance by phone"]);
@@ -144,7 +146,7 @@ export default function PickupsPage() {
               <section key={r.id} className="ax-panel ax-pu-card">
                 <div className="ax-pu-top">
                   <h2>{KIND[r.kind]}</h2>
-                  <StatusBadge label={STATUS_LABEL[r.status]} />
+                  <StatusBadge label={blocked?"Needs booking review":STATUS_LABEL[r.status]} />
                 </div>
                 <p className="ax-pu-addr">{r.address}</p>
 
@@ -176,7 +178,7 @@ export default function PickupsPage() {
                     </div>
                     {r.feePaise === null || r.feePaise === undefined ? (
                       <label>Fee for this request (Rs, whole request)
-                        <input inputMode="numeric" aria-label="Pickup fee in rupees" placeholder="e.g. 150" value={fees[r.id] ?? ""} onChange={(e) => setFees({ ...fees, [r.id]: e.target.value })} />
+                        <input inputMode="numeric" aria-label="Pickup fee in rupees" placeholder="Confirmed fee" value={fees[r.id] ?? ""} onChange={(e) => setFees({ ...fees, [r.id]: e.target.value })} />
                       </label>
                     ) : null}
                   </div>

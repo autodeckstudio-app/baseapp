@@ -1,3 +1,4 @@
+import{readCombinedPaymentBasis,assertCombinedSettlementPayment}from "../../lib/combined-settlement.js";
 // Studio/admin confirms an EXISTING pending cash/manual payment â the
 // production counterpart to recordManualPayment (which creates a new
 // completed payment from scratch). This closes the gap left when a customer
@@ -108,6 +109,8 @@ export const confirmManualPayment = onCall({ region: "asia-south1" , enforceAppC
       throw new HttpsError("failed-precondition", "Cannot confirm payment for a cancelled job.");
     }
 
+    const combinedBasis=await readCombinedPaymentBasis(db,tx,job);
+    assertCombinedSettlementPayment(job,freshPayment,combinedBasis);
     const now = new Date().toISOString();
     const prepared = await prepareJobInvoice(db, tx, job, payment.id);
     if (prepared.existing) {
@@ -115,6 +118,7 @@ export const confirmManualPayment = onCall({ region: "asia-south1" , enforceAppC
     }
     const { invoiceRef, invoice } = prepared;
     const invoiceNumber = invoice.invoiceNumber;
+    if(combinedBasis?.advancePaymentId){invoice.paymentAllocation={advancePaymentId:combinedBasis.advancePaymentId,advancePaidPaise:combinedBasis.advanceCapturedPaise,settlementPaymentId:freshPayment.id,settlementPaidPaise:freshPayment.amount};tx.update(db.collection(COLLECTIONS.payments()).doc(combinedBasis.advancePaymentId),{invoiceId:invoiceRef.id,updatedAt:now});}
 
     tx.update(db.collection(COLLECTIONS.payments()).doc(payment.id), {
       status: "completed",
@@ -123,10 +127,11 @@ export const confirmManualPayment = onCall({ region: "asia-south1" , enforceAppC
       updatedAt: now,
     });
     tx.set(invoiceRef, invoice);
-    tx.update(jobRef, { paymentStatus: "paid", updatedAt: now });
+    tx.update(jobRef, { paymentStatus: "paid",...(combinedBasis?{combinedSettlement:{advancePaymentId:combinedBasis.advancePaymentId,advanceCapturedPaise:combinedBasis.advanceCapturedPaise,balanceDuePaise:0,settlementPaymentId:freshPayment.id,settledAt:now}}:{}),updatedAt: now });
     if (job.bookingId) {
       tx.update(db.collection(COLLECTIONS.bookings()).doc(job.bookingId), {
         paymentStatus: "paid",
+      ...(combinedBasis?{combinedSettlement:{advancePaymentId:combinedBasis.advancePaymentId,advanceCapturedPaise:combinedBasis.advanceCapturedPaise,balanceDuePaise:0,settlementPaymentId:freshPayment.id,settledAt:now}}:{}),
         updatedAt: now,
       });
     }

@@ -27,7 +27,7 @@ describe("Services All view: one card per category", () => {
   it("All keeps large home cards, not a second list of every product",()=>{
     const explorer=readFileSync(`${__dirname}/../ui/ServicesExplorer.tsx`,"utf8");
     expect(explorer).toContain("if (!home)");expect(explorer).toContain("serviceHomeImages[h.key]");
-    expect(explorer).toContain("<ServicePackageCard");expect(explorer).toContain('s.category === "pickup"');
+    expect(explorer).toContain("<ServicePackageCard");expect(explorer).toContain('s.category!=="pickup"');
   });
 });
 

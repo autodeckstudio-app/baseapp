@@ -1,3 +1,7 @@
+import{isDeepStrictEqual}from "node:util";
+import{combinedCheckoutEnabled,combinedGiftCheckoutEnabled,combinedWashCheckoutEnabled,combinedPickupBenefitEnabled,combinedQuoteCheckoutEnabled,reviewCombinedBooking,combinedReviewIdentity}from'../../lib/combined-booking.js';
+import { membershipForFreePickup } from "../../lib/pickup-benefit.js";
+import{pickupRoadKmForDisplay}from'@autodeck/core';
 import { freezeConsultQuoteApproval } from "../../lib/consult-approval-binding.js";
 import {acceptedServiceQuote,acceptedQuoteBreakdown} from "../../lib/accepted-service-quote.js";
 import type {QuoteJourney} from "@autodeck/core";
@@ -45,6 +49,9 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
   const user = extractUser(request);
   const data = validate(createBookingSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "booking.create");
+  if(data.combinedReview&&!combinedCheckoutEnabled())throw new HttpsError('failed-precondition','Combined checkout is not active. No booking or payment was started.');
+  // Benefit/cancel/decline allocation acceptance remains a release gate, never guessed from the UI.
+  if(data.combinedReview&&(data.giftCode&&!combinedGiftCheckoutEnabled()||data.membershipId&&!combinedWashCheckoutEnabled()||data.quoteJourneyId&&!combinedQuoteCheckoutEnabled()))throw new HttpsError('failed-precondition','This benefit or custom quote still needs combined-checkout qualification. No booking or payment was started.');
 
   const db = getFirestore();
   // Self-service booking is role-agnostic: studio/admin book their OWN cars here too.
@@ -123,11 +130,13 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
   if(quoteRef&&quoteBefore?.phase==="visit_booked"){
     const replay=await db.collection(COLLECTIONS.bookingIntents()).doc(data.idempotencyKey).get();const r=replay.data();
     if(quoteBefore.tenantId!==user.claims.tenantId||quoteBefore.customerId!==customerDocId||r?.["customerId"]!==customerDocId||r?.["tenantId"]!==user.claims.tenantId||r?.["bookingId"]!==quoteBefore.bookingId)throw new HttpsError("failed-precondition","This quote already has a booking.");
+    const expectedIdentity=data.combinedReview?JSON.stringify([combinedReviewIdentity(data.combinedReview),null,null]):null;
+    if((r?.['combinedIdentity']??null)!==expectedIdentity)throw new HttpsError("already-exists","This quote was already booked with a different payment review.");
     const b=(await db.collection(COLLECTIONS.bookings()).doc(quoteBefore.bookingId!).get()).data() as Booking|undefined;
     if(!b||b.serviceId!==data.serviceId||b.vehicleId!==data.vehicleId||b.studioId!==data.studioId||b.scheduledDate!==data.scheduledDate||b.scheduledTime!==data.scheduledTime||quoteBefore.offer?.revision!==data.quoteRevision||quoteBefore.offer?.termsVersion!==data.quoteTermsVersion)throw new HttpsError("already-exists","This request already confirmed different booking details.");return{booking:b};
   }
   const acceptedOffer=quoteRef?acceptedServiceQuote(quoteBefore,quoteInput):null;
-  if(acceptedOffer&&advancePaymentEnabled()&&user.claims.role==="customer")throw new HttpsError("failed-precondition","Quote booking needs an updated payment flow. No booking or payment was started.");
+  if(acceptedOffer&&!data.combinedReview&&advancePaymentEnabled()&&user.claims.role==="customer")throw new HttpsError("failed-precondition","Quote booking needs an updated payment flow. No booking or payment was started.");
   if(quoteRef&&(data.extraServiceIds?.length||data.membershipId||data.giftCode))throw new HttpsError("failed-precondition","The accepted quote covers its exact work only. Extras, credits and gifts cannot change it.");
   if(!quoteRef&&(data.quoteRevision||data.quoteTermsVersion))throw new HttpsError("invalid-argument","Quote reference required.");
   const visitMinutes = acceptedOffer?acceptedOffer.workingMinutes:totalMinutes(service.estimatedDurationMinutes, extraLines);
@@ -197,11 +206,14 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
   const jobRef = db.collection(COLLECTIONS.jobs()).doc();
   const intentRef = db.collection(COLLECTIONS.bookingIntents()).doc(data.idempotencyKey);
 
+  const transportRef=data.combinedReview?.transport?db.collection(COLLECTIONS.pickupQuotes()).doc(data.combinedReview.transport.quoteId):null;
+  const combinedIdentity=data.combinedReview?JSON.stringify([combinedReviewIdentity(data.combinedReview),giftHash,data.membershipId??null]):null;
   const result = await db.runTransaction(async (tx) => {
     // Idempotency check
     const intentSnap = await tx.get(intentRef);
     if (intentSnap.exists) {
       const prior=intentSnap.data()!;if(prior["tenantId"]!==user.claims.tenantId||prior["customerId"]!==customerDocId)throw new HttpsError("permission-denied","Booking request unavailable.");
+      if((prior['combinedIdentity']??null)!==combinedIdentity)throw new HttpsError('already-exists','This request already confirmed a different checkout selection.');
       const existingBookingId = (intentSnap.data() as { bookingId: string }).bookingId;
       const existingSnap = await tx.get(
         db.collection(COLLECTIONS.bookings()).doc(existingBookingId),
@@ -220,6 +232,29 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
     if(currentVehicle.tenantId!==user.claims.tenantId || currentVehicle.ownerId!==customerDocId)throw new HttpsError("permission-denied","Vehicle does not belong to this customer.");
     if(currentVehicle.deletedAt)throw new HttpsError("failed-precondition","Restore this car before booking.");
 
+    // Every combined quote and pricing scope is read before ANY membership/gift/audit writes.
+    let transportQuote:unknown=null;
+    let reservedPickup:{ref:FirebaseFirestore.DocumentReference;membership:Membership}|null=null;
+    if(data.combinedReview){
+      const [freshService,freshConfig]=await Promise.all([tx.get(serviceSnap.ref),tx.get(configSnap.ref)]);
+      if(!isDeepStrictEqual(freshService.data(),service)||!isDeepStrictEqual(freshConfig.data(),config))throw new HttpsError('aborted','Service pricing or studio settings changed. Review again.');
+      if(transportRef){
+        transportQuote=(await tx.get(transportRef)).data();
+        // Until reservation/restoration is qualified, never charge a member for
+        // transport that the existing entitlement can cover. This guard survives
+        // an accidental capability toggle; it consumes nothing and changes no price.
+        if(Number((transportQuote as {feePaise?:number}|undefined)?.feePaise)>0){
+          const rows=await tx.get(db.collection(COLLECTIONS.memberships()).where("customerId","==",customerDocId).where("status","==","active").limit(101));
+          const plans=rows.docs.map(d=>d.data()as Membership).filter(m=>m.tenantId===user.claims.tenantId);
+          const pick=membershipForFreePickup(plans,nowIso)??membershipForFreePickup(plans,data.scheduledDate);
+          if(rows.size>100||pick&&!combinedPickupBenefitEnabled())throw new HttpsError("failed-precondition","Member transport benefits still need combined-checkout qualification. No booking or payment was started.");
+          if(pick){
+            if(!Number.isSafeInteger(pick.pickupsTotal)||!Number.isSafeInteger(pick.pickupsUsed??0)||(pick.pickupsUsed??0)<0||(pick.startDate&&pick.startDate.slice(0,10)>data.scheduledDate)||(pick.endDate&&pick.endDate.slice(0,10)<data.scheduledDate))throw new HttpsError("failed-precondition","The transport entitlement is not valid for this visit. Review the plan and price.");
+            reservedPickup={ref:db.collection(COLLECTIONS.memberships()).doc(pick.id),membership:pick};
+          }
+        }
+      }
+    }
     // Re-validate availability inside the transaction to prevent race conditions.
     // Query all active jobs for compatible bays across a MAX_SERVICE_SPAN_DAYS-
     // wide window around the requested date — a same-day-only query would miss
@@ -318,6 +353,10 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
         throw new HttpsError("failed-precondition", "Membership is not active or has expired.");
       }
 
+      if(data.combinedReview){
+        if(membership.startDate&&membership.startDate.slice(0,10)>data.scheduledDate)throw new HttpsError("failed-precondition","Membership has not started for this visit.");
+        if(!service.membershipWashEligible||!Number.isSafeInteger(membership.washesTotal)||!Number.isSafeInteger(membership.washesUsed)||membership.washesUsed<0||membership.washesUsed>=membership.washesTotal)throw new HttpsError("failed-precondition","This included wash is no longer available. Review the price again.");
+      }
       const consumeWash = service.membershipWashEligible && membership.washesUsed < membership.washesTotal;
       finalBreakdown = applyMembershipBenefit(breakdown, {
         discountPercent: membership.discountPercent,
@@ -369,13 +408,16 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
 
     if (giftToUse) {
       // The buyer already paid the full price, so this visit costs the recipient nothing.
-      finalBreakdown = { ...breakdown, tax: 0, total: 0, subtotal: 0 };
+      finalBreakdown = { ...breakdown, ...(data.combinedReview?{basePrice:0,scopeAdjustment:0}:{}), tax: 0, total: 0, subtotal: 0 };
       tx.update(giftToUse.ref, { status: "REDEEMED", redeemedBy: customerDocId, redeemedAt: nowIso, bookingId: bookingRef.id });
       writeAuditLog(tx, { action: "gift.redeemed", entityType: "Gift", entityId: giftToUse.gift.id, user, studioId: data.studioId, after: { bookingId: bookingRef.id } });
     }
 
     // Extra services ride on the same booking. Any membership benefit stays on the main service only.
     finalBreakdown = addExtrasToBreakdown(finalBreakdown, extraLines);
+    const combined=data.combinedReview?(()=>{try{return reviewCombinedBooking(finalBreakdown,data.combinedReview,transportQuote,{tenantId:user.claims.tenantId,customerId:customerDocId,nowMs:Date.now()},reservedPickup!==null)}catch(e){throw new HttpsError('failed-precondition',e instanceof Error?e.message:'Review checkout again.')}})():null;
+    if(combined)finalBreakdown=combined.breakdown;
+    if(reservedPickup)tx.update(reservedPickup.ref,{pickupsUsed:(reservedPickup.membership.pickupsUsed??0)+1,updatedAt:nowIso});
     const lines = extraLines.length ? [{ serviceId: data.serviceId, name: customerServiceName(service.name), price: breakdown.subtotal, durationMinutes: service.estimatedDurationMinutes }, ...extraLines] : undefined;
 
     // R3: with the advance flag ON, pay-at-studio goes through the existing
@@ -383,12 +425,12 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
     // verified advance webhook. Flag OFF: unchanged (confirmed at once).
     // A previously open customer tab cannot complete the advance path. Fail
     // before writing its booking rather than strand it in an unpayable hold.
-    if (advancePaymentEnabled() && user.claims.role === "customer" &&
+    if (!combined && advancePaymentEnabled() && user.claims.role === "customer" &&
         (data.payMode ?? "studio") === "studio" && finalBreakdown.total > 0 &&
         (acceptedOffer!==null||service.priceOnRequest !== true) && data.advanceFlowVersion !== 1) {
       throw new HttpsError("failed-precondition", "Online advance payments are now available. Refresh or update AutoDeck before booking so you can pay the 20% advance.");
     }
-    const start = bookingStartState({ payMode: data.payMode, totalPaise: finalBreakdown.total, priceOnRequest: acceptedOffer===null&&service.priceOnRequest === true, nowMs: now.getTime(), advanceEnabled: advancePaymentEnabled() && user.claims.role === "customer" });
+    const start = bookingStartState({ payMode: combined?"online":data.payMode, totalPaise: finalBreakdown.total, priceOnRequest: acceptedOffer===null&&service.priceOnRequest === true, nowMs: now.getTime(), advanceEnabled: advancePaymentEnabled() && user.claims.role === "customer" });
     const booking: Booking = {
       id: bookingRef.id,
       tenantId: user.claims.tenantId,
@@ -415,7 +457,8 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       bayId: assignedBayId,
       assignedEmployeeId: null,
       status: start.status,
-      payMode: data.payMode ?? "studio",
+      payMode: combined?(combined.payment.choice==='advance20'?'studio':'online'):data.payMode ?? "studio",
+      ...(combined?{combinedPayment:combined.payment,transportSnapshot:combined.transport}:{}),
       holdExpiresAt: start.holdExpiresAt,
       ...(acceptedOffer?{priceOnRequest:true,quoteStatus:"approved" as const,quoteJourneyId:data.quoteJourneyId,quoteRevision:acceptedOffer.revision,quoteScope:quoteBefore!.scope,quoteTermsVersion:acceptedOffer.termsVersion}:service.priceOnRequest === true ? { priceOnRequest: true, quoteStatus: "requested" as const } : {}),
       priceBreakdown: finalBreakdown,
@@ -467,6 +510,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       estimatedDurationMinutes: visitMinutes,
       studioNotes: data.notes ?? null,
       additionalWorkDelta: 0,
+      ...(combined?{combinedPayment:combined.payment,transportSnapshot:combined.transport}:{}),
       priceBreakdown: finalBreakdown, // same snapshot already computed for the booking — not recomputed
       ...(lines ? { lines } : {}),
       totalAmount: finalBreakdown.total,
@@ -483,12 +527,25 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       Object.assign(booking,{consultQuoteApproval:{quoteHash:receipt.quoteHash}});
     }
     if(quoteRef)tx.update(quoteRef,{phase:"visit_booked",bookingId:bookingRef.id,version:quoteBefore!.version+1});
+    if(combined?.transport&&data.combinedReview?.transport&&transportRef){
+      const t=combined.transport,input=data.combinedReview.transport;
+      tx.update(transportRef,{consumedAt:nowIso,bookingId:bookingRef.id});
+      tx.create(db.collection(COLLECTIONS.pickupRequests()).doc(bookingRef.id),{
+        id:bookingRef.id,tenantId:booking.tenantId,studioId:booking.studioId,bookingId:bookingRef.id,customerId:customerDocId,
+        kind:t.kind,address:input.address,preferredTime:'',requestedPickupTime:input.requestedPickupTime??'',requestedDropTime:'',note:'',
+        quoteId:t.quoteId,roadMeters:t.legs.reduce((n,l)=>n+l.roadMeters,0),distanceKm:pickupRoadKmForDisplay(t.legs.reduce((n,l)=>n+l.roadMeters,0)),
+        feePaise:t.feePaise,legs:t.legs,pickupFeePaise:t.pickupFeePaise,dropFeePaise:t.dropFeePaise,feeBilled:true,billingVersion:2,
+        ...(reservedPickup?{memberMembershipId:reservedPickup.ref.id,memberBenefitState:'reserved',memberBenefitReservedAt:nowIso}:{}),
+        status:'REQUESTED',staffNote:'',agreedPickupAt:null,agreedDropAt:null,createdAt:nowIso,updatedAt:nowIso,
+      });
+    }
     tx.set(bookingRef, booking);
     tx.set(jobRef, job);
     tx.set(intentRef, {
       bookingId: bookingRef.id,
       customerId: customerDocId,
       tenantId: user.claims.tenantId,
+      combinedIdentity,
       createdAt: nowIso,
     });
     // Write the bay lock read above — this is what actually forces Firestore
@@ -508,7 +565,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
         serviceId: data.serviceId,
         scheduledAt: requestedStart.toISOString(),
         bayId: assignedBayId,
-        totalAmount: breakdown.total,
+        totalAmount: finalBreakdown.total,
         status: start.status,
       },
     });

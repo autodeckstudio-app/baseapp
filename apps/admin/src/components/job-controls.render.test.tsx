@@ -1,3 +1,4 @@
+vi.mock('../lib/work-coverage-service',()=>({getStaffJobWorkCoverage:async(jobId:string)=>({status:'not_recorded',jobId,revision:null,workLock:'open',items:[]})}));
 // Mounts the REAL JobControls (the actual parent) + REAL DeliveryDeclaration
 // with firebase and the admin auth context mocked at the module boundary, and
 // drives the interaction paths the static/source tests cannot: an actual

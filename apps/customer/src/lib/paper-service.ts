@@ -111,8 +111,26 @@ export async function deleteMyPaper(paperId: string): Promise<void> {
 
 /** Every document this customer has, across all their cars (for the duplicate-number check). */
 export function listenToCustomerPapers(tenantId: string, customerId: string, onData: (papers: MyPaper[]) => void, onError: (err: Error) => void): Unsubscribe {
-  const q = query(collection(db, COLLECTIONS.papers()), where("tenantId", "==", tenantId), where("customerId", "==", customerId));
-  return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data() as MyPaper)), onError);
+  // Watch only the owner's active cars, then scope each papers query to one car.
+  // A former owner must never receive retained private document metadata after transfer.
+  let closed = false;
+  let generation = 0;
+  let stops: Unsubscribe[] = [];
+  const cars = query(collection(db, COLLECTIONS.vehicles()), where("tenantId", "==", tenantId), where("ownerId", "==", customerId));
+  const stopCars = onSnapshot(cars, snap => {
+    const current = ++generation;
+    stops.forEach(stop => stop()); stops = [];
+    const rows = new Map<string, MyPaper[]>();
+    onData([]);
+    for (const car of snap.docs) {
+      if (car.data().deletedAt) continue;
+      stops.push(listenToVehiclePapers(car.id, tenantId, customerId, papers => {
+        if (closed || generation !== current) return;
+        rows.set(car.id, papers); onData([...rows.values()].flat());
+      }, err => { if (!closed && generation === current) { rows.delete(car.id); onData([...rows.values()].flat()); onError(err); } }));
+    }
+  }, err => { if (!closed) { ++generation; stops.forEach(stop => stop()); stops = []; onData([]); onError(err); } });
+  return () => { closed = true; ++generation; stopCars(); stops.forEach(stop => stop()); stops = []; };
 }
 
 export function daysUntil(isoDate: string | null): number | null {

@@ -15,7 +15,7 @@ describe('Round 2 retained history on real Firestore emulator',()=>{
  await db.collection('bookings').doc('r2-booking').set({tenantId:'t',customerId:'owner',vehicleId:car.id,status:'COMPLETED'});
  await db.collection('jobs').doc('r2-job').set({tenantId:'t',customerId:'owner',vehicleId:car.id,status:'DELIVERED'});
  await db.collection('invoices').doc('r2-invoice').set({tenantId:'t',customerId:'owner',vehicleId:car.id,jobId:'r2-job',total:118000,lineItems:[{description:'Wash',total:100000}]});
- await permanentlyDeleteVehicle(db,{uid:'owner',role:'customer',tenantId:'t'},car.id,()=>{});
+ await permanentlyDeleteVehicle(db,{uid:'owner',customerId:'owner',role:'customer',tenantId:'t'},car.id,()=>{});
  expect((await db.collection('vehicles').doc(car.id).get()).exists).toBe(false);
  const owner=env.authenticatedContext('owner',{role:'customer',tenantId:'t'}).firestore();
  await assertSucceeds(owner.collection('deletedVehicles').doc(car.id).get());
@@ -24,6 +24,6 @@ describe('Round 2 retained history on real Firestore emulator',()=>{
  await assertFails(owner.collection('deletedVehicles').doc(car.id).delete());
  await assertFails(env.authenticatedContext('stranger',{role:'customer',tenantId:'t'}).firestore().collection('deletedVehicles').doc(car.id).get());
  await assertFails(env.authenticatedContext('owner',{role:'customer',tenantId:'other'}).firestore().collection('deletedVehicles').doc(car.id).get());
- const retry=await permanentlyDeleteVehicle(db,{uid:'owner',role:'customer',tenantId:'t'},car.id,()=>{});expect(retry.alreadyDeleted).toBe(true);
+ const retry=await permanentlyDeleteVehicle(db,{uid:'owner',customerId:'owner',role:'customer',tenantId:'t'},car.id,()=>{});expect(retry.alreadyDeleted).toBe(true);
  });
 });

@@ -1,4 +1,5 @@
 export type AuditAction =
+  | "work.recorded" | "work.qcRecorded" | "work.sealed"
   | "service.catalogue_draft_saved" | "service.catalogue_draft_reviewed"
   | "payment.external_return_recorded"
   | "staffAccess.approved" | "staffAccess.rejected"
@@ -21,6 +22,7 @@ export type AuditAction =
   | "payment.overpayment_flagged"
   | "payment.advance_old_link_capture"
   | "booking.expired"
+  | "booking.cancel_requested"
   | "booking.cancelled"
   | "booking.noshow_resolved"
   | "booking.quoted"
@@ -56,6 +58,8 @@ export type AuditAction =
   | "membership.wash_restored"
   | "membership.restored"
   | "membership.expired"
+  | "employee.document_submitted"
+  | "employee.document_reviewed"
   | "employee.created"
   | "employee.role_changed"
   | "employee.deactivated"

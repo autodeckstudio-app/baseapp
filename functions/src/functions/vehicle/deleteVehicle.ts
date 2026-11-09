@@ -9,6 +9,8 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { deleteVehicleSchema } from "../../schemas/vehicle.js";
 import { permanentlyDeleteVehicle, deleteVehiclePhotos, recordVehiclePhotoCleanup, VehicleDeleteError } from "../../lib/vehicle-delete.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import { COLLECTIONS } from "@autodeck/database";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
 
 // Permanently deletes ONE vehicle record (owner or admin, same tenant) after copying
 // its details onto that car's bookings, jobs and invoices. History is kept.
@@ -23,10 +25,13 @@ export const deleteVehicle = onCall({ region: "asia-south1" , enforceAppCheck: s
   const data = validate(deleteVehicleSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "vehicle.delete");
 
+  const db = getFirestore();
+  const customerDocId = user.claims.role === "customer" ? await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid) : null;
+
   try {
     const result = await permanentlyDeleteVehicle(
-      getFirestore(),
-      { uid: user.uid, role: user.claims.role, tenantId: user.claims.tenantId },
+      db,
+      { uid: user.uid, role: user.claims.role, tenantId: user.claims.tenantId, ...(customerDocId ? { customerId: customerDocId } : {}) },
       data.vehicleId,
       (tx, e) =>
         writeAuditLog(tx, {

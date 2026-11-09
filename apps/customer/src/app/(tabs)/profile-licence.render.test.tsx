@@ -14,7 +14,7 @@ const pressLabel=async(r:ReactTestRenderer,label:string)=>{await act(async()=>{r
 describe('profile licence with an upload on file',()=>{
  it('row reads View licence; uploader stays hidden until Replace; Keep current restores',async()=>{
   let r!:ReactTestRenderer;await act(async()=>{r=create(<Profile/>);});
-  expect(has(r,'View licence')).toBe(true);expect(has(r,'Add')).toBe(false);
+  expect(has(r,'Driving licence')).toBe(true);expect(has(r,'Private photo for the studio')).toBe(true);expect(has(r,'View licence')).toBe(false);
   await act(async()=>{r.root.findAll(n=>n.props.accessibilityLabel==='Driving licence'&&typeof n.props.onPress==='function')[0]!.props.onPress();});
   expect(r.root.findAllByType('SavedLicence' as any)).toHaveLength(1);
   expect(r.root.findAllByType('Uploader' as any)).toHaveLength(0);
@@ -27,7 +27,7 @@ describe('profile licence with an upload on file',()=>{
  it('no upload on file keeps Add and shows the uploader directly',async()=>{
   h.licState={url:null,state:'missing',retry:()=>undefined};
   let r!:ReactTestRenderer;await act(async()=>{r=create(<Profile/>);});
-  expect(has(r,'Add')).toBe(true);expect(has(r,'View licence')).toBe(false);
+  expect(has(r,'Driving licence')).toBe(true);expect(has(r,'View licence')).toBe(false);
   await act(async()=>{r.root.findAll(n=>n.props.accessibilityLabel==='Driving licence'&&typeof n.props.onPress==='function')[0]!.props.onPress();});
   expect(r.root.findAllByType('Uploader' as any)).toHaveLength(1);
   await act(async()=>r.unmount());

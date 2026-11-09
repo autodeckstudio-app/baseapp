@@ -101,7 +101,7 @@ export default function InvoiceScreen() {
         <Notice
           title={error ? "Couldn't load the invoice" : "No invoice yet"}
           body={error ?? "It's issued once payment is confirmed."}
-          action={error?<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>:<Button label="Go back" onPress={() => router.back()} />}
+          action={error?<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>:<Button label="Go back" onPress={() => router.back()} />}
         />
       </Screen>
     );
@@ -123,8 +123,8 @@ export default function InvoiceScreen() {
         </View>
       </Pane>
       <HorizonInvoice html={buildInvoiceHtml({ ...docInput, appearance: "screen" })} />
-      <Button label="Download PDF" onPress={() => printInvoiceHtml(buildInvoiceHtml(docInput))} />
-      <Button kind="quiet" label="Share" onPress={() => {
+      <Button icon="download" label="Download PDF" onPress={() => printInvoiceHtml(buildInvoiceHtml(docInput))} />
+      <Button kind="quiet" icon="share" label="Share" onPress={() => {
         const text = invoiceShareText({ number: invoice.invoiceNumber, totalPaise: invoice.total, studioName: STUDIO_INFO.name, studioPhone: STUDIO_INFO.phone });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const nav = (globalThis as any).navigator;

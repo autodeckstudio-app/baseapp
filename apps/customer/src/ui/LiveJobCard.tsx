@@ -33,9 +33,9 @@ export function LiveJobCard({ status, slotStarted = false, readyText, approvals,
               <View key={s} style={{ flex: 1, height: 6, borderRadius: 4, backgroundColor: i <= stage.index ? colors.textPrimary : "rgba(255,255,255,0.14)" }} />
             ))}
           </View>
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <View style={{ flexDirection: "row", gap: 6 }}>
             {STAGES.map((s, i) => (
-              <T key={s} role="caption" tone={i === stage.index ? "primary" : "tertiary"}>{s}</T>
+              <View key={s} style={{flex:1,minWidth:0}}><T role="caption" style={{textAlign:"center"}} tone={i === stage.index ? "primary" : "tertiary"}>{s}</T></View>
             ))}
           </View>
           {readyText && stage.index < 3 ? <T role="bodyStrong">Expected ready {readyText}</T> : null}

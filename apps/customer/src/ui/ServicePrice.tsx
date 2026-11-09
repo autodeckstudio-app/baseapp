@@ -7,6 +7,7 @@ import { priceErrorInfo } from "../lib/price-error";
 import { Button, Notice, Pane, Row, T, rupees } from "./kit";
 
 export type ServicePriceProps = {
+  inlineBreakdown?: boolean;
   category: string;
   priceOnRequest: boolean;
   /** True when this service is priced by car size (PPF) and the selected car has no saved type, or there is no car. */
@@ -40,13 +41,13 @@ export function ServicePrice(p: ServicePriceProps) {
           ) : p.error ? (
             <View style={{ gap: space.line }}>
               <Notice title="Can't get the price" body={priceErrorInfo(p.error).body} />
-              {priceErrorInfo(p.error).retry ? <Button label="Try again" kind="quiet" onPress={() => p.onRetry()} /> : p.onHelp ? <Button label="Get help" kind="quiet" onPress={p.onHelp} /> : null}
+              {priceErrorInfo(p.error).retry ? <Button icon="refresh" label="Try again" kind="quiet" onPress={() => p.onRetry()} /> : p.onHelp ? <Button label="Get help" kind="quiet" onPress={p.onHelp} /> : null}
             </View>
           ) : priceBreakdown !== null ? (
             <Pane pad="inset" style={{gap:12}}>
               <FactHighlights facts={[{value:rupees(priceBreakdown.total),label:"Total for your car"}]}/>
-              <Row title={detailsOpen?"Hide price breakdown":"View price breakdown"} onPress={()=>setDetailsOpen(!detailsOpen)} last/>
-              {detailsOpen?<View><Row title="Base" trailing={<T role="data">{rupees(priceBreakdown.basePrice)}</T>} />
+              {p.inlineBreakdown?null:<Row title={detailsOpen?"Hide price breakdown":"View price breakdown"} onPress={()=>setDetailsOpen(!detailsOpen)} last/>}
+              {p.inlineBreakdown||detailsOpen?<View><Row title="Base" trailing={<T role="data">{rupees(priceBreakdown.basePrice)}</T>} />
               {priceBreakdown.scopeAdjustment > 0 ? (
                 <Row title="Vehicle size adjustment" trailing={<T role="data">+{rupees(priceBreakdown.scopeAdjustment)}</T>} />
               ) : null}

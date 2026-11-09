@@ -97,7 +97,7 @@ export function NoShowPanel({ booking, onError }: { booking: Booking; onError: (
         chargePaise: candidate.chargePaise,
         reason: reason.trim(),
       });
-      setDone("No-show resolved. The refund is queued, not yet sent to the payment provider.");
+      setDone(booking.combinedPayment?"No-show fee recorded. Original-method returns await separate Admin approval.":"No-show resolved. The refund is queued, not yet sent to the payment provider.");
       onError(null);
     } catch (e) { onError(e instanceof Error ? e.message : "Could not resolve the no-show."); }
     finally { setBusy(false); }
@@ -129,7 +129,7 @@ export function NoShowPanel({ booking, onError }: { booking: Booking; onError: (
           {preview.capturedPaise === 0 ? <p className="ax-note">No online payment was captured, so there is nothing to refund.</p> : null}
           {preview.candidates.map((c) => (
             <button key={c.key} type="button" className={picked === c.key ? "ax-button ax-button--primary" : "ax-button"} aria-pressed={picked === c.key} disabled={busy} onClick={() => setPicked(c.key)}>
-              {c.key === "flat_rs100" ? "Charge Rs 100" : c.key === "pct_20" ? "Charge 20%" : "Waive the charge"}: keep {formatPaise(c.chargePaise)}, refund {formatPaise(c.refundPaise)}
+              {c.key === "flat_rs100" ? "Charge Rs 100" : c.key === "pct_20" ? "Charge 20%" : c.key === "service_20" ? "Keep 20% service only" : "Waive the charge"}: keep {formatPaise(c.chargePaise)}, refund {formatPaise(c.refundPaise)}
             </button>
           ))}
           {picked ? (

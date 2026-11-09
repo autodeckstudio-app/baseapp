@@ -119,12 +119,12 @@ export default function YouScreen() {
           </View>
         ) : delStep === "sent" ? (
           <View style={{ gap: space.breath }}>
-            <T role="caption" tone="secondary">Your deletion request is in. Your personal data is removed after 30 days. Invoices and warranty records are kept for 8 years with your name and phone removed. You can cancel within 7 days.</T>
+            <T role="heading">Deletion requested</T><View style={{gap:space.line}}>{[["Personal data","Removed after 30 days."],["Invoices & warranties","Kept for 8 years."],["Retained records","Your name and phone removed."],["Cancel this request","Within 7 days."]].map(([label,detail])=><View key={label} style={{gap:4}}><T role="caption" tone="tertiary">{label}</T><T tone="secondary">{detail}</T></View>)}</View>
             <Button kind="quiet" label="Cancel deletion" busy={delBusy} onPress={() => void changeDeletion(true)} />
           </View>
         ) : delStep === "ask" ? (
           <View style={{ gap: space.breath }}>
-            <T tone="secondary">Delete your account? Your personal data is removed after 30 days. Invoices and warranty records are kept for 8 years with your name and phone removed. You can cancel within 7 days.</T>
+            <T role="heading">Delete your account?</T><View style={{gap:space.line}}>{[["Personal data","Removed after 30 days."],["Invoices & warranties","Kept for 8 years."],["Retained records","Your name and phone removed."],["Cancel this request","Within 7 days."]].map(([label,detail])=><View key={label} style={{gap:4}}><T role="caption" tone="tertiary">{label}</T><T tone="secondary">{detail}</T></View>)}</View>
             <View style={{ flexDirection: "row", gap: space.breath }}>
               <Button kind="danger" label="Send request" busy={delBusy} style={{ flex: 1 }} onPress={() => void changeDeletion(false)} />
               <Button kind="quiet" label="Cancel" onPress={() => setDelStep("idle")} style={{ flex: 1 }} />

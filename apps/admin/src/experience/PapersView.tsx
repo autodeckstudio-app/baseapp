@@ -26,17 +26,22 @@ export function PapersView(p: {
   busy: boolean;
   error: string | null;
   message: string | null;
+  onOpenEvidence: (paperId: string) => Promise<string | null>;
   onFilter: (f: StatusFilter) => void;
   onResolvePlate: (plate: string) => Promise<Vehicle | null>;
   onSubmit: (input: { vehicleId: string; kind: PaperKind; reference: string; expiresOn: string; notes: string }) => void;
-  onReview: (paper: PaperVerification, decision: "VERIFIED" | "REJECTED", reason: string) => Promise<boolean>;
+  onReview: (paper: PaperVerification, decision: "VERIFIED" | "REJECTED", reason: string, inspectedPlate?: string) => Promise<boolean>;
 }) {
+  const [evidence, setEvidence] = useState<{paperId:string;url:string|null;error:string|null;busy:boolean}|null>(null);
   const [plate, setPlate] = useState("");
   const [found, setFound] = useState<Vehicle | null | "searching" | "missing">(null);
   const [kind, setKind] = useState<PaperKind>("INSURANCE");
   const [reference, setReference] = useState("");
   const [expiresOn, setExpiresOn] = useState("");
   const [notes, setNotes] = useState("");
+  const [verifyId, setVerifyId] = useState<string | null>(null);
+  const [inspectedPlate, setInspectedPlate] = useState("");
+  const [originalInspected, setOriginalInspected] = useState(false);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
@@ -88,14 +93,18 @@ export function PapersView(p: {
                           {paper.rejectionReason ? ` · rejected: ${paper.rejectionReason}` : ""}
                         </span>
                         <span className="ax-sub" style={{ whiteSpace: "normal", overflow: "visible" }}>{paper.verificationMode === "automatic" ? paper.status === "VERIFIED" ? "Auto-approved" : "Auto-rejected" : paper.verificationMode === "manual" ? "Reviewed by staff" : "Manual review needed"}{paper.verificationReason ? `: ${paper.verificationReason.replace(/^Needs review:\s*/i, "")}` : ": Original document needs a closer look."}</span>
-                        {paper.evidenceUrl && <a href={paper.evidenceUrl} target="_blank" rel="noreferrer">Open original document</a>}
+                        <button type="button" className="ax-button" disabled={evidence?.busy} onClick={()=>{setEvidence({paperId:paper.id,url:null,error:null,busy:true});void p.onOpenEvidence(paper.id).then(url=>setEvidence({paperId:paper.id,url,error:url?null:"No uploaded original is available. Check the physical document before verifying.",busy:false})).catch(err=>setEvidence({paperId:paper.id,url:null,error:err instanceof Error?err.message:"Could not load the original. Try again.",busy:false}))}}>Load original document</button>
+                        {evidence?.paperId===paper.id && (evidence.busy?<span className="ax-sub">Loading original...</span>:evidence.url?<a href={evidence.url} target="_blank" rel="noopener noreferrer">Open original document (temporary link)</a>:<span className="ax-sub" role="alert">{evidence.error}</span>)}
                       </span>
                       {expired && <span className="ax-expiry ax-expiry--danger">expired</span>}
                       {paper.status === "PENDING" && (
-                        <span className="ax-row-actions" style={{ flexWrap: "wrap", width: rejectId === paper.id ? "100%" : undefined }}>
-                          <button type="button" className="ax-button ax-button--primary" disabled={p.busy} onClick={() => void p.onReview(paper, "VERIFIED", "")}>
-                            Verify
-                          </button>
+                        <span className="ax-row-actions" style={{ flexWrap: "wrap", width: rejectId === paper.id || verifyId === paper.id ? "100%" : undefined }}>
+                          {verifyId === paper.id ? <div style={{width:"100%",display:"grid",gap:10}}>
+                            <input style={{width:"100%",maxWidth:260,textAlign:"left"}} aria-label="Plate printed on original document" placeholder="Plate printed on document" maxLength={30} value={inspectedPlate} onChange={e=>setInspectedPlate(e.target.value.toUpperCase())}/>
+                            <label style={{display:"flex",alignItems:"center",gap:10,textAlign:"left",width:"100%",fontSize:13,lineHeight:1.4}}><input style={{width:20,height:20,minHeight:20,padding:0,margin:0,flexShrink:0}} type="checkbox" checked={originalInspected} onChange={e=>setOriginalInspected(e.target.checked)}/><span>I checked the original document and its plate</span></label><div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                            <button type="button" className="ax-button ax-button--primary" disabled={p.busy || !originalInspected || !inspectedPlate.trim()} onClick={()=>void p.onReview(paper,"VERIFIED","",inspectedPlate.trim()).then(ok=>{if(ok){setVerifyId(null);setInspectedPlate("");setOriginalInspected(false)}})}>Confirm verification</button>
+                            <button type="button" className="ax-button" disabled={p.busy} onClick={()=>setVerifyId(null)}>Cancel verification</button></div>
+                          </div> : <button type="button" className="ax-button ax-button--primary" disabled={p.busy} onClick={()=>{setVerifyId(paper.id);setInspectedPlate("");setOriginalInspected(false);setRejectId(null)}}>Review &amp; verify</button>}
                           {rejectId === paper.id ? (
                             <>
                               <input
@@ -117,7 +126,7 @@ export function PapersView(p: {
                               <button type="button" className="ax-button" disabled={p.busy} onClick={() => { setRejectId(null); setRejectReason(""); }}>Cancel</button>
                             </>
                           ) : (
-                            <button type="button" className="ax-button" onClick={() => setRejectId(paper.id)}>Reject</button>
+                            <button type="button" className="ax-button" onClick={() => {setRejectId(paper.id);setVerifyId(null)}}>Reject</button>
                           )}
                         </span>
                       )}

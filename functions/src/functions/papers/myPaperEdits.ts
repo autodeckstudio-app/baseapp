@@ -86,6 +86,8 @@ export const updateMyPaper = onCall({ region: "asia-south1", invoker: "public", 
     ...(data.issuedOn !== undefined ? { issuedOn: data.issuedOn } : {}),
     ...(data.expiresOn !== undefined ? { expiresOn: data.expiresOn } : {}),
     status: "PENDING",
+    inspectedPlate: null,
+    originalInspected: null,
     verificationMode: "review",
     verificationReason: path ? "Replacement photo pending; it replaces the current photo after the upload and checks finish. If it stays pending, edit and save again." : "Edited by the owner. Manual review needed.",
     reviewedBy: null,
@@ -120,6 +122,7 @@ export const updateMyPaper = onCall({ region: "asia-south1", invoker: "public", 
     if (!freshVehicleSnap.exists || !freshVehicle || (freshVehicle.ownerId !== customerDocId && freshVehicle.ownerId !== user.uid) || freshVehicle.tenantId !== fresh.tenantId) throw new HttpsError("permission-denied", "You do not own this vehicle.");
     if (freshVehicle.deletedAt) throw new HttpsError("failed-precondition", "This car is archived.");
     if ((fresh.customerId !== customerDocId && fresh.customerId !== user.uid) || fresh.vehicleId !== paper.vehicleId || fresh.tenantId !== paper.tenantId) throw new HttpsError("permission-denied", "Not your document.");
+    if (paper.kind === "RC" && normalizeRcReference(reference) !== normalizeRcReference(freshVehicle.registrationNumber ?? "")) throw new HttpsError("failed-precondition", "The RC number does not match this car. Check the plate before saving.");
     // Conflict guard: the record must still be exactly the state we pre-read before minting URLs or
     // deleting objects. A concurrent finalize/edit landing in between would otherwise be clobbered by
     // this write, or have its freshly promoted photo deleted as "stillborn" by the cleanup below.

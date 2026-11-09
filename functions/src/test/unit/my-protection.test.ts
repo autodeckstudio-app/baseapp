@@ -4,9 +4,17 @@ const h = vi.hoisted(() => ({ rows: new Map<string, any>(), audit: [] as any[], 
 vi.mock("../../middleware/rateLimit.js", () => ({ enforceRateLimit: vi.fn(), subjectFrom: () => "me" }));
 vi.mock("../../middleware/audit.js", () => ({ writeAuditLog: (_tx: any, p: any) => h.audit.push(p) }));
 vi.mock("firebase-admin/firestore", () => {
-  const docRef = (path: string) => ({ id: path.split("/").pop(), path, get: async () => { if (path.startsWith("customers/") && !h.rows.has(path)) { const id = path.split("/").pop(); return { exists: true, data: () => ({ authUid: id, tenantId: "t", deletedAt: null }) }; } return { exists: h.rows.has(path), data: () => h.rows.get(path) }; } });
+  const docRef = (path: string) => ({ id: path.split("/").pop(), path, get: async () => { if (path.startsWith("customers/") && !h.rows.has(path) && ![...h.rows].some(([k,v])=>k.startsWith("customers/")&&v.authUid===path.split("/").pop())) { const id = path.split("/").pop(); return { exists: true, data: () => ({ authUid: id, tenantId: "t", deletedAt: null }) }; } return { exists: h.rows.has(path), data: () => h.rows.get(path) }; } });
   return { getFirestore: () => ({
-    collection: (c: string) => ({ doc: (id?: string) => docRef(`${c}/${id ?? "newid1"}`) }),
+    collection: (c: string) => ({
+      doc: (id?: string) => docRef(`${c}/${id ?? "newid1"}`),
+      where: (field:string, _op:string, value:any) => ({
+        limit: () => ({get:async () => ({
+          docs: [...h.rows].filter(([key,v]) => key.startsWith(c+'/') && v[field]===value)
+            .map(([key,v]) => ({id:key.split('/').pop(),data:()=>v}))
+        })})
+      })
+    }),
     runTransaction: async (fn: any) => {
       let mutated = false;
       const mutateOnce = () => { if (!mutated && h.txMutate) { mutated = true; h.txMutate(); } };
@@ -109,4 +117,12 @@ describe("updateMyProtection", () => {
     await expect(updateMyProtection.run(req("me", { expectedRevision: null, legacyBaseUpdatedAt: "x", vehicleId: "v1", protectionId: "c1", provider: "x" }))).rejects.toBeTruthy();
     expect(h.rows.get("vehicles/v1/protections/c1").provider).toBe("XPEL"); // untouched
   });
+});
+
+describe('canonical non-UID protection identity',()=>{
+ beforeEach(()=>{h.rows.set('customers/staged',{authUid:'login',tenantId:'t',deletedAt:null});h.rows.set('vehicles/v1',{ownerId:'staged',tenantId:'t',deletedAt:null})});
+ it('creates with canonical customer id and retains unverified state',async()=>{const out=await createMyProtection.run(req('login',{vehicleId:'v1',kind:'ppf',declarationId:DECL}));expect((out as any).protection).toMatchObject({customerId:'staged',status:'unverified',expiryDate:null})});
+ it('does not accept uid owner fallback',async()=>{h.rows.set('vehicles/v1',{ownerId:'login',tenantId:'t',deletedAt:null});await expect(createMyProtection.run(req('login',{vehicleId:'v1',kind:'ppf',declarationId:DECL}))).rejects.toMatchObject({code:'permission-denied'})});
+ it('updates canonical record without changing its principal',async()=>{h.rows.set('vehicles/v1/protections/c1',ownProtection('c1',{customerId:'staged'}));await updateMyProtection.run(req('login',{expectedRevision:null,legacyBaseUpdatedAt:'x',vehicleId:'v1',protectionId:'c1',provider:'New brand'}));expect(h.rows.get('vehicles/v1/protections/c1')).toMatchObject({customerId:'staged',provider:'New brand',status:'unverified'})});
+ it('does not edit legacy uid-keyed record with different canonical principal',async()=>{h.rows.set('vehicles/v1/protections/c1',ownProtection('c1',{customerId:'login'}));await expect(updateMyProtection.run(req('login',{expectedRevision:null,legacyBaseUpdatedAt:'x',vehicleId:'v1',protectionId:'c1',provider:'New'}))).rejects.toMatchObject({code:'permission-denied'});expect(h.rows.get('vehicles/v1/protections/c1').provider).toBe('XPEL')});
 });

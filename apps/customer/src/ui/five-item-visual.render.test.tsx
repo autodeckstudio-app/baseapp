@@ -49,15 +49,15 @@ describe("five-item visual wiring", () => {
     const t = textOf(el);
     expect(t).toContain("Insurance");
     expect(t).toContain("Document checked · AX-9912 · 21 days left · Clear scan");
-    expect(t).toContain("✎"); // edit glyph; the label is carried as accessibilityLabel
+    expect(JSON.stringify(el.toJSON())).toContain("Edit Insurance"); // accessible name, line SVG instead of font glyph
     const json: any = el.toJSON();
-    // outer row View children: [row pressable(title/detail), trailing IconAction, chevron]
+    // outer row View children: [row pressable(title/detail), trailing IconAction; no nested/duplicate chevron]
     const kids = json.children as any[];
-    expect(kids.length).toBe(3);
+    expect(kids.length).toBe(2);
     const sub = (n: any): string => n === null || n === undefined || typeof n === "boolean" ? "" : typeof n === "string" ? n : Array.isArray(n) ? n.map(sub).join(" ") : sub(n.children);
     expect(sub(kids[0])).toContain("Insurance"); // press target holds title/detail
     expect(sub(kids[0])).not.toContain("✎");    // trailing action is NOT inside it
-    expect(sub(kids[1])).toContain("✎");
+    expect(JSON.stringify(kids[1])).toContain("Edit Insurance");
   });
   it("FilterPills flat mode renders plain text tabs with the selected one underlined", async () => {
     const el = await render(createElement(FilterPills, {

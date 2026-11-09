@@ -1,3 +1,5 @@
+import{CombinedCashReceipt}from "../../../components/CombinedCashReceipt";
+import { JobWorkSession } from "../../../components/JobWorkSession";
 import {ReleaseCompletedBayPane} from "../../../components/ReleaseCompletedBayPane";
 import { httpsCallable } from "firebase/functions";
 import { MEMBERSHIP_SETTLEMENT_ENABLED, ADMIN_APPROVAL_ENABLED, UPI_RECORD_ENABLED } from "../../../lib/backend-features";
@@ -641,7 +643,7 @@ export default function JobDetailScreen() {
         ) : job.status === "CANCELLED" || job.status === "DELIVERED" ? (
           <Text style={{ ...typography.caption, color: colors.textMuted }}>No photos or damage note were recorded.</Text>
         ) : (
-          <Button label="Add photos or a damage note" onPress={() => void handleStartInspection()} loading={startingInspection} />
+          <Button label="Photos / damage note" accessibilityLabel="Add photos or a damage note" onPress={() => void handleStartInspection()} loading={startingInspection} />
         )}
       </Section>
 
@@ -668,11 +670,13 @@ export default function JobDetailScreen() {
         {(payment as (Payment & {invoiceReviewNeeded?:boolean})|null)?.invoiceReviewNeeded ? <Text style={{color:colors.textMuted}}>Money received, but this payment needs office review. The job is not marked paid. Do not collect another payment.</Text> : null}
         {payment?.method === "cash" && ["failed","cancelled"].includes(payment.status) ? <Text style={{color:colors.textMuted}}>The previous recording attempt did not complete. Check whether cash is already in hand before recording it. Do not collect it again.</Text> : null}
         <Row label="Job total" value={formatPaise(job.totalAmount)} />
+        {job.combinedSettlement?<><Row label="Verified advance" value={formatPaise(job.combinedSettlement.advanceCapturedPaise)}/><Row label="Balance due" value={formatPaise(job.combinedSettlement.balanceDuePaise)}/></>:null}
+        {job.combinedPayment&&(job.combinedPayment.choice==="full"||Boolean(job.combinedSettlement?.advancePaymentId))&&job.paymentStatus!=="paid"&&job.status!=="CANCELLED"&&paymentRead==="ready"&&!quotePaymentHold&&(!payment||["failed","cancelled"].includes(payment.status))&&job.combinedSettlement?.balanceDuePaise!==0?<CombinedCashReceipt jobId={job.id} balancePaise={Math.max(0,job.totalAmount-(job.combinedSettlement?.advanceCapturedPaise??0)-(job.offlineSettlement?.appliedPaise??0))}/>:null}
         {payment ? <Row label="Method" value={payment.method === "cash" ? "Cash" : payment.method === "razorpay_payment_link" ? "Online payment link" : payment.method === "upi_manual" ? "UPI - office confirmation" : "Bank transfer - office confirmation"} /> : null}
         {invoice && <Row label="Invoice" value={invoice.invoiceNumber} />}
         {paymentRead === "ready" && payment?.method === "razorpay_payment_link" && ["pending","processing"].includes(payment.status)?<Button label="Refresh recorded payment status" size="md" variant="secondary" onPress={()=>setPaymentRetryTick(t=>t+1)}/>:null}
 
-        {!(MEMBERSHIP_SETTLEMENT_ENABLED && (membershipCoveredLabel(job) || (booking && membershipCoveredLabel(booking)))) && !cashConfirmLive && paymentRead === "ready" && (!payment || (payment.method === "cash" && ["failed","cancelled"].includes(payment.status))) && job.paymentStatus !== "paid" && job.status !== "CANCELLED" && (
+        {!(MEMBERSHIP_SETTLEMENT_ENABLED && (membershipCoveredLabel(job) || (booking && membershipCoveredLabel(booking)))) && !job.combinedPayment && !cashConfirmLive && paymentRead === "ready" && (!payment || (payment.method === "cash" && ["failed","cancelled"].includes(payment.status))) && job.paymentStatus !== "paid" && job.status !== "CANCELLED" && (
           <Button
             label={UPI_RECORD_ENABLED ? "Record payment" : "Record cash payment"}
             disabled={quotePaymentHold}
@@ -834,6 +838,7 @@ export default function JobDetailScreen() {
       {job.status === "STANDBY" ? <Section><Text style={{color: colors.textPrimary}}>Waiting since {new Date(job.standbyArrivedAt ?? job.createdAt).toLocaleString("en-IN", {timeZone: "Asia/Kolkata"})}. No bay or time reserved.</Text><Button label="Admit from standby" onPress={() => setStaffAction("admit")} /></Section> : null}
       {job.status === "PENDING_VEHICLE" && job.bookingId ? <Button label="Arrived - standby" variant="secondary" disabled={Date.parse(job.scheduledAt) > Date.now()} onPress={() => setStaffAction("enqueue")} style={{marginBottom: spacing.lg}} /> : null}
       {job.status === "QUALITY_CHECK" ? <Button label="Send back for rework" variant="ghost" onPress={() => setStaffAction("rework")} style={{marginBottom: spacing.lg}} /> : null}
+      {['IN_PROGRESS','QUALITY_CHECK','READY_FOR_DELIVERY','DELIVERED'].includes(job.status) ? <Section><JobWorkSession key={job.id} job={job}/></Section> : null}
       {ADMIN_APPROVAL_ENABLED && job ? <AdminRequestPanel targetType="job" targetId={job.id} tenantId={job.tenantId} studioId={job.studioId} /> : null}
       {advanceConfirm && job ? <Section>{job.status === "READY_FOR_DELIVERY" ? <DeliveryConfirmPane key={`${job.id}:${job.vehicleId}`} job={job} onDelivered={()=>setAdvanceConfirm(null)} onCancel={()=>setAdvanceConfirm(null)}/> : <><Text style={{color:colors.textPrimary}}>{advanceLabel}? This updates the studio floor and customer tracker.</Text><Button label={`Confirm ${advanceLabel.toLowerCase()}`} onPress={()=>void handleAdvance()} loading={advancing}/><Button label="Cancel" variant="secondary" disabled={advancing} onPress={()=>setAdvanceConfirm(null)}/></>}</Section> : null}
       {job.status === "READY_FOR_DELIVERY" ? <Section><ReleaseCompletedBayPane key={`${job.id}:${job.status}:${job.bayReleasedAt??''}`} job={job}/></Section> : null}

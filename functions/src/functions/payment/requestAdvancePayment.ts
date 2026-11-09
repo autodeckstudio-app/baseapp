@@ -1,3 +1,5 @@
+import{readConsultPaymentBinding}from"../../lib/consult-payment.js";
+import type{ServiceJob}from"@autodeck/core";
 // Pay-at-studio ADVANCE payment (basket item 4 - PREVIEW, NOT ACTIVATED).
 // The customer pays the owner-adopted 20% advance online (policy 2 Nov 2026:
 // discounted service price incl GST excl pickup, advance rounded up, balance
@@ -13,6 +15,7 @@
 // customer reaches this call (customer app gate).
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import {checkedCombinedPayment} from "@autodeck/core";
 import type { Booking, Payment, Customer } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractCustomerUser, assertTenant, assertStudio } from "../../middleware/auth.js";
@@ -26,6 +29,8 @@ import {
   advancePaymentEnabled,
   buildAdvancePaymentRequest,
 } from "../../lib/advance-payment.js";
+import{combinedCheckoutEnabled,combinedPaymentAmounts}from'../../lib/combined-booking.js';
+import{requireCustomerDocId}from'../../lib/customer-identity.js';
 import { isHoldExpired } from "../../lib/booking-hold.js";
 import { ensureAdvanceLink, type AdvanceLinkDeps } from "../../lib/advance-link.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
@@ -39,7 +44,7 @@ export const requestAdvancePayment = onCall(
     // callable's caller check even while the flag is off. The flag guard stays
     // before any schema validation, Firestore read, or provider call.
     const user = extractCustomerUser(request);
-    if (!advancePaymentEnabled()) {
+    if (!advancePaymentEnabled()&&!combinedCheckoutEnabled()) {
       throw new HttpsError(
         "failed-precondition",
         "Advance payments are not enabled yet. Pay at the studio when you collect your car.",
@@ -57,7 +62,8 @@ export const requestAdvancePayment = onCall(
 
     assertTenant(user, booking.tenantId);
     assertStudio(user, booking.studioId, "Booking");
-    if (booking.customerId !== user.uid) {
+    const owner=await requireCustomerDocId(db,COLLECTIONS.customers(),user.claims.tenantId,user.uid);
+    if (booking.customerId !== owner) {
       throw new HttpsError("permission-denied", "Cannot pay an advance for another customer's booking.");
     }
     const assertActiveHold = (b: Booking) => {
@@ -76,15 +82,29 @@ export const requestAdvancePayment = onCall(
     const paymentRef = db.collection(COLLECTIONS.payments()).doc(`advance-${booking.id}`);
     const now = new Date().toISOString();
 
+    const assertDisplayedAmount = (amount: number) => {
+      if (data.expectedAdvancePaise !== undefined && data.expectedAdvancePaise !== amount) {
+        throw new HttpsError("failed-precondition", "The advance amount changed. Review the booking before paying.", { reason: "advance_amount_changed" });
+      }
+    };
     const claim = await db.runTransaction(async (tx) => {
       const freshBooking = await tx.get(bookingRef);
       const b = freshBooking.data() as Booking;
       assertActiveHold(b);
+      if(b.customerId!==owner||b.tenantId!==booking.tenantId||b.studioId!==booking.studioId||b.id!==booking.id)throw new HttpsError("permission-denied","Booking ownership changed.");
+      if(b.combinedPayment&&!combinedCheckoutEnabled())throw new HttpsError("failed-precondition","Combined payment is not active.");
+      if(b.combinedPayment){try{const snap=checkedCombinedPayment(b.combinedPayment,b.totalAmount);if(snap.choice!=="advance20")throw Error();}catch{throw new HttpsError("failed-precondition","Combined advance snapshot changed.");}}
+      if(b.combinedPayment&&(b as Booking&{quoteJourneyId?:string}).quoteJourneyId){const jobs=await tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId","==",b.id).limit(2));if(jobs.size!==1)throw new HttpsError("failed-precondition","Quote job binding needs review.");await readConsultPaymentBinding(db,tx,jobs.docs[0]!.data()as ServiceJob,b as unknown as Record<string,unknown>);}
       if (b.advancePaymentId) {
         const existing = await tx.get(db.collection(COLLECTIONS.payments()).doc(b.advancePaymentId as string));
-        return { created: false as const, existing: existing.data() as Payment };
+        const payment = existing.data() as Payment;
+        if(!payment||payment.id!==b.advancePaymentId||payment.targetType!=="booking"||payment.jobId!==null||payment.studioId!==b.studioId||payment.currency!==b.priceBreakdown.currency||payment.method!=="razorpay_payment_link"||payment.bookingId!==b.id||payment.customerId!==b.customerId||payment.tenantId!==b.tenantId)throw new HttpsError("failed-precondition","Payment binding needs review.");
+        if(b.combinedPayment&&payment.amount!==b.combinedPayment.payNowPaise)throw new HttpsError("failed-precondition","Combined payment amount changed.");
+        assertDisplayedAmount(payment.amount);
+        return { created: false as const, existing: payment };
       }
-      const advance = buildAdvancePaymentRequest(
+      if(b.combinedPayment&&!combinedCheckoutEnabled())throw new HttpsError("failed-precondition","Combined payment is not active.");
+      const legacyAdvance = ()=>buildAdvancePaymentRequest(
         {
           id: b.id,
           payMode: b.payMode ?? "online",
@@ -96,6 +116,9 @@ export const requestAdvancePayment = onCall(
         ADVANCE_ROUNDING_POLICY,
         { enabled: advancePaymentEnabled() },
       );
+      const snap=b.combinedPayment;
+      const advance=snap?(()=>{const checked=combinedPaymentAmounts(b.totalAmount,snap.choice);if(snap.choice!=='advance20'||checked.payNowPaise!==snap.payNowPaise||checked.balancePaise!==snap.balancePaise)throw new HttpsError('failed-precondition','Combined payment snapshot changed.');return{amountPaise:snap.payNowPaise,currency:b.priceBreakdown.currency??'INR',bookingId:b.id,description:'20% advance for combined service and transport',referenceId:`advance-${b.id}`,advancePaise:snap.payNowPaise,dueAtStudioPaise:snap.balancePaise}})():legacyAdvance();
+      assertDisplayedAmount(advance.amountPaise);
       const payment: Payment = {
         id: paymentRef.id,
         tenantId: b.tenantId,

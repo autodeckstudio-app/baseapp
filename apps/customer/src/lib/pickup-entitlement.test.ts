@@ -1,0 +1,6 @@
+import{it,expect}from'vitest';import{reviewedPickupEntitlement as pick}from'./pickup-entitlement';
+const scope={tenantId:'t',customerId:'c',visitDate:'2026-11-15',today:'2026-11-09'},m={id:'m',tenantId:'t',customerId:'c',status:'active',startDate:'2026-11-01',endDate:'2026-12-01',pickupsTotal:2,pickupsUsed:0}as any;
+it('only correct owner tenant active available entitlement is reviewed free',()=>{expect(pick([m],scope)).toBe('m');for(const patch of[{tenantId:'other'},{customerId:'other'},{status:'cancelled'},{pickupsUsed:2},{pickupsUsed:-1},{pickupsTotal:undefined}])expect(pick([{...m,...patch}],scope)).toBeNull()});
+it('retains legacy no-end-date entitlement and earliest ending first',()=>{expect(pick([{...m,endDate:null}],scope)).toBe('m');expect(pick([m,{...m,id:'soon',endDate:'2026-11-20'}],scope)).toBe('soon')});
+it('plan covering today but not visit refuses, never charges a paid fallback',()=>{expect(()=>pick([{...m,endDate:'2026-11-10'}],scope)).toThrow(/does not cover/);expect(()=>pick([{...m,startDate:'2026-11-20'}],scope)).toThrow(/does not cover/)});
+it('already expired or fully consumed entitlement does not waive transport',()=>{expect(pick([{...m,endDate:'2026-11-01'}],scope)).toBeNull();expect(pick([{...m,pickupsUsed:2}],scope)).toBeNull()});

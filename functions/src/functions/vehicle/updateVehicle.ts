@@ -8,6 +8,7 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { updateVehicleSchema } from "../../schemas/vehicle.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
 
 export const updateVehicle = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
@@ -17,6 +18,7 @@ export const updateVehicle = onCall({ region: "asia-south1" , enforceAppCheck: s
   await enforceRateLimit(subjectFrom(user), "vehicle.update");
 
   const db = getFirestore();
+  const customerDocId = user.claims.role === "customer" ? await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid) : null;
   const ref = db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId);
 
   await db.runTransaction(async (tx) => {
@@ -31,7 +33,7 @@ export const updateVehicle = onCall({ region: "asia-south1" , enforceAppCheck: s
     assertTenant(user, existing.tenantId);
 
     // Customers can only update their own vehicles
-    if (user.claims.role === "customer" && existing.ownerId !== user.uid) {
+    if (user.claims.role === "customer" && existing.ownerId !== customerDocId) {
       throw new HttpsError("permission-denied", "You do not own this vehicle.");
     }
 

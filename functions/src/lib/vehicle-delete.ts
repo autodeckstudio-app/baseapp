@@ -19,6 +19,8 @@ const CLOSED_JOB = new Set(["DELIVERED", "CANCELLED"]);
 export interface VehicleDeleteActor {
   uid: string;
   role: string;
+  /** Resolved customer doc id for ownership checks (customers only); uid stays the actor stamp. */
+  customerId?: string;
   tenantId: string;
 }
 
@@ -107,7 +109,7 @@ export async function permanentlyDeleteVehicle(
     if (tomb.exists) {
       const t = tomb.data() as DeletedVehicle;
       if (t.tenantId !== actor.tenantId) throw new VehicleDeleteError("not-found", "Vehicle not found.");
-      if (actor.role === "customer" && t.ownerId !== actor.uid) {
+      if (actor.role === "customer" && t.ownerId !== actor.customerId) {
         throw new VehicleDeleteError("permission-denied", "You do not own this vehicle.");
       }
       const stamped = await stamp(db, t.tenantId, t.ownerId, vehicleId, t.snapshot);
@@ -119,7 +121,7 @@ export async function permanentlyDeleteVehicle(
   const vehicle = first.data() as Vehicle;
   // Existence of another tenant's car is not disclosed.
   if (vehicle.tenantId !== actor.tenantId) throw new VehicleDeleteError("not-found", "Vehicle not found.");
-  if (actor.role === "customer" && vehicle.ownerId !== actor.uid) {
+  if (actor.role === "customer" && vehicle.ownerId !== actor.customerId) {
     throw new VehicleDeleteError("permission-denied", "You do not own this vehicle.");
   }
   if (!["customer", "admin", "superadmin"].includes(actor.role)) {

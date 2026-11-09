@@ -10,12 +10,8 @@ import { Ambient } from "../../experience/Ambient";
 import { StaffShell } from "../../experience/StaffShell";
 import "../../experience/shell.css";
 
-// Route protection for all /(admin) screens. One staff shell, two modes:
-//   STUDIO (bookings, job floor): studio staff and admins.
-//   OFFICE (money, catalogue, customers, staff, settings): admins only.
-// Studio staff who reach an office route are sent back to the floor. This is
-// navigation; Firestore rules and the callables/API routes enforce the same
-// boundary server-side. See lib/staff-access.ts.
+// Admin host requires an Admin/superadmin session, or the separate read-only accountant scope.
+// Studio staff use the separate Studio app, including when an old Admin tab returns to focus.
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, claims, loading, signOut } = useAdminAuth();

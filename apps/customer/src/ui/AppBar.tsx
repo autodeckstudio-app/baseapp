@@ -34,14 +34,14 @@ export function AppBar({ title, onBack }: { title: string; onBack?: (() => void)
       <SideDrawer open={open} onClose={() => setOpen(false)} name={display} initial={initial} items={items} />
       {onBack ? (
         <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
-          <Text style={{ color: colors.textPrimary, fontSize: 26, lineHeight: 28, fontWeight: "600" }}>{"\u2039"}</Text>
+          <NavIcon name="back" color={colors.textPrimary} size={22} cut="#18181C" />
         </Pressable>
       ) : (
         <Pressable accessibilityRole="button" accessibilityLabel="Menu" onPress={() => setOpen(true)} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
         <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "800" }}>{initial}</Text>
       </Pressable>
       )}
-      <Text numberOfLines={1} style={{ flex: 1, textAlign: "center", color: colors.textPrimary, fontSize: 17, fontWeight: "800" }}>{title}</Text>
+      <Text style={{ flex: 1, minWidth:0, textAlign: "center", color: colors.textPrimary, fontSize: 17, fontWeight: "800" }}>{title}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"} onPress={go("/(tabs)/notifications")} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
         <NavIcon name="bell" color={colors.textPrimary} size={22} cut="#18181C" />
         {unread > 0 ? <View style={{ position: "absolute", top: 11, right: 12, width: 9, height: 9, borderRadius: 5, backgroundColor: "#EC8638" }} /> : null}

@@ -1,4 +1,4 @@
-import { Image, View, Pressable, type ImageSourcePropType } from "react-native";
+import { Image, View, Pressable, useWindowDimensions, type ImageSourcePropType } from "react-native";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import {
   SERVICE_HOMES,
@@ -23,6 +23,7 @@ import {
   familyChoices,
   HOME_COPY,
   FAMILY_COPY,
+  familySummary,
   serviceSearch,
   type ServicesPath,
 } from "../lib/services-navigation";
@@ -43,6 +44,8 @@ export function ServiceChoiceCard({
   photo?: ImageSourcePropType;
 }) {
   const { colors } = useExperienceTheme();
+  const {width,fontScale}=useWindowDimensions();
+  const compact=width<360||fontScale>1.15;
   const logo = brand ? BRAND_LOGOS[title] : null;
   return (
     <SceneCard
@@ -59,13 +62,13 @@ export function ServiceChoiceCard({
     >
       <View
         style={{
-          padding: 18,
-          gap: 14,
+          padding: compact?14:18,
+          gap: compact?10:14,
           flexDirection: "row",
           alignItems: "center",
         }}
       >
-        {photo ? <TypePhoto source={photo} label={title} /> : null}
+        {photo ? <TypePhoto source={photo} label={title} size={compact?64:88} /> : null}
         {logo ? (
           <View
             style={{
@@ -173,7 +176,8 @@ export function ServicesExplorer({
   priceLabel: (s: Service) => string | null | undefined;
 }) {
   const { colors } = useExperienceTheme();
-  const rows = currentServices(services),
+  // Pickup/drop is a booking option, never a standalone sale card. This is presentation only.
+  const rows = currentServices(services).filter(s=>s.category!=="pickup"),
     refs = referenceChoices(rows);
   const home = SERVICE_HOMES.find((h) => h.key === path.home);
   const searching = !!query.trim();
@@ -260,16 +264,6 @@ export function ServicesExplorer({
             </View>
           </SceneCard>
         ))}
-        {rows
-          .filter((s) => s.category === "pickup")
-          .map((s) => (
-            <ServicePackageCard
-              key={s.id}
-              service={s}
-              price={priceLabel(s)}
-              onPress={() => onOpen(s)}
-            />
-          ))}
         <T role="caption" tone="tertiary">
           Service images are illustrative. Only confirmed current offerings are
           shown as products.
@@ -344,20 +338,12 @@ export function ServicesExplorer({
       {!family ? (
         <>
           {families.map((f) => {
-            const count =
-              mine.filter((s) => servicePlacement(s)?.family === f).length +
-              rr.filter((r) => referencePlacement(r).family === f).length;
             return (
               <ServiceChoiceCard
                 key={f}
                 title={f}
                 photo={serviceTypeImage(home.key, f)}
-                detail={
-                  FAMILY_COPY[f] ??
-                  (count
-                    ? `${count} current ${count === 1 ? "option" : "options"}`
-                    : "Confirm options with the studio")
-                }
+                detail={familySummary(f)}
                 onPress={() => onPath({ home: home.key, family: f })}
               />
             );
@@ -390,7 +376,7 @@ export function ServicesExplorer({
                   key={b}
                   title={b}
                   brand
-                  detail={(() => { const n = selected.filter((s) => s.brand === b).length + selectedRefs.filter((r) => r.brand === b && r.level !== "brand").length; return n ? `${n} current option${n === 1 ? "" : "s"}` : "Confirm options with the studio"; })()}
+                  detail={familySummary(family!)}
                   onPress={() => onPath({ ...path, brand: b })}
                 />
               ))}
@@ -448,9 +434,11 @@ export function ServicesExplorer({
 function TypePhoto({
   source,
   label,
+  size=88,
 }: {
   source: ImageSourcePropType;
   label: string;
+  size?: number;
 }) {
   const { colors } = useExperienceTheme();
   const [failed, setFailed] = useState(false);
@@ -458,8 +446,8 @@ function TypePhoto({
   return (
     <View
       style={{
-        width: 88,
-        height: 88,
+        width: size,
+        height: size,
         borderRadius: 16,
         overflow: "hidden",
         backgroundColor: colors.surface,

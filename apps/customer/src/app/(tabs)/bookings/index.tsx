@@ -176,7 +176,7 @@ export default function BookingsScreen() {
   return (
     <Screen appBar="Bookings" header={<PageHeader title={error || bookings === null ? "Bookings" : liveJob ? "In the studio" : next ? "Upcoming visit" : "No upcoming visits"} sub={error || bookings === null ? "" : [upcoming.length > 0 ? `${upcoming.length} coming up` : "", past.length > 0 ? `${past.length} past` : ""].filter(Boolean).join(" · ") || "Book a service when you are ready."} />}>
       <View {...swipe.handlers} style={[{ gap: 20, minHeight: Math.max(winH - 220, 480) }, swipe.style]}>
-      {error ? <Notice title="Can't load bookings" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
+      {error ? <Notice title="Can't load bookings" body="Check your connection and try again." action={<Button kind="quiet" icon="refresh" label="Try again" onPress={() => void load()} />} /> : null}
 
       <TabPills tabs={[{ key: "active", label: "Active" }, { key: "upcoming", label: "Upcoming" }, { key: "past", label: "Past" }]} value={seg} onChange={setSegPick} />
 
@@ -213,8 +213,8 @@ export default function BookingsScreen() {
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
             {nextElig?.eligible ? <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" label="Reschedule" onPress={() => router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: next.id } })} /></View> : null}
             {nextCancel?.canCancel && !confirmCancel ? <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" label="Cancel" onPress={() => setConfirmCancel(true)} /></View> : null}
-            <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" label="Directions" onPress={() => void Linking.openURL(STUDIO_INFO.mapsUrl)} /></View>
-            <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" label="Call studio" onPress={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)} /></View>
+            <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" icon="directions" label="Directions" onPress={() => void Linking.openURL(STUDIO_INFO.mapsUrl)} /></View>
+            <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" icon="call" label="Call studio" onPress={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)} /></View>
           </View>
           {nextElig && !nextElig.eligible && nextElig.reason ? <T role="caption" tone="tertiary">{nextElig.reason}</T> : null}
           {confirmCancel ? (

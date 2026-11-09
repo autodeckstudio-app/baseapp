@@ -11,6 +11,7 @@ describe("Team add form collects name, email and contact", () => {
     expect(src).toContain("{ phone: phone.trim() }");
   });
   it("email alone grants sign-in (no Aadhaar gate in the add path)", () => {
-    expect(src).not.toMatch(/aadhaar/i);
+    expect(src).not.toContain("requiredDocument");
+    expect(src).toContain("StaffDocumentReview employeeId={emp.id}");
   });
 });

@@ -8,6 +8,8 @@ import { create, act } from "react-test-renderer";
 import { createElement } from "react";
 import type { Protection, ServiceJob } from "@autodeck/core";
 
+const workState=vi.hoisted(()=>({value:null as any}));
+vi.mock('../lib/work-coverage-service',()=>({getStaffJobWorkCoverage:async(jobId:string)=>workState.value??({status:'not_recorded',jobId,revision:null,workLock:'open',items:[]})}));
 const getCurrentProtections = vi.fn();
 const advanceJobStatus = vi.fn();
 type StaffAuthT = { uid: string; role: string | null; tenantId: string | null; studioId: string | null };
@@ -71,6 +73,7 @@ const flush = () => act(async () => { await Promise.resolve(); await Promise.res
 
 let resolveA: (v: Protection[]) => void;
 beforeEach(() => {
+  workState.value=null;
   getCurrentProtections.mockReset();
   advanceJobStatus.mockReset();
   currentAuth = STAFF;
@@ -369,3 +372,12 @@ describe("DeliveryConfirmPane mounted", () => {
     expect(textOf(el)).toContain("No protection work");
   });
 });
+
+  it("recorded sealed QC work replaces re-entry with explicit same-revision handover, never a manual none",async()=>{
+    workState.value={status:'recorded',jobId:'jA',revision:5,workLock:'locked',handoverReady:true,items:[]};getCurrentProtections.mockResolvedValue([]);let el:any;await act(async()=>{el=create(createElement(DeliveryConfirmPane,{job:job(),onDelivered:vi.fn(),onCancel:vi.fn()}))});
+    expect(textOf(el)).toContain('Use the checked work record');expect(textOf(el)).not.toContain('No protection work');
+    const b=(label:string)=>el.root.findAll((n:any)=>n.props.label===label&&n.props.onPress)[0];expect(b('Confirm mark delivered').props.disabled).toBe(true);await act(async()=>b('Use recorded work').props.onPress());expect(b('Confirm mark delivered').props.disabled).toBe(false);advanceJobStatus.mockResolvedValue({});await act(async()=>b('Confirm mark delivered').props.onPress());expect(advanceJobStatus).toHaveBeenCalledWith('jA',undefined,undefined,undefined,5);await act(async()=>el.unmount());
+  });
+  it("partial or unsealed recorded work cannot fall back to manual none or guessed handover",async()=>{
+    for(const state of[{status:'recorded',workLock:'open',handoverReady:false},{status:'needs_review',workLock:'unknown',handoverReady:false}]){workState.value={...state,jobId:'jA',revision:3,items:[]};getCurrentProtections.mockResolvedValue([]);let el:any;await act(async()=>{el=create(createElement(DeliveryConfirmPane,{job:job(),onDelivered:vi.fn(),onCancel:vi.fn()}))});expect(textOf(el)).not.toContain('No protection work');expect(textOf(el)).toContain('Finish recording, QC');expect(el.root.findAll((n:any)=>n.props.label==='Confirm mark delivered'&&n.props.onPress)[0].props.disabled).toBe(true);await act(async()=>el.unmount())}
+  });

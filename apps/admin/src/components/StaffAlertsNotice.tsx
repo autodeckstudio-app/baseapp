@@ -20,6 +20,8 @@ const TEXT: Record<string, (n: number) => string> = {
   membership_manual_review: (n) => `${n} membership payment(s) need a provider check before another payment link can be opened.`,
   gift_manual_review: (n) => `${n} gift payment(s) need a provider check before another payment link can be opened.`,
   waiting_cancel_link_terminal_processing: (n) => `${n} cancellation request(s) have a closed payment link, but a payment already started may still arrive. Booked times remain held and cancel automatically if a payment arrives. Check the link in the Razorpay dashboard.`,
+  combined_cancel_payment_check: (n) => `${n} combined cancellation(s) await a payment check. Booked times stay held. No automatic refund.`,
+  combined_cancel_capture_review: (n) => `${n} combined cancellation payment(s) arrived. Review cancellation, then approve original-method returns.`,
   waiting_cancel_review: (n) => `${n} cancellation request(s) still await the online payment. Booked times remain held; a manual check is needed.`,
   waiting_cancel_refund_not_reserved: (n) => `${n} payment(s) arrived for a waiting cancellation but the full refund was NOT reserved. Booked times remain held; manual action is required.`,
   ambiguous_payment_link: (n) => `${n === 1 ? "1 online payment notice matched" : `${n} online payment notices matched`} more than one payment, so ${n === 1 ? "it was" : "they were"} not applied automatically. A manual check is needed.`,

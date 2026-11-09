@@ -1,20 +1,20 @@
 "use client";
+import { JobWorkCoverage } from "../../../../components/JobWorkCoverage";
 import {OfflineReceiptPanel} from "../../../../components/OfflineReceiptPanel";
 import {OFFLINE_RECEIPT_REGISTER_ENABLED} from "../../../../lib/backend-features";
 import { MembershipSettlement } from "../../../../components/MembershipSettlement";
 import { JobPaymentPanel } from "../../../../components/JobPaymentPanel";
-import {jobActivityLabel} from "../../../../lib/job-activity-label";
 import { membershipCoveredLabel } from "@autodeck/core";
 
 import { goBackOrTo } from "../../../../lib/go-back";
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { httpsCallable } from "firebase/functions";
-import type { Booking, ServiceJob, Payment, Invoice, ApprovalRequest, Warranty, AuditLog, Customer, Vehicle, Service, PaymentMethod, Inspection, InspectionArea } from "@autodeck/core";
+import type { Booking, ServiceJob, Payment, Invoice, ApprovalRequest, Warranty, Customer, Vehicle, Service, PaymentMethod, Inspection, InspectionArea } from "@autodeck/core";
 import { formatDuration } from "@autodeck/core";
 import { functions } from "../../../../lib/firebase";
 import { useAdminAuth } from "../../../../lib/auth-context";
-import { listenToJob, getWarrantyForJob, listenToAuditForEntity, listenToInspectionForJob } from "../../../../lib/jobs-service";
+import { listenToJob, getWarrantyForJob, listenToInspectionForJob } from "../../../../lib/jobs-service";
 import { listenToBooking, listenToApprovalsForJob, listenToPaymentForJob, listenToInvoiceForJob, getCustomer, getVehicle, getService } from "../../../../lib/bookings-service";
 import { getStudioConfig } from "../../../../lib/studio-service";
 import { StatusBadge } from "../../../../components/StatusBadge";
@@ -22,6 +22,7 @@ import { formatPaise, formatDateTime, formatDate } from "../../../../lib/format"
 import { statusLabel } from "../../../../lib/status-label";
 import { BookingPanels } from "../../../../components/BookingPanels";
 import { JobControls } from "../../../../components/JobControls";
+import {JobSummaryIcon}from"../../../../components/JobSummaryIcon";
 import { StageTrack } from "../../../../experience/StageTrack";
 
 type RecordManualPaymentOutput = { paymentId: string; invoiceId: string };
@@ -43,7 +44,6 @@ export default function JobDetailPage() {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [warranty, setWarranty] = useState<Warranty | null>(null);
   const [inspection, setInspection] = useState<Inspection | null>(null);
-  const [audit, setAudit] = useState<AuditLog[]>([]);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [service, setService] = useState<Service | null>(null);
@@ -71,20 +71,19 @@ export default function JobDetailPage() {
   }, [bookingId, attempt]);
 
   useEffect(() => {
-    setPayment(undefined);setPaymentScope('');setInvoice(null);setApprovals([]);setInspection(null);setAudit([]);setWarranty(null);
+    setPayment(undefined);setPaymentScope('');setInvoice(null);setApprovals([]);setInspection(null);setWarranty(null);
     if(!job||!claims||!user||resolvedPrincipal!==user.uid||job.id!==id||job.tenantId!==claims.tenantId||resolvedId!==id)return;
     let alive=true;const scope=[id,claims.tenantId,user.uid].join('|');const safe=<T,>(set:(v:T)=>void)=>(v:T)=>{if(alive)set(v)};
     const fail=(err:Error)=>{if(alive){setPayment(undefined);setInvoice(null);setError(err.message)}};
     const unsubApprovals=listenToApprovalsForJob(job.id,claims.tenantId,safe(setApprovals),fail);
     const unsubPayment=listenToPaymentForJob(job.id,claims.tenantId,p=>{if(!alive)return;if(p&&(p.jobId!==id||p.tenantId!==claims.tenantId)){fail(Error('Payment record does not match this job.'));return}setPayment(p);setPaymentScope(scope)},fail);
     const unsubInvoice=listenToInvoiceForJob(job.id,claims.tenantId,v=>{if(!alive)return;if(v&&(v.jobId!==id||v.tenantId!==claims.tenantId)){fail(Error('Invoice does not match this job.'));return}setInvoice(v)},fail);
-    const unsubAudit=listenToAuditForEntity(claims.tenantId,'ServiceJob',job.id,safe(setAudit),fail);
     const unsubInspection=listenToInspectionForJob(job.id,safe(setInspection),()=>{});
     void getWarrantyForJob(job.id).then(safe(setWarranty)).catch(()=>{if(alive)setWarranty(null)});
     void getCustomer(job.customerId).then(safe(setCustomer)).catch(()=>{if(alive)setCustomer(null)});
     void getVehicle(job.vehicleId).then(safe(setVehicle)).catch(()=>{if(alive)setVehicle(null)});
     void getService(job.serviceId).then(safe(setService)).catch(()=>{if(alive)setService(null)});
-    return()=>{alive=false;unsubApprovals();unsubPayment();unsubInvoice();unsubAudit();unsubInspection()};
+    return()=>{alive=false;unsubApprovals();unsubPayment();unsubInvoice();unsubInspection()};
   },[job?.id,job?.customerId,job?.vehicleId,job?.serviceId,claims?.tenantId,attempt,resolvedId,id,user?.uid,resolvedPrincipal]);
   const currentScope=!!claims&&!!user&&resolvedPrincipal===user.uid&&resolvedId===id&&job?.id===id&&job?.tenantId===claims.tenantId;
   const currentPayment= currentScope&&paymentScope===[id,claims?.tenantId,user?.uid].join('|')?payment:undefined;
@@ -166,13 +165,15 @@ export default function JobDetailPage() {
         <div>
           <p className="ax-label">{job.isWalkIn ? "Walk-in job" : "Booked job"} · {service?.name ?? "Service"}</p>
           <h1>{plate}</h1>
-          <p className="ax-hero-sub">{[car, customer?.name].filter(Boolean).join(" · ")}</p>
+          <p className="ax-hero-sub"><JobSummaryIcon name="car"/>{[car, customer?.name].filter(Boolean).join(" · ")}</p>
         </div>
         <div className="ax-hero-side ax-job-summary">
+          <div className="ax-job-highlight"><JobSummaryIcon name="tools"/><div>
           <span className="ax-label">Job stage</span><StatusBadge label={job.status} />
-          <span className="ax-label">Job total</span><span className="ax-hero-total">{formatPaise(job.totalAmount)}</span>
-          <span className="ax-label">Payment</span><StatusBadge label={membershipCoveredLabel(job) ?? ((payment as (Payment & {invoiceReviewNeeded?:boolean})|null)?.invoiceReviewNeeded ? "Received - needs review" : (payment?.status==="completed"&&job.paymentStatus!=="paid")||(job.paymentStatus==="paid"&&payment?.status!=="completed") ? "Payment records syncing" : job.paymentStatus)} />
-          <details className="ax-job-price-details"><summary>Price breakdown</summary><div className="kv"><span>Service</span><span>{typeof job.priceBreakdown?.total==="number"?formatPaise(job.priceBreakdown.total):"Not available"}</span></div>{job.additionalWorkDelta!==0?<div className="kv"><span>Extra work</span><span>{formatPaise(job.additionalWorkDelta)}</span></div>:null}<p className="ax-note">Original booking prices and payment receipts are listed separately below.</p></details>
+          </div></div><div className="ax-job-highlight"><JobSummaryIcon name="invoice"/><div><span className="ax-label">Job total</span><span className="ax-hero-total">{formatPaise(job.totalAmount)}</span>
+          </div></div><div className="ax-job-highlight"><JobSummaryIcon name="payments"/><div><span className="ax-label">Payment</span><StatusBadge label={membershipCoveredLabel(job) ?? ((payment as (Payment & {invoiceReviewNeeded?:boolean})|null)?.invoiceReviewNeeded ? "Received - needs review" : (payment?.status==="completed"&&job.paymentStatus!=="paid")||(job.paymentStatus==="paid"&&payment?.status!=="completed") ? "Payment records syncing" : job.paymentStatus)} />
+          </div></div>
+          <details className="ax-job-price-details"><summary><span>Price breakdown</span><JobSummaryIcon name="chevron"/></summary><div className="kv"><span>Service</span><span>{typeof job.priceBreakdown?.total==="number"?formatPaise(job.priceBreakdown.total):"Not available"}</span></div>{job.additionalWorkDelta!==0?<div className="kv"><span>Extra work</span><span>{formatPaise(job.additionalWorkDelta)}</span></div>:null}<p className="ax-note">Original booking prices and payment receipts are listed separately below.</p></details>
         </div>
       </header>
 
@@ -183,6 +184,7 @@ export default function JobDetailPage() {
       <div className="ax-detail">
         <div className="ax-detail-main">
           {booking ? <BookingPanels compact booking={booking} job={job} service={service} bayName={bayName} onError={setError} /> : null}
+          <details className="ax-panel ax-job-disclosure"><summary>Performed work and QC</summary><JobWorkCoverage key={job.id} job={job}/></details>
           <details className="ax-panel ax-job-disclosure">
             <summary>Stage history ({job.statusHistory.length})</summary>
             <ol className="ax-timeline">
@@ -242,22 +244,7 @@ export default function JobDetailPage() {
             </section>
           )}
 
-          <details className="ax-panel ax-job-disclosure">
-            <summary>Job activity ({audit.length})</summary>
-            {audit.length === 0 ? (
-              <p className="ax-note" style={{ marginTop: 0 }}>No recorded changes yet.</p>
-            ) : (
-              <ol className="ax-timeline">
-                {audit.map((a) => (
-                  <li key={a.id}>
-                    <span className="ax-timeline-dot" style={{ background: "var(--ad-inactive)" }} aria-hidden="true" />
-                    <span>{jobActivityLabel(a.action)}<span className="ax-timeline-note">by {statusLabel(a.performedByRole)}</span></span>
-                    <span className="ax-timeline-meta">{formatDateTime(a.createdAt)}</span>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </details>
+
         </div>
 
         <aside className="ax-detail-side">
@@ -292,7 +279,7 @@ export default function JobDetailPage() {
           </details>
 
 
-          {OFFLINE_RECEIPT_REGISTER_ENABLED && currentScope && currentPayment !== undefined ? <OfflineReceiptPanel key={[job.id,user?.uid,claims?.tenantId].join("|")} jobId={job.id}/> : null}
+          {(OFFLINE_RECEIPT_REGISTER_ENABLED||Boolean(job.combinedPayment)) && currentScope && currentPayment !== undefined ? <OfflineReceiptPanel key={[job.id,user?.uid,claims?.tenantId].join("|")} jobId={job.id}/> : null}
           <JobPaymentPanel compact onRefreshPayment={()=>{setPayment(undefined);setStatus("Refreshing AutoDeck payment record. This does not charge or record money.");setAttempt(n=>n+1)}}
             job={job}
             booking={booking}

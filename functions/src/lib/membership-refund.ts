@@ -38,9 +38,9 @@ export async function readMembershipForRefund(tx: Transaction, db: Firestore, pa
   const ref = db.collection(COLLECTIONS.memberships()).doc(payment.membershipId);
   const snap = await tx.get(ref);
   if (!snap.exists) return null;
-  // A memberMembershipId is bound only at CONFIRM time, so CONFIRMED is the
-  // only open state that can hold a free pickup from this plan.
-  const pickups = await tx.get(db.collection(COLLECTIONS.pickupRequests()).where("memberMembershipId", "==", ref.id).where("status", "==", "CONFIRMED").limit(10));
+  // Legacy bindings start at confirmation. Private combined reservations also
+  // hold an entitlement while REQUESTED, so both open states need review alerts.
+  const pickups = await tx.get(db.collection(COLLECTIONS.pickupRequests()).where("memberMembershipId", "==", ref.id).where("status", "in", ["REQUESTED","CONFIRMED"]).limit(10));
   return { ref, data: snap.data() as Membership, inFlightPickupIds: pickups.docs.map((d) => d.id) };
 }
 

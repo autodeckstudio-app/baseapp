@@ -6,16 +6,12 @@ export type DayAction = "in" | "bs" | "be" | "out";
 export function dayActions(today: Pick<AttendanceRecord, "checkInAt" | "checkOutAt" | "breaks"> | null): Record<DayAction, boolean> {
   const checkedIn = !!today?.checkInAt;
   const out = !!today?.checkOutAt;
-  const onBreak = !!today?.breaks?.some((b) => !b.endedAt);
   return {
     in: !checkedIn,
-    // Break controls removed from the UI (Gauri 2 Nov basket item 3; Meet 16:25 "Accept gauris
-    // changes"). UI-only: records, history and the backend functions are untouched. "End break"
-    // stays available while a break is actually open so anyone mid-break can still finish the
-    // day and check out; no new break can be started.
+    // No standalone break controls. Open break ends only through explicit combined checkout.
     bs: false,
-    be: checkedIn && !out && onBreak,
-    out: checkedIn && !out && !onBreak,
+    be: false,
+    out: checkedIn && !out,
   };
 }
 

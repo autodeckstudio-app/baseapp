@@ -121,7 +121,7 @@ export default function BookServiceScreen() {
 
 
   if (loading) return <Loading label="Finding times" />;
-  if (loadError) return <Screen><Notice title="Can't open booking" body="Check your connection and try again." action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
+  if (loadError) return <Screen><Notice title="Can't open booking" body="Check your connection and try again." action={<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
   // Booking needs a verified customer record. Mirrors the quote-request
   // terminal account states: while auth resolves show a loading state (never a
   // false "Service not found"); a signed-out or claims-less session gets a
@@ -133,7 +133,7 @@ export default function BookServiceScreen() {
   if (auth.status !== "ready") return <Screen><Notice title="Sign in to book" body="Your account session could not be verified." action={<Button label="Sign in" onPress={() => router.push("/login")} />} /></Screen>;
   if (!ownerKey) {
     // Resolution error is truthful unknown (retry), never an account denial.
-    if (auth.customerDocResolution === "error") return <Screen><Notice title="Couldn't confirm your profile" body="Try again in a moment." action={<Button label="Try again" onPress={() => setRetryTick((n) => n + 1)} />} /></Screen>;
+    if (auth.customerDocResolution === "error") return <Screen><Notice title="Couldn't confirm your profile" body="Try again in a moment." action={<Button icon="refresh" label="Try again" onPress={() => setRetryTick((n) => n + 1)} />} /></Screen>;
     return <BookingRoleGate staff={auth.claims.role !== "customer"} onAccount={() => router.navigate("/(tabs)/profile")} onBrowse={() => router.navigate("/(tabs)/catalogue")} />;
   }
   if (!service || service.active === false) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." /></Screen>;
@@ -149,7 +149,7 @@ export default function BookServiceScreen() {
       <View style={{ gap: space.line }}>
         <Kicker>Booking for</Kicker>
         {selectedVehicle && vehicles.length <= 1 ? <Pane pad="inset"><View style={{flexDirection:"row",alignItems:"center",gap:14}}>{selectedVehicle.photoUrl?<CarThumb car={selectedVehicle} height={60} width={84} radius={12}/>:null}<View style={{flex:1,gap:6}}><T role="heading">{selectedVehicle.make} {selectedVehicle.model}</T><Plate value={selectedVehicle.registrationNumber}/></View></View></Pane> : null}
-        {vehiclesError ? <Notice title="Can't load your cars" body="Try again before choosing a time." action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>}/> : vehicles.length === 0 ? (
+        {vehiclesError ? <Notice title="Can't load your cars" body="Try again before choosing a time." action={<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>}/> : vehicles.length === 0 ? (
           <Notice title="Add your car first" body="We price and plan the work around it." action={<Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} />} />
         ) : vehicles.length === 1 ? null : (
           <Pane pad="gap">
@@ -191,7 +191,7 @@ export default function BookServiceScreen() {
       <View style={{ gap: space.line }}>
         <Kicker>Pick a time</Kicker>
         {dayMissed ? <T role="caption" tone="secondary">No free time {day === "weekend" ? "this weekend" : day} for this service. Showing the earliest day instead.</T> : null}
-        {slotsError ? <Notice title="Can't load times" body="Check your connection and try again." action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /> : null}
+        {slotsError ? <Notice title="Can't load times" body="Check your connection and try again." action={<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /> : null}
         {slotsLoading ? (
           <View style={{ gap: space.line }}><View style={{ flexDirection: "row", gap: 8 }}><Skeleton height={40} width={110} /><Skeleton height={40} width={110} /></View><Skeleton height={150} /></View>
         ) : !slotsError && Object.keys(slotsByDate).length === 0 ? (

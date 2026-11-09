@@ -6,8 +6,8 @@ export function pickupFeeLabel(feePaise: number | null | undefined, memberMember
   if (feePaise === 0) return "Free";
   const rupees = feePaise / 100;
   const fmt = (n: number) => `Rs ${Number.isInteger(n) ? n : n.toFixed(2)}`;
-  // The stored fee is for the whole request. "Pick up and drop back" is two legs, each an equal share (the server splits it the same way).
-  return kind === "both" ? `${fmt(rupees)} total (${fmt(rupees / 2)} each way)` : fmt(rupees);
+  // The stored total does not establish equal fees: directed road legs can differ.
+  return kind === "both" ? `${fmt(rupees)} total` : fmt(rupees);
 }
 
 /** A request with no price (the customer sent no pin) waits for admin to price it, so the customer and studio see the same fee. */

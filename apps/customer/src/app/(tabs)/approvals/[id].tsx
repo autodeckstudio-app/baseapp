@@ -91,7 +91,7 @@ export default function ApprovalDetailScreen() {
   if (error) {
     return (
       <Screen>
-        <Notice title="Can't load this request" body={error} action={<Button label="Retry" onPress={() => setRetryTick(n=>n+1)} />} />
+        <Notice title="Can't load this request" body={error} action={<Button icon="refresh" label="Retry" onPress={() => setRetryTick(n=>n+1)} />} />
       </Screen>
     );
   }

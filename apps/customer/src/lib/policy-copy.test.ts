@@ -12,7 +12,7 @@ describe("cancel bands come from one source", () => {
     expect(cancellationLine("ceramic")).toContain("24 hours");
   });
   it("app FAQs retain the core summary while the public site uses approved contact-first terms", () => {
-    for (const f of ["./studio-info.ts", "./showcase.ts"]) expect(r(f)).toContain("cancellationPolicySummary()");
+    expect(r("./studio-info.ts")).toContain("cancellationPolicySummary(true)");expect(r("./showcase.ts")).toContain("cancellationPolicySummary()");
     const approved = "For cancellation, refund, pickup, warranty or membership terms, please contact AutoDeck before confirming your booking.";
     for (const page of ["terms", "faq"]) {
       expect(r(`../../../site/src/pages/${page}.astro`)).toContain(`../data/redesign/${page}.html?raw`);

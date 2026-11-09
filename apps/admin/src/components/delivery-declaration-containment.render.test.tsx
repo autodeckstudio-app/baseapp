@@ -1,3 +1,4 @@
+vi.mock('../lib/work-coverage-service',()=>({getStaffJobWorkCoverage:async(jobId:string)=>({status:'not_recorded',jobId,revision:null,workLock:'open',items:[]})}));
 // Phone-width containment guard for the delivery declaration. The record
 // select's distinguishing labels (kind - scope - date - source - ref) are
 // intentionally long; unpinned, the select's intrinsic width blew the grid

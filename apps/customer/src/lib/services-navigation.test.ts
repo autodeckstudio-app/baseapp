@@ -155,3 +155,11 @@ it("global search finds the same exact offering by actual product, brand or cano
     expect(serviceSearch(x, q)).toBe(true);
   expect(serviceSearch(x, "film installation")).toBe(false);
 });
+
+import {FAMILY_COPY as summaries,familySummary as summary} from './services-navigation';
+it('all category summaries describe the offering rather than option counts',()=>{
+  for(const key of ['Ceramic','PPF','PPS','Colour PPF','Wraps','Window tint','Accessories & styling','Exterior wash','Interior cleaning','Complete wash','Headlight restoration','Wheels & tyres','Battery & electrical','AC care','Repairs','Inspection','Fabric','Leather','Glass','Film aftercare','Lights & plastics','Tyres & rubber','Wheels & trim','Trim restoration','Maintenance','Paint sealant','Surface care']){
+    expect(summaries[key]).toBeTruthy();expect(summary(key).length).toBeLessThanOrEqual(40);expect(summary(key)).not.toMatch(/current option|\d/);
+  }
+  expect(summary('Custom care')).toBe('Custom care for your car');
+});

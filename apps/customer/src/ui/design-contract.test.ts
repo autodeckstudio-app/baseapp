@@ -165,7 +165,7 @@ it("keeps Home glass to three blur surfaces, hides the campaign slot without rea
 });
 it("every journey element has a reason: no None status rows, a call route when online cancel is closed, a next step after pay at the studio",()=>{
   expect(read("src/ui/CarOverview.tsx")).not.toContain('"None"');
-  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain('label="Call the studio"');expect(b).toContain("tel:${STUDIO_INFO.phone}");expect(b).toContain("nextStepLine({ giftCovered");
+  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain('label="Call the studio"');expect(b).toContain("tel:${STUDIO_INFO.phone}");expect(b).toContain('title="Next step"');expect(b).toContain('"Pay at the studio."');
 });
 it("audit batch: no spinner price labels, no icon placeholders over titles, labelled remove, headline on You, action on every notification",()=>{
   expect(read("src/app/(tabs)/catalogue/index.tsx")).not.toContain("Checking price");
@@ -206,7 +206,7 @@ describe("booking flow guardrails", () => {
     expect(rd("app/(tabs)/catalogue/[id].tsx")).not.toContain("incl. GST");
     expect(rd("app/(tabs)/catalogue/index.tsx")).not.toContain("incl. GST");
     for (const f of ["ui/ServicePrice.tsx", "app/(tabs)/book/confirm.tsx", "app/(tabs)/bookings/[id].tsx", "app/(tabs)/bookings/invoice.tsx"]) {
-      expect(rd(f)).toMatch(/\.tax > 0/);
+      expect(rd(f)).toMatch(/(?:\.tax > 0|\.tax\?\?0\) > 0)/);
       expect(rd(f)).not.toMatch(/[^_]incl\. GST[^"]/);
     }
   });
@@ -251,7 +251,7 @@ describe("one confirm button", () => {
     expect(c).not.toMatch(/Or tap here/);
     expect(c).toMatch(/Pay & confirm/);
     expect(c).toMatch(/Confirm booking/);
-    expect(c).toMatch(/busy=\{booking\} disabled=\{booking\}/);
+    expect(c).toContain("busy={booking} disabled={booking||combinedMode&&(!combinedReview||!combinedNoPayment&&!combinedChoice)}");
     expect(c).toMatch(/Go back/);
     expect(c).toMatch(/payMode:/);
     expect(c).toMatch(/bookingPayOutcomeMessage/);
@@ -292,7 +292,7 @@ describe("services filters", () => {
     expect(read("src/app/(tabs)/garage/index.tsx")).toContain("<FilterPills");
     expect(src).not.toMatch(/What does your car need/);
     expect(src).not.toMatch(/ZoneCar|GOALS|zonesOf/);
-    expect(src).toMatch(/<Screen\s+(?:key=\{JSON.stringify\(path\)\}\s+)?appBar=/);
+    expect(src).toMatch(/<Screen\s+(?:scrollIdentity=\{JSON.stringify\(path\)\}\s+)?appBar=/);
     expect(read("src/ui/ServicesExplorer.tsx")).toContain("serviceHomeImages[h.key]");
   });
   it("unmapped types keep an icon rather than unrelated stock; newly generated matching service subjects are allowed", () => {
@@ -326,7 +326,7 @@ describe("garage switcher (concept C)", () => {
     const g = read("src/app/(tabs)/garage/index.tsx");
     expect(g).toContain('label: "All"');
     expect(g).toContain("dueChip(");
-    expect(g.split('label="Book a service"').length - 1).toBe(1);
+    expect(g.split("<GarageActions ").length - 1).toBe(1); expect(read("src/ui/GarageActions.tsx").split('label="Book a service"').length - 1).toBe(1);
     expect(g).not.toContain("GarageCard");
     expect(g).toContain("glassPane(");
   });
@@ -464,7 +464,7 @@ describe("nav order and drawer", () => {
   it("Services levels step back through the one header, not a second back link", () => {
     const c = read("src/app/(tabs)/catalogue/index.tsx");
     expect(c).not.toContain("\u2039 {label}");
-    expect(c).toContain("onBack={fromRoute ? () => navigate(parentPath(path), true) : undefined}");
+    expect(c).toContain("onBack={fromRoute ? () => router.canGoBack() ? router.back() : navigate(parentPath(path), true) : undefined}");
     expect(read("src/ui/GarageCard.tsx")).toContain("minHeight: 44");
   });
   it("a plan wash is labelled as a wash and its expiry date is human readable", () => {
@@ -642,14 +642,17 @@ describe("service detail (batch 2)", () => {
     expect(d).not.toContain('label: "Overview"');
     expect(d).not.toContain('label: "Reviews"');
     expect(d).toContain("reviews.count > 0");
-    expect((d.match(/<ServiceScope /g) ?? []).length).toBe(1);
+    expect((d.match(/<ServiceScope /g) ?? []).length).toBe(2);
+    expect(d).toContain('placement="description"');
+    expect(d).toContain('placement="details"');
+    expect(d).not.toContain('placement="combined"');
     expect((d.match(/H\("Questions"/g) ?? []).length).toBe(0); // questions list removed; one Ask-the-studio row in the scope card instead
     expect(d).not.toContain("FAQS");
     expect(d).toContain("careTip="); // exactly one care tip shown, inside the scope card
     const scope = read("src/ui/ServiceScope.tsx");
     expect(scope).not.toContain("Before you book");
     expect(scope).toContain("What's included");
-    expect((scope.match(/Ask the studio/g) ?? []).length).toBe(3); // the single ask row, plus the empty-scope fallback body and action
+    expect((scope.match(/Ask the studio/g) ?? []).length).toBe(4); // the single ask row, plus the empty-scope fallback body and action
     expect(scope).not.toContain("Ask about this service"); // the duplicate ask box is gone
   });
 });
@@ -783,8 +786,8 @@ describe("no studio photo behind app pages; the page light is the orange lamp gl
   });
 });
 
-it("gift-covered zero-total bookings use the shared next-step helper (behaviour tested in booking-next-step.test.ts)",()=>{
-  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain("Boolean(booking.giftId) && booking.priceBreakdown.total === 0");expect(b).toContain("nextStepLine({ giftCovered, jobStatus: job?.status ?? null");
+it("gift-covered zero-total detail says no payment needed rather than offering payment (also actual route tested)",()=>{
+  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain("Boolean(booking.giftId) && booking.priceBreakdown.total === 0");expect(b).toContain("Included with your gift - no payment needed");expect(b).toContain("const canPay = !noPaymentDue");
   const c=read("src/app/(tabs)/book/confirm.tsx");expect(c).toContain("gift:Boolean(giftCode)");expect(read("src/lib/booking-confirm-copy.ts")).toContain("Your gift covers the selected wash.");expect(c).not.toContain("Price may vary based on final work.");
 });
 

@@ -41,3 +41,6 @@ export function pickupCounts(
   }
   return c;
 }
+
+/** Tabs count every displayed row. Eligibility remains a separate, explicit fact. */
+export function pickupTabCount(counts:PickupCounts,status:keyof Pick<PickupCounts,'REQUESTED'|'CONFIRMED'|'DONE'|'DECLINED'|'ALL'>){return counts[status]+(status==='REQUESTED'?counts.closeRequested:status==='CONFIRMED'?counts.closeConfirmed:0);}

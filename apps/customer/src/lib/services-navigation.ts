@@ -19,14 +19,39 @@ export const HOME_COPY: Record<ServiceHomeKey, string> = {
   garage: "Inspection, diagnostics and repair care",
   modifications: "Colour film, wraps, tint and accessories",
 };
+/** Short category summaries. Exact products, coverage and terms stay on the detail page. */
 export const FAMILY_COPY: Record<string, string> = {
-  Ceramic:
-    "Paint coatings, with the exact product and preparation confirmed for your car.",
-  PPF: "Paint protection film. Full-body fitting, removal and replacement are separate work.",
-  PPS: "Spray-on paint protection. A different treatment from film or ceramic coating.",
-  "Colour PPF":
-    "Coloured and black paint protection films. The studio confirms the film, coverage and quote for your car.",
+  Ceramic: "Ceramic paint coatings",
+  PPF: "Film fitting, removal or replacement",
+  PPS: "Spray-on paint protection",
+  "Colour PPF": "Coloured and black protection films",
+  Wraps: "Full or partial vinyl wraps",
+  "Window tint": "Window films, quoted for your car",
+  "Accessories & styling": "Accessories, quoted per job",
+  "Exterior wash": "Exterior wash and dry",
+  "Interior cleaning": "Seats, mats and interior cleaning",
+  "Complete wash": "Interior and exterior cleaning",
+  "Headlight restoration": "Headlight restoration and buffing",
+  "Wheels & tyres": "Wheel alignment and balancing",
+  "Battery & electrical": "Battery and charging checks",
+  "AC care": "Cooling and leak checks",
+  Repairs: "Inspect first, then quote repairs",
+  Inspection: "Car checks and condition report",
+  Fabric: "Coatings for seats and mats",
+  Leather: "Coatings for leather seats and trim",
+  Glass: "Water-repellent glass coatings",
+  "Film aftercare": "Care coatings for protection film",
+  "Lights & plastics": "Coatings for lights and plastics",
+  "Tyres & rubber": "Care for tyres and rubber",
+  "Wheels & trim": "Coatings for wheels and trim",
+  "Trim restoration": "Faded trim restoration and coating",
+  Maintenance: "Coating maintenance top-ups",
+  "Paint sealant": "Paint sealants for shine and care",
+  "Surface care": "Care for your car's surfaces",
 };
+export function familySummary(family: string): string {
+  return FAMILY_COPY[family] ?? `${family} for your car`;
+}
 /** Display grouping only. Product identity, price, eligibility and scope remain on the original record. */
 export function servicePlacement(
   s: Pick<Service, "id" | "name" | "category" | "description">,

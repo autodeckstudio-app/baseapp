@@ -316,7 +316,7 @@ describe("fresh ownership/identity re-checks inside the write transaction", () =
     h.rows.set(`papers/${P}`, seedPaper({ status: "PENDING", verificationMode: "review" }));
     h.meta.set(OLD, { md5Hash: MD5, size: 100, contentType: "image/webp" });
     h.beforeTx = () => h.rows.set(`vehicles/${V}`, { ...h.rows.get(`vehicles/${V}`), deletedAt: "2026-10-31T00:00:00.000Z" });
-    await finalizeMyPaper.run(req("me", { paperId: P }));
+    await expect(finalizeMyPaper.run(req("me", { paperId: P }))).rejects.toMatchObject({ code: "failed-precondition" });
     expect(h.rows.get(`papers/${P}`).status).toBe("PENDING");
     expect(h.audit).toEqual([]);
   });
@@ -415,8 +415,7 @@ describe("truthful finalize outcomes and delete-after-proof ordering", () => {
     seedPendingInsurance();
     h.ocr = verifiedOcr;
     h.beforeTx = () => h.rows.set(`vehicles/${V}`, { ...h.rows.get(`vehicles/${V}`), deletedAt: "2026-10-31T00:00:00.000Z" });
-    const res = await finalizeMyPaper.run(req("me", { paperId: P }));
-    expect(res.status).toBe("PENDING");
+    await expect(finalizeMyPaper.run(req("me", { paperId: P }))).rejects.toMatchObject({ code: "failed-precondition" });
     expect(h.rows.get(`papers/${P}`).status).toBe("PENDING");
     expect(h.storageDeleted).toEqual([]);
   });
@@ -766,4 +765,18 @@ describe("reviewer qualifications: explicit-null expectation, same-MIME original
     expect(replay2).toMatchObject({ replayed: true, photoState: "none", uploadUrl: null });
     expect(h.rows.get(`papers/${first.id}`).evidencePath).toBe(bPath); // record untouched, nothing restored
   });
+});
+
+it('finalize aborts if car plate changes after OCR, without overwriting evidence or decision',async()=>{
+ h.rows.set('papers/'+P,seedPaper({status:'PENDING',verificationMode:'review'}));
+ h.meta.set(OLD,{size:10,contentType:'image/webp'});
+ h.ocr={text:'Registration GJ01AB1234 valid to 31/12/2030',confidence:99};
+ h.beforeTx=()=>{h.rows.set('vehicles/'+V,{...h.rows.get('vehicles/'+V),registrationNumber:'MH40CQ3187'})};
+ const before={...h.rows.get('papers/'+P)};
+ await expect(finalizeMyPaper.run(req('me',{paperId:P}))).rejects.toMatchObject({code:'aborted'});
+ expect(h.rows.get('papers/'+P)).toEqual(before);expect(h.storageDeleted).toHaveLength(0);
+});
+it('a known different typed RC refuses submit before record or photo-URL creation',async()=>{
+ await expect(submitMyPaper.run(req('me',{studioId:'s1',vehicleId:V,kind:'RC',reference:'MH40CQ3187'}))).rejects.toMatchObject({code:'failed-precondition'});
+ expect([...h.rows.keys()].filter(k=>k.startsWith('papers/'))).toHaveLength(1);expect(h.signed).toHaveLength(0);
 });

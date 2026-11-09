@@ -86,3 +86,4 @@ describe("tab roots are navigated, never pushed", () => {
     expect(s).toContain("detachInactiveScreens: false");
   });
 });
+describe('quote secondary roots',()=>{it('quote inbox/request have Back to catalogue only for directentry fallback',()=>{expect(backFallback(['(tabs)','quotes'])).toBe('/(tabs)/catalogue');expect(backFallback(['(tabs)','quote-request'])).toBe('/(tabs)/catalogue')})});

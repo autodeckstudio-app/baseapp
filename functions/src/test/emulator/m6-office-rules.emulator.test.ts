@@ -66,6 +66,7 @@ async function seed(
 ) {
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
     if(coll==="papers" && typeof data["customerId"]==="string")await getFirestore().collection("customers").doc(data["customerId"]).set({id:data["customerId"],authUid:data["customerId"],tenantId:FIRST_TENANT_ID,deletedAt:null});
+    if(coll==="papers" && typeof data["vehicleId"]==="string")await getFirestore().collection("vehicles").doc(data["vehicleId"]).set({id:data["vehicleId"],ownerId:data["customerId"],tenantId:FIRST_TENANT_ID,deletedAt:null});
     await ctx.firestore().collection(coll).doc(docId).set({
       id: docId,
       tenantId: FIRST_TENANT_ID,

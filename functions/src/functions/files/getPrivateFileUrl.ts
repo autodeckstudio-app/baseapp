@@ -10,7 +10,7 @@ import { getStorage } from "firebase-admin/storage";
 import { z } from "zod";
 import type { Customer, PaperVerification, Vehicle } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
+import { extractUser, assertRole, assertTenant, assertStudio } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
@@ -51,6 +51,7 @@ export const getPrivateFileUrl = onCall({ region: "asia-south1", invoker: "publi
   }
 
   let path: string | null = null;
+  let assertPaperRead: (() => Promise<void>) | null = null;
   let vehicleRef: ReturnType<ReturnType<typeof getFirestore>["doc"]> | null = null;
   let checkedPaperGeneration: string | null = null;
   let uploadedPaperGeneration: string | null = null;
@@ -63,6 +64,7 @@ export const getPrivateFileUrl = onCall({ region: "asia-south1", invoker: "publi
     if (!snap.exists) throw new HttpsError("not-found", "Document not found.");
     const paper = snap.data() as PaperVerification & { evidencePath?: string | null; evidenceGeneration?: string | null };
     assertTenant(user, paper.tenantId);
+    assertStudio(user, paper.studioId, "Paper");
     // Fresh CURRENT vehicle proof, not the record's stored customerId alone: after a transfer
     // or archive the former owner must not keep minting reads against a stale record.
     const vSnap = await db.collection(COLLECTIONS.vehicles()).doc(paper.vehicleId).get();
@@ -73,6 +75,14 @@ export const getPrivateFileUrl = onCall({ region: "asia-south1", invoker: "publi
     if (user.claims.role === "customer" && (paper.customerId !== customerDocId || vehicle.ownerId !== customerDocId)) {
       throw new HttpsError("permission-denied", "Not your document.");
     }
+    assertPaperRead = async () => {
+      const [freshPaperSnap, freshVehicleSnap] = await Promise.all([db.collection(COLLECTIONS.papers()).doc(data.id).get(), db.collection(COLLECTIONS.vehicles()).doc(paper.vehicleId).get()]);
+      const freshPaper = freshPaperSnap.data() as typeof paper | undefined;
+      const freshVehicle = freshVehicleSnap.data() as Vehicle | undefined;
+      if (!freshPaper || !freshVehicle || freshVehicle.deletedAt || freshVehicle.tenantId !== paper.tenantId || freshPaper.tenantId !== paper.tenantId || freshPaper.vehicleId !== paper.vehicleId || freshPaper.customerId !== paper.customerId || freshPaper.evidencePath !== paper.evidencePath || freshPaper.evidenceGeneration !== paper.evidenceGeneration || (freshPaper as {uploadedGeneration?:string|null}).uploadedGeneration !== (paper as {uploadedGeneration?:string|null}).uploadedGeneration) throw new HttpsError("failed-precondition", "This document changed. Open it again.");
+      assertStudio(user, freshPaper.studioId, "Paper");
+      if (user.claims.role === "customer" && (freshPaper.customerId !== customerDocId || freshVehicle.ownerId !== customerDocId)) throw new HttpsError("permission-denied", "Not your document.");
+    };
     path = paper.evidencePath ?? null;
     // The record's identity comes from the document path (the request id), never from a stored
     // field: a record whose stored id contradicts its own document id is corrupt and refused.
@@ -138,6 +148,7 @@ export const getPrivateFileUrl = onCall({ region: "asia-south1", invoker: "publi
       throw new HttpsError("permission-denied", "Vehicle ownership or photo changed. Try again.");
     }
   }
+  if (assertPaperRead) await assertPaperRead();
   if (data.kind === "inspectionPhoto") await assertInspectionRead();
   // Known limit, by design: a signed read URL stays usable for up to READ_WINDOW_MS after it
   // is minted. A transfer or archive landing in that window does NOT instantly revoke it -

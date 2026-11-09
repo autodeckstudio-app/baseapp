@@ -36,8 +36,8 @@ describe("admin layout polish", () => {
     expect(css).toContain(':not([data-hero="on"]) .ax-page-head h1');
   });
   it("renders refund work as a collapsible bar and leaves its disabled-control copy intact", () => {
-    expect(views).toContain('<details className="ax-panel ax-rw"');
-    expect(views).toContain("Not yet activated in production - held for activation review");
+    expect(views).toContain('<section className="ax-panel ax-rw ax-rw-simple"');
+    expect(views).toContain("Refund actions unavailable");
     expect(views).toContain("!p.actionsEnabled");
   });
   it("gives the payments columns fixed widths that fit a 1180px tablet", () => {

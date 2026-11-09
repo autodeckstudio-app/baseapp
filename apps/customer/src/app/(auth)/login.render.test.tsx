@@ -71,8 +71,11 @@ it("cancelled provider login does not falsely report successful sign-in", async 
     await Promise.resolve();
   });
   expect(r.root.findByType("login-stage").props.error).toBe(
-    "Sign-in was cancelled.",
+    "The Google window closed before sign-in finished. Try again.",
   );
   expect(r.root.findByType("auth-button").props.busy).toBe(false);
   r.unmount();
 });
+
+it("same-tick repeated taps launch only one Google request",async()=>{let resolve:any;h.signin.mockImplementation(()=>new Promise(r=>resolve=r));let r:any;await act(async()=>{r=create(<Login/>)});const press=r.root.findByType("auth-button").props.onPress;await act(async()=>{press();press();press()});expect(h.signin).toHaveBeenCalledTimes(1);await act(async()=>resolve(undefined));await act(async()=>{vi.advanceTimersByTime(10000)});r.unmount()});
+it("overlapping-provider code does not claim the user cancelled",async()=>{h.signin.mockRejectedValue({code:"auth/cancelled-popup-request"});let r:any;await act(async()=>{r=create(<Login/>)});await act(async()=>{r.root.findByType("auth-button").props.onPress();await Promise.resolve()});expect(r.root.findByType("login-stage").props.error).toBe("Another sign-in interrupted this attempt. Try again.");r.unmount()});

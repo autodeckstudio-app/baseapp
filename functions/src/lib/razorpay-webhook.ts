@@ -1,3 +1,7 @@
+import{readConsultPaymentBinding}from"./consult-payment.js";
+import{isDeepStrictEqual}from "node:util";
+import {readCombinedPaymentBasis,assertCombinedSettlementPayment,type CombinedPaymentBasis}from "./combined-settlement.js";
+import {checkedCombinedPayment}from "@autodeck/core";
 import { resolveWaitingCancel } from "./waiting-cancel.js";
 import { isHoldExpired } from "./booking-hold.js";
 // Applies a verified payment-provider event to Firestore. Pure of HTTP: the
@@ -374,12 +378,18 @@ export async function processProviderEvent(
         // an EXPIRED hold means the sweep may release the slot, so money
         // landing now is recorded but the booking is NOT confirmed - the
         // office queue reconciles (capacity + refund), never silent.
+        const combinedJobs=bk?.combinedPayment&&payment.bookingId?await tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId","==",payment.bookingId).limit(2)):null;
+        const combinedJob=combinedJobs?.size===1?combinedJobs.docs[0]!.data()as ServiceJob:undefined;
+        let combinedAnomaly:string|null=null;
+        if(bk?.combinedPayment){try{const cp=checkedCombinedPayment(bk.combinedPayment,bk.totalAmount);if(cp.choice!=="advance20"||cp.payNowPaise!==payment.amount||bk.advancePaymentId!==payment.id||bk.customerId!==payment.customerId||!combinedJob||combinedJob.tenantId!==bk.tenantId||combinedJob.studioId!==bk.studioId||combinedJob.customerId!==bk.customerId||combinedJob.totalAmount!==bk.totalAmount||combinedJob.status==="CANCELLED"||combinedJob.paymentStatus==="paid"||!isDeepStrictEqual(combinedJob.combinedPayment,bk.combinedPayment))combinedAnomaly="combined_advance_binding";}catch{combinedAnomaly="combined_advance_snapshot";}}
+        if(bk?.combinedPayment&&(bk as Booking&{quoteJourneyId?:string}).quoteJourneyId&&combinedJob&&!combinedAnomaly){try{await readConsultPaymentBinding(db,tx,combinedJob,bk as unknown as Record<string,unknown>)}catch{combinedAnomaly="combined_quote_approval_changed"}}
         const holdExpired = !!bk && bk.status === "PENDING" && isHoldExpired(bk, Date.parse(now));
         const anomaly = !bk ? "booking_missing"
           : bk.tenantId !== payment.tenantId ? "tenant_mismatch"
           : (bk.studioId ?? null) !== (payment.studioId ?? null) ? "studio_mismatch"
           : bk.status === "CANCELLED" ? "booking_cancelled"
           : bk.status === "EXPIRED" ? "advance_hold_expired"
+          : combinedAnomaly ? combinedAnomaly
           : bk.advancePaidAt ? "advance_already_paid"
           : holdExpired ? "advance_hold_expired"
           : null;
@@ -392,16 +402,18 @@ export async function processProviderEvent(
           after: { status: "completed", targetType: "booking", bookingId: payment.bookingId, via: "razorpay_webhook" },
           ...(anomaly ? { metadata: { needsReview: anomaly } } : {}) });
         if (!anomaly && bRef && bk) {
+          if(bk.combinedPayment&&combinedJobs?.size===1){tx.update(combinedJobs.docs[0]!.ref,{paymentStatus:"partial",combinedSettlement:{advancePaymentId:payment.id,advanceCapturedPaise:payment.amount,balanceDuePaise:bk.totalAmount-payment.amount,settlementPaymentId:null,settledAt:null},updatedAt:now});}
+
           if (bk.status === "PENDING") {
             // Active held booking: confirm it (capacity was reserved by the
             // hold), clear the hold, mark advance-paid - one transition.
-            tx.update(bRef, { status: "CONFIRMED", confirmedAt: now, holdExpiresAt: null, advancePaidAt: now, updatedAt: now });
+            tx.update(bRef, { status: "CONFIRMED", confirmedAt: now, holdExpiresAt: null, advancePaidAt: now,...(bk.combinedPayment?{paymentStatus:"partial"}:{}), updatedAt: now });
             writeAuditLog(tx, { action: "booking.confirmed", entityType: "Booking", entityId: bRef.id, user, studioId: payment.studioId,
               before: { status: "PENDING" }, after: { status: "CONFIRMED", advancePaidAt: now, paymentId: payment.id, via: "razorpay_webhook" } });
           } else {
             // Pre-activation vintage (CONFIRMED without the hold): marker
             // only, the status lifecycle is unchanged.
-            tx.update(bRef, { advancePaidAt: now, updatedAt: now });
+            tx.update(bRef, { advancePaidAt: now,...(bk.combinedPayment?{paymentStatus:"partial"}:{}), updatedAt: now });
             writeAuditLog(tx, { action: "booking.advance_paid", entityType: "Booking", entityId: bRef.id, user, studioId: payment.studioId,
               after: { advancePaidAt: now, paymentId: payment.id, via: "razorpay_webhook" } });
           }
@@ -417,7 +429,9 @@ export async function processProviderEvent(
       const booking = bookingRef ? ((await tx.get(bookingRef)).data() as Booking | undefined) : undefined;
       // Money has arrived. If the job is gone, cancelled or already settled another way we still
       // record the payment as completed (it IS received) but touch nothing else, and flag it.
-      const anomaly = !job ? "job_missing" : job.status === "CANCELLED" ? "job_cancelled" : job.paymentStatus === "paid" ? "job_already_paid" : null;
+      let combinedBasis:CombinedPaymentBasis|null=null,combinedAnomaly:string|null=null;
+      if(job?.combinedPayment){try{combinedBasis=await readCombinedPaymentBasis(db,tx,job);assertCombinedSettlementPayment(job,payment,combinedBasis);}catch{combinedAnomaly="combined_balance_needs_review";}}
+      const anomaly = !job ? "job_missing" : job.status === "CANCELLED" ? "job_cancelled" : job.paymentStatus === "paid" ? "job_already_paid" : combinedAnomaly;
       const prepared = job && !anomaly ? await prepareJobInvoice(db, tx, job, payment.id) : null;
       record("completed");
       if (!job || anomaly || !prepared || prepared.existing) {
@@ -436,10 +450,11 @@ export async function processProviderEvent(
         return "completed";
       }
       const { invoiceRef, invoice } = prepared;
+      if(combinedBasis?.advancePaymentId){invoice.paymentAllocation={advancePaymentId:combinedBasis.advancePaymentId,advancePaidPaise:combinedBasis.advanceCapturedPaise,settlementPaymentId:payment.id,settlementPaidPaise:payment.amount};tx.update(db.collection(COLLECTIONS.payments()).doc(combinedBasis.advancePaymentId),{invoiceId:invoiceRef.id,updatedAt:now});}
       tx.update(paymentRef, { status: "completed", razorpayPaymentId: ev.providerPaymentId || payment.razorpayPaymentId,
         invoiceId: invoiceRef.id, providerEventId: ev.providerEventId, completedAt: now, updatedAt: now });
       tx.set(invoiceRef, invoice);
-      tx.update(jobRef, { paymentStatus: "paid", updatedAt: now });
+      tx.update(jobRef, { paymentStatus: "paid",...(combinedBasis?{combinedSettlement:{advancePaymentId:combinedBasis.advancePaymentId,advanceCapturedPaise:combinedBasis.advanceCapturedPaise,balanceDuePaise:0,settlementPaymentId:payment.id,settledAt:now}}:{}),updatedAt: now });
       if (bookingRef) {
         // Paying a held (PENDING) online booking confirms it. Paid bookings that were already confirmed only get the payment flag.
         const confirms = booking?.status === "PENDING";
@@ -574,6 +589,7 @@ export async function processProviderEvent(
     const gift = giftSnapRefund?.exists ? (giftSnapRefund.data() as Gift) : null;
     const job = jobSnapRefund?.exists ? (jobSnapRefund.data() as ServiceJob) : null;
     const booking = bookingSnapRefund?.exists ? (bookingSnapRefund.data() as Booking) : null;
+    if(booking?.combinedPayment){tx.update(paymentRef,{invoiceReviewNeeded:true,updatedAt:now});record('related_mismatch');return 'related_mismatch';}
     const relatedMismatch =
       // A carried link must resolve: dangling invoiceId/giftId/jobId/bookingId.
       (payment.invoiceId ? !inv : invSnap !== null && !inv) ||

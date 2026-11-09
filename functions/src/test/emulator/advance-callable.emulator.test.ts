@@ -175,3 +175,15 @@ it("activation rejects already confirmed and paid holds without a new payment", 
   await expect(requestAdvancePayment.run({ data: { bookingId: p.bookingId }, auth: auth(p.customerId) } as never)).rejects.toThrow(/active hold/);
   expect((await db.collection("payments").doc(p.paymentId).get()).exists).toBe(false);
 });
+
+it('displayed advance mismatch refuses a new claim or an existing-link retry before provider interaction',async()=>{
+  const s=await seed();
+  const req={data:{bookingId:s.bookingId,expectedAdvancePaise:23500},auth:auth(s.customerId)} as never;
+  await expect(requestAdvancePayment.run(req)).rejects.toMatchObject({details:{reason:'advance_amount_changed'}});
+  expect((await db.collection('payments').doc(s.paymentId).get()).exists).toBe(false);
+  expect((await db.collection('bookings').doc(s.bookingId).get()).data()!.advancePaymentId).toBeUndefined();
+  await requestAdvancePayment.run({data:{bookingId:s.bookingId,expectedAdvancePaise:23600},auth:auth(s.customerId)} as never);
+  const before=(await db.collection('payments').doc(s.paymentId).get()).data();
+  await expect(requestAdvancePayment.run(req)).rejects.toMatchObject({details:{reason:'advance_amount_changed'}});
+  expect((await db.collection('payments').doc(s.paymentId).get()).data()).toEqual(before);
+});

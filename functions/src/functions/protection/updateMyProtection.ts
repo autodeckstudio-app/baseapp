@@ -10,10 +10,10 @@ import type { Protection, Vehicle } from "@autodeck/core";
 import { COLLECTIONS, SUBCOLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
-import { resolveCustomerDocId } from "../../lib/customer-identity.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { updateMyProtectionSchema } from "../../schemas/protection.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
 
 export const updateMyProtection = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
@@ -23,10 +23,7 @@ export const updateMyProtection = onCall({ region: "asia-south1", enforceAppChec
   await enforceRateLimit(subjectFrom(user), "protection.update");
 
   const db = getFirestore();
-  // Customer-role boundary preserved exactly. Resolve the canonical doc id when a
-  // profile exists; otherwise keep the exact base uid keying. Ownership below accepts
-  // either binding of the same verified principal (pre-fix records are uid-keyed).
-  const customerDocId = (await resolveCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid)) ?? user.uid;
+  const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
   const ref = db.collection(SUBCOLLECTIONS.vehicleProtections(data.vehicleId)).doc(data.protectionId);
   const vehicleRef = db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId);
 
@@ -38,12 +35,12 @@ export const updateMyProtection = onCall({ region: "asia-south1", enforceAppChec
     if (!vehicleSnap.exists) throw new HttpsError("not-found", "Vehicle not found.");
     const vehicle = vehicleSnap.data() as Vehicle;
     assertTenant(user, vehicle.tenantId);
-    if (vehicle.ownerId !== customerDocId && vehicle.ownerId !== user.uid) throw new HttpsError("permission-denied", "Not your car.");
+    if (vehicle.ownerId !== customerDocId) throw new HttpsError("permission-denied", "Not your car.");
     if (vehicle.deletedAt) throw new HttpsError("failed-precondition", "This car is archived.");
     if (!snap.exists) throw new HttpsError("not-found", "Protection not found.");
     const existing = snap.data() as Protection;
     assertTenant(user, existing.tenantId);
-    if (existing.customerId !== customerDocId && existing.customerId !== user.uid) throw new HttpsError("permission-denied", "Not your record.");
+    if (existing.customerId !== customerDocId) throw new HttpsError("permission-denied", "Not your record.");
     if (existing.source !== "customer") throw new HttpsError("permission-denied", "Only details you added can be edited here.");
     if (existing.kind !== "ppf" && existing.kind !== "ceramic") throw new HttpsError("permission-denied", "Only cosmetic protection details can be edited here.");
     if (existing.status !== "unverified") throw new HttpsError("failed-precondition", "This record can no longer be edited.");

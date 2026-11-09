@@ -1,3 +1,4 @@
+import {readRecordedHandover} from "../../lib/recorded-work-handover.js";
 import {hasReleasedBay} from "@autodeck/core";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
@@ -191,7 +192,7 @@ export const advanceJobStatus = onCall(
       }
       // The performed-work declaration belongs ONLY to the delivery step: supplying it
       // on any other transition is a caller bug, never silently ignored.
-      if (data.protectionWork !== undefined && nextStatus !== "DELIVERED") {
+      if ((data.protectionWork !== undefined || data.recordedWorkRevision !== undefined) && nextStatus !== "DELIVERED") {
         throw new HttpsError(
           "failed-precondition",
           "A protection work declaration is only accepted when delivering the vehicle.",
@@ -316,6 +317,7 @@ export const advanceJobStatus = onCall(
       // bay assignment — doc07 §7.5).
       let warranty: ReturnType<typeof buildWarranty> = null;
       let protectionPlan: { outcomes: PlannedEvent[] } = { outcomes: [] };
+      let performedEvents = data.protectionWork;
       const warrantyRef = db
         .collection(COLLECTIONS.warranties())
         .doc(data.jobId);
@@ -323,7 +325,13 @@ export const advanceJobStatus = onCall(
         // Delivery REQUIRES an explicit performed-work declaration: [] means
         // "reviewed - no protection work of any kind on this visit"; an absent
         // field means the staff never made the choice. The two never blur.
-        if (data.protectionWork === undefined)
+        if(data.recordedWorkRevision!==undefined){
+          if(data.protectionWork!==undefined)throw new HttpsError("invalid-argument","Choose recorded work or a manual declaration, not both.");
+          performedEvents=await readRecordedHandover(tx,db,{...freshJob,id:jobId},data.recordedWorkRevision);
+        }else if((await tx.get(db.collection("jobPerformedWork").doc(jobId))).exists){
+          throw new HttpsError("failed-precondition","This visit has recorded work. Review and use that work record before delivering.");
+        }
+        if (performedEvents === undefined)
           throw new HttpsError(
             "failed-precondition",
             "Confirm the protection work declaration before delivering - record the work performed, or explicitly record none.",
@@ -428,7 +436,7 @@ export const advanceJobStatus = onCall(
           tx.get(db.collection(COLLECTIONS.services()).doc(freshJob.serviceId)),
           tx.get(warrantyRef),
         ]);
-        if (serviceSnap.exists && !warrantySnap.exists) {
+        if (serviceSnap.exists && !warrantySnap.exists && data.recordedWorkRevision === undefined) {
           warranty = buildWarranty({
             job: freshJob,
             service: serviceSnap.data() as Service,
@@ -444,7 +452,7 @@ export const advanceJobStatus = onCall(
         // records are keyed by their AUTHORITATIVE doc id (a corrupt stored id
         // redirects nothing) and must belong to this job's tenant + vehicle.
         const declaredEvents: ProtectionWorkEvent[] = (
-          data.protectionWork ?? []
+          performedEvents ?? []
         ).map((w) =>
           w.action === "remove"
             ? {
@@ -509,7 +517,7 @@ export const advanceJobStatus = onCall(
         statusHistory: [...freshJob.statusHistory, newHistoryEntry],
         updatedAt: now,
         ...(nextStatus === "DELIVERED"
-          ? { sealedAt: now, protectionWork: data.protectionWork ?? [] }
+          ? { sealedAt: now, protectionWork: performedEvents ?? [], ...(data.recordedWorkRevision!==undefined?{performedWorkRevision:data.recordedWorkRevision}:{}) }
           : {}),
       });
 

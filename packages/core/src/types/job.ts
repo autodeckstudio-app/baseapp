@@ -1,3 +1,4 @@
+import type{CombinedPaymentSnapshot,BookingTransportSnapshot}from'../combined-checkout.js';
 import type { PriceBreakdown } from "./booking.js";
 import type { VehicleSnapshot } from "./customer.js";
 
@@ -19,6 +20,9 @@ export interface JobStatusHistoryEntry {
 }
 
 export interface ServiceJob {
+  combinedPayment?:CombinedPaymentSnapshot;
+  combinedSettlement?:{advancePaymentId:string|null;advanceCapturedPaise:number;balanceDuePaise:number;settlementPaymentId:string|null;settledAt:string|null};
+  transportSnapshot?:Readonly<BookingTransportSnapshot>|null;
   /** Display snapshot only; settlement validates linked consumption server-side. */
   membershipWashUsed?: boolean;
   settlementKind?: "membership_covered";

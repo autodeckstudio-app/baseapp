@@ -8,13 +8,15 @@ vi.mock("firebase-admin/firestore", () => {
   const ref = (path: string) => ({ path, get: async () => ({ exists: h.rows.has(path), data: () => h.rows.get(path) }) });
   return { getFirestore: () => ({ collection: (c: string) => ({ doc: (id: string) => ref(`${c}/${id}`) }), runTransaction: async (fn: any) => fn({ get: async (r: any) => r.get(), update: (r: any, d: any) => h.rows.set(r.path, { ...h.rows.get(r.path), ...d }) }) }) };
 });
-vi.mock("@autodeck/database", () => ({ COLLECTIONS: { carListings: () => "carListings" } }));
+vi.mock("@autodeck/database", () => ({ COLLECTIONS: { carListings: () => "carListings", customers: () => "customers" } }));
+// Active handlers resolve canonical customer IDs separately from login UIDs.
+vi.mock("../../lib/customer-identity.js",()=>({ requireCustomerDocId: async (_db: unknown,_path: string,_tenant: string, uid: string)=>`canonical-${uid}` }));
 import { removeMyListingPhoto, replaceMyListingPhoto } from "../../functions/carsale/carsale.js";
 const req = (uid: string, data: any): any => ({ data, auth: { uid, token: { role: "customer", tenantId: "t" } } });
 beforeEach(() => {
   h.rows.clear(); h.uploaded.clear(); h.gone.length = 0; h.fail = false; h.audit.length = 0;
-  h.rows.set("carListings/L1", { id: "L1", sellerId: "me", tenantId: "t", studioId: "s", status: "live", photoPaths: ["t/listings/a.jpg", "t/listings/b.jpg", "t/listings/c.jpg"] });
-  h.rows.set("carListings/L2", { id: "L2", sellerId: "other", tenantId: "t", studioId: "s", status: "live", photoPaths: ["t/listings/x.jpg", "t/listings/y.jpg"] });
+  h.rows.set("carListings/L1", { id: "L1", sellerId: "canonical-me", tenantId: "t", studioId: "s", status: "live", photoPaths: ["t/listings/a.jpg", "t/listings/b.jpg", "t/listings/c.jpg"] });
+  h.rows.set("carListings/L2", { id: "L2", sellerId: "canonical-other", tenantId: "t", studioId: "s", status: "live", photoPaths: ["t/listings/x.jpg", "t/listings/y.jpg"] });
 });
 describe("removeMyListingPhoto (round7 p7, sell-car images)", () => {
   it("removes exactly the chosen photo and its object; listing and other photos stay", async () => {

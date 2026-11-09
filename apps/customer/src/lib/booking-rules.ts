@@ -1,6 +1,6 @@
 // Reschedule and cancel rules for a customer booking, shared by the booking page and the Bookings list.
 import type { Booking } from "@autodeck/core";
-import { rescheduleRule, isBiggerService, isBookingMissed, cancellationTerms, cancellationLine } from "@autodeck/core";
+import { rescheduleRule, isBiggerService, isBookingMissed, cancellationTerms, combinedCancellationTerms, cancellationLine } from "@autodeck/core";
 
 const NON_RESCHEDULABLE_STATUS_REASONS: Record<string, string> = {
   PENDING: "This booking is still awaiting studio confirmation.",
@@ -38,11 +38,11 @@ export function getRescheduleEligibility(booking: Booking, category?: string | n
 /** Whether the customer can cancel online. A cancel inside the free window costs a fee (core cancellation-policy), so it is allowed with the fee shown first.
  *  Once the car is at the studio (ACTIVE) work has started: no online cancel, call the studio. */
 
-export function cancelState(booking: Booking, now = Date.now(), category?: string | null): { canCancel: boolean; lateToCancel: boolean; feePaise: number; line: string } {
+export function cancelState(booking: Booking, now = Date.now(), category?: string | null): { canCancel: boolean; lateToCancel: boolean; feePaise: number; line: string; freeUntilHours:number; bigger:boolean } {
   const missed = isBookingMissed(booking, now);
   const open = booking.cancelIntent?.state !== "waiting" && booking.cancelIntent?.state !== "needs_review" && !missed && (booking.status === "CONFIRMED" || booking.status === "PENDING");
-  const terms = cancellationTerms({ category, totalPaise: booking.totalAmount ?? 0, scheduledAtMs: new Date(booking.scheduledAt).getTime(), nowMs: now });
-  return { canCancel: open, lateToCancel: !missed && booking.status === "ACTIVE", feePaise: terms.feePaise, line: cancellationLine(category) };
+  const terms = booking.combinedPayment ? combinedCancellationTerms(booking.priceBreakdown,{categories:[category,...(booking.cancelCategories??[])],scheduledAtMs:Date.parse(booking.scheduledAt),nowMs:now}) : cancellationTerms({ category, totalPaise: booking.totalAmount ?? 0, scheduledAtMs: new Date(booking.scheduledAt).getTime(), nowMs: now });
+  return { canCancel: open, lateToCancel: !missed && booking.status === "ACTIVE", feePaise: terms.feePaise, freeUntilHours:terms.freeUntilHours,bigger:terms.bigger,line: booking.combinedPayment&&terms.bigger?"Free until 24 hours before. Then 20% of service including GST. Unused pickup/drop excluded.":cancellationLine(category) };
 }
 
 /** Text for the cancel confirmation: the rule, and the fee if one applies now. */

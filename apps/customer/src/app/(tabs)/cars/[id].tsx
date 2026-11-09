@@ -142,7 +142,7 @@ export default function CarDetail() {
         </View>
       ) : null}
       {car.mine ? (
-        <Notice title={car.status === "pending" ? "Waiting for review" : car.status === "rejected" ? "Not approved" : "Your listing"} body={car.status === "pending" ? "The studio checks every car before it shows to others." : car.status === "sold" ? "Marked as sold. It is no longer shown to other customers." : car.rejectionReason ?? "Live for other customers."} />
+        <Notice title={car.status === "pending" ? "Waiting for review" : car.status === "rejected" ? "Not approved" : "Your listing"} body={car.status === "pending" ? "The studio checks every car before it shows to others." : car.status === "sold" ? "Marked as sold. It is no longer shown to other customers." : car.status === "live" ? "Visible to buyers." : car.status === "reserved" ? "Reserved." : car.status === "expired" ? "This listing has expired." : car.status === "draft" ? "Not published." : car.rejectionReason ?? "Contact the studio about your listing."} />
       ) : sent === "interest" ? (
         <Notice title="Sent to the studio" body="The studio will call you, and the price shows on this car now. Your number is not shared with the seller." />
       ) : sent === "report" ? (
