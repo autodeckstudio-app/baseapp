@@ -1,4 +1,27 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "bash ../../scripts/vercel-ignore.sh admin"
+  "framework": null,
+  "installCommand": "echo sample-review-no-install",
+  "buildCommand": "mkdir -p review-dist && cp -R review-assets34/. review-dist/",
+  "outputDirectory": "review-dist",
+  "ignoreCommand": "exit 1",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
+      ]
+    }
+  ]
 }
