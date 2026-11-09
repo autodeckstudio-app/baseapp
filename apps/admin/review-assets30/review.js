@@ -1,0 +1,1 @@
+document.addEventListener('click',event=>{const a=event.target.closest('a');if(a&&/^(https?:|tel:|mailto:|sms:)/i.test(a.getAttribute('href')||'')){event.preventDefault();event.stopImmediatePropagation();alert('Sample preview: external contact and live links are disabled.');}},true);
