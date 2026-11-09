@@ -1,5 +1,7 @@
-import { Text, TouchableOpacity, type StyleProp, type ViewStyle } from "react-native";
-import { colors } from "../tokens/colors.js";
+import{useExperienceTheme}from"../native/ThemeContext.js";
+import{useReduceTransparency}from"../native/LiquidGlass.js";
+import{material as baseMaterial}from"../theme/material.js";
+import { Platform, Text, TouchableOpacity, type StyleProp, type ViewStyle } from "react-native";
 import { radius } from "../tokens/radius.js";
 
 export interface IconButtonProps {
@@ -19,12 +21,13 @@ export function IconButton({
   glyph,
   onPress,
   accessibilityLabel,
-  variant = "default",
+  variant: _variant = "default",
   size = 40,
   disabled = false,
   style,
 }: IconButtonProps) {
-  const filled = variant === "filled";
+  const{name:mode}=useExperienceTheme();
+  const reduce=useReduceTransparency();const material:typeof baseMaterial=(m,r,s)=>baseMaterial(m,r,{...s,reduce});
   return (
     <TouchableOpacity
       accessibilityRole="button"
@@ -41,13 +44,14 @@ export function IconButton({
           borderRadius: radius.full,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: filled ? colors.surfaceSunken : "transparent",
+          backgroundColor:material(mode,"control").fallback,
+          ...(Platform.OS==="web"?material(mode,"control").web as ViewStyle:{}),
           opacity: disabled ? 0.4 : 1,
         },
         style,
       ]}
     >
-      <Text style={{ fontSize: size * 0.5, color: colors.textPrimary, lineHeight: size * 0.55 }}>{glyph}</Text>
+      <Text style={{ fontSize: size * 0.5, color: material(mode).ink, lineHeight: size * 0.55 }}>{glyph}</Text>
     </TouchableOpacity>
   );
 }

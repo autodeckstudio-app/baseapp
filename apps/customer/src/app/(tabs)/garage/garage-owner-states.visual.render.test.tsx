@@ -14,9 +14,12 @@ const h = vi.hoisted(() => ({
 vi.mock('@autodeck/ui/native', async () => {
   const real = await import('../../../../../../packages/ui/src/native/ThemeContext');
   return {
+    useReduceTransparency:()=>false,
     useExperienceTheme: real.useExperienceTheme,
     ExperienceThemeProvider: real.ExperienceThemeProvider,
-    Ambient: ({ children }: any) => children ?? null,
+    Ambient: ({children}:any)=>children??null,
+    LiquidAmbient: ({ children }: any) => children ?? null,
+    LiquidGlass: ({ children }: any) => React.createElement("div", null, children),
     onTabPressed: () => () => {},
     Icon: () => null,
     FadeImage: (props: any) => React.createElement('img', { src: props?.source?.uri, style: props?.style }),

@@ -1,9 +1,9 @@
+import{ServiceNextAction}from"../../../ui/ServiceNextAction";
 import { SERVICE_HOMES } from "@autodeck/core";
 import { servicePlacement } from "../../../lib/services-navigation";
 import{ServicePageHeader}from"../../../ui/ServicePageHeader";
 import { customerOfferingVisible } from '../../../lib/customer-offering-visibility';
 import{SERVICE_QUOTE_JOURNEY_READY}from "../../../lib/service-quote";
-import{ServiceActionBar}from "../../../ui/ServiceActionBar";
 import { customerRatingPrivacy } from "@autodeck/core";
 import { ServiceVisitFacts } from "../../../ui/ServiceVisitFacts";
 import { ServiceScope } from "../../../ui/ServiceScope";
@@ -19,17 +19,17 @@ import { customerCatalogueEligible, isSizePriced, needsInspectionNote, PAINT_INS
 import { COLLECTIONS } from "@autodeck/database";
 import { space} from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
-import { Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
 import { listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
-import { stickyPriceLabel, sheetBarVisible } from "../../../lib/sticky-price";
+import { sheetBarVisible } from "../../../lib/sticky-price";
 import { ServicePrice } from "../../../ui/ServicePrice";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { COPY_IS_DRAFT, SHOW_BEFORE_AFTER, showcaseFor } from "../../../lib/showcase";
 import { getServiceReviews, type ServiceReviews } from "../../../lib/review-service";
-import { FIRST_STUDIO_ID, GST_ENABLED } from "@autodeck/core";
+import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { getAvailability, todayIST } from "../../../lib/booking-service";
 import { applyBrandWarranty, getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
 
@@ -172,7 +172,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         </Pane>
 
         <>
-        <ServiceVisitFacts duration={dur} warranty={service.warrantyLabel} brand={service.brand} quote={service.priceOnRequest===true} inspection={service.priceOnRequest===true&&(service.category==='garage'||service.category==='modifications')}/>
+        <ServiceVisitFacts nextAction={focused&&showBar?<ServiceNextAction label={service.priceOnRequest===true?(service.category==="garage"||service.category==="modifications"?"Inspection":"Get quote"):"Book now"} disabled={!service.priceOnRequest&&priceBreakdown===null} onPress={()=>service.priceOnRequest===true&&SERVICE_QUOTE_JOURNEY_READY?router.push({pathname:"/(tabs)/quote-request",params:{serviceId:String(id)}}):router.push(`/(tabs)/book/${id}`)}/>:null} duration={dur} warranty={service.warrantyLabel} brand={service.brand} quote={service.priceOnRequest===true} inspection={service.priceOnRequest===true&&(service.category==='garage'||service.category==='modifications')}/>
 
         {service.priceEstimate ? <T role="caption" tone="tertiary">Estimated price. The studio confirms the final amount before work starts.</T> : null}
 
@@ -209,7 +209,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
               ))}
             </View>
           </Pane>
-          <T role="caption" tone="tertiary">Stock image for layout only. Real studio before and after photos go here.</T>
+          <T role="caption" tone="tertiary">Illustrative photo, not studio work.</T>
         </View> : null}
 
         <View style={{ gap: space.line }}>
@@ -221,9 +221,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         </>
 
         <>
-        {focused && showBar ? <Pane pad="inset">
-        <ServiceActionBar hidePrice={service.priceOnRequest!==true&&priceBreakdown!==null} car={`${pricingVehicle.label??"Your car"}${GST_ENABLED ? " · incl. GST" : ""}`} price={stickyPriceLabel({priceOnRequest:service.priceOnRequest===true,loading:priceLoading,total:priceBreakdown?priceBreakdown.total:null,from:service.priceFrom===true,needsCarType,hasCar:!!pricingVehicle.vehicle,error:priceError!==null},rupees)} disabled={!service.priceOnRequest&&priceBreakdown===null} label={service.priceOnRequest===true?(service.category==="garage"||service.category==="modifications"?"Book an inspection":"Request a quote"):"Book now"} onPress={()=>service.priceOnRequest===true&&SERVICE_QUOTE_JOURNEY_READY?router.push({pathname:"/(tabs)/quote-request",params:{serviceId:String(id)}}):router.push(`/(tabs)/book/${id}`)}/>
-        </Pane> : null}
+
         <ServiceScope service={service} careTip={(service.careTips ?? [])[0] ?? null} onAsk={() => router.push({ pathname: "/(tabs)/help", params: { service: service.name } })} />
 
         {sc.benefits.length > 0 ? (

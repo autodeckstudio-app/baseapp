@@ -143,7 +143,7 @@ describe("surfaces share one radius and one padding",()=>{
     const r=read("src/lib/raised.ts");
     expect(r).not.toContain("borderRadius: 26");expect(r).not.toContain("borderRadius: 30");expect(r).not.toContain("borderRadius: 18");
     expect(read("src/ui/ProfileHero.tsx")).not.toContain("rotate");
-    expect(read("src/ui/kit.tsx")).toContain('pad === "inset" ? 16');
+    expect(read("src/ui/kit.tsx")).toContain('<BaseGlass pad={pad}');
   });
 });
 it("keeps the Home lead card on the shared card padding",()=>{expect(read("src/ui/HomeView.tsx")).not.toContain("padding: 18")});
@@ -152,7 +152,7 @@ it("takes hero heights from metrics on car and booking detail",()=>{expect(read(
 it("uses the card padding rule on list cards",()=>{for(const f of ["bookings/index","membership/index","garage/index"])expect(read(`src/app/(tabs)/${f}.tsx`)).toContain("padding: metrics.cardPad")});
 it("shows the price total on the booking confirm screen",()=>{const s=read("src/app/(tabs)/book/confirm.tsx");expect(s).toContain("breakdown.total");expect(s).toContain("breakdown.tax")});
 it("keeps the service price bar on the card edges, hides empty story circles, and names walk-in visits",()=>{
-    const svc=read("src/app/(tabs)/catalogue/[id].tsx");expect(svc).toContain('showBar ? <Pane pad="inset">');expect(svc).not.toContain('bottom: 92');expect(svc).not.toContain('setBarH');expect(svc.indexOf('<ServiceActionBar')).toBeLessThan(svc.indexOf('<ServiceScope'));
+    const svc=read("src/app/(tabs)/catalogue/[id].tsx");expect(svc).toContain('nextAction={focused&&showBar?');expect(svc).not.toContain('<ServiceActionBar');expect(svc).not.toContain('bottom: 92');expect(svc).not.toContain('setBarH');expect(svc.indexOf('<ServiceVisitFacts')).toBeLessThan(svc.indexOf('<ServicePrice'));
     expect(read("src/ui/StoryCircles.tsx")).toContain("if (shown.length === 0) return null;"); // no groups, no row; a group without a photo shows its initial
     expect(read("src/app/(tabs)/bookings/index.tsx")).toContain("visitTitle(nameOf(");expect(read("src/app/(tabs)/bookings/index.tsx")).not.toContain('?? "Service"');
   });
@@ -203,7 +203,7 @@ describe("booking flow guardrails", () => {
   });
   it("GST is one switch and no screen prints GST or a tax row unless it is on", () => {
     expect(read("packages/core/src/constants.ts".replace(/^/, "../../"))).toMatch(/export const GST_ENABLED = false/);
-    expect(rd("app/(tabs)/catalogue/[id].tsx")).toMatch(/GST_ENABLED \? " · incl\. GST"/);
+    expect(rd("app/(tabs)/catalogue/[id].tsx")).not.toContain("incl. GST");
     expect(rd("app/(tabs)/catalogue/index.tsx")).not.toContain("incl. GST");
     for (const f of ["ui/ServicePrice.tsx", "app/(tabs)/book/confirm.tsx", "app/(tabs)/bookings/[id].tsx", "app/(tabs)/bookings/invoice.tsx"]) {
       expect(rd(f)).toMatch(/\.tax > 0/);
@@ -371,7 +371,7 @@ describe("one icon set", () => {
     expect(read("src/ui/HomeView.tsx")).toMatch(/function TopPickCard[\s\S]*serviceImagery/);
   });
   it("night surfaces use one charcoal card colour", () => {
-    expect(read("src/lib/raised.ts")).toContain('const surf = c.surface');
+    expect(read("src/lib/raised.ts")).toContain('material(mode,"surface")');
   });
 });
 
@@ -604,7 +604,7 @@ import { DAY_ATMOSPHERE } from "@autodeck/ui/theme";
 describe("one Day background across the apps", () => {
   it("customer Day ground is the shared atmosphere, studio applies it, Home photo dissolves into it", () => {
     expect(read("src/lib/raised.ts")).toContain('canvas: "#FFFFFF"');
-    expect(read("src/lib/raised.ts")).toContain("rgba(236,134,56,0.05)");
+    expect(read("src/lib/raised.ts")).toContain("groundImage: night ? nightGround : DAY_ATMOSPHERE");
     expect(read("../studio/src/app/_layout.tsx")).toContain("rs.backgroundImage = DAY_ATMOSPHERE");
     const h = read("src/ui/HomeBackdrop.tsx");
     expect(h).toContain("maskImage");

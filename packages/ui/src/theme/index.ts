@@ -23,3 +23,5 @@ export * from "./autoMode.js";
 
 export * from "./night.js";
 export * from "./float.js";
+
+export * from "./material.js";

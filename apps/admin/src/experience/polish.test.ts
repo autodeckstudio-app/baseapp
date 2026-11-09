@@ -14,7 +14,7 @@ describe("admin layout polish", () => {
 
   it("loads last so it settles the older layers", () => {
     const order = [...shell.matchAll(/import "\.\/([a-z0-9-]+)\.css";/g)].map((m) => m[1]);
-    expect(order[order.length - 1]).toBe("polish");
+    expect(order.slice(-2)).toEqual(["polish","actions"]);
   });
   it("keeps list rows flat (no grey button fill, no rounded corners)", () => {
     expect(css).toMatch(/\.ax-list-row[^{]*\{[^}]*background: transparent !important[^}]*border-radius: 0 !important/);

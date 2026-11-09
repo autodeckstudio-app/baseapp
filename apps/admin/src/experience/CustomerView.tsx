@@ -144,7 +144,7 @@ export function CustomerView({ d, services, onBack, onOpen, onSave, onSaveVehicl
         <div>
           <p className="ax-label">Customer since {formatDate(d.customer.createdAt)}</p>
           <h1 className="ax-hero-name">{d.customer.name || "Unnamed customer"}</h1>
-          <p className="ax-hero-sub">{activeMember ? `${statusLabel(activeMember.tier)} member` : "Customer"}{d.vehicles.length ? ` · ${d.vehicles.length} ${d.vehicles.length === 1 ? "car" : "cars"}` : ""}{onSave && !editing ? <> · <button type="button" className="ax-inline-add" onClick={startEdit}>Edit details</button></> : null}</p>
+          <p className="ax-hero-sub">{activeMember ? `${statusLabel(activeMember.tier)} member` : "Customer"}{d.vehicles.length ? ` · ${d.vehicles.length} ${d.vehicles.length === 1 ? "car" : "cars"}` : ""}{onSave && !editing ? <> · <button type="button" className="ax-edit-details" onClick={startEdit}>Edit details</button></> : null}</p>
         </div>
         <div className="ax-kpis">
           <div><span className="ax-kpi-v ax-kpi-v--premium">{formatPaise(paid)}</span><span className="ax-label">Paid to date</span></div>

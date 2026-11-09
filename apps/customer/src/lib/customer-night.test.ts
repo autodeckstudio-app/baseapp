@@ -4,7 +4,7 @@ import {
   applyCustomerRaisedTheme,
   lightColors,
   nightColors,
-  contrastRatio,
+  contrastRatio,material,
 } from "@autodeck/ui/theme";
 import {
   applyCustomerSoftNight,
@@ -33,7 +33,7 @@ it("Customer soft night leaves day values unchanged and provides readable tonal 
   expect(raised("night").ground).toBe(customerNight.canvas);
   // The night card is translucent glass: it must lighten the ground, never paint an opaque slab.
   const nightCard = String(raised("night").card.backgroundColor);
-  expect(nightCard).toMatch(/^rgba\(255,255,255,0\.0?[4-9]/);
+  expect(nightCard).toBe(material("night","surface",{reduce:true}).fallback);
   const cardOverCanvas = composite(nightCard, customerNight.canvas);
   for (const background of [
     customerNight.canvas,
@@ -58,6 +58,6 @@ it("Customer soft night leaves day values unchanged and provides readable tonal 
     expect(contrastRatio(customerNight.accent, background)).toBeGreaterThanOrEqual(4.5);
   // Day cards stay white-family glass: translucent white, composited over the white ground it stays bright.
   const dayCard = String(raised("light").card.backgroundColor);
-  expect(dayCard === "#FFFFFF" || /^rgba\(255,255,255,0\.[5-9]/.test(dayCard)).toBe(true);
+  expect(dayCard).toBe(material("light","surface",{reduce:true}).fallback);
   expect(contrastRatio(lightColors.textPrimary, composite(dayCard, "#FFFFFF"))).toBeGreaterThanOrEqual(4.5);
 });

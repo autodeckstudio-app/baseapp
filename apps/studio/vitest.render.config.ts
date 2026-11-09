@@ -15,6 +15,7 @@ export default defineConfig({
   ssr: { noExternal: true },
   resolve: {
     alias: [
+      { find: /^expo-blur$/, replacement: path.resolve(__dirname, "test/stubs/expo-blur.ts") },
       { // Bare "react-native-web" would resolve relative to the IMPORTER, and
         // pnpm does not link it under packages/ui; use the absolute path.
         find: /^react-native$/,

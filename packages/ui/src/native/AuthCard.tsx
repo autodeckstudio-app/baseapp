@@ -1,6 +1,8 @@
+import{material}from"../theme/material.js";
+import{BlurView}from"expo-blur";
+import{useReduceTransparency}from"./LiquidGlass.js";
 import type { ReactNode } from "react";
 import { Platform, Pressable, Text, View } from "react-native";
-import { nightButtonStyle, nightButtonText } from "../theme/night.js";
 import { AUTH, AUTH_FOOTNOTE } from "../theme/auth.js";
 import { createElement } from "react";
 import { Logo } from "./Logo.js";
@@ -33,9 +35,9 @@ export function AuthCard({ role, title, copy, children, error }: { role: string;
 }
 
 /** The sign-in button, identical in every app. */
-export function AuthButton({ label, onPress, busy, disabled, testID, dark: _darkProp = true, soft = false }: { dark?: boolean; soft?: boolean; label: string; onPress: () => void; busy?: boolean; disabled?: boolean; testID?: string }) {
-  const night = false; // the sign-in button is the same orange in every mode
-  const dark = true;
+export function AuthButton({ label, onPress, busy, disabled, testID, dark: _darkProp = true, soft: _soft = false }: { dark?: boolean; soft?: boolean; label: string; onPress: () => void; busy?: boolean; disabled?: boolean; testID?: string }) {
+  const reduce=useReduceTransparency();
+  const look=material("night","control",{disabled:!!busy||!!disabled,reduce});
   return (
     <Pressable
       testID={testID}
@@ -43,10 +45,12 @@ export function AuthButton({ label, onPress, busy, disabled, testID, dark: _dark
       accessibilityLabel={label}
       disabled={busy || disabled}
       onPress={onPress}
-      style={({ pressed }) => ({ height: AUTH.buttonHeight, borderRadius: AUTH.buttonRadius, backgroundColor: soft ? "rgba(255,255,255,0.16)" : dark ? "#F59A45" : AUTH.accent, ...(soft ? { borderWidth: 1, borderColor: "rgba(255,255,255,0.32)" } : null), flexDirection: "row", alignItems: "center", justifyContent: "center", opacity: busy || disabled ? 0.6 : pressed ? 0.88 : 1, ...(dark && !soft && Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, #F9B060 0%, #F59A45 55%, #EC8638 100%)" } as object) : {}), ...(night && Platform.OS === "web" ? nightButtonStyle : {}) })}
+      accessibilityState={{disabled:!!busy||!!disabled,busy:!!busy}}
+      style={({ pressed }) => ({ minHeight:44,height:AUTH.buttonHeight,borderRadius:AUTH.buttonRadius,backgroundColor:Platform.OS==="ios"&&!reduce?"transparent":look.fallback,borderWidth:1,borderColor:look.edge,overflow:"hidden",flexDirection:"row",alignItems:"center",justifyContent:"center",opacity:busy||disabled?.64:1,transform:pressed?[{scale:.98}]:[],...(Platform.OS==="web"?look.web as object:{}) })}
     >
+      {Platform.OS==="ios"&&!reduce?<BlurView pointerEvents="none" intensity={55} tint="dark" style={{position:"absolute",top:0,right:0,bottom:0,left:0}}/>:null}
       {Platform.OS === "web" ? createElement("svg", { width: 18, height: 18, viewBox: "0 0 48 48", "aria-hidden": true, style: { marginRight: 10 }, dangerouslySetInnerHTML: { __html: G } }) : null}
-      <Text style={{ color: soft ? "#FFFFFF" : night && Platform.OS === "web" ? nightButtonText : dark ? "#1A1410" : "#fff", fontSize: 16, fontWeight: "600" }}>{busy ? "Please wait..." : label}</Text>
+      <Text numberOfLines={1} style={{ textAlign:"center",color:look.ink, fontSize: 16, fontWeight: "600" }}>{busy ? "Please wait..." : label}</Text>
     </Pressable>
   );
 }

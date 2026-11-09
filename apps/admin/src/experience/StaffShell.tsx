@@ -14,6 +14,7 @@ import "./orizon.css";
 import "./canvas.css";
 import "./shell-v2.css";
 import "./polish.css";
+import "./actions.css";
 
 export const STUDIO_LINKS = [
   { href: "/bookings", label: "Bookings" },

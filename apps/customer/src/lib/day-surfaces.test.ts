@@ -8,7 +8,7 @@ describe("Day surfaces are never the night colour", () => {
     const r = read("lib/raised.ts");
     expect(r).toContain('surface: "#FFFFFF"');
     expect(r).toContain('canvas: "#FFFFFF"');
-    expect(r).toMatch(/const surf = c\.surface/);
+    expect(r).toContain('material(mode,"surface")');
   });
   it("glassPane has a light variant that is the warm card, not dark glass", () => {
     const g = read("lib/glass-pane.ts");
@@ -19,7 +19,7 @@ describe("Day surfaces are never the night colour", () => {
   it("Home never calls glassPane without the mode", () => {
     expect(read("ui/HomeView.tsx")).not.toMatch(/glassPane\(\)/);
   });
-  it("service detail delegates its inline action surface to the theme-aware Pane",()=>{const s=read("app/(tabs)/catalogue/[id].tsx");expect(s).toContain('showBar ? <Pane pad="inset">');expect(s).not.toContain('backgroundColor: mode ===');});
+  it("service detail delegates its inline action surface to the theme-aware Pane",()=>{const s=read("app/(tabs)/catalogue/[id].tsx");expect(s).toContain('nextAction={focused&&showBar?');expect(s).not.toContain('<ServiceActionBar');expect(s).not.toContain('backgroundColor: mode ===');});
   it("components that draw a night card colour also branch on the theme", () => {
     for (const f of ["ui/GarageCard.tsx", "ui/SlideToConfirm.tsx"]) {
       expect(read(f)).toMatch(/"light"/);

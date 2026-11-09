@@ -1,8 +1,10 @@
+import{useExperienceTheme}from"../native/ThemeContext.js";
+import{BlurView}from"expo-blur";
+import{material}from"../theme/material.js";
+import{useReduceTransparency}from"../native/LiquidGlass.js";
 import { ActivityIndicator, Platform, Pressable, Text, type StyleProp, type ViewStyle } from "react-native";
-import { nightButtonStyle, nightButtonText } from "../theme/night.js";
-import { colors, isNightPalette } from "../tokens/colors.js";
+import { colors } from "../tokens/colors.js";
 import { spacing } from "../tokens/spacing.js";
-import { radius } from "../tokens/radius.js";
 import { typography } from "../tokens/typography.js";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "destructive";
@@ -10,6 +12,7 @@ export type ButtonSize = "md" | "lg";
 
 export interface ButtonProps {
   label: string;
+  accessibilityLabel?:string;
   onPress: () => void;
   variant?: ButtonVariant;
   size?: ButtonSize;
@@ -19,13 +22,6 @@ export interface ButtonProps {
   style?: StyleProp<ViewStyle>;
 }
 
-const VARIANT_STYLES: Record<ButtonVariant, { bg: string; bgPressed: string; text: string; border?: string }> = {
-  primary: { bg: colors.accent, bgPressed: colors.accentPressed, text: colors.textOnAccent },
-  secondary: { bg: colors.surfaceSunken, bgPressed: colors.border, text: colors.textPrimary },
-  ghost: { bg: "transparent", bgPressed: colors.surfaceSunken, text: colors.textPrimary, border: colors.border },
-  destructive: { bg: "transparent", bgPressed: colors.errorMuted, text: colors.error, border: colors.error },
-};
-
 const SIZE_STYLES: Record<ButtonSize, { paddingVertical: number; paddingHorizontal: number; fontSize: number }> = {
   md: { paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.lg, fontSize: typography.body.fontSize },
   lg: { paddingVertical: spacing.md + 2, paddingHorizontal: spacing.xl, fontSize: typography.title.fontSize },
@@ -34,6 +30,7 @@ const SIZE_STYLES: Record<ButtonSize, { paddingVertical: number; paddingHorizont
 /** Primary action control. Use `variant="primary"` sparingly - one per screen. */
 export function Button({
   label,
+  accessibilityLabel,
   onPress,
   variant = "primary",
   size = "lg",
@@ -42,58 +39,47 @@ export function Button({
   fullWidth = true,
   style,
 }: ButtonProps) {
-  const v = VARIANT_STYLES[variant];
   const s = SIZE_STYLES[size];
   const isDisabled = disabled || loading;
 
+  const reduce=useReduceTransparency();
+  const {name:mode}=useExperienceTheme();
   const web = Platform.OS === "web";
-  const raised = (variant === "primary" || variant === "secondary") && !isDisabled;
-  const webLook = (pressed: boolean): Record<string, unknown> => {
-    if (!web) return {};
-    if (variant === "primary" && isNightPalette) return nightButtonStyle;
-    if (variant === "secondary" && isNightPalette) return { backgroundColor: "rgba(255,255,255,.08)", borderWidth: 1, borderColor: "rgba(255,255,255,.24)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)" };
-    if (variant === "primary") {
-      // Day main button is neutral ink, not orange (60-30-10, owner pick 18 Oct 2026).
-      return {
-        backgroundColor: "#1A1410",
-        boxShadow: raised && !pressed ? "0 4px 12px rgba(26,20,16,0.18)" : "0 2px 6px rgba(26,20,16,0.2)",
-      };
-    }
-    if (variant === "secondary") {
-      return { backdropFilter: "blur(18px) saturate(150%)", WebkitBackdropFilter: "blur(18px) saturate(150%)", backgroundColor: "rgba(255,255,255,0.78)", border: "1px solid rgba(255,255,255,0.95)", boxShadow: pressed ? "0 1px 3px rgba(40,30,60,0.12)" : "0 4px 12px rgba(40,30,20,0.06), inset 0 1px 0 rgba(255,255,255,0.9)" };
-    }
-    return {};
-  };
+  const look=(pressed:boolean)=>material(mode,"control",{pressed,disabled:isDisabled,reduce});
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel??label}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       onPress={onPress}
       disabled={isDisabled}
       style={({ pressed }) => [
         {
-          backgroundColor: variant === "secondary" ? (isNightPalette ? colors.surface : "#FFFFFF") : v.bg,
-          borderRadius: variant === "primary" || variant === "secondary" ? 999 : radius.md,
+          backgroundColor: Platform.OS==="ios"&&!reduce?"transparent":look(pressed).fallback,
+          overflow:"hidden",
+          borderRadius: 999,
           paddingVertical: s.paddingVertical,
           paddingHorizontal: s.paddingHorizontal,
           alignItems: "center",
           justifyContent: "center",
           flexDirection: "row",
-          opacity: isDisabled ? 0.45 : 1,
+          opacity: isDisabled ? 0.64 : 1,
           alignSelf: fullWidth ? "stretch" : "flex-start",
           minHeight: 44, // touch target
-          borderWidth: v.border ? 1 : 0,
-          borderColor: v.border,
+          borderWidth: 1,
+          borderColor: variant === "destructive" ? colors.error : look(pressed).edge,
           transform: pressed && !isDisabled ? [{ translateY: 2 }] : [],
         },
-        webLook(pressed) as ViewStyle,
+        web ? look(pressed).web as ViewStyle : {},
+        variant === "primary" ? {borderColor:mode==="light"?"rgba(194,84,10,.45)":"rgba(236,134,56,.55)"}:variant==="destructive"?{borderColor:colors.error}:{},
         style,
       ]}
     >
+      {Platform.OS==="ios"&&!reduce?<BlurView pointerEvents="none" intensity={55} tint={mode==="light"?"light":"dark"} style={{position:"absolute",top:0,right:0,bottom:0,left:0}}/>:null}
       {loading ? (
-        <ActivityIndicator color={web && variant === "primary" ? (isNightPalette ? nightButtonText : "#FFFFFF") : v.text} />
+        <ActivityIndicator color={variant === "destructive" ? colors.error : look(false).ink} />
       ) : (
-        <Text style={{ color: web && variant === "primary" ? (isNightPalette ? nightButtonText : "#FFFFFF") : v.text, fontSize: s.fontSize, fontWeight: "600" }}>{label}</Text>
+        <Text numberOfLines={1} style={{ textAlign:"center",flexShrink:1,color: variant === "destructive" ? colors.error : look(false).ink, fontSize: s.fontSize, fontWeight: "600" }}>{label}</Text>
       )}
     </Pressable>
   );

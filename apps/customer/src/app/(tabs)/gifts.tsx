@@ -39,7 +39,7 @@ export default function GiftsScreen() {
   useEffect(() => { if (GIFT_LIVE) load(); }, [load]);
   const referralCode = auth.status === "ready" ? referralCodeFor(auth.user.uid) : null;
   const friendPanel = <Pane pad="gap"><T role="heading">Bring a friend</T><T tone="secondary">{referralSubtitle(referralCode)}</T><Button label="Share AutoDeck" onPress={() => void Share.share({ message: referralShareMessage(referralCode) }).catch(() => undefined)} /></Pane>;
-  if (!GIFT_LIVE) return <Screen appBar="Friends & gifts">{friendPanel}<Notice title="Gift a wash" body="Gifting a wash will be here soon." /></Screen>;
+  if (!GIFT_LIVE) return <Screen appBar="Friends & gifts">{friendPanel}<Notice title="Gift a wash" body="Wash gifting is not available yet." /></Screen>;
 
   async function buy() {
     if (!checkoutSupported && !NATIVE_GIFT_PAYMENT_ENABLED) { setInfo("Buying a gift is not available in this app build yet. Use app.autodeck.in."); return; }

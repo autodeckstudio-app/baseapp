@@ -16,7 +16,7 @@ const SLIDES: Slide[] = [
   { image: serviceImagery.washing, kicker: "Book", title: "Pick a service. Pick a time.", line: "Washing, ceramic coating, paint protection film and more, with open slots you can see." },
   { image: serviceImagery.ceramic, kicker: "Follow", title: "Watch the work happen", line: "Live status, photos and approvals. Pay at the studio when you collect your car." },
   { image: require("../../assets/imagery/brands/xpel-hero.jpg"), kicker: "Brands we fit", title: "Products you can trust", line: "Only the names the industry relies on, with their own warranties.", chips: ["XPEL", "Garware", "Kovalent"] },
-  { image: serviceImagery.ppf, kicker: "Everything in one place", title: "Garage, bills and papers", line: "Keep every car, invoice, warranty and document together, with reminders before anything expires." },
+  { image: serviceImagery.ppf, kicker: "Everything in one place", title: "Garage, bills and papers", line: "Keep your car records, invoices, warranties and documents together." },
 ];
 
 export function Onboarding({ onDone }: { onDone: () => void }) {

@@ -2,10 +2,11 @@
 import { createElement } from "react";
 import { Image, Platform } from "react-native";
 
-export type NavIconName = "home" | "services" | "bookings" | "garage" | "profile" | "club" | "gift" | "bell" | "pin" | "chat" | "wash" | "ceramic" | "tools" | "search" | "check" | "call" | "whatsapp" | "instagram" | "channel" | "directions";
+export type NavIconName = "home" | "services" | "bookings" | "garage" | "profile" | "club" | "gift" | "bell" | "pin" | "chat" | "wash" | "ceramic" | "tools" | "search" | "check" | "call" | "whatsapp" | "instagram" | "channel" | "directions" | "proceed";
 
 // body: the main silhouette (filled when active). detail: strokes drawn on top, in the cut-out colour when filled.
 const ART: Record<NavIconName, { body: string; detail: string }> = {
+  proceed: {body:'<path d="M5 12h14M13 6l6 6-6 6"/>',detail:""},
   home: { body: '<path d="M3.5 10.8 12 3.5l8.5 7.3V19.5a1 1 0 0 1-1 1H15v-5.8H9v5.8H4.5a1 1 0 0 1-1-1z"/>', detail: "" },
   services: { body: '<path d="M10.5 4.5 12.3 10l5.500 1.800-5.500 1.800-1.800 5.500-1.800-5.500L3.200 11.800 8.700 10z"/>', detail: '<path d="M18 3.500v4M16 5.500h4M18.500 16v3.500M16.800 17.800h3.400"/>' },
   bookings: { body: '<rect x="3.5" y="5" width="17" height="15.5" rx="3"/>', detail: '<path d="M3.5 10h17M8 3v4M16 3v4M9 15.2l2.2 2.2 4-4.2"/>' },

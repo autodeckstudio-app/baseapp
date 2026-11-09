@@ -133,7 +133,7 @@ export default function MembershipScreen() {
       )}
 
       {cols.length === 0 ? (
-        <Notice title="No plans available" body="Check back soon." />
+        <Notice title="No plans available" body="No membership plans are available right now." />
       ) : (
         <View style={{ gap: space.line }}>
           <Kicker>{current ? "Plans" : "Compare plans"}</Kicker>

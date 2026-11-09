@@ -24,11 +24,10 @@ import {
   type ViewStyle,
 } from "react-native";
 import { useRouter, useSegments, useFocusEffect } from "expo-router";
-import { glassSurface, glassQuiet } from "../lib/glass";
 // Compact, labelled glass actions. Primary intent keeps a warm rim, never a large orange fill.
-const inkButton = (mode: string): ViewStyle => ({ ...glassQuiet, backgroundColor: mode === "light" ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.10)", borderColor: mode === "light" ? "rgba(130,78,36,0.40)" : "rgba(225,184,143,0.48)", ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(150deg,rgba(255,255,255,0.14),rgba(255,255,255,0.01))", boxShadow: "0 3px 9px rgba(16,17,19,0.12), inset 0 1px 0 rgba(255,255,255,0.20)" } as object) : {}) });
-import { Ambient as BaseAmbient, type GlassProps, useExperienceTheme, onTabPressed } from "@autodeck/ui/native";
-import { floatHero, fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
+const inkButton = (mode: "light"|"night"|"dark",reduce:boolean,pressed=false): ViewStyle => ({backgroundColor:material(mode,"control",{reduce,pressed}).fallback,...(Platform.OS === "web" ? material(mode,"control",{reduce,pressed}).web as ViewStyle : {})});
+import { LiquidAmbient as BaseAmbient, LiquidGlass as BaseGlass, useReduceTransparency, type GlassProps, useExperienceTheme, onTabPressed } from "@autodeck/ui/native";
+import { material, floatHero, fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
 const FALLBACK: Record<TypeRole["family"], string> = {
   display: Platform.select({ web: "Montserrat, Inter, 'Noto Sans Gujarati', 'Noto Sans Devanagari', system-ui, sans-serif", default: "System" }) ?? "System",
@@ -99,7 +98,7 @@ function useBar(appBar?: string, onBackOverride?: () => void) {
 }
 
 function Ambient({ children }: { children?: ReactNode }) {
-  return <BaseAmbient style={{ backgroundColor: "transparent", ...(Platform.OS === "web" ? ({ backgroundImage: "none" } as object) : null) }}>{children}</BaseAmbient>;
+  return <BaseAmbient>{children}</BaseAmbient>;
 }
 
 /** Studio photo behind the top of a screen (web), as on the canvas layout. */
@@ -190,15 +189,9 @@ export function Screen({
   );
 }
 
-/** Solid dark card in the reference style (replaces the blurred glass pane). */
+/** Shared one-layer glass pane, with native blur and accessible fallback. */
 export function Pane({ children, pad = "gap", tone, fill, style, testID }: GlassProps) {
-  const { colors } = useExperienceTheme();
-  const edge = tone ? colors[tone] : "transparent";
-  return (
-    <View testID={testID} style={[{ borderRadius: 24, overflow: "hidden", ...glassSurface, ...(fill === "warm" ? { backgroundColor: colors.accentHaze } : null), ...(tone ? { borderColor: edge, borderWidth: 1 } : null), padding: pad === "none" ? 0 : pad === "inset" ? 16 : space[pad] }, style as never]}>
-      {children}
-    </View>
-  );
+ return <BaseGlass pad={pad} {...(tone?{tone}:{})} {...(fill?{fill}:{})} {...(style?{style}:{})} {...(testID?{testID}:{})}>{children}</BaseGlass>;
 }
 
 export function Kicker({ children, tone = "tertiary" }: { children: ReactNode; tone?: "tertiary" | "accent" | "premium" }) {
@@ -244,6 +237,7 @@ export function Button({
   testID?: string;
 }) {
   const { colors, name } = useExperienceTheme();
+  const reduce=useReduceTransparency();
   const primary = kind === "primary";
   const off = disabled || busy;
   return (
@@ -264,10 +258,11 @@ export function Button({
           justifyContent: "center",
           flexDirection: "row",
           gap: space.breath,
-          ...(primary ? inkButton(name) : glassQuiet),
-          ...(Platform.OS === "web" && !primary ? ({ boxShadow: "0 2px 7px rgba(16,17,19,0.10), inset 0 1px 0 rgba(255,255,255,0.12)" } as object) : {}),
+          ...inkButton(name,reduce,pressed),
+          ...(primary ? {borderColor:"rgba(194,84,10,.45)"} : {}),
+
           ...(kind === "danger" ? { borderColor: colors.danger } : null),
-          opacity: off ? 0.45 : 1,
+          opacity: off ? 0.64 : 1,
           transform: pressed && !off ? [{ scale: 0.97 }] : [],
           ...(Platform.OS === "web" ? ({ transition: "transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease", cursor: "pointer" } as object) : {}),
         },
@@ -463,7 +458,8 @@ export function Field({
   keyboardType?: "default" | "numeric" | "email-address" | "phone-pad";
   multiline?: boolean;
 }) {
-  const { colors } = useExperienceTheme();
+  const { colors,name } = useExperienceTheme();
+  const reduce=useReduceTransparency();
   return (
     <View style={{ gap: space.breath }}>
       <T role="label" tone="tertiary">{label}</T>
@@ -483,13 +479,14 @@ export function Field({
           textStyle("body"),
           {
             color: colors.textPrimary,
-            backgroundColor: colors.surface,
+            backgroundColor: material(name,"field",{reduce}).fallback,
+            ...(Platform.OS === "web" ? material(name,"field",{reduce}).web as object : {}),
             borderWidth: 1,
             borderColor: error ? colors.danger : colors.borderSubtle,
             borderRadius: radius.chip,
             paddingHorizontal: space.line,
             paddingVertical: 12,
-            minHeight: multiline ? 96 : undefined,
+            minHeight: multiline ? 96 : 44,
             textAlignVertical: multiline ? "top" : "auto",
           },
         ]}
