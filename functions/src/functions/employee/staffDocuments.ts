@@ -46,6 +46,7 @@ async function employee(request: any, employeeId: string, selfOnly = false) {
   return { user, db, ref, e, own };
 }
 export const issueStaffDocumentUpload = onCall(options, async (request) => {
+  assertRole(extractUser(request), "studio", "admin", "superadmin");
   const d = validate(
       z
         .object({
@@ -92,6 +93,7 @@ export const issueStaffDocumentUpload = onCall(options, async (request) => {
   return { uploadId: key, path, uploadUrl: url, requiredHeaders: headers };
 });
 export const submitStaffDocument = onCall(options, async (request) => {
+  assertRole(extractUser(request), "studio", "admin", "superadmin");
   const d = validate(
       z
         .object({ employeeId: id, uploadId: id, consent: z.literal(true) })
@@ -188,6 +190,7 @@ export const submitStaffDocument = onCall(options, async (request) => {
   return { submitted: true, revision: d.uploadId };
 });
 export const getStaffDocument = onCall(options, async (request) => {
+  assertRole(extractUser(request), "studio", "admin", "superadmin");
   const d = validate(
       z.object({ employeeId: id, open: z.boolean().optional() }).strict(),
       request.data,
@@ -232,6 +235,7 @@ export const getStaffDocument = onCall(options, async (request) => {
   };
 });
 export const reviewStaffDocument = onCall(options, async (request) => {
+  assertRole(extractUser(request), "studio", "admin", "superadmin");
   const d = validate(
       z
         .object({

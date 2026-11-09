@@ -225,9 +225,9 @@ it("cleanup deletes expired abandoned and superseded copies but preserves the cu
       .collection("staffDocumentUploads")
       .doc(u.uploadId)
       .update({ expiresAt: new Date(0).toISOString() });
-  const { cleanExpiredStaffDocumentUploads } =
+  const { cleanExpiredStaffDocumentUploadsScheduled } =
     await import("../../functions/employee/cleanExpiredStaffDocumentUploads.js");
-  await cleanExpiredStaffDocumentUploads.run({} as never);
+  await cleanExpiredStaffDocumentUploadsScheduled.run({} as never);
   expect(
     (await db.collection("staffDocumentUploads").doc(current.uploadId).get())
       .exists,

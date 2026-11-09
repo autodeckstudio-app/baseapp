@@ -238,6 +238,6 @@ export { recordJobPerformedWork, getWorkRecordReceipt } from './functions/work/r
 
 export {issueStaffDocumentUpload,submitStaffDocument,getStaffDocument,reviewStaffDocument}from'./functions/employee/staffDocuments.js';
 
-export {cleanExpiredStaffDocumentUploads}from'./functions/employee/cleanExpiredStaffDocumentUploads.js';
+export {cleanExpiredStaffDocumentUploadsScheduled}from'./functions/employee/cleanExpiredStaffDocumentUploads.js';
 
 export {getCombinedReturnReview,approveCombinedReturn,settleCombinedManualReturn}from'./functions/payment/combinedReturnReview.js';

@@ -97,7 +97,7 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
     if(!freshJob||freshJob.id!==job.id||freshJob.customerId!==job.customerId||freshJob.studioId!==job.studioId||freshJob.tenantId!==job.tenantId||freshJob.totalAmount!==job.totalAmount||freshJob.status==="CANCELLED"||freshJob.offlineSettlement)throw new HttpsError("failed-precondition","Job or receipt balance changed. Refresh before payment.");
     const basis=await readCombinedPaymentBasis(db,tx,freshJob);
     const dueAmount=basis?.balanceDuePaise??freshJob.totalAmount;
-    if(!Number.isSafeInteger(dueAmount)||dueAmount<=0)throw new HttpsError("failed-precondition","No verified payable balance remains.");
+    if(!Number.isSafeInteger(dueAmount)||dueAmount<0||(basis?dueAmount===0:false))throw new HttpsError("failed-precondition","No verified payable balance remains.");
     const freshExisting = await tx.get(
       db
         .collection(COLLECTIONS.payments())

@@ -40,7 +40,7 @@ const auth = (uid: string) => ({ uid, token: { role: "customer", tenantId: "ac-t
 async function seed(o: { status?: string; payMode?: string } = {}) {
   n += 1; const id = `${Date.now()}${n}`;
   const customerId = `ac-c-${id}`, bookingId = `ac-b-${id}`;
-  await db.collection("customers").doc(customerId).set({ id: customerId, tenantId: "ac-t", name: "Test Customer", phone: "+919000000001" });
+  await db.collection("customers").doc(customerId).set({ id: customerId, tenantId: "ac-t", authUid: customerId, name: "Test Customer", phone: "+919000000001" });
   await db.collection("bookings").doc(bookingId).set({
     id: bookingId, tenantId: "ac-t", studioId: "ac-s", customerId,
     status: o.status ?? "PENDING", paymentStatus: "unpaid",
@@ -87,7 +87,7 @@ describe("requestAdvancePayment callable (W1, flag mocked on, mock provider)", (
   it("R3: advance payable against an ACTIVE held (PENDING) booking", async () => {
     n += 1; const id = `${Date.now()}${n}`;
     const customerId = `ac-c-${id}`, bookingId = `ac-b-${id}`;
-    await db.collection("customers").doc(customerId).set({ id: customerId, tenantId: "ac-t", name: "T", phone: "+919000000001" });
+    await db.collection("customers").doc(customerId).set({ id: customerId, tenantId: "ac-t", authUid: customerId, name: "T", phone: "+919000000001" });
     await db.collection("bookings").doc(bookingId).set({
       id: bookingId, tenantId: "ac-t", studioId: "ac-s", customerId,
       status: "PENDING", paymentStatus: "unpaid", payMode: "studio",
@@ -102,7 +102,7 @@ describe("requestAdvancePayment callable (W1, flag mocked on, mock provider)", (
   it("R3: an EXPIRED hold cannot be paid against - fail before any provider work", async () => {
     n += 1; const id = `${Date.now()}${n}`;
     const customerId = `ac-c-${id}`, bookingId = `ac-b-${id}`;
-    await db.collection("customers").doc(customerId).set({ id: customerId, tenantId: "ac-t", name: "T", phone: "+919000000001" });
+    await db.collection("customers").doc(customerId).set({ id: customerId, tenantId: "ac-t", authUid: customerId, name: "T", phone: "+919000000001" });
     await db.collection("bookings").doc(bookingId).set({
       id: bookingId, tenantId: "ac-t", studioId: "ac-s", customerId,
       status: "PENDING", paymentStatus: "unpaid", payMode: "studio",
@@ -152,6 +152,10 @@ describe("requestAdvancePayment callable (W1, flag mocked on, mock provider)", (
 
   it("another customer's booking is rejected; a CANCELLED booking is rejected", async () => {
     const s = await seed();
+    // The cross-customer caller must be a properly bound identity for the
+    // ownership comparison to be what rejects the request (fail-closed
+    // identity resolution runs first; an unbound caller stops at profile setup).
+    await db.collection("customers").doc("someone-else").set({ id: "someone-else", tenantId: "ac-t", authUid: "someone-else", name: "Other Customer", phone: "+919000000002" });
     await expect(requestAdvancePayment.run({ data: { bookingId: s.bookingId }, auth: auth("someone-else") } as never))
       .rejects.toThrow(/another customer/);
     const s2 = await seed({ status: "CANCELLED" });
