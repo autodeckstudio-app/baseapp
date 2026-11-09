@@ -26,6 +26,16 @@ const nextConfig: NextConfig = {
           { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
         ],
       },
+      // Firebase's same-origin AuthRelay iframe must be framed by this app.
+      // Keep every other document DENY, including the popup handler. The
+      // route's SAMEORIGIN + frame-ancestors self reject outside embedding.
+      {
+        source: "/__/auth/iframe",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+        ],
+      },
     ];
   },
   // Serves Firebase's sign-in handler from this site so redirect sign-in works in Safari.
