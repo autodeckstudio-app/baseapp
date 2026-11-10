@@ -16,6 +16,8 @@ import {
   GoogleAuthProvider,
   signInWithCredential,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as firebaseSignOut,
   onAuthStateChanged as firebaseOnAuthStateChanged,
   onIdTokenChanged as firebaseOnIdTokenChanged,
@@ -61,6 +63,28 @@ export async function signInWithGooglePopup(): Promise<User> {
   provider.setCustomParameters({ prompt: "select_account" });
   const result = await signInWithPopup(auth, provider);
   return result.user;
+}
+
+/**
+ * Web build where popups cannot report back (in-app webviews, iOS Safari):
+ * full-page redirect sign-in, the same pattern the Admin app runs in
+ * production. signInWithRedirect leaves the page; the session is picked up
+ * on return via the usual auth listeners.
+ */
+export async function signInWithGoogleRedirect(): Promise<void> {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  await signInWithRedirect(auth, provider);
+}
+
+/**
+ * Resolves a pending redirect sign-in after the page reloads so its error
+ * can be shown. A successful result also reaches the onIdTokenChanged
+ * listener in useAuth, which runs the same post-sign-in resolution a
+ * successful popup runs today - no new side effects.
+ */
+export async function completeGoogleRedirect(): Promise<void> {
+  await getRedirectResult(auth);
 }
 
 /** Exchanges a Google ID token from the native flow for a Firebase session. */
