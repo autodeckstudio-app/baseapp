@@ -64,6 +64,15 @@
           "value": "same-origin-allow-popups"
         }
       ]
+    },
+    {
+      "source": "/__/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        }
+      ]
     }
   ]
 }
