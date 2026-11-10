@@ -1,6 +1,6 @@
 export type AuditAction =
   | "work.recorded" | "work.qcRecorded" | "work.sealed"
-  | "service.catalogue_draft_saved" | "service.catalogue_draft_reviewed"
+  | "service.catalogue_draft_saved"|"service.catalogue_draft_discarded" | "service.catalogue_draft_reviewed"
   | "payment.external_return_recorded"
   | "staffAccess.approved" | "staffAccess.rejected"
   | "account.deletion_requested" | "account.deletion_cancelled"
