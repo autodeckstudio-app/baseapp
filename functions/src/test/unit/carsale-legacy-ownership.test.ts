@@ -157,11 +157,17 @@ describe("carsale legacy ownership (staged customer, doc id != auth uid)", () =>
     expect(l4.priceHidden).toBe(true);
   });
 
-  it("an office transfer to another customer doc cuts the legacy owner off", async () => {
-    h.rows.set("carListings/L1", { ...listing("L1", OTHER_DOC) }); // office reassigned the listing
+  it("an office transfer of a legacy uid-keyed record cuts the old owner off and moves it to the new auth", async () => {
+    h.rows.set("carListings/L1", { ...listing("L1", OTHER_DOC) }); // office reassigned the legacy record to another customer doc
+    // Old owner is still a valid customer (resolver intact) and still owns their other records...
+    const stillMine = await (listCarListings as any).run(req({ mine: true }));
+    expect(stillMine.listings.map((l: any) => l.id)).toEqual(["L2"]);
+    // ...but can no longer write the transferred record under either id.
     await expect((submitMyListing as any).run(req(editPayload("L1")))).rejects.toMatchObject({ code: "permission-denied" });
     await expect((markMyListingSold as any).run(req({ listingId: "L1" }))).rejects.toMatchObject({ code: "permission-denied" });
-    // The new owner's own login (doc id == sellerId) keeps working.
+    // The new owner is a different auth mapped to a different doc, and the record follows them.
+    const newOwnerMine = await (listCarListings as any).run(req({ mine: true }, OTHER_UID));
+    expect(newOwnerMine.listings.map((l: any) => l.id)).toEqual(["L1", "L3", "L4"]); // L1 transfer plus their own legacy rows
     await (markMyListingSold as any).run(req({ listingId: "L1" }, OTHER_UID));
     expect(h.rows.get("carListings/L1")?.status).toBe("sold");
   });
