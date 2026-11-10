@@ -66,11 +66,10 @@ export async function signInWithGooglePopup(): Promise<User> {
 }
 
 /**
- * Web build on mobile browsers: full-page redirect instead of a popup.
- * Mobile browsers open the popup as a separate tab and lose the
- * popup-to-opener link, so the page never hears the result and reports
- * "Sign-in was cancelled" once the user returns or closes the tab.
- * signInWithRedirect leaves the page; the session is picked up on return.
+ * Web build where popups cannot report back (in-app webviews, iOS Safari):
+ * full-page redirect sign-in, the same pattern the Admin app runs in
+ * production. signInWithRedirect leaves the page; the session is picked up
+ * on return via the usual auth listeners.
  */
 export async function signInWithGoogleRedirect(): Promise<void> {
   const provider = new GoogleAuthProvider();
@@ -79,9 +78,10 @@ export async function signInWithGoogleRedirect(): Promise<void> {
 }
 
 /**
- * Resolves a pending redirect sign-in after the page reloads, so its error
- * can be shown. The signed-in user, if any, also reaches the
- * onAuthStateChanged listeners that route into the app.
+ * Resolves a pending redirect sign-in after the page reloads so its error
+ * can be shown. A successful result also reaches the onIdTokenChanged
+ * listener in useAuth, which runs the same post-sign-in resolution a
+ * successful popup runs today - no new side effects.
  */
 export async function completeGoogleRedirect(): Promise<void> {
   await getRedirectResult(auth);
