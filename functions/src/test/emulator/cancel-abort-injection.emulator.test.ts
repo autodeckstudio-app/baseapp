@@ -23,6 +23,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { COLLECTIONS } from "@autodeck/database";
+import type * as AdminFirestore from "firebase-admin/firestore";
 
 // Hoisted injection state shared with the getFirestore mock below.
 const h = vi.hoisted(() => ({
@@ -32,7 +33,7 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("firebase-admin/firestore", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("firebase-admin/firestore")>();
+  const mod = await importOriginal<typeof AdminFirestore>();
   let db: FirebaseFirestore.Firestore | null = null;
   return {
     ...mod,
@@ -80,7 +81,6 @@ vi.mock("firebase-admin/firestore", async (importOriginal) => {
   };
 });
 
-// eslint-disable-next-line import/first
 import { getFirestore } from "firebase-admin/firestore";
 
 const db = getFirestore();
