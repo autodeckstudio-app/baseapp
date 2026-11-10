@@ -16,6 +16,8 @@ import {
   GoogleAuthProvider,
   signInWithCredential,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as firebaseSignOut,
   onAuthStateChanged as firebaseOnAuthStateChanged,
   onIdTokenChanged as firebaseOnIdTokenChanged,
@@ -61,6 +63,28 @@ export async function signInWithGooglePopup(): Promise<User> {
   provider.setCustomParameters({ prompt: "select_account" });
   const result = await signInWithPopup(auth, provider);
   return result.user;
+}
+
+/**
+ * Web build on mobile browsers: full-page redirect instead of a popup.
+ * Mobile browsers open the popup as a separate tab and lose the
+ * popup-to-opener link, so the page never hears the result and reports
+ * "Sign-in was cancelled" once the user returns or closes the tab.
+ * signInWithRedirect leaves the page; the session is picked up on return.
+ */
+export async function signInWithGoogleRedirect(): Promise<void> {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  await signInWithRedirect(auth, provider);
+}
+
+/**
+ * Resolves a pending redirect sign-in after the page reloads, so its error
+ * can be shown. The signed-in user, if any, also reaches the
+ * onAuthStateChanged listeners that route into the app.
+ */
+export async function completeGoogleRedirect(): Promise<void> {
+  await getRedirectResult(auth);
 }
 
 /** Exchanges a Google ID token from the native flow for a Firebase session. */
