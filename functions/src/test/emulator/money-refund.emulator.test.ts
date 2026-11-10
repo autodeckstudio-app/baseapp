@@ -70,15 +70,31 @@ describe("concurrent reservations", () => {
     expect(requests).toHaveLength(1);
     expect(all.size).toBe(2);
     // Loser never reserves silently. Two precise observed classes for its
-    // rejection, both safe: (a) its transaction runs after the winner commits
-    // and hits the coded guard ("already has an active refund request"); (b) the
-    // emulator invalidates its transaction under contention before the guard
-    // runs (code 3, "Transaction is invalid or closed." - the class
-    // transaction-read.ts documents; runTransaction aborts surface raw here).
-    // The counts above are the invariant; the message check only proves the
-    // loser failed, never that a second reservation exists.
+    // rejection: (a) its transaction runs after the winner commits
+    // and hits the coded guard; (b) the emulator invalidates its transaction
+    // under contention before the guard runs (the class transaction-read.ts
+    // documents; runTransaction aborts surface raw here). The counts above are
+    // the invariant; the checks below only prove HOW the loser failed, never
+    // that a second reservation exists. Both alternatives are anchored
+    // complete-message shapes - no substring or generic INVALID_ARGUMENT match.
     const loser = [r1, r2].find((r) => r.status === "rejected") as PromiseRejectedResult;
-    expect(String(loser.reason)).toMatch(/already has an active refund request|Transaction is invalid or closed/);
+    const loserMessage = String(loser.reason);
+    const GUARD_SHAPE = /^Error: payment \S+ already has an active refund request \(\S+\)$/;
+    const ABORT_SHAPE = /^Error: 3 INVALID_ARGUMENT: Transaction is invalid or closed\.$/;
+    if (ABORT_SHAPE.test(loserMessage)) {
+      // SDK-level abort: verify the exact gRPC code + details the class is
+      // defined by (per transaction-read.ts), not merely the message text.
+      const failure = loser.reason as { code?: unknown; details?: unknown };
+      expect(failure.code).toBe(3);
+      expect(failure.details).toBe("Transaction is invalid or closed.");
+    } else {
+      expect(loserMessage).toMatch(GUARD_SHAPE);
+    }
+    // The failed loser left business state unchanged: no refund projected,
+    // the two refund business-state fields remain as seeded.
+    const stored = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(stored.refundAmount).toBeNull();
+    expect(stored.status).toBe("completed");
   });
 });
 
