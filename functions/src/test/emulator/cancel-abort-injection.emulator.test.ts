@@ -7,9 +7,12 @@
  * error from INSIDE the live emulator transaction, targeted at the cancel
  * transaction's own read of the target booking document, and proves:
  *   1. the callable surfaces the failure truthfully (rejects, no false success)
- *   2. nothing commits on the aborted attempt: booking status, membership
- *      binding and wash counters, jobs and audit logs are all unchanged,
- *      verified against the real emulator state afterwards
+ *   2. the aborted attempt commits no business state: booking status,
+ *      membership binding and wash counters, jobs and audit logs are
+ *      unchanged against the real emulator state afterwards. This is a
+ *      selected business-state check, not byte equality: the pre-transaction
+ *      rate-limit slot consumption on the failed call is a real side effect
+ *      and is explicitly out of scope here
  *   3. an unarmed retry then succeeds exactly once (idempotent contract)
  *   4. a further retry is a truthful no-op (alreadyCancelled)
  *
@@ -128,7 +131,7 @@ beforeEach(async () => {
 });
 
 describe("cancelBooking under a controlled aborted transaction (synthetic injection, honest label)", () => {
-  it("an aborted attempt surfaces failure and commits NOTHING; an unarmed retry succeeds exactly once", async () => {
+  it("an aborted attempt surfaces the abort and commits no business state; an unarmed retry succeeds exactly once", async () => {
     const { cancelBooking } = await import("../../functions/booking/cancelBooking.js");
     const { mid, bid, jobId } = await seedCoveredState();
 
@@ -137,15 +140,29 @@ describe("cancelBooking under a controlled aborted transaction (synthetic inject
     h.targetPath = `${COLLECTIONS.bookings()}/${bid}`;
     h.abortsRemaining = 6;
 
-    await expect(
-      cancelBooking.run({ data: { bookingId: bid, reason: "changed plans" }, auth: customerAuthC1 } as never),
-    ).rejects.toThrow();
+    // Exact caller-error mapping for this direct-run harness: runCancel has no
+    // catch around the cancel transaction, so the raw injected abort propagates
+    // with its code and message intact - anything else here means the failure
+    // was NOT the injected abort and the test must say so. (Through the
+    // Functions HTTP runtime a non-HttpsError surfaces to clients as internal;
+    // that mapping is framework behavior outside this harness.)
+    const failure = await cancelBooking
+      .run({ data: { bookingId: bid, reason: "changed plans" }, auth: customerAuthC1 } as never)
+      .then(
+        () => { throw new Error("cancel unexpectedly SUCCEEDED under an injected abort"); },
+        (e: unknown) => e,
+      );
+    expect(failure).toBeInstanceOf(Error);
+    expect((failure as { code?: unknown }).code).toBe(10); // the injected ABORTED, not some other failure
+    expect(String((failure as Error).message)).toContain("10 ABORTED");
 
     // The injection must actually have fired - a green test without it would
     // prove nothing about the failure branch.
     expect(h.abortAttempts).toBeGreaterThan(0);
 
-    // Independent real-state check: the aborted attempt committed nothing.
+    // Independent real-state check: the aborted attempt committed no business
+    // state (booking, membership, job, audit). Not byte equality - the failed
+    // call still consumed its pre-transaction rate-limit slot by design.
     const b = await bookingDoc(bid);
     expect(b["status"]).toBe("CONFIRMED");
     expect(b["membershipId"]).toBe(mid);
@@ -167,6 +184,14 @@ describe("cancelBooking under a controlled aborted transaction (synthetic inject
     const again = (await cancelBooking.run({ data: { bookingId: bid, reason: "changed plans" }, auth: customerAuthC1 } as never)) as Record<string, unknown>;
     expect(again["success"]).toBe(true);
     expect(again["alreadyCancelled"]).toBe(true);
+    // Full post-retry invariants after the repeated cancel: still exactly one
+    // restore and one cancel audit, job terminal, membership binding intact.
     expect((await membership(mid))["washesUsed"]).toBe(3); // still exactly one restore
+    expect((await audits(mid)).filter((x) => x["action"] === "membership.wash_restored").length).toBe(1);
+    expect((await audits(bid)).filter((x) => x["action"] === "booking.cancelled").length).toBe(1);
+    expect((await jobDoc(jobId))["status"]).toBe("CANCELLED");
+    const bf = await bookingDoc(bid);
+    expect(bf["membershipId"]).toBe(mid);
+    expect(bf["membershipWashUsed"]).toBe(true);
   }, 30000);
 });
