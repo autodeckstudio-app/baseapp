@@ -54,6 +54,40 @@ describe("no-show review", () => {
     expect(r).not.toHaveProperty("selected");
   });
 
+  it("mapped default uses the approved service-only 20% basis, excluding pickup/drop and discount", async () => {
+    // Approved rule (owner yes 2 Nov 21:32 IST): 20% of the discounted service price
+    // including GST, excluding pickup/drop. Fixture: subtotal 110000 = service 100000 +
+    // pickup 5000 + drop 5000, membership discount 10000, no GST -> discounted service
+    // 90000 -> retain 18000. Customer paid the discounted total: 100000.
+    h.data["bookings"]!["b1"]!["priceBreakdown"] = {
+      vehicleCategory: "suv", basePrice: 100000, scopeAdjustment: 0, addOns: [],
+      subtotal: 110000, membershipDiscount: 10000, membershipDiscountPercent: null,
+      pickupFee: 5000, dropFee: 5000, tax: 0, taxRatePercent: 0, total: 100000,
+    };
+    const r: any = await previewNoShowResolution.run(req({ bookingId: "b1" }));
+    expect(r.capturedPaise).toBe(100000);
+    expect(r.mappedDefault).toEqual({ serviceClass: "service_only", key: "service_20", chargePaise: 18000, refundPaise: 82000 });
+  });
+
+  it("booking without a price snapshot gets NO default - admin reviews explicitly", async () => {
+    // The unapproved historical Rs100/20%-of-total bands must not be recommended.
+    const r: any = await previewNoShowResolution.run(req({ bookingId: "b1" }));
+    expect(r.mappedDefault).toBeNull();
+    // Explicit admin choices remain available.
+    expect(r.candidates.map((c: any) => c.key)).toEqual(["flat_rs100", "pct_20", "waive"]);
+  });
+
+  it("retention is capped at captured; equal capture leaves zero refund for approval", async () => {
+    h.data["bookings"]!["b1"]!["priceBreakdown"] = {
+      vehicleCategory: "suv", basePrice: 500000, scopeAdjustment: 0, addOns: [],
+      subtotal: 500000, membershipDiscount: null, membershipDiscountPercent: null,
+      pickupFee: 0, dropFee: 0, tax: 0, taxRatePercent: 0, total: 100000,
+    };
+    const r: any = await previewNoShowResolution.run(req({ bookingId: "b1" }));
+    // 20% of 500000 service = 100000, capped at the 100000 actually captured.
+    expect(r.mappedDefault).toEqual({ serviceClass: "service_only", key: "service_20", chargePaise: 100000, refundPaise: 0 });
+  });
+
   it("charge resolution reserves exactly captured-minus-charge in the outbox", async () => {
     const r: any = await resolveNoShow.run(req({ bookingId: "b1", resolution: "charge", chargePaise: 10000, reason: "policy charge" }));
     expect(r).toMatchObject({ resolved: true, chargePaise: 10000 });

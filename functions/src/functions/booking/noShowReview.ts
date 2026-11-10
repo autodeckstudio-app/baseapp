@@ -5,7 +5,7 @@ import{combinedNoShowAmounts,checkedCombinedPayment}from "@autodeck/core";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
-import { isBiggerVisit, CANCEL_SHORT, CANCEL_BIGGER, type Booking, type Payment } from "@autodeck/core";
+import { type Booking, type Payment } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { extractUser, assertTenant, assertStudio } from "../../middleware/auth.js";
@@ -35,22 +35,18 @@ const resolveSchema = z.object({
   reason: z.string().trim().min(3).max(500),
 }).strict();
 
-// Mapped default (settled mapping, same bands as the customer cancel fee): small jobs Rs 100, bigger jobs 20% of the
-// booking total, never more than what was captured. When the service class cannot be determined there is NO default
-// (null): the admin must pass an explicit charge. Deviations are allowed only as a labelled, reasoned exception.
-async function mappedNoShowDefault(db: FirebaseFirestore.Firestore, booking: Booking & { id: string }, captured: number) {
+// Mapped default (owner-approved 2 Nov 21:32 IST): 20% of the discounted service price including GST,
+// excluding unused pickup/drop, never more than what was captured. When the booking has no price snapshot
+// there is NO grounded discounted-service basis and NO default (null): the admin reviews the booking and
+// passes an explicit charge with a reason. Deviations are allowed only as a labelled, reasoned exception.
+async function mappedNoShowDefault(booking: Booking & { id: string }, captured: number) {
   if(booking.combinedPayment){try{checkedCombinedPayment(booking.combinedPayment,booking.totalAmount);const amounts=combinedNoShowAmounts(booking.priceBreakdown,captured);return{serviceClass:"service_only",key:"service_20",chargePaise:amounts.retainedPaise,refundPaise:amounts.refundReviewPaise};}catch{throw new HttpsError("failed-precondition","No-show price snapshot needs office review.");}}
-  let categories = (booking as { cancelCategories?: string[] }).cancelCategories ?? [];
-  if (!categories.length && booking.serviceId) {
-    const svc = await db.collection(COLLECTIONS.services()).doc(booking.serviceId).get();
-    const c = svc.exists ? (svc.data() as { category?: string }).category : undefined;
-    if (c) categories = [String(c)];
-  }
-  if (!categories.length) return null;
-  const bigger = isBiggerVisit(categories);
-  const raw = bigger ? Math.round((Math.max(0, booking.totalAmount) * CANCEL_BIGGER.feePercent) / 100) : CANCEL_SHORT.feePaise;
-  const chargePaise = Math.min(raw, captured);
-  return { serviceClass: bigger ? "bigger" : "small", key: bigger ? "pct_20" : "flat_rs100", chargePaise, refundPaise: captured - chargePaise };
+  const pb = (booking as { priceBreakdown?: { subtotal: number; pickupFee: number; dropFee: number; membershipDiscount: number | null; taxRatePercent: number } }).priceBreakdown;
+  if (!pb) return null;
+  try {
+    const amounts = combinedNoShowAmounts(pb, captured);
+    return { serviceClass: "service_only", key: "service_20", chargePaise: amounts.retainedPaise, refundPaise: amounts.refundReviewPaise };
+  } catch { throw new HttpsError("failed-precondition", "No-show price snapshot needs office review."); }
 }
 
 interface NoShowContext {
@@ -149,7 +145,7 @@ export const previewNoShowResolution = onCall({ region: "asia-south1", enforceAp
   assertTenant(user, booking.tenantId);
   assertStudio(user, booking.studioId, "Booking");
   const captured = payment && payment.status === "completed" ? payment.amount : 0;
-  if(booking.combinedPayment){const mapped=await mappedNoShowDefault(db,booking,captured);return{bookingId:data.bookingId,capturedPaise:captured,candidates:[{key:"service_20",chargePaise:mapped!.chargePaise,refundPaise:mapped!.refundPaise},{key:"waive",chargePaise:0,refundPaise:captured}],mappedDefault:mapped,policyNote:"Keep 20% of discounted service including GST. Unused transport is excluded. Refund remainder awaits approval and processing."};}
+  if(booking.combinedPayment){const mapped=await mappedNoShowDefault(booking,captured);return{bookingId:data.bookingId,capturedPaise:captured,candidates:[{key:"service_20",chargePaise:mapped!.chargePaise,refundPaise:mapped!.refundPaise},{key:"waive",chargePaise:0,refundPaise:captured}],mappedDefault:mapped,policyNote:"Keep 20% of discounted service including GST. Unused transport is excluded. Refund remainder awaits approval and processing."};}
   return {
     bookingId: data.bookingId,
     capturedPaise: captured,
@@ -161,7 +157,7 @@ export const previewNoShowResolution = onCall({ region: "asia-south1", enforceAp
       { key: "waive", chargePaise: 0, refundPaise: captured },
     ],
     // Settled mapping: small = Rs 100, bigger = 20% of the booking total. null when the class is unknown (no silent charge).
-    mappedDefault: await mappedNoShowDefault(db, booking, captured),
+    mappedDefault: await mappedNoShowDefault(booking, captured),
     policyNote: "Pick the no-show charge for this booking: Rs 100 or 20% of the captured payment, or waive it. The rest goes back to the customer.",
   };
 });
@@ -191,7 +187,7 @@ export const resolveNoShow = onCall({ region: "asia-south1", enforceAppCheck: sh
   }
 
   const capturedNow = payment && payment.status === "completed" ? payment.amount : 0;
-  const mapped = await mappedNoShowDefault(db, booking, capturedNow);
+  const mapped = await mappedNoShowDefault(booking, capturedNow);
   // charge with no amount takes the mapped default; with no mapped default it is refused (no silent arbitrary charge).
   const charge = data.resolution === "waive" ? 0 : (data.chargePaise ?? mapped?.chargePaise ?? null);
   if(booking.combinedPayment&&data.resolution==="charge"&&charge!==mapped?.chargePaise)throw new HttpsError("invalid-argument","Combined no-show retention is 20% of service only. No unused transport charge.");
