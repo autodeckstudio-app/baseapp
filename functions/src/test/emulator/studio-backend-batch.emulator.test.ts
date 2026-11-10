@@ -401,9 +401,12 @@ describe("inspection photos — addPhotos path validation", () => {
   });
 
   it("accepts the lowercase customerid key that real signed-URL PUTs land, and still rejects a wrong-customer binding in that casing", async () => {
-    // Pinned date+time: do not consume the shared nextDate() counter (see
+    // Locally pinned slot: do not consume the shared nextDate() counter (see
     // freshJob); 17:30 avoids the bay/time slot every counter booking uses.
-    const { job } = await freshJob(service, TENANT_A, STUDIO_A, "2026-11-10", "17:30");
+    // Computed from now (never an absolute date): a hardcoded day expires and
+    // fails the booking window's future check in later CI runs.
+    const pinnedDate = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+    const { job } = await freshJob(service, TENANT_A, STUDIO_A, pinnedDate, "17:30");
     const staff = studioAuth(uid("staff"));
     await startInspection.run({ data: { jobId: job.id }, auth: staff } as never);
     const base = `${job.tenantId}/jobs/${job.id}/photos`;
