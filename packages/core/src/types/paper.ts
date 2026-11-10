@@ -12,7 +12,7 @@ export interface PaperVerification {
   tenantId: string;
   studioId: string;
   vehicleId: string;
-  customerId: string; // owner auth uid, denormalized for rules and customer reads
+  customerId: string; // canonical customer record id; legacy records may use auth uid
   kind: PaperKind;
   reference: string; // document / policy / certificate number
   title?: string | null; // customer-given name, used for OTHER documents
@@ -24,6 +24,8 @@ export interface PaperVerification {
   status: PaperStatus;
   verificationMode?: "automatic" | "manual" | "review";
   verificationReason?: string;
+  inspectedPlate?: string | null; // staff transcription from the original, not an OCR claim
+  originalInspected?: boolean | null; // explicit staff attestation, cleared on edits
   extractedPlate?: string | null;
   extractedExpiry?: string | null;
   reviewedBy: string | null; // auth uid

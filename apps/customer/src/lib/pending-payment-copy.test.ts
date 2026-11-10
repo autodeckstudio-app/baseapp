@@ -19,7 +19,9 @@ describe("pending online payment copy", () => {
     expect(detail).toContain("customerPaymentLabel(payment");
     expect(readFileSync("src/lib/existing-job-payment.ts", "utf8")).toContain("Online payment pending");
     expect(detail).toContain('!(booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt)))');
-    expect(detail).toContain("Held until");
+    expect(detail).toContain('title="Slot held until"');
+    expect(detail).toContain('detail="After verified payment."');
+    expect(detail).not.toContain("until the payment goes through");
   });
   it("retitles the confirm notice while a slot is held", () => {
     expect(confirm).toContain('held ? "Payment pending"');

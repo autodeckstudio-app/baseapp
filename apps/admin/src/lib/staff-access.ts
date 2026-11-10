@@ -1,11 +1,4 @@
-// Studio / Office gating for the admin shell. Pure so it can be unit tested.
-//
-// STUDIO = run today's work (bookings and the job floor). Staff live here.
-// OFFICE = run the business: money, catalogue, customers, staff, settings.
-// Admins see both. Studio staff see only Studio routes; anything else sends
-// them back to the Studio floor. Firestore rules and every callable/API
-// route keep their own server-side checks - this is navigation, not the
-// security boundary.
+// Admin host navigation. Studio credentials are valid only on the separate floor app.
 import type { UserRole } from "@autodeck/auth";
 
 export const STUDIO_HOME = "/jobs";
@@ -31,10 +24,10 @@ export function isAccountantPath(pathname: string): boolean {
 export function canVisit(role: UserRole | undefined | null, pathname: string): boolean {
   if (role === "accountant") return isAccountantPath(pathname);
   if (canSeeOffice(role)) return true;
-  return role === "studio" && isStudioPath(pathname);
+  return false;
 }
 
 export function homeFor(role: UserRole | undefined | null): string {
   if (role === "accountant") return ACCOUNTANT_HOME;
-  return canSeeOffice(role) ? OFFICE_HOME : STUDIO_HOME;
+  return canSeeOffice(role) ? OFFICE_HOME : "/login";
 }

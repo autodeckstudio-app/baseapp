@@ -14,3 +14,4 @@ export async function publishManagedCatalogue(input:{publishId:string;reviews:{d
 export async function inspectManagedCatalogueRecovery(publishId:string){return(await httpsCallable<{publishId:string},{assessment:string;assessmentDigest?:string}>(functions,'inspectManagedCatalogueRecovery')({publishId})).data;}
 export async function reviewManagedCatalogueRecovery(publishId:string){return(await httpsCallable<{publishId:string},{assessmentDigest:string}>(functions,'reviewManagedCatalogueRecovery')({publishId})).data;}
 export async function finishManagedCatalogueRecovery(input:{publishId:string;assessmentDigest:string}){return(await httpsCallable<typeof input,{phase:string}>(functions,'finishManagedCatalogueRecovery')(input)).data;}
+export async function discardCatalogueDraft(input:{draftId:string;expectedVersion:number}){return(await httpsCallable<typeof input,{ok:boolean}>(functions,'discardCatalogueDraft')(input)).data;}

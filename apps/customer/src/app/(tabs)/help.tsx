@@ -33,10 +33,10 @@ export default function HelpScreen() {
   const hasContact = Boolean(s.phone || s.whatsapp);
   return (
     <Screen appBar="Help & contact">
-      {typeof serviceName === "string" && serviceName.trim() ? <Notice title={`Ask about ${serviceName.slice(0, 160)}`} body="Call or message the studio below to confirm the scope, exclusions and care instructions for this service." /> : null}
+      {typeof serviceName === "string" && serviceName.trim() ? <Notice title={`Ask about ${serviceName.slice(0, 160)}`} body="Call or message to check this service." /> : null}
       {hasContact ? (
         <Pane pad="gap">
-          {s.phone ? <Row title={t("Call the studio")} detail={s.hours || undefined} trailing={<NavIcon name="call" color={colors.textPrimary} size={22} cut={cut} />} onPress={() => void Linking.openURL(`tel:${s.phone}`)} last={!s.whatsapp} /> : null}
+          {s.phone ? <Row title={t("Call the studio")} detail="Service help by phone" trailing={<NavIcon name="call" color={colors.textPrimary} size={22} cut={cut} />} onPress={() => void Linking.openURL(`tel:${s.phone}`)} last={!s.whatsapp} /> : null}
           {s.whatsapp ? <Row title="WhatsApp" detail="Message the studio" trailing={<NavIcon name="whatsapp" color={colors.textPrimary} size={22} cut={cut} />} onPress={() => void Linking.openURL(`https://wa.me/${s.whatsapp}`)} last /> : null}
         </Pane>
       ) : (
@@ -53,7 +53,7 @@ export default function HelpScreen() {
           {shown.map((f, i) => (
             <View key={f.q}>
               <Row title={f.q} onPress={() => setOpen(open === i ? null : i)} last={i === shown.length - 1 && open !== i} />
-              {open === i ? <View style={{ paddingHorizontal: space.line, paddingBottom: space.line }}><T tone="secondary">{f.a}</T></View> : null}
+              {open === i ? <View style={{ paddingHorizontal: space.line, paddingBottom: space.line }}><View style={{gap:space.line}}>{f.facts.map(fact=><View key={fact.label} style={{gap:4}}><T role="caption" tone="tertiary">{fact.label}</T><T tone="secondary">{fact.detail}</T></View>)}</View></View> : null}
             </View>
           ))}
         </Pane>

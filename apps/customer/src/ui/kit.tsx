@@ -1,3 +1,4 @@
+import { NavIcon, type NavIconName } from "./NavIcon";
 import { SceneMotion } from "./SceneMotion";
 import { useReduceMotion } from "../lib/reduce-motion";
 // Customer app building blocks on the AutoDeck experience theme: the dark
@@ -84,7 +85,7 @@ export function T({
 /** Full screen: ambient ground, scrolling column capped at reading width. */
 // One header on every screen: avatar (or Back on a drill-down), screen name, bell. Same height everywhere.
 // Tab roots (index, bookings, catalogue = Services, garage, profile) never show Back: the nav is their way around.
-const BAR_TITLES: Record<string, string> = { bookings: "Bookings", catalogue: "Services", garage: "Garage", profile: "You", membership: "Membership", notifications: "Notifications", studio: "The studio", help: "Help", cars: "Cars", book: "Book", approvals: "Approval", invoice: "Invoice", gifts: "Gifts" };
+const BAR_TITLES: Record<string, string> = { bookings: "Bookings", catalogue: "Services", garage: "Garage", profile: "You", membership: "Membership", notifications: "Notifications", studio: "The studio", help: "Help", cars: "Cars", book: "Book", approvals: "Approval", invoice: "Invoice", gifts: "Gifts", "quote-request": "Request a quote", quotes: "Your quotes" };
 function useBar(appBar?: string, onBackOverride?: () => void) {
   const router = useRouter();
   const segs = useSegments() as string[];
@@ -144,11 +145,14 @@ export function Screen({
   canvas = false,
   appBar,
   onBack,
+  scrollIdentity = "screen",
 }: {
   /** Shared tab header: avatar, screen name, bell. Pass the screen name. */
   appBar?: string;
   /** A level inside one screen (Services category) steps back here instead of using a second back link. */
   onBack?: (() => void) | undefined;
+  /** In-screen route identity, e.g. a catalogue category, each retains its own offset. */
+  scrollIdentity?: string;
   /** Show the photo backdrop behind the header (use with CanvasTitle). */
   canvas?: boolean;
   children: ReactNode;
@@ -159,17 +163,29 @@ export function Screen({
 }) {
   const scrollRef = useRef<ScrollView>(null);
   const bar = useBar(appBar, onBack);
+  // Screen deliberately removes unfocused content. Keep offsets outside that ScrollView lifecycle.
+  const offsets=useRef(new Map<string,number>()), restorePending=useRef(false),scrollActive=useRef(true);
+  const activeScrollIdentity=useRef(scrollIdentity);activeScrollIdentity.current=scrollIdentity;
+  const restoreOffset=useCallback(()=>{if(restorePending.current)scrollRef.current?.scrollTo({y:offsets.current.get(scrollIdentity)??0,animated:false})},[scrollIdentity]);
+  const cancelRestore=()=>{restorePending.current=false};
   const {width}=useWindowDimensions();
   const gutter=width<360?layout.screenInsetCompact:layout.screenInset;
   const [focused, setFocused] = useState(true);
   useFocusEffect(useCallback(() => {
-    setFocused(true);
+    scrollActive.current=true;setFocused(true);
     resetNavScroll();
-    return () => setFocused(false);
-  }, []));
+    restorePending.current=true;
+    return () => {
+      // A browser focus/click may scroll just before blur, ahead of throttled onScroll.
+      // Sample its actual node before teardown so the last visible origin wins.
+      if(Platform.OS==='web'&&!restorePending.current){const node=scrollRef.current?.getScrollableNode?.() as {scrollTop?:number}|undefined;if(typeof node?.scrollTop==='number')offsets.current.set(scrollIdentity,node.scrollTop);}
+      scrollActive.current=false;restorePending.current=false;setFocused(false)
+    };
+  }, [scrollIdentity]));
+  useEffect(()=>{if(focused)restoreOffset()},[focused,restoreOffset]);
   const segs = useSegments() as string[];
   const myTab = segs[0] === "(tabs)" ? (segs[1] ?? "index") : "";
-  useEffect(() => onTabPressed((t) => { if (t === myTab) scrollRef.current?.scrollTo({ y: 0, animated: true }); }), [myTab]);
+  useEffect(() => onTabPressed((t) => { if (t === myTab) {restorePending.current=false;offsets.current.set(activeScrollIdentity.current,0);scrollRef.current?.scrollTo({ y: 0, animated: true });} }), [myTab]);
   const body = (
     <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: top ? space.gap : space.inset, paddingBottom: (Platform.OS === "web" ? "calc(96px + env(safe-area-inset-bottom))" : 96) as unknown as number, gap: 20 }}>
       {bar && !top ? <AppBar title={bar.title} onBack={bar.back} /> : null}
@@ -184,7 +200,7 @@ export function Screen({
     <Ambient>
       {canvas ? <CanvasBackdrop /> : null}
       {top ? <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: space.inset, gap: space.line, zIndex: 2 }}>{bar ? <AppBar title={bar.title} onBack={bar.back} /> : null}{top}</View> : null}
-      {scroll ? <ScrollView ref={scrollRef} scrollEventThrottle={16} onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)} contentContainerStyle={{ flexGrow: 1 }}>{content}</ScrollView> : content}
+      {scroll ? <ScrollView testID="screen-scroll" ref={scrollRef} scrollEventThrottle={16} onLayout={restoreOffset} onContentSizeChange={restoreOffset} onScrollBeginDrag={cancelRestore} onTouchStart={cancelRestore} {...(Platform.OS==='web'?{onWheel:cancelRestore}:{})} onScroll={(e) => {if(!scrollActive.current)return;const y=e.nativeEvent.contentOffset.y;const target=offsets.current.get(scrollIdentity)??0;if(restorePending.current){if(Math.abs(y-target)>1)return;restorePending.current=false;}offsets.current.set(scrollIdentity,y);reportScroll(y)}} contentContainerStyle={{ flexGrow: 1 }}>{content}</ScrollView> : content}
     </Ambient>
   );
 }
@@ -221,6 +237,7 @@ export function Plate({ value }: { value: string }) {
 
 export function Button({
   label,
+  icon,
   onPress,
   kind = "primary",
   disabled,
@@ -229,6 +246,8 @@ export function Button({
   testID,
 }: {
   label: string;
+  /** Explicitly opt in only when a familiar icon is clear in its local context. */
+  icon?: NavIconName;
   onPress?: () => void;
   kind?: "primary" | "quiet" | "danger";
   disabled?: boolean;
@@ -243,6 +262,7 @@ export function Button({
   return (
     <Pressable
       testID={testID}
+      accessibilityLabel={label}
       accessibilityRole="button"
       accessibilityState={{ disabled: !!off, busy: !!busy }}
       disabled={off}
@@ -252,6 +272,7 @@ export function Button({
           minHeight: 48,
           alignSelf: "flex-start",
           marginTop: primary ? 8 : 0,
+          marginBottom: icon ? 0 : 8,
           borderRadius: radius.pill,
           paddingHorizontal: 18,
           alignItems: "center",
@@ -266,13 +287,14 @@ export function Button({
           transform: pressed && !off ? [{ scale: 0.97 }] : [],
           ...(Platform.OS === "web" ? ({ transition: "transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease", cursor: "pointer" } as object) : {}),
         },
+        ...(icon ? [{ minWidth:48, width:48, paddingHorizontal:0, marginTop:0, borderWidth:0, backgroundColor:"transparent", borderRadius:0, ...(Platform.OS==="web"?{backgroundImage:"none",boxShadow:"none",backdropFilter:"none"}: {}) } as ViewStyle] : []),
         style,
       ]}
     >
       {busy ? <ActivityIndicator color={colors.textPrimary} /> : null}
-      <T numberOfLines={1} role="bodyStrong" tone={kind === "danger" ? "danger" : "primary"} style={[{textAlign:"center",flexShrink:1},primary?{fontWeight:"700"}:null]}>
+      {icon ? (!busy ? <NavIcon name={icon} size={24} color={kind === "danger" ? colors.danger : colors.textPrimary} cut={name === "light" ? "#FFFFFF" : "#252C35"}/> : null) : <T numberOfLines={1} role="bodyStrong" tone={kind === "danger" ? "danger" : "primary"} style={[{textAlign:"center",flexShrink:1},primary?{fontWeight:"700"}:null]}>
         {label}
-      </T>
+      </T>}
     </Pressable>
   );
 }
@@ -284,16 +306,17 @@ export function Row({
   onPress,
   last,
   detailTone = "tertiary",
+  expanded,
 }: {
   title: ReactNode;
   detail?: ReactNode | undefined;
   detailTone?: "tertiary" | "secondary";
+  expanded?: boolean;
   trailing?: ReactNode | undefined;
   onPress?: (() => void) | undefined;
   last?: boolean | undefined;
 }) {
   const { colors, name } = useExperienceTheme();
-  const night = name === "night";
   // Never nest interactive elements: the row's press target closes before any
   // trailing content renders, so trailing IconAction buttons (edit/delete) are
   // siblings of the row pressable, never children (invalid nested <button> on web).
@@ -312,15 +335,16 @@ export function Row({
         disabled={!onPress}
         onPress={onPress}
         accessibilityRole={onPress ? "button" : undefined}
-        style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: space.line, opacity: pressed ? 0.7 : 1 })}
+        accessibilityState={expanded===undefined?undefined:{expanded}}
+        style={({ pressed }) => ({ flex: 1, minHeight:48, flexDirection: "row", alignItems: "center", gap: space.line, opacity: pressed ? 0.7 : 1 })}
       >
         <View style={{ flex: 1, gap: 2 }}>
           {typeof title === "string" ? <T role="bodyStrong">{title}</T> : title}
           {detail ? typeof detail === "string" ? <T role="caption" tone={detailTone}>{detail}</T> : detail : null}
         </View>
+        {onPress && !trailing ? <NavIcon name={expanded?"close":"proceed"} size={22} color={colors.textSecondary} cut={name === "light" ? "#FFFFFF" : "#252C35"}/> : null}
       </Pressable>
       {trailing}
-      {onPress ? <View style={{ width: 28, height: 28, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: night ? "rgba(255,255,255,0.07)" : "rgba(20,22,26,0.06)" }}><T tone="secondary">›</T></View> : null}
     </View>
   );
 }

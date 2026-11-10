@@ -10,6 +10,7 @@ import { COLLECTIONS } from "@autodeck/database";
  * 3D HANDOFF: "expired windows can be overwritten/reused safely").
  */
 export type RateLimitAction =
+  | "work.record"
   | "customer.claimIssue"
   | "customer.claim"
   | "read.jobs"
@@ -60,6 +61,9 @@ export type RateLimitAction =
   | "customer.licenseUpload"
   | "booking.review"
   | "studio.removeHoliday"
+  | "employee.documentUpload"
+  | "employee.documentRead"
+  | "employee.documentReview"
   | "employee.add"
   | "employee.updateRole"
   | "employee.deactivate"
@@ -146,6 +150,7 @@ interface RateLimitConfig {
 // entirely â it was fixed there specifically to make this LOW-tier
 // assumption true again, not weakened.
 const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
+  "work.record": {limit:60,windowMs:60_000},
   "customer.claimIssue": { limit: 30, windowMs: 3_600_000 },
   "customer.claim": { limit: 10, windowMs: 600_000 },
   "read.jobs": {limit:60,windowMs:60_000},
@@ -198,6 +203,9 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "studio.upsertBay": { limit: 60, windowMs: 60_000 },
   "studio.addHoliday": { limit: 60, windowMs: 60_000 },
   "studio.removeHoliday": { limit: 60, windowMs: 60_000 },
+  "employee.documentUpload": {limit:6,windowMs:60_000},
+  "employee.documentRead": {limit:120,windowMs:60_000},
+  "employee.documentReview": {limit:30,windowMs:60_000},
   "employee.add": { limit: 30, windowMs: 60_000 },
   "attendance.checkIn": { limit: 30, windowMs: 60_000 },
   "attendance.checkOut": { limit: 30, windowMs: 60_000 },

@@ -1,3 +1,5 @@
+import {GarageDisclosure} from '../../../ui/GarageDisclosure';
+import {currentVehicleYear} from '@autodeck/core';
 import { useReduceMotion } from "../../../lib/reduce-motion";
 import { SceneIntro } from "../../../ui/SceneIntro";
 import { validAppliedDate, todayStudioDate } from "../../../lib/applied-date";
@@ -214,7 +216,7 @@ export default function AddVehicleScreen() {
   function validate(f: FormState): Partial<Record<keyof FormState, string>> {
     const yearNum = parseInt(f.year, 10);
     const plate = normalizePlate(f.registrationNumber);
-    const maxYear = new Date().getFullYear() + 1;
+    const maxYear = currentVehicleYear();
     const fe: Partial<Record<keyof FormState, string>> = {};
     if (!plate) fe.registrationNumber = "Enter your registration number.";
     else if (/[^A-Za-z0-9\s]/.test(f.registrationNumber) || !/^[A-Z]{2}\d{2}[A-Z]{1,3}\d{4}$/.test(plate)) fe.registrationNumber = "Enter a valid registration number, e.g. MH12AB1234.";
@@ -513,7 +515,7 @@ export default function AddVehicleScreen() {
 
         <View style={{ gap: space.breath }}>
           <Kicker>Existing protection (optional)</Kicker>
-          <T role="caption" tone="secondary">If this car already has PPF or ceramic coating, add what you know. It shows as added by you - AutoDeck has not verified it. Warranty years alone do not create an expiry date.</T>
+          <GarageDisclosure kind="protection"/>
           {PROTECTION_BLOCKS.map(({ kind, label, question }) => (
             <View key={kind} style={{ gap: space.hair }}>
               {/* SelectField renders no visible label on web (native-only);
@@ -572,7 +574,7 @@ export default function AddVehicleScreen() {
               <View style={{ width: "100%", maxWidth: 380 }}>
                 <ModalCard title="This car is already in your garage" body="A car with this registration number is already saved, so it can't be added again.">
                   <Button label="View saved car" onPress={() => { setDupOpen(false); router.replace(`/(tabs)/garage/${savedId}`); }} />
-                  <Button label="Close" kind="quiet" onPress={() => setDupOpen(false)} />
+                  <Button icon="close" label="Close" kind="quiet" onPress={() => setDupOpen(false)} />
                 </ModalCard>
               </View>
             </View>
@@ -586,7 +588,7 @@ export default function AddVehicleScreen() {
             action={
               <View style={{ gap: space.breath }}>
                 <Button label="Yes, same car" busy={loading} onPress={() => void handleRestore()} />
-                <Button label="Edit registration number" kind="quiet" onPress={() => setArchivedMatch(null)} />
+                <Button icon="edit" label="Edit registration number" kind="quiet" onPress={() => setArchivedMatch(null)} />
               </View>
             }
           />
@@ -596,7 +598,7 @@ export default function AddVehicleScreen() {
 
         {savedId && journal && journalPending(journal) ? (
           <View style={{ gap: space.breath }}>
-            <T role="caption" tone="tertiary">This save is not finished. Resume it, continue to the saved car and finish there, or start over - editing here stays locked until you choose.</T>
+            <GarageDisclosure kind="unfinished"/>
             <Button label="Resume unfinished save" busy={loading} onPress={() => void retryPendingStages()} />
             <Button label="Continue to your car" kind="quiet" onPress={() => router.replace(`/(tabs)/garage/${savedId}`)} />
             <Button label="Start over with a new car" kind="quiet" busy={loading} onPress={() => abandonPendingJournal()} />

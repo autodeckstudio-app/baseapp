@@ -4,11 +4,12 @@
 // Office staff get everything. Access is by Google account on this roster.
 import { useState } from "react";
 import type { Employee, StaffAccessRequest } from "@autodeck/core";
+import { StaffDocumentReview } from "./StaffDocumentReview";
 import { PageHead } from "./Office";
 
 type Role = "studio" | "admin";
-const ROLE_NAME: Record<Role, string> = { studio: "Studio", admin: "Office" };
-const ROLE_HINT: Record<Role, string> = { studio: "Floor app: bookings and jobs", admin: "Everything, including money and team" };
+const ROLE_NAME: Record<Role, string> = { studio: "Studio", admin: "Admin" };
+const ROLE_HINT: Record<Role, string> = { studio: "Bookings • jobs", admin: "Money • team • settings" };
 
 function initials(name: string): string {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "?";
@@ -41,11 +42,11 @@ export function TeamView(p: {
   return (
     <div className="ax-page">
       <PageHead
-        eyebrow="Office"
+        eyebrow="Admin"
         title="Team"
         kpis={[
           { value: current.filter((s) => s.role === "studio").length, label: "Studio" },
-          { value: current.filter((s) => s.role === "admin").length, label: "Office", tone: "premium" },
+          { value: current.filter((s) => s.role === "admin").length, label: "Admin", tone: "premium" },
           { value: waiting, label: "Not signed in yet", tone: waiting ? "accent" : undefined },
           { value: pendingReqs.length, label: "Requests", tone: pendingReqs.length ? "accent" : undefined },
         ]}
@@ -68,7 +69,7 @@ export function TeamView(p: {
                     </span>
                     <select value={reqRole} onChange={(e) => setReqRole(e.target.value as Role)} aria-label={`Access for ${r.name}`} disabled={p.busy}>
                       <option value="studio">Studio</option>
-                      <option value="admin">Office</option>
+                      <option value="admin">Admin</option>
                     </select>
                     <span className="ax-row-actions">
                       <button type="button" className="ax-button ax-button--primary" disabled={p.busy} onClick={() => p.onDecide?.(r, "approve", reqRole)}>Approve</button>
@@ -87,8 +88,9 @@ export function TeamView(p: {
               <p className="ax-note">No one on the team yet. Add the first person on the right.</p>
             ) : (
               <ul className="ax-people">
-                {current.map((emp) => (
-                  <li key={emp.id} className="ax-person">
+                {([...current.filter(e=>e.role!=="admin"),...current.filter(e=>e.role==="admin")]).map((emp,i,ordered) => (
+                  <li key={emp.id} className="ax-person" style={{flexWrap:"wrap"}}>
+                    {i===0||(ordered[i-1]?.role==="admin")!==(emp.role==="admin")?<span className="ax-label" style={{width:"100%",gridColumn:"1 / -1",flexBasis:"100%",paddingTop:i===0?0:12}}>{emp.role==="admin"?"Admin":"Staff"}</span>:null}
                     <span className={`ax-avatar ax-avatar--${emp.role}`} aria-hidden="true">{initials(emp.name)}</span>
                     <span className="ax-person-main">
                       <span className="ax-person-name">{emp.name}</span>
@@ -96,7 +98,7 @@ export function TeamView(p: {
                     </span>
                     <select value={emp.role} onChange={(e) => p.onRole(emp, e.target.value as Role)} aria-label={`Access for ${emp.name}`} disabled={p.busy}>
                       <option value="studio">Studio</option>
-                      <option value="admin">Office</option>
+                      <option value="admin">Admin</option>
                     </select>
                     {confirmId === emp.id ? (
                       <span className="ax-row-actions">
@@ -106,6 +108,7 @@ export function TeamView(p: {
                     ) : (
                       <button type="button" className="ax-button" onClick={() => setConfirmId(emp.id)}>Remove</button>
                     )}
+                    {emp.authUid?<StaffDocumentReview employeeId={emp.id} revisionKey={emp.documentReview?`${emp.documentReview.revision}:${emp.documentReview.status}`:undefined}/>:null}
                   </li>
                 ))}
               </ul>
@@ -169,7 +172,7 @@ export function TeamView(p: {
             <button type="submit" className="ax-button ax-button--primary" style={{ width: "100%" }} disabled={p.busy || !name.trim() || !emailOk}>
               Add to team
             </button>
-            <p className="ax-note">They sign in with Google using this exact address. Nothing is sent to them; tell them it&apos;s ready.</p>
+            <div className="ax-note" style={{display:"grid",gap:6}}><span>Sign-in: exact Google email.</span><span>Invite: nothing sent automatically.</span><span>Next: tell them access is ready.</span></div>
           </form>
         </aside>
       </div>

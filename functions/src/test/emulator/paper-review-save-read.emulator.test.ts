@@ -39,7 +39,7 @@ describe("staff document review save-read (emulator)", () => {
   it("verify: the decision persists with reviewer + timestamp + manual-verification copy, and the audit entry records before/after", async () => {
     const paperId = await pendingPaper(uid("cust"));
     const reviewer = uid("staff");
-    const out = (await review(staff(reviewer), { paperId, decision: "VERIFIED" })) as { id: string; status: string };
+    const out = (await review(staff(reviewer), { paperId, decision: "VERIFIED", inspectedPlate: "GJ01AB1234", originalInspected: true })) as { id: string; status: string };
     expect(out).toEqual({ id: paperId, status: "VERIFIED" });
     const saved = await readPaper(paperId); // the read the office + customer listeners serve
     expect(saved["status"]).toBe("VERIFIED");
@@ -66,21 +66,21 @@ describe("staff document review save-read (emulator)", () => {
 
   it("a customer's own review call is denied; nothing is written", async () => {
     const paperId = await pendingPaper(uid("cust"));
-    await expect(review(customer(uid("cust")), { paperId, decision: "VERIFIED" })).rejects.toMatchObject({ code: "permission-denied" });
+    await expect(review(customer(uid("cust")), { paperId, decision: "VERIFIED", inspectedPlate: "GJ01AB1234", originalInspected: true })).rejects.toMatchObject({ code: "permission-denied" });
     expect((await readPaper(paperId))["status"]).toBe("PENDING");
   });
 
   it("an already-decided paper cannot be re-reviewed", async () => {
     const paperId = await pendingPaper(uid("cust"));
-    await review(staff(uid("staff")), { paperId, decision: "VERIFIED" });
+    await review(staff(uid("staff")), { paperId, decision: "VERIFIED", inspectedPlate: "GJ01AB1234", originalInspected: true });
     await expect(review(staff(uid("staff2")), { paperId, decision: "REJECTED", rejectionReason: "late flip" })).rejects.toMatchObject({ code: "failed-precondition" });
     expect((await readPaper(paperId))["status"]).toBe("VERIFIED"); // the first decision stands
   });
 
   it("cross-tenant staff and another studio's staff are both denied", async () => {
     const paperId = await pendingPaper(uid("cust"));
-    await expect(review(staff(uid("staff"), STUDIO, "other-tenant"), { paperId, decision: "VERIFIED" })).rejects.toMatchObject({ code: "permission-denied" });
-    await expect(review(staff(uid("staff"), "other-studio"), { paperId, decision: "VERIFIED" })).rejects.toMatchObject({ code: "permission-denied" });
+    await expect(review(staff(uid("staff"), STUDIO, "other-tenant"), { paperId, decision: "VERIFIED", inspectedPlate: "GJ01AB1234", originalInspected: true })).rejects.toMatchObject({ code: "permission-denied" });
+    await expect(review(staff(uid("staff"), "other-studio"), { paperId, decision: "VERIFIED", inspectedPlate: "GJ01AB1234", originalInspected: true })).rejects.toMatchObject({ code: "permission-denied" });
     expect((await readPaper(paperId))["status"]).toBe("PENDING");
   });
 });

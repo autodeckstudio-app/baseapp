@@ -38,6 +38,7 @@ export interface StudioConfig {
 }
 
 export interface Employee {
+  documentReview?:{revision:string;status:"submitted"|"reviewed"|"needs_resubmission";submittedAt:string;reviewedAt:string|null};
   id: string;
   tenantId: string;
   studioId: string | null; // null for tenant admins (not studio-scoped)

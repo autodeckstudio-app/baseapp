@@ -52,7 +52,7 @@ export default function Shop() {
 
   if (open) {
     return (
-      <Screen appBar="Shop" onBack={() => setOpen(null)}>
+      <Screen appBar="Shop" scrollIdentity={`shop:${open.id}`} onBack={() => setOpen(null)}>
         <View style={{ gap: space.line }}>
           <Chip label={open.limited ? "CONCEPT · LIMITED DROP" : "CONCEPT"} tone={open.limited ? "premium" : "neutral"} />
           <T role="title">{open.name}</T>
@@ -66,7 +66,7 @@ export default function Shop() {
   }
 
   return (
-    <Screen appBar="Shop">
+    <Screen appBar="Shop" scrollIdentity="shop:list">
       <PageHeader kicker="GUEST STORE" title="Everything here is a concept" sub="The AutoDeck store is taking shape. Ordering is not open yet." />
       {chips}
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.gap }}>

@@ -5,19 +5,14 @@ import { getAdminAuth } from "./firebase-admin";
 
 export const SESSION_COOKIE_NAME = "__session";
 
-// Roles that may hold an admin-app session at all. 'studio' is let in for
-// the Studio floor only; the (admin) layout and every office API route
-// still require admin/superadmin. See lib/staff-access.ts.
-export const ADMIN_APP_ROLES = new Set(["admin", "superadmin", "studio", "accountant"]);
+// Studio credentials stay valid for the separate floor app, never an Admin-host session.
+export const ADMIN_APP_ROLES = new Set(["admin", "superadmin", "accountant"]);
 
 export function extractClaims(decoded: Record<string, unknown>): AutoDeckClaims | null {
   const role = typeof decoded["role"] === "string" ? decoded["role"] : null;
   const tenantId = typeof decoded["tenantId"] === "string" ? decoded["tenantId"] : null;
   if (!role || !ADMIN_APP_ROLES.has(role) || !tenantId) return null;
   const studioId = typeof decoded["studioId"] === "string" ? decoded["studioId"] : null;
-  // Studio staff are always scoped to one studio; a studio claim without a
-  // studio is malformed and gets no session.
-  if (role === "studio" && !studioId) return null;
   return { role: role as AutoDeckClaims["role"], tenantId, studioId };
 }
 

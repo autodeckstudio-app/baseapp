@@ -32,7 +32,7 @@ export function LicenceSection({ customerId, scope, upload, lock, epoch }: { cus
   }
   return (
     <>
-      <ListRow icon="search" title="Driving licence" detail="Private photo for the studio" action={licOpen ? "Close" : licPhoto.state === "ready" ? "View licence" : "Add"} onPress={() => setLicOpen(!licOpen)} />
+      <ListRow expanded={licOpen} icon="search" title="Driving licence" detail="Private photo for the studio" action={licOpen ? "Close" : licPhoto.state === "ready" ? "View licence" : "Add"} onPress={() => setLicOpen(!licOpen)} />
       {licOpen ? (
         <View style={{ gap: space.breath, paddingBottom: 14 }}>
           {customerId ? <SavedLicensePhotoView r={licPhoto} /> : <T role="caption">Customer profile could not be verified. Your licence has not been changed.</T>}

@@ -1,3 +1,4 @@
+import {currentVehicleYear} from '@autodeck/core';
 import { z } from "zod";
 
 // India plate format: up to 2 letters + 2 digits + 1-2 letters + 4 digits
@@ -21,7 +22,7 @@ export const createVehicleSchema = z.object({
     .regex(INDIA_PLATE_REGEX, "Invalid India vehicle registration format (e.g. GJ01AB1234)"),
   make: z.string().min(1).max(50).trim(),
   model: z.string().min(1).max(100).trim(),
-  year: z.number().int().min(1980).max(new Date().getFullYear() + 1),
+  year: z.number().int().min(1980).refine(year=>year<=currentVehicleYear(),()=>({message:`Year cannot be later than ${currentVehicleYear()}.`})),
   color: z.string().min(1).max(50).trim(),
   category: vehicleCategorySchema.nullable().optional(),
   // Studio/admin walk-in registration only — a customer can never set this
@@ -41,7 +42,7 @@ export const updateVehicleSchema = z.object({
     .optional(),
   make: z.string().min(1).max(50).trim().optional(),
   model: z.string().min(1).max(100).trim().optional(),
-  year: z.number().int().min(1980).max(new Date().getFullYear() + 1).optional(),
+  year: z.number().int().min(1980).refine(year=>year<=currentVehicleYear(),()=>({message:`Year cannot be later than ${currentVehicleYear()}.`})).optional(),
   color: z.string().min(1).max(50).trim().optional(),
   odometer: z.number().int().min(0).optional(),
   category: vehicleCategorySchema.nullable().optional(),

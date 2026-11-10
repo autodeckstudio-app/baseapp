@@ -1,3 +1,4 @@
+vi.mock("./NavIcon",()=>({NavIcon:(p:Record<string,unknown>)=>React.createElement("NavIcon",p)}));
 import React from "react";
 import { act, create } from "react-test-renderer";
 // @ts-expect-error workspace has no react-dom declarations

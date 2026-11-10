@@ -81,6 +81,7 @@ describe("Storage success path (emulator)", () => {
 
   it("listing photo remove and replace act on the chosen photo only; others keep their objects", async () => {
     const me = uid("c"); const lid = uid("L");
+    await db.collection("customers").doc(me).set({ id: me, authUid: me, tenantId: TENANT, deletedAt: null });
     const a = `${TENANT}/listings/${lid}-a.jpg`, b = `${TENANT}/listings/${lid}-b.jpg`, c = `${TENANT}/listings/${lid}-c.jpg`, nw = `${TENANT}/listings/${lid}-new.png`;
     await Promise.all([put(a), put(b), put(c), put(nw)]);
     await db.collection("carListings").doc(lid).set({ id: lid, sellerId: me, tenantId: TENANT, studioId: "s", status: "live", photoPaths: [a, b, c] });

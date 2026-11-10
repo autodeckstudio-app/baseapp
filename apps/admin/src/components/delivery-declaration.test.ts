@@ -1,3 +1,4 @@
+vi.mock('../lib/work-coverage-service',()=>({getStaffJobWorkCoverage:vi.fn()}));
 import { describe, it, expect, vi } from "vitest";
 // The component's firebase boundary is mocked; only initial (pre-effect)
 // render states are asserted via static markup - interaction is covered by

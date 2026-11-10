@@ -60,7 +60,7 @@ export default function MembershipUsageScreen() {
   }, [load]);
 
   if (loading) return <Loading label="Opening usage" />;
-  if (error) return <Screen><Notice title="Could not load usage" body={error} action={<Button label="Retry" onPress={()=>void load()}/>} /></Screen>;
+  if (error) return <Screen><Notice title="Could not load usage" body={error} action={<Button icon="refresh" label="Retry" onPress={()=>void load()}/>} /></Screen>;
 
   return (
     <Screen
@@ -87,7 +87,7 @@ export default function MembershipUsageScreen() {
           })}
         </Pane>
       )}
-      <Button label="Plan history" kind="quiet" onPress={() => router.push("/(tabs)/membership/history")} />
+      <Button icon="history" label="Plan history" kind="quiet" onPress={() => router.push("/(tabs)/membership/history")} />
     </Screen>
   );
 }

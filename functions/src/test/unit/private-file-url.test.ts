@@ -119,3 +119,10 @@ describe("paper reader canonical identity seam", () => {
     await expect(getPrivateFileUrl.run(req("me", { kind: "paper", id: P }))).rejects.toMatchObject({ code: "internal" });
   });
 });
+
+it('paper read follows the same studio scope as metadata and review',async()=>{
+ seed({studioId:'s1'});
+ const request=req('operator',{kind:'paper',id:P},'studio');request.auth.token.studioId='s2';
+ await expect(getPrivateFileUrl.run(request)).rejects.toMatchObject({code:'permission-denied'});expect(h.fileCalls).toHaveLength(0);
+ request.auth.token.studioId='s1';expect(await getPrivateFileUrl.run(request)).toMatchObject({url:expect.any(String)});
+});

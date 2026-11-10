@@ -39,7 +39,7 @@ html:root .ax-shell .ax-nav-link[aria-current="page"], html:root .ax-shell .ax-c
 
 /* buttons: 14 radius, orange only on the primary */
 html:root .ax-shell .ax-button, html:root .ax-shell button, html:root .ax-shell input, html:root .ax-shell select, html:root .ax-shell textarea { border-radius: 14px !important; }
-html:root .ax-shell .ax-button:not(.ax-button--primary), html:root .ax-shell button:not(.ax-button--primary):not([type="submit"]) {
+html:root .ax-shell .ax-button:not(.ax-button--primary):not(.ax-button--danger), html:root .ax-shell button:not(.ax-button--primary):not(.ax-button--danger):not([type="submit"]) {
   background: var(--gl-sunken) !important; border: none !important; box-shadow: none !important; background-image: none !important; color: var(--gl-text) !important;
 }
 html:root .ax-shell .ax-button--primary, html:root .ax-shell button[type="submit"] { background: linear-gradient(180deg, #F08A45, #E8742A) !important; color: #fff !important; border: none !important; border-radius: 14px !important; }

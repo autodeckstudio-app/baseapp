@@ -18,7 +18,7 @@ export function InvoiceExportAction({ html }: { html: string }) {
     finally { locked.current = false; if (alive.current) setBusy(false); }
   }
   return <View style={{ gap: 8 }}>
-    <Button label={busy ? "Opening invoice copy..." : Platform.OS === "web" ? "Download PDF" : "Save PDF copy"} disabled={busy} onPress={() => void openCopy()} />
+    <Button icon="download" label={busy ? "Opening invoice copy..." : Platform.OS === "web" ? "Download PDF" : "Save PDF copy"} disabled={busy} onPress={() => void openCopy()} />
     {Platform.OS !== "web" ? <T role="caption" tone="secondary">Choose where to save in your phone's share sheet. This does not issue a new invoice.</T> : null}
     {error ? <View accessibilityRole="alert"><T role="caption" tone="secondary">{error}</T></View> : null}
   </View>;

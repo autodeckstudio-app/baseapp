@@ -69,7 +69,7 @@ export default function ServiceHistoryScreen() {
     return () => { alive = false; };
   }, [vehicleId,owner]);
 
-  if (error) return <Screen><Notice title="History unavailable" body={error} action={<Button label="Retry" onPress={() => setTick((n) => n + 1)} />} /></Screen>;
+  if (error) return <Screen><Notice title="History unavailable" body={error} action={<Button icon="refresh" label="Retry" onPress={() => setTick((n) => n + 1)} />} /></Screen>;
   if (auth.status !== "ready" || jobs === null) return <Loading label="Opening service history" />;
 
   return (

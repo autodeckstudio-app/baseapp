@@ -1,3 +1,4 @@
+import{MyDayActions,type MyDayAction}from'../../components/MyDayActions';
 import { useMinuteNow } from "@autodeck/ui/clock";
 import { bayOccupancy } from "../../lib/bay-holders";
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
@@ -117,6 +118,7 @@ export default function TodaysJobsScreen() {
 
   return (
     <View style={{ flex: 1 }}>
+    {day.confirmDialog}
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xl, paddingBottom: 130, flexGrow: 1, width: "100%", maxWidth: 1040, alignSelf: "center", gap: spacing.lg }}>
       <View style={{ flexDirection: wide ? "row" : "column", alignItems: wide ? "flex-end" : "flex-start", justifyContent: "space-between", gap: spacing.md, minHeight: wide ? 180 : phoneFont(150, 108) }}>
         <View style={{ justifyContent: "flex-end" }}>
@@ -130,19 +132,16 @@ export default function TodaysJobsScreen() {
       <View accessibilityLabel="My day" style={{ ...glass, borderRadius: 20, padding: spacing.lg, gap: spacing.sm }}>
         <Text style={{ ...typography.caption, color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.2, fontWeight: "600" } as never}>My day</Text>
         <Text style={{ ...typography.title, color: colors.textPrimary }}>{day.ready ? day.state : day.noProfile ? "No staff profile is linked to this account yet. Ask your admin." : "Checking your day..."}</Text>
-        {day.ready ? (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
-            {day.actions.in ? <Button label="Check in" size="md" fullWidth={false} loading={day.busy === "in"} disabled={day.busy !== null} onPress={() => void day.run("in")} /> : null}
-            {day.actions.be ? <Button label="End break" size="md" fullWidth={false} loading={day.busy === "be"} disabled={day.busy !== null} onPress={() => void day.run("be")} /> : null}
-            {day.actions.out ? <Button label="Check out" size="md" variant="secondary" fullWidth={false} loading={day.busy === "out"} disabled={day.busy !== null} onPress={() => void day.run("out")} /> : null}
-          </View>
-        ) : null}
         {day.note ? <Text style={{ ...typography.caption, color: colors.textMuted }}>{day.note}</Text> : null}
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.xs }}>
-          <Button label="Walk-in inspections" size="md" variant="secondary" fullWidth={false} onPress={() => router.push("/(tabs)/service-quotes")} />
-          <Button label="Pickups" size="md" variant="secondary" fullWidth={false} onPress={() => router.push("/(tabs)/pickups")} />
-          <Button label="Account" size="md" variant="secondary" fullWidth={false} onPress={() => router.push("/(tabs)/account")} />
-        </View>
+        <MyDayActions actions={[
+          ...(day.ready?[
+            ...(day.actions.in?[{key:'in',label:'Check in',icon:'check' as const,busy:day.busy==='in',disabled:day.busy!==null,onPress:()=>void day.run('in')}]:[]),
+            ...(day.actions.out?[{key:'out',label:'Check out',accessibilityLabel:day.onBreak?'End break & check out':'Check out',icon:'close' as const,busy:day.busy==='out',disabled:day.busy!==null,onPress:()=>void day.run('out')}]:[]),
+          ]:[]),
+          {key:'inspection',label:'Inspect',icon:'wrench',onPress:()=>router.push('/(tabs)/service-quotes')},
+          {key:'pickups',label:'Pickups',icon:'car',onPress:()=>router.push('/(tabs)/pickups')},
+          {key:'account',label:'Account',icon:'profile',onPress:()=>router.push('/(tabs)/account')},
+        ] as MyDayAction[]}/>
       </View>
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
         <Stat label="On the floor" value={activeJobs.length} />

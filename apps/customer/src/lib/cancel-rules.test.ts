@@ -101,3 +101,5 @@ describe("refund notices (source guard, not rendered proof)", () => {
     expect(src).not.toMatch(/\d+\s*(-\s*\d+\s*)?(working |business )?days/i.exec(src.slice(src.indexOf('refundStatus === "processed"'), src.indexOf('refundStatus === "processed"') + 300))?.[0] ?? "NOPE_XYZ");
   });
 });
+
+it('combined customer preview matches the approved service-only fee even with asymmetric transport and a discount',()=>{const booking={...b(2,'CONFIRMED',115050),combinedPayment:{version:2,choice:'advance20',totalPaise:115050,payNowPaise:23100,balancePaise:91950},priceBreakdown:{subtotal:107500,pickupFee:2500,dropFee:5000,membershipDiscount:10000,taxRatePercent:18},cancelCategories:['ceramic']}as Booking;expect(cancelState(booking,now,'ceramic')).toMatchObject({feePaise:21240,freeUntilHours:24,bigger:true});expect(cancelState(booking,now,'ceramic').line).toContain('Unused pickup/drop excluded');});

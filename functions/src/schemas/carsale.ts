@@ -1,3 +1,4 @@
+import {currentVehicleYear} from '@autodeck/core';
 import { z } from "zod";
 
 const contentType = z.enum(["image/jpeg", "image/png", "image/webp"]);
@@ -5,7 +6,7 @@ const fields = {
   make: z.string().min(1).max(50).trim(),
   model: z.string().min(1).max(80).trim(),
   variant: z.string().max(80).trim().nullable().optional(),
-  year: z.number().int().min(1990).max(new Date().getFullYear() + 1),
+  year: z.number().int().min(1990).refine(year=>year<=currentVehicleYear(),()=>({message:`Year cannot be later than ${currentVehicleYear()}.`})),
   kmDriven: z.number().int().min(0).max(1_500_000),
   fuel: z.enum(["petrol", "diesel", "cng", "electric", "hybrid"]),
   gearbox: z.enum(["manual", "automatic"]),
@@ -36,6 +37,7 @@ export const adminSaveListingSchema = z.object({
 }).strict();
 
 export const submitMyListingSchema = z.object({
+  operationId: z.string().regex(/^[A-Za-z0-9_-]{16,120}$/).optional(), // backwards compatible; only keyed requests are retry-safe
   listingId: z.string().min(1).optional(), // edit own listing (goes back to pending)
   ...fields,
   sellerName: z.string().min(1).max(80).trim(),

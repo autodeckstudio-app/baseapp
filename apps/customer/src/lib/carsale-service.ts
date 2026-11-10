@@ -17,22 +17,34 @@ export async function getCarListings(mine = false): Promise<CarListingView[]> {
 }
 
 export async function uploadListingPhoto(blob: Blob | Uint8Array, contentType: string): Promise<string> {
-  const issue = httpsCallable<{ contentType: string }, { uploadUrl: string; path: string; requiredHeaders: Record<string, string> }>(functions, "issueListingPhotoUploadUrl");
+  const issue = httpsCallable<{ contentType: string }, { uploadUrl: string; path: string; requiredHeaders: Record<string, string> }>(functions, "issueListingPhotoUploadUrl", { timeout: 20000 });
   const { uploadUrl, path, requiredHeaders } = (await issue({ contentType })).data;
   const transport = blob instanceof Uint8Array ? nativeFetch : fetch;
-  const res = await transport(uploadUrl, { method: "PUT", headers: requiredHeaders, body: blob });
-  if (!res.ok) throw new Error("A photo did not upload. Try again.");
-  return path;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 45000);
+  try {
+    const res = await transport(uploadUrl, { method: "PUT", headers: requiredHeaders, body: blob, signal: controller.signal });
+    if (!res.ok) throw new Error("A photo did not upload. Try again.");
+    return path;
+  } finally { clearTimeout(timer); }
 }
 
 export type SellInput = {
-  listingId?: string; make: string; model: string; variant: string | null; year: number; kmDriven: number;
+  listingId?: string; operationId?: string; make: string; model: string; variant: string | null; year: number; kmDriven: number;
   fuel: "petrol" | "diesel" | "cng" | "electric" | "hybrid"; gearbox: "manual" | "automatic"; bodyType: "hatchback" | "sedan" | "suv" | "muv" | "coupe" | "other" | null; owners: number; colour: string; area: string;
   askingPrice: number; description: string | null; insuranceValidTill: string | null; photoPaths: string[];
   sellerName: string; sellerPhone: string; registrationNumber: string | null;
 };
-export async function submitMyListing(input: SellInput): Promise<void> {
-  await httpsCallable<SellInput, { id: string }>(functions, "submitMyListing")(input);
+export async function submitMyListing(input: SellInput): Promise<string> {
+  const result = await httpsCallable<SellInput, { id: string }>(functions, "submitMyListing", { timeout: 30000 })(input);
+  if (!result.data.id) throw new Error("The listing was not confirmed. Check your saved listings before retrying.");
+  return result.data.id;
+}
+
+/** Exact operation receipt only. A not_found response does not cancel an in-flight submit. */
+export type ListingSubmissionState={status:'not_found'}|{status:'committed';id:string;listingStatus:string};
+export async function getMyListingSubmission(operationId:string):Promise<ListingSubmissionState>{
+ return (await httpsCallable<{operationId:string},ListingSubmissionState>(functions,'getMyListingSubmission',{timeout:15000})({operationId})).data;
 }
 
 export async function markListingSold(listingId: string): Promise<void> {

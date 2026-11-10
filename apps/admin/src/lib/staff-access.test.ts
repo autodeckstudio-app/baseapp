@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { canVisit, homeFor, isStudioPath } from "./staff-access";
 
 describe("staff access", () => {
-  it("keeps studio staff on studio routes", () => {
-    expect(canVisit("studio", "/jobs")).toBe(true);
-    expect(canVisit("studio", "/jobs/abc")).toBe(true);
-    expect(canVisit("studio", "/bookings")).toBe(true);
+  it("denies Studio role on every Admin-host route", () => {
+    expect(canVisit("studio", "/jobs")).toBe(false);
+    expect(canVisit("studio", "/jobs/abc")).toBe(false);
+    expect(canVisit("studio", "/bookings")).toBe(false);
     expect(canVisit("studio", "/payments")).toBe(false);
     expect(canVisit("studio", "/staff")).toBe(false);
     expect(canVisit("studio", "/jobsx")).toBe(false);
@@ -18,7 +18,7 @@ describe("staff access", () => {
     expect(canVisit("customer", "/jobs")).toBe(false);
   });
   it("sends each role home", () => {
-    expect(homeFor("studio")).toBe("/jobs");
+    expect(homeFor("studio")).toBe("/login");
     expect(homeFor("admin")).toBe("/dashboard");
     expect(isStudioPath("/bookings/1")).toBe(true);
   });

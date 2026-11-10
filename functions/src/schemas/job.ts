@@ -56,6 +56,7 @@ export const advanceJobStatusSchema = z.object({
   // enforced in the function): [] means "reviewed - no protection work of
   // any kind", an absent field means the choice was never made.
   protectionWork: z.array(protectionWorkEventSchema).optional(),
+  recordedWorkRevision: z.number().int().positive().optional(),
 }).strict();
 
 export const cancelWalkinJobSchema = z.object({

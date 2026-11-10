@@ -95,6 +95,7 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
     if (freshPayment.tenantId !== user.claims.tenantId) {
       throw new HttpsError("permission-denied", "Cross-tenant access denied.");
     }
+    if(freshPayment.bookingId){const linked=(await tx.get(db.collection(COLLECTIONS.bookings()).doc(freshPayment.bookingId))).data();if(linked?.['combinedPayment'])throw new HttpsError('failed-precondition','Combined payments require the original-method allocation review.');}
     if (freshPayment.externalReturnRecordId) {
       throw new HttpsError("failed-precondition", "Owner-reported external return recorded; provider refunds are blocked for reconciliation.");
     }

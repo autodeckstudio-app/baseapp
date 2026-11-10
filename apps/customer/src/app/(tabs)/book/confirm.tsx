@@ -1,3 +1,10 @@
+import{COMBINED_CHECKOUT_ENABLED,COMBINED_GIFT_CHECKOUT_ENABLED,COMBINED_WASH_CHECKOUT_ENABLED,COMBINED_PICKUP_BENEFIT_ENABLED,washCombinedServicePreview,giftCombinedServicePreview,combinedCheckoutReview}from'../../../lib/combined-checkout';
+import{CombinedPaymentOptions}from'../../../ui/CombinedPaymentOptions';
+import type{CombinedPaymentChoice}from'@autodeck/core';
+import{reviewedPickupEntitlement}from"../../../lib/pickup-entitlement";
+import type{Membership}from"@autodeck/core";
+import{pickupDraftScope,currentPickupQuote}from'../../../lib/pickup-draft';
+import{usePickupDraft}from'../../../lib/use-pickup-draft';
 import {bookingConfirmCopy}from"../../../lib/booking-confirm-copy";
 import { listOwnerKey } from "../../../lib/owner-key";
 import { formatServiceTime } from "../../../lib/duration";
@@ -19,23 +26,18 @@ import { payOnline, payWithPaymentLink } from "../../../lib/razorpay-checkout";
 import { bookingPayOutcomeMessage } from "../../../lib/native-pay-core";
 import { space } from "@autodeck/ui/theme";
 import { Icon } from "@autodeck/ui/native";
+import { AdvancePaymentSheet } from "../../../ui/AdvancePaymentSheet";
 import { MEMBERSHIP_WASH_LIVE, pickWash, todayInIndia, type WashDecision } from "../../../lib/membership-wash";
 import { getMyMemberships, getMembershipPlans } from "../../../lib/membership-service";
 import { memberSaving } from "../../../lib/member-save";
 import { Sheet, SheetTotal, SheetLine, SheetDivider } from "../../../ui/Sheet";
 import { Button, Field, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { REFERRAL_LIVE, normaliseReferralCode, referralCodeToSend } from "../../../lib/referral";
-import { describePickupQuote, getDeviceLocation, getPickupQuote, requestPickupDrop, type PickupQuote } from "../../../lib/pickup-service";
+import { describePickupQuote, getDeviceLocation, getPickupQuote, requestPickupDrop } from "../../../lib/pickup-service";
 import { pickupDayHoursFor, pickupSlotOptions, validPickupSlot, type PickupDayHours } from "../../../lib/pickup-slots";
-import { PICKUP_POLICY } from "../../../lib/pickup-policy";
+import { PickupOptions } from "../../../ui/PickupOptions";
 import { SelectField } from "../../../ui/inputs";
 import { useAuth } from "../../../hooks/useAuth";
-
-const PICKUP_KINDS: { value: "pickup" | "drop" | "both"; label: string }[] = [
-  { value: "pickup", label: "Pickup" },
-  { value: "drop", label: "Drop-off" },
-  { value: "both", label: "Pickup and drop" },
-];
 
 // Multi-day PPF services run into thousands of minutes - "~4320 min" is
 // meaningless to a customer. This is service-time (not calendar time - the
@@ -71,21 +73,24 @@ export default function BookingConfirmScreen() {
   const [wash, setWash] = useState<WashDecision | null>(null);
   const [useWash, setUseWash] = useState(false);
   const [payAtStudio, setPayAtStudio] = useState(false);
+  const [combinedChoice,setCombinedChoice]=useState<CombinedPaymentChoice|null>(null);
   // Optional pickup/drop chosen here and sent with "Confirm booking" (round 8):
   // nothing is selected by default, and tapping the chosen chip again clears
   // the whole selection so nothing pickup-related is sent.
   const [showTerms, setShowTerms] = useState(false);
-  const [pickupKind, setPickupKind] = useState<"pickup" | "drop" | "both" | null>(null);
-  const [pickupAddress, setPickupAddress] = useState("");
-  const [pickupSlot, setPickupSlot] = useState("");
-  const [pickupWhere, setPickupWhere] = useState<{ lat: number; lng: number } | null>(null);
-  // The server-checked road-distance quote for pickupWhere+pickupKind. Its stored fee is exactly what the
-  // customer is charged; when it cannot be fetched there is no estimate - only the failure copy below.
-  const [pickupQuote, setPickupQuote] = useState<PickupQuote | null>(null);
+  const transportScope=pickupDraftScope(auth.status==='ready'?{uid:auth.user.uid,customerId:auth.customerDocId??null,tenantId:auth.claims?.tenantId??null}:null,params.serviceId);
+  const {draft:transportDraft,update:transportUpdate}=usePickupDraft(transportScope);
+  const {kind:pickupKind,address:pickupAddress,where:pickupWhere,quote:pickupQuote}=transportDraft;
+  const setPickupKind=(kind:typeof pickupKind)=>transportUpdate({kind});
+  const setPickupAddress=(address:string)=>{actionGeneration.current++;setLocating(false);transportUpdate({address,quote:null,where:null})};
+  const setPickupWhere=(where:typeof pickupWhere)=>transportUpdate({where});
+  const setPickupQuote=(quote:typeof pickupQuote)=>transportUpdate({quote});
+  const [pickupSlot,setPickupSlot]=useState("");
   const [pickupQuoteError, setPickupQuoteError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   // Pay online holds the slot for 15 minutes. The booking exists (pending) while the customer pays or retries.
-  const [held, setHeld] = useState<{ bookingId: string; paymentJobId: string | null; expiresAt: number; pickupSent: boolean; advance?: boolean } | null>(null);
+  const [held, setHeld] = useState<{ bookingId: string; paymentJobId: string | null; expiresAt: number; pickupSent: boolean; advance?: boolean; expectedAdvancePaise?: number } | null>(null);
+  const [advanceSheet, setAdvanceSheet] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const heldOver = held !== null && now >= held.expiresAt;
   const payBusy = useRef(false);
@@ -98,7 +103,9 @@ export default function BookingConfirmScreen() {
   const scopeKey=JSON.stringify([auth.status,auth.status==='ready'?auth.user.uid:null,auth.status==='ready'?auth.customerDocId:null,params.serviceId,params.vehicleId,params.vehicleCategory,params.scheduledDate,params.scheduledTime]);
   const scopeRef=useRef(scopeKey);scopeRef.current=scopeKey;const actionGeneration=useRef(0),confirmBusy=useRef(false);
   const idempotencyKey=useRef(generateIdempotencyKey());
-  useEffect(()=>{actionGeneration.current++;confirmBusy.current=false;payBusy.current=false;idempotencyKey.current=generateIdempotencyKey();setBooking(false);setHeld(null);setFriendCode('');setUseWash(false);setWash(null);setPayAtStudio(false);setPickupKind(null);setPickupAddress('');setPickupSlot('');setPickupWhere(null);setPickupQuote(null);setPickupQuoteError(null);setLocating(false);setShowTerms(false);return()=>{actionGeneration.current++}},[scopeKey]);
+  const [pickupPlans,setPickupPlans]=useState<{scope:string;status:'ready'|'error';list:Membership[]}|null>(null);
+  useEffect(()=>{if(!COMBINED_CHECKOUT_ENABLED||!COMBINED_PICKUP_BENEFIT_ENABLED)return;let alive=true;setPickupPlans(null);void getMyMemberships().then(list=>{if(alive)setPickupPlans({scope:scopeKey,status:'ready',list})}).catch(()=>{if(alive)setPickupPlans({scope:scopeKey,status:'error',list:[]})});return()=>{alive=false}},[scopeKey]);
+  useEffect(()=>{actionGeneration.current++;confirmBusy.current=false;payBusy.current=false;idempotencyKey.current=generateIdempotencyKey();setBooking(false);setHeld(null);setFriendCode('');setUseWash(false);setWash(null);setPayAtStudio(false);setCombinedChoice(null);setPickupSlot('');setPickupQuoteError(null);setLocating(false);setShowTerms(false);setAdvanceSheet(false);return()=>{actionGeneration.current++}},[scopeKey]);
 
   useEffect(() => {
     let alive=true;setService(null);setVehicle(null);setBreakdown(null);setBookError(null);setHeld(null);if (!params.serviceId || !params.vehicleId || !params.vehicleCategory) {setLoading(false);setLoadError(true);return;}
@@ -126,9 +133,9 @@ export default function BookingConfirmScreen() {
   useEffect(() => {
     if (!MEMBERSHIP_WASH_LIVE || !service) return;
     let alive = true;
-    void getMyMemberships().then((list) => { if (alive) setWash(pickWash(list, service, todayInIndia())); }).catch(() => { if (alive) setWash(null); });
+    void getMyMemberships().then((list) => { if (alive) setWash(pickWash(list, service, COMBINED_CHECKOUT_ENABLED?params.scheduledDate??todayInIndia():todayInIndia())); }).catch(() => { if (alive) setWash(null); });
     return () => { alive = false; };
-  }, [service]);
+  }, [service,params.scheduledDate]);
   // "Members save" line: only for people with no plan yet, from real plan data, hidden when it is not above zero.
   const [plans, setPlans] = useState<Awaited<ReturnType<typeof getMembershipPlans>> | null>(null);
   useEffect(() => {
@@ -170,9 +177,31 @@ export default function BookingConfirmScreen() {
   // A stale choice can never survive: the shown and sent preference is always
   // one of the current options, or nothing.
   const chosenSlot = validPickupSlot(pickupSlot, pickupSlots);
-  const pickupQuoteInfo = pickupWhere && pickupQuote && pickupQuote.kind === pickupKind ? pickupQuote : null;
+  const pickupQuoteInfo = currentPickupQuote(transportDraft,now);
+
+  const combinedMode=COMBINED_CHECKOUT_ENABLED&&(!giftCode||COMBINED_GIFT_CHECKOUT_ENABLED)&&(!washOn||COMBINED_WASH_CHECKOUT_ENABLED)&&service?.priceOnRequest!==true;
+  let freePickupMembership:string|null=null,pickupBenefitError:string|null=null;
+  if(combinedMode&&COMBINED_PICKUP_BENEFIT_ENABLED&&pickupKind&&pickupQuoteInfo&&pickupQuoteInfo.feePaise>0){
+    if(!pickupPlans||pickupPlans.scope!==scopeKey||pickupPlans.status!=="ready")pickupBenefitError="Check your transport benefits before confirming. Reload this review if needed.";
+    else if(auth.status!=="ready"||!auth.customerDocId||!auth.claims?.tenantId)pickupBenefitError="Your customer profile needs review.";
+    else try{freePickupMembership=reviewedPickupEntitlement(pickupPlans.list,{tenantId:auth.claims.tenantId,customerId:auth.customerDocId,visitDate:params.scheduledDate,today:new Date().toISOString().slice(0,10)})}catch(e){pickupBenefitError=e instanceof Error?e.message:"Review transport benefits."}
+  }
+  function reviewedCombined(choice:CombinedPaymentChoice){
+    if(pickupBenefitError)throw Error(pickupBenefitError);
+    if(!breakdown)throw Error("Price unavailable. Reload this review.");
+    if(pickupKind&&(!pickupQuoteInfo||!pickupWhere))throw Error("Recheck the selected pickup/drop distance before continuing.");
+    return combinedCheckoutReview(giftCode?giftCombinedServicePreview(breakdown):washOn?washCombinedServicePreview(breakdown):breakdown,choice,pickupKind&&pickupQuoteInfo&&pickupWhere?{quoteId:pickupQuoteInfo.quoteId,kind:pickupKind,lat:pickupWhere.lat,lng:pickupWhere.lng,address:pickupAddress,legs:pickupQuoteInfo.legs,...(pickupKind!=="drop"&&chosenSlot?{requestedPickupTime:chosenSlot}:{})}:undefined,freePickupMembership!==null);
+  }
+  let combinedReview:ReturnType<typeof reviewedCombined>|null=null,combinedReviewError:string|null=null;
+  if(combinedMode&&breakdown){try{combinedReview=reviewedCombined(combinedChoice??"advance20")}catch(e){combinedReviewError=e instanceof Error?e.message:"Review the price again."}}
+  let combinedAdvance:ReturnType<typeof reviewedCombined>|null=null;
+  if(combinedMode&&breakdown){try{combinedAdvance=reviewedCombined("advance20")}catch{ /* selection/action remains unavailable until the quote is complete */ }}
+
+  const combinedNoPayment=combinedMode&&combinedReview?.payment.totalPaise===0;
 
   function choosePickupKind(k: "pickup" | "drop" | "both") {
+    actionGeneration.current++;
+    setLocating(false);
     setPickupQuote(null);
     setPickupQuoteError(null);
     setPickupWhere(null);
@@ -239,7 +268,7 @@ export default function BookingConfirmScreen() {
   }
 
   /** Opens checkout for the held booking. Success goes to the booking; a failure or close stays here with the slot held. */
-  async function payHeld(h: { bookingId: string; paymentJobId: string | null; expiresAt: number; pickupSent: boolean; advance?: boolean }) {
+  async function payHeld(h: { bookingId: string; paymentJobId: string | null; expiresAt: number; pickupSent: boolean; advance?: boolean; expectedAdvancePaise?: number }) {
     if (payBusy.current || !service) return;
     const scope=scopeKey,gen=actionGeneration.current;const current=()=>scopeRef.current===scope&&actionGeneration.current===gen;
     payBusy.current = true;
@@ -247,7 +276,7 @@ export default function BookingConfirmScreen() {
     setBookError(null);
     try {
       if (h.advance) {
-        const adv = await requestAdvancePayment(h.bookingId);
+        const adv = await requestAdvancePayment(h.bookingId, h.expectedAdvancePaise);
         if(!current())return;
         if (adv.status === "manual_review" || !adv.paymentUrl) {
           setBookError("We're confirming your advance payment link. Please try again in a few minutes.");
@@ -257,7 +286,8 @@ export default function BookingConfirmScreen() {
         if(!current())return;
         const message = bookingPayOutcomeMessage(out);
         if (message) { setBookError(message); return; }
-        router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: h.bookingId, placed: "1", ...(h.pickupSent ? {} : { pickup: "failed" }) } });
+        transportUpdate({kind:null,address:'',where:null,quote:null});
+      router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: h.bookingId, placed: "1", ...(h.pickupSent ? {} : { pickup: "failed" }) } });
         return;
       }
       if (!h.paymentJobId) throw new Error("no checkout");
@@ -266,12 +296,13 @@ export default function BookingConfirmScreen() {
       const out = pay.paymentId ? await payOnline({ paymentId: pay.paymentId, paymentUrl: pay.paymentUrl, name: "AutoDeck Studio", description: service.name }) : "failed";
       if(!current())return;
       if (out === "paid") {
-        router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: h.bookingId, placed: "1", pay: "paid", ...(h.pickupSent ? {} : { pickup: "failed" }) } });
+        transportUpdate({kind:null,address:'',where:null,quote:null});
+      router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: h.bookingId, placed: "1", pay: "paid", ...(h.pickupSent ? {} : { pickup: "failed" }) } });
         return;
       }
       setBookError(bookingPayOutcomeMessage(out));
-    } catch {
-      if(current())setBookError("We could not open the payment. Please retry.");
+    } catch (err) {
+      if(current())setBookError((err as { details?: { reason?: string } })?.details?.reason === "advance_amount_changed" ? "The advance amount changed. Check this booking in your bookings before paying. No payment was opened." : "We could not open the payment. Please retry.");
     } finally {
       if(current()){payBusy.current = false;setBooking(false);}
     }
@@ -280,6 +311,8 @@ export default function BookingConfirmScreen() {
   async function handleConfirm() {
     if(booking || !service || !vehicle || !breakdown) return;
     if(confirmBusy.current)return;
+    if (combinedMode&&(!combinedReview||!combinedNoPayment&&!combinedChoice)) {setBookError(combinedReviewError??"Choose 20% advance or full payment before continuing.");return;}
+    if (!combinedMode&&ADVANCE_SPLIT_ENABLED && !payNow && !giftCode && !washOn && !service.priceOnRequest && !advancePreview) { setBookError("We could not verify the advance amount. Reload this booking review before continuing."); return; }
     if (held) { if (!heldOver) await payHeld(held); return; }
     if (!params.serviceId || !params.vehicleId || !params.vehicleCategory || !params.scheduledDate || !params.scheduledTime) return;
     const scope=scopeKey,gen=actionGeneration.current;const current=()=>scopeRef.current===scope&&actionGeneration.current===gen;confirmBusy.current=true;
@@ -295,8 +328,8 @@ export default function BookingConfirmScreen() {
         scheduledDate: params.scheduledDate,
         scheduledTime: params.scheduledTime,
         idempotencyKey:idempotencyKey.current,
-        payMode: payNow ? "online" : "studio",
-        ...(ADVANCE_SPLIT_ENABLED ? { advanceFlowVersion: 1 as const } : {}),
+        payMode: combinedMode?combinedNoPayment?"online":combinedChoice==="full"?"online":"studio":payNow ? "online" : "studio",
+        ...(combinedMode&&combinedReview?{combinedReview:(combinedNoPayment?reviewedCombined("full"):combinedReview).review}:ADVANCE_SPLIT_ENABLED ? { advanceFlowVersion: 1 as const } : {}),
         ...(washOn && washOffer ? { membershipId: washOffer.membershipId } : {}),
         ...(sendCode ? { referralCode: sendCode } : {}),
         ...(giftCode ? { giftCode } : {}),
@@ -306,14 +339,20 @@ export default function BookingConfirmScreen() {
       // Create the booking exactly as before, then request pickup/drop with
       // the new booking id (round 8). The request's failure never fails the
       // booking - the booking page shows a call-the-studio note instead.
-      const pickupSent = await sendPickupRequest(result.id);
+      const pickupSent = combinedMode?true:await sendPickupRequest(result.id);
       if(!current())return;
       // Retain the created booking before requesting its link: every retry uses
       // this same booking/payment, never creates a second held booking.
-      if (advanceDue && (result.status === "CONFIRMED" || result.status === "PENDING")) {
+      if(combinedNoPayment){
+        if(result.status!=="CONFIRMED"||result.totalAmount!==0||result.combinedPayment?.totalPaise!==0||result.combinedPayment?.payNowPaise!==0||result.holdExpiresAt)throw Error("Zero-payment confirmation needs review.");
+        transportUpdate({kind:null,address:'',where:null,quote:null});
+        router.replace({pathname:"/(tabs)/bookings/[id]",params:{id:result.id,placed:"1"}});
+        return;
+      }
+      if ((combinedMode&&combinedChoice==="advance20"||!combinedMode&&advanceDue) && (result.status === "CONFIRMED" || result.status === "PENDING")) {
         const h = { bookingId: result.id, paymentJobId: null,
           expiresAt: Date.parse(result.holdExpiresAt ?? "") || Date.now() + 15 * 60_000,
-          pickupSent, advance: true };
+          pickupSent, advance: true, ...(combinedMode&&combinedReview?{expectedAdvancePaise:combinedReview.payment.payNowPaise}:advancePreview ? { expectedAdvancePaise: advancePreview.advancePaise } : {}) };
         setHeld(h);
         await payHeld(h);
         return;
@@ -328,17 +367,18 @@ export default function BookingConfirmScreen() {
         await payHeld(h);
         return;
       }
+      transportUpdate({kind:null,address:'',where:null,quote:null});
       router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: result.id, placed: "1", ...(pickupSent ? {} : { pickup: "failed" }) } });
     } catch (err) {
       console.warn("create booking failed", err);
-      if(current())setBookError(created ? "We could not open the payment. Please retry." : "We could not send your request. Check your bookings first - if it reached the studio, it appears there.");
+      if(current())setBookError(created ? combinedNoPayment?"We could not verify this booking. Check your bookings before trying again.":"We could not open the payment. Please retry." : "We could not send your request. Check your bookings first - if it reached the studio, it appears there.");
     } finally {
       if(current()){confirmBusy.current=false;if (!payBusy.current) setBooking(false);}
     }
   }
 
   if (loading) return <Loading label="Getting your price" />;
-  if (loadError) return <Screen><Notice title="Can't load details" body="Check your connection and try again." action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
+  if (loadError) return <Screen><Notice title="Can't load details" body="Check your connection and try again." action={<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
 
   const displayDate =
     params.scheduledDate &&
@@ -353,7 +393,8 @@ export default function BookingConfirmScreen() {
   // Pickup/drop fee rides inside the shown total once the server quote exists; the fee
   // itself is still paid at the studio (PICKUP_POLICY), never added to the online charge.
   const pickupFeePaise = pickupQuoteInfo ? pickupQuoteInfo.feePaise : null;
-  const visitTotal = breakdown ? breakdown.total + (pickupFeePaise ?? 0) : null;
+  const visitTotal = combinedMode?combinedReview?.breakdown.total??null:breakdown ? breakdown.total + (pickupFeePaise ?? 0) : null;
+  const shownBreakdown=combinedMode&&combinedReview?combinedReview.breakdown:breakdown;
 
   return (
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Confirm</Kicker><T role="title">Review booking</T>{service?.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : null}</View>}>
@@ -385,7 +426,7 @@ export default function BookingConfirmScreen() {
           <Row
             title="Use a membership wash"
             detail={<T role="caption" tone="secondary">{`${washOffer.washesLeft} left${washOffer.expiresOn ? `, plan valid until ${new Date(`${washOffer.expiresOn}T12:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` : ""}. One wash per booking.`}</T>}
-            trailing={<Button kind={washOn ? "primary" : "quiet"} label={washOn ? "Using it" : "Use"} onPress={() => setUseWash(!useWash)} />}
+            trailing={<Button kind={washOn ? "primary" : "quiet"} label={washOn ? "Using it" : "Use"} disabled={booking||held!==null} onPress={() => {if(!booking&&!held)setUseWash(!useWash)}} />}
             last
           />
         </Pane>
@@ -394,12 +435,9 @@ export default function BookingConfirmScreen() {
             <View style={{ gap: space.line }}>
         <Kicker>Pickup and drop (optional)</Kicker>
         <Pane pad="gap" style={{ gap: space.gap }}>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
-            {PICKUP_KINDS.map((k) => <Button key={k.value} label={k.label} kind={pickupKind === k.value ? "primary" : "quiet"} onPress={() => choosePickupKind(k.value)} style={{ flexGrow: 1 }} />)}
-          </View>
+          <PickupOptions value={pickupKind} onChange={choosePickupKind} />
           {pickupKind ? (
             <View style={{ gap: space.line }}>
-              <T role="caption" tone="secondary">{PICKUP_POLICY}</T>
               <Field
                 label="Address"
                 value={pickupAddress}
@@ -426,26 +464,25 @@ export default function BookingConfirmScreen() {
                 </>
               ) : null}
             </View>
-          ) : (
-            <T role="caption" tone="secondary">Choose pickup, drop-off or both to add it to your booking.</T>
-          )}
+          ) : null}
         </Pane>
       </View>
-      {giftCode || washOn ? (
+      {(giftCode || washOn)&&!combinedMode ? (
         <Sheet>
           {giftCode ? <SheetTotal label="Covered by your gift" value="Included" /> : <SheetTotal label="Wash from your plan" value="Included" />}
         </Sheet>
       ) : service?.priceOnRequest !== true && breakdown ? (
         <Sheet>
           <SheetTotal label="Total" value={rupees(visitTotal ?? breakdown.total)} />
+          {combinedMode&&giftCode?<SheetLine small label="Gifted service" value="Included"/>:combinedMode&&washOn?<SheetLine small label="Membership wash" value="Included"/>:null}
           <SheetDivider />
-          <SheetLine small label="Base" value={rupees(breakdown.basePrice)} />
-          {breakdown.scopeAdjustment > 0 ? <SheetLine small label="Vehicle size adjustment" value={`+${rupees(breakdown.scopeAdjustment)}`} /> : null}
+          {combinedMode&&(giftCode||washOn)?null:<SheetLine small label="Base" value={rupees(breakdown.basePrice)} />}
+          {!(combinedMode&&(giftCode||washOn))&&breakdown.scopeAdjustment > 0 ? <SheetLine small label="Vehicle size adjustment" value={`+${rupees(breakdown.scopeAdjustment)}`} /> : null}
           {breakdown.membershipDiscount !== null && breakdown.membershipDiscount > 0 ? <SheetLine small label="Membership discount" value={`-${rupees(breakdown.membershipDiscount)}`} /> : null}
-          {breakdown.tax > 0 ? <SheetLine small label={breakdown.taxDescription} value={rupees(breakdown.tax)} /> : null}
-          {pickupKind ? <SheetLine small label="Pickup/drop" value={pickupFeePaise === null ? "After location check" : pickupFeePaise === 0 ? "Free" : `${rupees(pickupFeePaise)} · paid at the studio`} /> : null}
-          {payNow && pickupFeePaise ? <SheetLine small label="Pay online now" value={rupees(breakdown.total)} /> : null}
-          {advanceDue && advancePreview ? (
+          {(shownBreakdown?.tax??0) > 0 ? <SheetLine small label={shownBreakdown?.taxDescription??breakdown.taxDescription} value={rupees(shownBreakdown?.tax??0)} /> : null}
+          {pickupKind ? <SheetLine small label="Pickup/drop" value={freePickupMembership?"Included with your plan":pickupFeePaise === null ? "After location check" : pickupFeePaise === 0 ? "Free" : combinedMode?rupees(pickupFeePaise):`${rupees(pickupFeePaise)} · paid at the studio`} /> : null}
+          {!combinedMode&&payNow && pickupFeePaise ? <SheetLine small label="Pay online now" value={rupees(breakdown.total)} /> : null}
+          {!combinedMode&&advanceDue && advancePreview ? (
             <>
               <SheetLine small label="Pay now (20% advance)" value={rupees(advancePreview.advancePaise)} />
               <SheetLine small label={pickupKind ? "Pay at the studio (before pickup/drop fees)" : "Pay at the studio"} value={rupees(advancePreview.dueAtStudioPaise)} />
@@ -453,6 +490,9 @@ export default function BookingConfirmScreen() {
           ) : null}
         </Sheet>
       ) : null}
+
+      {freePickupMembership?<Pane pad="gap"><Row title="Plan transport benefit" detail="One free pickup/drop request will be reserved with this booking." last/></Pane>:null}
+      {combinedMode?combinedReviewError?<Notice title="Review pickup/drop" body={combinedReviewError}/>:combinedAdvance?<Pane pad="gap"><CombinedPaymentOptions transportIncluded={freePickupMembership!==null} coveredService={giftCode?"gift":washOn?"membership":undefined} choice={combinedChoice} total={combinedAdvance.payment} disabled={booking||held!==null} onChange={setCombinedChoice}/>{combinedReview&&combinedChoice?<View><SheetLine small label="Pay now" value={rupees(combinedReview.payment.payNowPaise)}/><SheetLine small label="Booking balance at studio" value={rupees(combinedReview.payment.balancePaise)} last/></View>:null}</Pane>:null:null}
 
       {saving !== null ? (
         <Pane pad="gap">
@@ -463,9 +503,9 @@ export default function BookingConfirmScreen() {
       {service?.priceOnRequest === true ? <Pane pad="gap"><Row title="Price" detail={<T role="caption" tone="secondary">Quote on request. The studio sets the price for your car and you approve it before work starts.</T>} last /></Pane> : null}
 
       <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>
-        {bookingConfirmCopy({quote:service?.priceOnRequest===true,gift:Boolean(giftCode),membership:washOn,online:payNow,advance:advanceDue})}
+        {combinedNoPayment?"No payment is needed. Confirm your booking below.":combinedMode?"Review the combined total and your payment choice before confirming.":bookingConfirmCopy({quote:service?.priceOnRequest===true,gift:Boolean(giftCode),membership:washOn,online:payNow,advance:advanceDue})}
       </T>
-      {service?.priceOnRequest === true || washOn || giftCode ? null : <View style={{ gap: space.line }}>
+      {combinedMode||service?.priceOnRequest === true || washOn || giftCode ? null : <View style={{ gap: space.line }}>
         <Kicker>How will you pay</Kicker>
         <Pane pad="gap">
           {payHow.online ? (
@@ -473,7 +513,7 @@ export default function BookingConfirmScreen() {
               <Row title="Pay online" detail={<T role="caption" tone="secondary">Confirm below to open secure payment. The slot is held for 15 minutes after your request.</T>} trailing={!payAtStudio ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last={false} />
             </Pressable>
           ) : null}
-          <Pressable accessibilityRole="button" accessibilityState={{ selected: payAtStudio || !payHow.online }} onPress={() => { if (!held) setPayAtStudio(true); }}>
+          <Pressable accessibilityRole="button" accessibilityState={{ selected: payAtStudio || !payHow.online }} onPress={() => { if (!held) { setPayAtStudio(true); if (studioAdvanceAvailable) setAdvanceSheet(true); } }}>
             <Row title="Pay at studio" detail={<T role="caption" tone="secondary">{studioAdvanceAvailable ? "Pay 20% advance online to confirm. Slot held for 15 minutes; the rest at the studio." : "Confirm your slot below. Pay when you collect your car."}</T>} trailing={payAtStudio || !payHow.online ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last={!advanceDue && !payNow} />
           </Pressable>
           {/* Disclose the policy for the effective payment route only. */}
@@ -498,8 +538,11 @@ export default function BookingConfirmScreen() {
         </Pressable>
         {showTerms ? (
           <View style={{ gap: space.line }}>
-            <T role="caption" tone="secondary">Need to change your visit? Open the booking for available change and cancellation options. A request is not a confirmed change. Any cancellation fee is shown before you cancel.</T>
-            <T role="caption" tone="secondary">Pickup and drop requests are separate from the booking. The studio agrees the exact time with you.</T>
+            <Row title="Changes" detail="Request from your booking. Approval is separate."/>
+            <Row title="Cancellation" detail="Review the fee before confirming."/>
+            <Row title="Transport" detail={combinedMode?"Selected pickup/drop is included in this total.":"Pickup/drop is a separate request."}/>
+            <Row title="Timing" detail="The studio confirms transport timing with you."/>
+            {combinedMode?<><Row title="Bigger-service late cancel" detail="20% of service including GST."/><Row title="Late cancel window" detail="Free until 24 hours before."/><Row title="Unused pickup/drop" detail="Excluded from that percentage fee."/><Row title="No-show retention" detail="20% of discounted service, including GST."/><Row title="Unused transport" detail="Excluded from no-show retention."/><Row title="Refund remainder" detail="Sent for approval. Not refunded until processed."/></>:null}
             <Pressable accessibilityRole="button" onPress={() => router.navigate("/(tabs)/help")}><T role="caption" tone="secondary">Questions before booking? <T role="caption" tone="accent">Open Help & contact.</T></T></Pressable>
           </View>
         ) : null}
@@ -511,9 +554,23 @@ export default function BookingConfirmScreen() {
       {heldOver ? <Notice title="Time ran out" body="Payment was not completed in 15 minutes, so the slot was released. Pick a time again." action={<Button label="Pick a time" onPress={() => router.back()} />} /> : null}
 
       <View style={{ gap: space.breath }}>
-        {heldOver ? null : <Button label={service?.priceOnRequest === true ? "Request quote" : payNow || held ? "Pay & confirm" : advanceDue ? "Pay 20% advance" : "Confirm booking"} busy={booking} disabled={booking} onPress={() => void handleConfirm()} />}
+        {heldOver ? null : <Button label={combinedNoPayment?"Confirm booking":combinedMode?combinedChoice==="advance20"?"Pay 20% & confirm":"Pay in full & confirm":service?.priceOnRequest === true ? "Request quote" : payNow || held ? "Pay & confirm" : advanceDue ? "Pay 20% advance" : "Confirm booking"} busy={booking} disabled={booking||combinedMode&&(!combinedReview||!combinedNoPayment&&!combinedChoice)} onPress={() => { if (!combinedMode&&advanceDue && !held) { setAdvanceSheet(true); return; } void handleConfirm(); }} />}
         {held && !heldOver ? <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>Your booking is pending until the payment goes through.</T> : <Button label="Go back" kind="quiet" onPress={() => router.back()} />}
       </View>
+      {!combinedMode&&ADVANCE_SPLIT_ENABLED && advancePreview ? (
+        <AdvancePaymentSheet
+          visible={advanceSheet}
+          serviceName={service?.name ?? "Service"}
+          visitLabel={[displayDate, params.scheduledTime].filter(Boolean).join(" · ")}
+          serviceTotalPaise={advancePreview.serviceTotalPaise}
+          advancePaise={advancePreview.advancePaise}
+          balancePaise={advancePreview.serviceTotalPaise - advancePreview.advancePaise}
+          pickupFees={Boolean(pickupKind)}
+          busy={booking}
+          onPayAdvance={() => { setAdvanceSheet(false); void handleConfirm(); }}
+          onGoBack={() => setAdvanceSheet(false)}
+        />
+      ) : null}
     </Screen>
   );
 }

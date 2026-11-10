@@ -9,13 +9,14 @@ const read = (p: string) => readFileSync(resolve(root, p), "utf8");
 
 describe("waiting-cancel alert text coverage", () => {
   const lib = read("functions/src/lib/waiting-cancel.ts");
-  const kinds = [...lib.matchAll(/alert\(\w+, "([a-z_]+)"/g)].map((m) => m[1]!);
+  const kinds = [...lib.matchAll(/alert\(\w+,\s*['"]([a-z_]+)['"]/g)].map((m) => m[1]!);
   const notice = read("apps/admin/src/components/StaffAlertsNotice.tsx");
+  kinds.push("combined_cancel_payment_check");
   it("finds the alert kinds", () => { expect(kinds.length).toBeGreaterThanOrEqual(3); });
   for (const k of new Set(kinds)) it(`StaffAlertsNotice has text for ${k}`, () => { expect(notice).toMatch(new RegExp(`\\n\\s+${k}:\\s*\\(n\\)`)); });
   it("needs_review panel text never claims the link is closed", () => {
     const panel = read("apps/admin/src/components/CancelBookingPanel.tsx");
-    const line = panel.split("\n").find((l) => l.includes('cancelIntent.state === "needs_review" ?'))!;
+    const line = panel.split("\n").find((l) => l.includes('cancelIntent?.state === "needs_review" ?'))!;
     expect(line).toBeTruthy();
     expect(line).not.toMatch(/link is closed|closed link/i);
     expect(line).toMatch(/may still be in progress or arrive/);

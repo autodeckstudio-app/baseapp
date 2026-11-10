@@ -1,3 +1,4 @@
+import type{CombinedPaymentSnapshot,BookingTransportSnapshot}from'../combined-checkout.js';
 import type { VehicleCategory } from "./service.js";
 
 export type BookingStatus =
@@ -31,6 +32,8 @@ export interface PriceBreakdown {
 export type QuoteStatus = "requested" | "quoted" | "approved" | "declined";
 
 export interface Booking {
+  combinedPayment?:CombinedPaymentSnapshot;
+  transportSnapshot?:Readonly<BookingTransportSnapshot>|null;
   settlementKind?: "membership_covered";
   invoiceId?: string;
   /** Public projection only. Operational cancellation details are server-only. */

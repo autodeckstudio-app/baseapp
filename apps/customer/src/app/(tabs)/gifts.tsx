@@ -38,7 +38,7 @@ export default function GiftsScreen() {
   }, []);
   useEffect(() => { if (GIFT_LIVE) load(); }, [load]);
   const referralCode = auth.status === "ready" ? referralCodeFor(auth.user.uid) : null;
-  const friendPanel = <Pane pad="gap"><T role="heading">Bring a friend</T><T tone="secondary">{referralSubtitle(referralCode)}</T><Button label="Share AutoDeck" onPress={() => void Share.share({ message: referralShareMessage(referralCode) }).catch(() => undefined)} /></Pane>;
+  const friendPanel = <Pane pad="gap"><T role="heading">Bring a friend</T><T tone="secondary">{referralSubtitle(referralCode)}</T><Button icon="share" label="Share AutoDeck" onPress={() => void Share.share({ message: referralShareMessage(referralCode) }).catch(() => undefined)} /></Pane>;
   if (!GIFT_LIVE) return <Screen appBar="Friends & gifts">{friendPanel}<Notice title="Gift a wash" body="Wash gifting is not available yet." /></Screen>;
 
   async function buy() {
@@ -82,7 +82,7 @@ export default function GiftsScreen() {
     <Screen appBar="Friends & gifts">
       {friendPanel}
       {card ? <GiftCard code={card.code} expiresAt={card.expiresAt} buyerName={buyerName} /> : null}
-      {loadFailed ? <Notice title="Could not load gifts" body="Check your connection and try again." action={<Button label="Retry" onPress={load} />} /> : null}
+      {loadFailed ? <Notice title="Could not load gifts" body="Check your connection and try again." action={<Button icon="refresh" label="Retry" onPress={load} />} /> : null}
       {offer ? <GiftBuy amountPaise={offer.amountPaise} canPay={checkoutSupported || NATIVE_GIFT_PAYMENT_ENABLED} busy={busy} onPay={() => void buy()} /> : null}
       <Pane pad="gap">
         <T role="heading">Got a gift code?</T>

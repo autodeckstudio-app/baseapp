@@ -5,3 +5,5 @@ describe('document rules',()=>{
  it('insurance and PUC are free-entry numbers',()=>{for(const kind of ['INSURANCE','PUC'])for(const value of ['MH/2026/12345','PUC2026MH123456','ABC'])expect(validateDocument(kind,value,'')).toBeNull();});
  it('validates real date-only calendar days without timezone conversion',()=>{expect(isDateOnly('2028-02-29')).toBe(true);for(const value of ['22-22-2026','2026-02-29','2026-04-31','2026-13-01','2026-00-00'])expect(isDateOnly(value)).toBe(false);expect(validateDocument('PUC','ABC','2026-02-29')).toContain('calendar');});
 });
+
+it('typed RC must match the actual car, but insurance policy numbers are not plates',()=>{expect(validateDocument('RC','mh-02 ab 1234','','MH02AB1234')).toBeNull();expect(validateDocument('RC','MH02AB1234','','GJ01AB1234')).toContain('does not match');expect(validateDocument('INSURANCE','POL-123','','GJ01AB1234')).toBeNull();});

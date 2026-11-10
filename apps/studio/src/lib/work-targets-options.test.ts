@@ -1,0 +1,8 @@
+import{it,expect}from'vitest';import{parseWorkTargets}from'./work-targets-options';
+const scope={uid:'u',tenantId:'t',role:'studio' as const,studioId:'s',jobId:'j',vehicleId:'v',customerId:'c'};
+const doc=(id:string,data:unknown)=>({id,data});
+const current=(o:any={})=>({id:'p1',tenantId:'t',vehicleId:'v',customerId:'c',kind:'ppf',coverage:'full_front',provider:'SampleBrand',lifecycle:'current',revision:2,...o});
+it('only exact current cosmetic records of this car and current customer are targets',()=>{const docs=[doc('p1',current()),doc('p2',current({id:'p2',kind:'insurance'})),doc('p3',current({id:'p3',lifecycle:'removed'})),doc('p4',current({id:'p4',customerId:'former'})),doc('p5',current({id:'p5',vehicleId:'other'}))];const targets=parseWorkTargets(docs,scope);expect(targets).toHaveLength(1);expect(targets[0]).toMatchObject({id:'p1',revision:2,kind:'ppf',coverage:'full_front',label:'SampleBrand'})});
+it('legacy unversioned record is the explicit revision 0, unknown scope stays recorded as unknown',()=>{const legacy=current();delete legacy.revision;delete legacy.coverage;const targets=parseWorkTargets([doc('p1',legacy)],scope);expect(targets[0]).toMatchObject({revision:0,coverage:null})});
+it('corrupt identity, revision or scope fails the whole read closed',()=>{for(const bad of[{...current(),id:'other'},{...current(),revision:-1},{...current(),revision:2.5},{...current(),coverage:'whole car'},null])expect(()=>parseWorkTargets([doc('p1',bad)],scope)).toThrow()});
+it('the display label never invents a brand',()=>{expect(parseWorkTargets([doc('p1',{...current(),provider:null})],scope)[0]!.label).toBe('PPF')});

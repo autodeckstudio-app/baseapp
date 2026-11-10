@@ -1,13 +1,14 @@
+import {currentVehicleYear} from '@autodeck/core';
 export type SellForm = { make: string; model: string; variant: string; year: string; km: string; fuel: string; gearbox: string; body: string; owners: string; colour: string; area: string; price: string; description: string; name: string; phone: string; reg: string };
 export type SellErrors = Partial<Record<keyof SellForm | "photos", string | undefined>>;
 export const sellNumber = (s: string): number => Number(s.replace(/,/g, "").trim());
 const integer = (s: string, min: number, max: number) => /^\d+$/.test(s.replace(/,/g, "").trim()) && sellNumber(s) >= min && sellNumber(s) <= max;
-export function validateSellStep(f: SellForm, step: number, photoCount: number, year = new Date().getFullYear()): SellErrors {
+export function validateSellStep(f: SellForm, step: number, photoCount: number, year = currentVehicleYear()): SellErrors {
   const errors: SellErrors = {};
   if (step === 0) {
     if (!f.make.trim()) errors.make = "Enter the car make.";
     if (!f.model.trim()) errors.model = "Enter the car model.";
-    if (!/^\d{4}$/.test(f.year.trim()) || !integer(f.year, 1990, year + 1)) errors.year = `Enter a year between 1990 and ${year + 1}.`;
+    if (!/^\d{4}$/.test(f.year.trim()) || !integer(f.year, 1990, year)) errors.year = `Enter a year between 1990 and ${year}.`;
     if (!integer(f.km, 0, 1500000)) errors.km = "Enter kilometres driven between 0 and 1,500,000.";
     if (!integer(f.owners, 1, 10)) errors.owners = "Enter an owner count between 1 and 10.";
     if (!f.colour.trim()) errors.colour = "Enter the car colour.";

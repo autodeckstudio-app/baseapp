@@ -12,7 +12,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractCustomerUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
-import { submitMyPaperSchema } from "../../schemas/paper.js";
+import { submitMyPaperSchema, normalizeRcReference } from "../../schemas/paper.js";
 import { assertNumberUnused, isActivePaper, readClaims, PAPER_LOCKS } from "../../lib/paper-numbers.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { resolveCustomerDocId } from "../../lib/customer-identity.js";
@@ -59,6 +59,7 @@ export const submitMyPaper = onCall({ region: "asia-south1", timeoutSeconds: 60,
   assertTenant(user, vehicle.tenantId);
   if (vehicle.ownerId !== customerDocId && vehicle.ownerId !== user.uid) throw new HttpsError("permission-denied", "You do not own this vehicle.");
   if (vehicle.deletedAt) throw new HttpsError("failed-precondition", "This car is archived.");
+  if (data.kind === "RC" && normalizeRcReference(data.reference) !== normalizeRcReference(vehicle.registrationNumber ?? "")) throw new HttpsError("failed-precondition", "The RC number does not match this car. Check the plate before saving.");
 
   // Operation-identity replay: the client generates one submissionId per add-document
   // form session and resends it on retry. A retry of the SAME submission (the first
@@ -264,6 +265,7 @@ export const submitMyPaper = onCall({ region: "asia-south1", timeoutSeconds: 60,
     assertTenant(user, freshVehicle.tenantId);
     if (freshVehicle.ownerId !== customerDocId && freshVehicle.ownerId !== user.uid) throw new HttpsError("permission-denied", "You do not own this vehicle.");
     if (freshVehicle.deletedAt) throw new HttpsError("failed-precondition", "This car is archived.");
+    if (data.kind === "RC" && normalizeRcReference(data.reference) !== normalizeRcReference(freshVehicle.registrationNumber ?? "")) throw new HttpsError("failed-precondition", "The RC number no longer matches this car. Reload the car before saving.");
     // The operation lock is checked and set INSIDE this transaction: two concurrent first
     // attempts of the same submission (even with different numbers) cannot both create.
     const opRef = data.submissionId
@@ -399,6 +401,7 @@ export const finalizeMyPaper = onCall({ region: "asia-south1", invoker: "public"
     const freshVehicle = freshVehicleSnap.data() as Vehicle | undefined;
     if (!freshVehicleSnap.exists || !freshVehicle || (freshVehicle.ownerId !== customerDocId && freshVehicle.ownerId !== user.uid) || freshVehicle.tenantId !== current.tenantId || freshVehicle.deletedAt) return;
     if ((current.customerId !== customerDocId && current.customerId !== user.uid) || current.vehicleId !== paper.vehicleId || current.tenantId !== paper.tenantId) return;
+    if (normalizeRcReference(freshVehicle.registrationNumber ?? "") !== normalizeRcReference(vehicle.registrationNumber ?? "")) throw new HttpsError("aborted", "The car plate changed while the document was checked. Reload the car and check the document again.");
     // Supersede guard: this call may only write the exact state it read. A staged-photo finalize applies
     // only while its own staging is still current; a submit-flow finalize applies only while no edit has
     // staged a replacement and the evidence is untouched. Otherwise an older finalize would overwrite the
@@ -409,6 +412,8 @@ export const finalizeMyPaper = onCall({ region: "asia-south1", invoker: "public"
     const now = new Date().toISOString();
     tx.update(ref, {
       status: decision.status,
+      inspectedPlate: null,
+      originalInspected: null,
       verificationMode: decision.status === "PENDING" ? "review" : "automatic",
       verificationReason: decision.reason,
       extractedPlate: decision.extractedPlate,
@@ -450,7 +455,7 @@ export const finalizeMyPaper = onCall({ region: "asia-south1", invoker: "public"
     if (!latest.exists) throw new HttpsError("failed-precondition", "This document was removed while its checks ran.");
     const cur = latest.data() as PaperVerification & { customerId?: string };
     const v = vSnap.data() as Vehicle | undefined;
-    if (!vSnap.exists || !v || (v.ownerId !== customerDocId && v.ownerId !== user.uid) || v.tenantId !== cur.tenantId || (cur.customerId !== customerDocId && cur.customerId !== user.uid)) {
+    if (!vSnap.exists || !v || (v.ownerId !== customerDocId && v.ownerId !== user.uid) || v.tenantId !== cur.tenantId || v.deletedAt || (cur.customerId !== customerDocId && cur.customerId !== user.uid)) {
       throw new HttpsError("failed-precondition", "This document's checks could not be completed. Open the document to see its current state.");
     }
     return { status: cur.status, reason: "This document changed while its checks ran. Its latest state is shown." };

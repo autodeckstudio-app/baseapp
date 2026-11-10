@@ -5,7 +5,7 @@ import { floatCard } from "@autodeck/ui/theme";
 import { CanvasTitle } from "../../components/CanvasTitle";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, TextInput, FlatList } from "react-native";
-import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where, onSnapshot } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { COLLECTIONS } from "@autodeck/database";
 import { db, functions } from "../../lib/firebase";
@@ -37,6 +37,7 @@ export default function PickupsScreen() {
   const [error,setError] = useState<string|null>(null);
   const [bookings, setBookings] = useState<Record<string, Bk | null>>({});
   const [hidden, setHidden] = useState(0);
+  const [bookingIdsKey,setBookingIdsKey]=useState("[]");
   const [busy, setBusy] = useState<string | null>(null);
   const busyRef = useRef(false);
   const [errId, setErrId] = useState<string | null>(null);
@@ -54,7 +55,10 @@ export default function PickupsScreen() {
     const generation=++loadGeneration.current,scope=principalScope;
     setError(null);
     const snap = await getDocs(query(collection(db, COLLECTIONS.pickupRequests()), where("tenantId", "==", tenantId), where("studioId", "==", studioId)));
-    const list = snap.docs.map((d) => d.data() as Req).filter((r) => (history ? r.status === "DONE" || r.status === "DECLINED" : r.status === "REQUESTED" || r.status === "CONFIRMED"));
+    const allRequests = snap.docs.map((d) => ({...d.data(),id:d.id ?? d.data().id}) as Req);
+    if(generation!==loadGeneration.current||liveScope.current!==scope)return;
+    setBookingIdsKey(JSON.stringify([...new Set(allRequests.map(r=>r.bookingId))].sort()));
+    const list = allRequests.filter((r) => (history ? r.status === "DONE" || r.status === "DECLINED" : r.status === "REQUESTED" || r.status === "CONFIRMED"));
     // Every request must belong to a real booking. Look each one up; requests with no booking behind them are not shown.
     const found: Record<string, Bk | null> = {};
     await Promise.all(list.map(async (r) => {
@@ -64,7 +68,7 @@ export default function PickupsScreen() {
         const d = b.data() as { vehicleSnapshot?: { registrationNumber?: string; make?: string; model?: string }; scheduledAt?: string; status?: string };
         const v = d.vehicleSnapshot;
         found[r.id] = { plate: v?.registrationNumber ?? "", car: [v?.make, v?.model].filter(Boolean).join(" "), when: d.scheduledAt ? formatAgreed(d.scheduledAt) : "", status: d.status ?? "" };
-      } catch { found[r.id] = null; }
+      } catch { throw new Error("Booking status unavailable. Requests could not be checked."); }
     }));
     if(generation!==loadGeneration.current||liveScope.current!==scope)return;
     setBookings(found);
@@ -77,6 +81,25 @@ export default function PickupsScreen() {
   }, [tenantId, studioId, history, principalId, principalScope]);
 
   useEffect(() => { setRows(null);setBookings({});setAgreedPickup({});setAgreedDrop({});void load().catch((e) => { setError(e instanceof Error ? e.message : "Try again."); }); return()=>{loadGeneration.current++};}, [load]);
+
+  // Incoming requests and Admin/customer changes must refresh an already-open tab.
+  useEffect(()=>{
+    if(!tenantId||!studioId)return;
+    let active=true;
+    const fail=(e:unknown)=>{if(active){setRows(null);setError(e instanceof Error?e.message:"Requests unavailable. Try again.")}};
+    const stop=onSnapshot(query(collection(db,COLLECTIONS.pickupRequests()),where("tenantId","==",tenantId),where("studioId","==",studioId)),()=>{if(active)void load().catch(fail)},fail);
+    return()=>{active=false;stop()};
+  },[tenantId,studioId,load]);
+  // Booking eligibility can change without a pickup-request write.
+  useEffect(()=>{
+    if(!tenantId||!studioId)return;
+    let active=true;
+    const stops=(JSON.parse(bookingIdsKey) as string[]).map(id=>{
+      let initial=true;
+      return onSnapshot(doc(db,COLLECTIONS.bookings(),id),()=>{if(initial){initial=false;return}if(active)void load().catch(e=>{if(active){setRows(null);setError(e instanceof Error?e.message:"Booking status unavailable.")}})},e=>{if(active){setRows(null);setError(e.message)}});
+    });
+    return()=>{active=false;stops.forEach(stop=>stop())};
+  },[bookingIdsKey,tenantId,studioId,load]);
 
   async function markLeg(r: Req, leg: LegName) {
     if (busyRef.current || !PICKUP_LEG_PROGRESS_ENABLED || !canMarkLeg(r, leg)) return;

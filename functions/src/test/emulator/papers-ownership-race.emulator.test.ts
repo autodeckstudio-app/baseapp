@@ -129,8 +129,7 @@ describe("document writes refuse a transferred, archived, or foreign car (emulat
       // archive, so this exercises the fresh re-read inside the write transaction:
       // the OCR decision must NOT be written.
       await db.collection("vehicles").doc(v).update({ deletedAt: new Date().toISOString() });
-      const res = (await finalize(me, paper.id)) as { status: string };
-      expect(res.status).toBe("PENDING");
+      await expect(finalize(me, paper.id)).rejects.toMatchObject({code:"failed-precondition"});
       const after = await paperDoc(paper.id);
       expect(after).toEqual(before); // not one field written
       expect((await getStorage().bucket().file(paper.evidencePath).exists())[0]).toBe(true); // object kept

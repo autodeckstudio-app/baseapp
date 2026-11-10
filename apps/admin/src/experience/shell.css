@@ -333,6 +333,10 @@ html[data-theme="night"] .ax-shell a.ax-button--primary { color: #1A1410; }
 }
 .ax-inline-form { display: inline-flex; gap: 6px; align-items: center; }
 .ax-shell .ax-search--plate { font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; letter-spacing: 1px; max-width: 220px; }
+/* Status tokens referenced below were never defined anywhere, so destructive
+   and warning styling silently rendered as ordinary text. Define them once. */
+:root { --ad-danger: #B3261E; --ad-warning: #8A5A00; }
+html[data-theme="night"] { --ad-danger: #F2B8B5; --ad-warning: #F5D08A; }
 .ax-shell .ax-button--danger { color: var(--ad-danger); border-color: color-mix(in srgb, var(--ad-danger) 40%, transparent); }
 .ax-status-msg--warn { color: var(--ad-warning) !important; }
 

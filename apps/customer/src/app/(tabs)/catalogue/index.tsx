@@ -138,10 +138,10 @@ export default function CatalogueScreen() {
   );
   return (
     <Screen
-      key={JSON.stringify(path)}
+      scrollIdentity={JSON.stringify(path)}
       appBar="Services"
       top={top}
-      onBack={fromRoute ? () => navigate(parentPath(path), true) : undefined}
+      onBack={fromRoute ? () => router.canGoBack() ? router.back() : navigate(parentPath(path), true) : undefined}
     >
       <View
         key={JSON.stringify(path)}

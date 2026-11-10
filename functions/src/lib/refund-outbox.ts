@@ -1,3 +1,4 @@
+import {combinedReturnTotals,type CombinedReturn} from './combined-return-state.js';
 // Booking-refund outbox: reserve -> submit to provider -> reconcile/projection.
 //
 // Why an outbox: a provider refund is an external side effect that must happen
@@ -100,7 +101,7 @@ export type ReservePlan =
 export async function planReserveInTx(
   tx: FirebaseFirestore.Transaction,
   db: Firestore,
-  i: { payment: Payment; amountPaise: number; reason: string; createdBy: string; expectedBookingId?: string | null; expectedJobId?: string | null; completingInThisTx?: boolean },
+  i: { payment: Payment; amountPaise: number; reason: string; createdBy: string; expectedBookingId?: string | null; expectedJobId?: string | null; completingInThisTx?: boolean; combinedAllocationApproval?:{entryKey:string} },
 ): Promise<ReservePlan> {
   const amount = Math.round(i.amountPaise);
   if (!Number.isInteger(amount) || amount <= 0) return { ok: false, reason: "refund amount must be a positive integer (paise)", code: "invalid" };
@@ -159,6 +160,8 @@ export async function planReserveInTx(
     if (!bookingSnap.exists) return { ok: false, code: "invalid", reason: `payment ${payment.id} booking ${payment.bookingId} missing` };
     const booking = bookingSnap.data() as Booking;
     if (booking.tenantId !== payment.tenantId) return { ok: false, code: "invalid", reason: `payment ${payment.id} booking ${payment.bookingId} tenant ${booking.tenantId} != payment tenant ${payment.tenantId}` };
+    if(booking.combinedPayment){const plan=(booking as Booking&{combinedReturn?:CombinedReturn}).combinedReturn,entry=plan?.entries.find(e=>e.key===i.combinedAllocationApproval?.entryKey);if(!i.combinedAllocationApproval||!plan||plan.status!=='awaiting_admin'||!entry||entry.paymentId!==payment.id||entry.method!=='razorpay_payment_link'||entry.returnPaise!==amount||entry.returnedPaise!==0||entry.requestId) return{ok:false,code:'conflict',reason:'Combined payments require the reviewed original-method allocation approval.'};}
+
   }
   const guardRef = requestsCol(db).doc(`active_${payment.id}`);
   const now = new Date().toISOString();
@@ -401,11 +404,22 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
       if (job.tenantId !== payment.tenantId) throw new Error(`refund projection rejected: job ${fresh.jobId} tenant ${job.tenantId} != payment tenant ${payment.tenantId}`);
       if (fresh.bookingId && job.bookingId !== fresh.bookingId) throw new Error(`refund projection rejected: job ${fresh.jobId} booking ${job.bookingId} != request booking ${fresh.bookingId}`);
     }
+    let combinedProjection:null|{plan:CombinedReturn;totals:ReturnType<typeof combinedReturnTotals>;jobId:string}=null;
     if (fresh.bookingId) {
       const bookingSnap = await tx.get(db.collection(COLLECTIONS.bookings()).doc(fresh.bookingId));
       if (!bookingSnap.exists) throw new Error(`refund projection rejected: booking ${fresh.bookingId} missing`);
       const booking = bookingSnap.data() as Booking;
       if (booking.tenantId !== payment.tenantId) throw new Error(`refund projection rejected: booking ${fresh.bookingId} tenant ${booking.tenantId} != payment tenant ${payment.tenantId}`);
+      if(booking.combinedPayment){
+        const plan=(booking as Booking&{combinedReturn?:CombinedReturn}).combinedReturn;
+        const entry=plan?.entries.find(e=>e.paymentId===payment.id&&e.requestId===fresh.id);
+        if(!plan||plan.status==='awaiting_admin'||!entry||entry.method!=='razorpay_payment_link'||entry.returnPaise!==fresh.amountPaise||entry.returnedPaise!==0)throw new Error('Combined refund lacks an approved original-payment allocation.');
+        const job=(await tx.get(db.collection('jobs').doc(plan.jobId))).data();
+        if(!job||job['tenantId']!==booking.tenantId||job['studioId']!==booking.studioId||job['customerId']!==booking.customerId||job['bookingId']!==booking.id)throw new Error('Combined refund job binding changed.');
+        const next:CombinedReturn={...plan,entries:plan.entries.map(e=>e.key===entry.key?{...e,returnedPaise:fresh.amountPaise}:e)};
+        const totals=combinedReturnTotals(next);if(totals.due===0)next.status='returned';combinedProjection={plan:next,totals,jobId:plan.jobId};
+      }
+
     }
     // Owner policy 30 Oct 2026: full refund of a membership payment ends that
     // membership's benefits - read BEFORE any write in this transaction.
@@ -455,13 +469,14 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
       invoiceReviewNeeded: payment.invoiceId ? true : false,
       updatedAt: now,
     });
-    if (fresh.jobId) {
+    if (fresh.jobId && !combinedProjection) {
       tx.update(db.collection(COLLECTIONS.jobs()).doc(fresh.jobId), {
         paymentStatus: check.label === "refunded" ? "refunded" : "partial",
         updatedAt: now,
       });
     }
-    if (fresh.bookingId) {
+    if(combinedProjection&&fresh.bookingId){const c=combinedProjection;tx.update(db.collection("bookings").doc(fresh.bookingId),{combinedReturn:c.plan,refundedPaise:c.totals.returned,manualRefundDuePaise:c.totals.cashDue,paymentStatus:c.totals.paymentStatus,refundStatus:c.totals.refundStatus,updatedAt:now});tx.update(db.collection("jobs").doc(c.jobId),{paymentStatus:c.totals.paymentStatus,updatedAt:now});}
+    if (fresh.bookingId && !combinedProjection) {
       // Requested -> processed: projection happens ONLY on exact provider
       // "processed" evidence, so the booking now carries the real refunded
       // amount and the provider refund id - never a planned figure.

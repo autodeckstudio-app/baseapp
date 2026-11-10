@@ -1,3 +1,5 @@
+import {requestCombinedWaitingCancel} from '../../lib/combined-waiting-cancel.js';
+import {decideCombinedReturn} from '../../lib/combined-return.js';
 import { transactionRead } from "../../lib/transaction-read.js";
 import {cancelOfflineVisit} from "../../lib/offline-cancel.js";
 import { requestWaitingCancel, unresolvedCancel } from "../../lib/waiting-cancel.js";
@@ -30,6 +32,7 @@ const adminCancelSchema = z.object({
   /** charge = the customer asked late, the policy fee applies. waive = studio cancelled or goodwill. */
   feeAction: z.enum(["charge", "waive"]),
   preview: z.boolean().optional(),
+  paymentCheck:z.object({confirmed:z.literal(true),note:z.string().trim().min(3).max(500)}).strict().optional(),
 }).strict();
 
 const settleFeeSchema = z.object({
@@ -44,7 +47,7 @@ const CANCELLABLE_JOB = ["PENDING_VEHICLE", "STANDBY", "VEHICLE_RECEIVED"];
 /** The one cancel path: fee, refund through the payment provider, credits back, slot released. Admin and customer share it. */
 export async function runCancel(
   user: ReturnType<typeof extractUser>,
-  data: { bookingId: string; reason: string; feeAction: "charge" | "waive"; preview?: boolean | undefined },
+  data: { bookingId: string; reason: string; feeAction: "charge" | "waive"; preview?: boolean | undefined;paymentCheck?:{confirmed:true;note:string}|undefined },
   actor: "admin" | "customer",
 ) {
     const db = getFirestore();
@@ -58,6 +61,7 @@ export async function runCancel(
     if (actor === "customer") {
       if (booking.customerId !== customerDocId) throw new HttpsError("permission-denied", "Cannot cancel another customer's booking.");
     }
+    if(booking.combinedPayment){const waiting=await requestCombinedWaitingCancel(db,user,data,actor);if(waiting)return waiting;return decideCombinedReturn(db,user,data,actor,"cancellation");}
     if (booking.status === "CANCELLED") return { success: true, alreadyCancelled: true };
     if (booking.status === "COMPLETED" || booking.status === "EXPIRED") {
       throw new HttpsError("failed-precondition", `Cannot cancel a booking with status ${booking.status}.`);

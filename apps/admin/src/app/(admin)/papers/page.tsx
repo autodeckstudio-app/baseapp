@@ -6,14 +6,14 @@ import { FIRST_STUDIO_ID } from "@autodeck/core";
 import type { PaperVerification, Vehicle } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { db } from "../../../lib/firebase";
-import { listenToPapers, findVehicleByPlate, submitPaper, reviewPaper } from "../../../lib/papers-service";
+import { listenToPapers, findVehicleByPlate, submitPaper, reviewPaper, resolvePaperEvidence } from "../../../lib/papers-service";
 import { useAdminAuth } from "../../../lib/auth-context";
 import { PapersView } from "../../../experience/PapersView";
 
 type StatusFilter = "PENDING" | "VERIFIED" | "REJECTED";
 
 export default function PapersPage() {
-  const { claims } = useAdminAuth();
+  const { claims, user } = useAdminAuth();
   const [filter, setFilter] = useState<StatusFilter>("PENDING");
   const [focusedPaper, setFocusedPaper] = useState<string | null>(null);
   useEffect(() => {
@@ -84,7 +84,7 @@ export default function PapersPage() {
   );
 
   return (
-    <PapersView
+    <PapersView key={`${user?.uid ?? ""}:${claims?.tenantId ?? ""}:${claims?.role ?? ""}:${claims?.studioId ?? ""}:${filter}`}
       filter={filter}
       papers={focusedPaper ? papers.filter((paper) => paper.id === focusedPaper) : papers}
       vehiclesById={vehiclesById}
@@ -92,6 +92,7 @@ export default function PapersPage() {
       busy={busy}
       error={error}
       message={message}
+      onOpenEvidence={resolvePaperEvidence}
       onFilter={(value) => { setFocusedPaper(null); setFilter(value); }}
       onResolvePlate={resolvePlate}
       onSubmit={(input) =>
@@ -109,9 +110,9 @@ export default function PapersPage() {
           "Couldn't register the document.",
         )
       }
-      onReview={(paper, decision, reason) =>
+      onReview={(paper, decision, reason, inspectedPlate) =>
         run(
-          () => reviewPaper({ paperId: paper.id, decision, ...(reason ? { rejectionReason: reason } : {}) }),
+          () => reviewPaper({ paperId: paper.id, decision, ...(decision === "VERIFIED" ? { ...(inspectedPlate ? { inspectedPlate } : {}), originalInspected: true } : {}), ...(reason ? { rejectionReason: reason } : {}) }),
           decision === "VERIFIED" ? "Marked verified." : "Marked rejected.",
           "Couldn't save the review.",
         )

@@ -1,3 +1,7 @@
+import{readCombinedPaymentBasis,assertCombinedSettlementPayment}from "../../lib/combined-settlement.js";
+import{requireCustomerDocId}from "../../lib/customer-identity.js";
+import{checkedCombinedPayment}from'@autodeck/core';
+import{combinedCheckoutEnabled}from'../../lib/combined-booking.js';
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { ServiceJob, Payment, Customer } from "@autodeck/core";
@@ -24,6 +28,11 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
   if (!jobSnap.exists) throw new HttpsError("not-found", "Job not found.");
 
   const job = jobSnap.data() as ServiceJob;
+  if(job.combinedPayment){
+    if(!combinedCheckoutEnabled())throw new HttpsError("failed-precondition","Combined payments are not active.");
+    try{checkedCombinedPayment(job.combinedPayment,job.totalAmount)}catch{throw new HttpsError("failed-precondition","Combined price changed. Review the booking before paying.")}
+
+  }
   if(job.offlineSettlement)throw new HttpsError("failed-precondition","Actual offline receipts exist. Use the receipt balance, not an online payment link.");
 
   // Ownership: customer pays own job; studio/admin can initiate payment for
@@ -31,15 +40,13 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
   // was previously never checked against job.studioId at all, letting a
   // studio employee at Studio A initiate payment for a job belonging to
   // Studio B in the same tenant).
-  const isOwner = job.customerId === user.uid;
+  if(job.tenantId!==user.claims.tenantId)throw new HttpsError("permission-denied","Cross-tenant access denied.");
+  assertStudio(user,job.studioId,"Job");
+  const isOwner = user.claims.role==="customer" && job.customerId === await requireCustomerDocId(db,COLLECTIONS.customers(),user.claims.tenantId,user.uid);
   const isStudioOrAdmin = ["studio", "admin", "superadmin"].includes(user.claims.role);
   if (!isOwner && !isStudioOrAdmin) {
     throw new HttpsError("permission-denied", "Cannot initiate payment for this job.");
   }
-  if (job.tenantId !== user.claims.tenantId) {
-    throw new HttpsError("permission-denied", "Cross-tenant access denied.");
-  }
-  assertStudio(user, job.studioId, "Job");
   if (job.status === "CANCELLED") {
     throw new HttpsError("failed-precondition", "Cannot pay for a cancelled job.");
   }
@@ -65,7 +72,7 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
     .limit(1)
     .get();
 
-  if (!preCheckPayments.empty) {
+  if (!preCheckPayments.empty && !job.combinedPayment) {
     const existing = preCheckPayments.docs[0]?.data() as Payment;
     if (existing?.status === "completed") {
       throw new HttpsError("already-exists", "This job has already been paid.");
@@ -77,7 +84,7 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
   const paymentRef = db.collection(COLLECTIONS.payments()).doc();
 
   // Amount ALWAYS comes from job.totalAmount (immutable price snapshot) — NEVER from client
-  const amount = job.totalAmount;
+  let amount = job.totalAmount;
 
   // Authoritative re-check + claim, atomically: re-verify no in-flight/
   // completed payment exists for this job, and create THIS payment doc (as
@@ -88,6 +95,9 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
   const claim = await db.runTransaction(async (tx) => {
     const freshJob=(await tx.get(db.collection(COLLECTIONS.jobs()).doc(data.jobId))).data() as ServiceJob | undefined;
     if(!freshJob||freshJob.id!==job.id||freshJob.customerId!==job.customerId||freshJob.studioId!==job.studioId||freshJob.tenantId!==job.tenantId||freshJob.totalAmount!==job.totalAmount||freshJob.status==="CANCELLED"||freshJob.offlineSettlement)throw new HttpsError("failed-precondition","Job or receipt balance changed. Refresh before payment.");
+    const basis=await readCombinedPaymentBasis(db,tx,freshJob);
+    const dueAmount=basis?.balanceDuePaise??freshJob.totalAmount;
+    if(!Number.isSafeInteger(dueAmount)||dueAmount<0||(basis?dueAmount===0:false))throw new HttpsError("failed-precondition","No verified payable balance remains.");
     const freshExisting = await tx.get(
       db
         .collection(COLLECTIONS.payments())
@@ -96,6 +106,7 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
         .limit(1),
     );
     if (!freshExisting.empty) {
+      assertCombinedSettlementPayment(freshJob,freshExisting.docs[0]!.data() as Payment,basis);
       return { created: false as const, existing: freshExisting.docs[0]?.data() as Payment };
     }
 
@@ -108,7 +119,8 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
       bookingId: job.bookingId,
       membershipId: null,
       customerId: job.customerId,
-      amount,
+      amount:dueAmount,
+      ...(basis?{combinedBasis:basis}:{}),
       currency: job.priceBreakdown.currency,
       method: data.method,
       status: "pending",
@@ -135,9 +147,9 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
       entityId: paymentRef.id,
       user,
       studioId: job.studioId,
-      after: { jobId: job.id, bookingId: job.bookingId, amount, method: data.method, status: "pending" },
+      after: { jobId: job.id, bookingId: job.bookingId, amount:dueAmount, method: data.method, status: "pending" },
     });
-    return { created: true as const, existing: null };
+    return { created: true as const, existing: null,amount:dueAmount };
   });
 
   if (!claim.created) {
@@ -147,6 +159,8 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
     }
     return { paymentId: existing.id, paymentUrl: existing.paymentUrl ?? null, status: existing.status };
   }
+
+  amount=claim.amount;
 
   // Call the provider exactly once, now that this call has exclusive claim
   // on this job's payment slot, then patch the committed doc with the

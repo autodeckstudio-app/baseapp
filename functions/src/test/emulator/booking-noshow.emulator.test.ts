@@ -1,7 +1,8 @@
 /**
  * Emulator tests for no-show resolution through the real callables, documents seeded directly. Local only: the
- * refund outbox is a RESERVATION (never submitted here, no provider call). Mapped default: small Rs 100, bigger 20%
- * of the booking total; unknown class has no default; deviations are a labelled exception; waive is logged.
+ * refund outbox is a RESERVATION (never submitted here, no provider call). Mapped default (owner-approved 2 Nov):
+ * 20% of the discounted service including GST excluding pickup/drop when the price snapshot exists; no snapshot has
+ * NO default (office review); the flat/percent bands stay explicit admin candidates; deviations are a labelled exception; waive is logged.
  */
 import { describe, it, expect } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
@@ -15,12 +16,14 @@ const uid = (p: string) => `${p}-${Date.now()}-${(seq += 1)}`;
 const admin = () => ({ uid: uid("admin"), token: { role: "admin", tenantId: TENANT, studioId: null }, rawToken: "t" });
 const customer = () => ({ uid: uid("c"), token: { role: "customer", tenantId: TENANT, studioId: null }, rawToken: "t" });
 
-async function seed(o: { category: string | null; total: number; paid: number; method?: string }) {
+async function seed(o: { category: string | null; total: number; paid: number; method?: string; snapshot?: boolean }) {
   const now = new Date().toISOString();
   const bookingId = uid("bk");
   await db.collection("bookings").doc(bookingId).set({
     id: bookingId, tenantId: TENANT, studioId: STUDIO, customerId: uid("cu"), status: "CANCELLED", missedAt: now,
     scheduledAt: new Date(Date.now() - 3600000).toISOString(), totalAmount: o.total,
+    // Subtotal INCLUDES pickup+drop; the approved basis excludes all transport and the membership discount.
+    ...(o.snapshot ? { priceBreakdown: { subtotal: o.total + 10000, pickupFee: 5000, dropFee: 5000, membershipDiscount: 10000, taxRatePercent: 0, tax: 0, total: o.total } } : {}),
     ...(o.category ? { cancelCategories: [o.category] } : {}), createdAt: now, updatedAt: now,
   });
   let paymentId: string | null = null;
@@ -38,11 +41,14 @@ const resolve = (data: Record<string, unknown>, auth: unknown = admin()) => reso
 const bk = async (id: string) => (await db.collection("bookings").doc(id).get()).data() as Record<string, any>;
 
 describe("no-show resolution (fixture money, reservation only)", () => {
-  it("preview maps small to Rs 100 and bigger to 20% of the total, and preselects nothing else", async () => {
-    const a = await seed({ category: "washing", total: 100000, paid: 100000 });
-    expect((await preview(a.bookingId)).mappedDefault).toEqual({ serviceClass: "small", key: "flat_rs100", chargePaise: 10000, refundPaise: 90000 });
-    const b = await seed({ category: "ppf", total: 500000, paid: 500000 });
-    expect((await preview(b.bookingId)).mappedDefault).toEqual({ serviceClass: "bigger", key: "pct_20", chargePaise: 100000, refundPaise: 400000 });
+  it("preview maps the approved discounted-service basis when the price snapshot exists, and otherwise preselects nothing", async () => {
+    // service = 110000 - 5000 pickup - 5000 drop - 10000 discount = 90000; 20% = 18000, refund 82000 (GST disabled).
+    const a = await seed({ category: "washing", total: 100000, paid: 100000, snapshot: true });
+    expect((await preview(a.bookingId)).mappedDefault).toEqual({ serviceClass: "service_only", key: "service_20", chargePaise: 18000, refundPaise: 82000 });
+    const bare = await seed({ category: "ppf", total: 500000, paid: 500000 });
+    const p = await preview(bare.bookingId);
+    expect(p.mappedDefault).toBeNull();
+    expect(p.candidates.map((c: { key: string }) => c.key)).toEqual(["flat_rs100", "pct_20", "waive"]); // explicit admin choices, unchanged
   });
 
   it("unknown service class has no default and a charge without an amount is refused (no silent charge)", async () => {
@@ -53,21 +59,22 @@ describe("no-show resolution (fixture money, reservation only)", () => {
   });
 
   it("charge with no amount applies the mapped default and reserves captured minus charge (a reservation, not a refund)", async () => {
-    const s = await seed({ category: "ppf", total: 500000, paid: 500000 });
+    const s = await seed({ category: "ppf", total: 500000, paid: 500000, snapshot: true });
+    // service = 510000 - 5000 - 5000 - 10000 = 490000; 20% = 98000, refund 402000.
     const r = await resolve({ bookingId: s.bookingId, resolution: "charge", reason: "no contact" });
-    expect(r).toMatchObject({ resolved: true, chargePaise: 100000 });
+    expect(r).toMatchObject({ resolved: true, chargePaise: 98000 });
     const rr = (await db.collection("refundRequests").doc(r.refundRequestId).get()).data()!;
-    expect(rr).toMatchObject({ amountPaise: 400000, status: "reserved", paymentId: s.paymentId });
+    expect(rr).toMatchObject({ amountPaise: 402000, status: "reserved", paymentId: s.paymentId });
     expect(rr["providerRefundId"]).toBeNull();
-    expect(await bk(s.bookingId)).toMatchObject({ noShowResolution: "charge", noShowChargePaise: 100000, noShowMappedDefaultPaise: 100000, refundStatus: "reserved", cancellationFeeStatus: "withheld" });
+    expect(await bk(s.bookingId)).toMatchObject({ noShowResolution: "charge", noShowChargePaise: 98000, noShowMappedDefaultPaise: 98000, refundStatus: "reserved", cancellationFeeStatus: "withheld" });
     expect((await bk(s.bookingId))["noShowChargeException"]).toBeUndefined();
     expect((await db.collection("payments").doc(s.paymentId!).get()).data()).toMatchObject({ status: "completed", refundAmount: null });
   });
 
   it("a charge that differs from the mapped default is recorded as a labelled exception", async () => {
-    const s = await seed({ category: "washing", total: 100000, paid: 100000 });
+    const s = await seed({ category: "washing", total: 100000, paid: 100000, snapshot: true });
     await resolve({ bookingId: s.bookingId, resolution: "charge", chargePaise: 25000, reason: "customer agreed by phone" });
-    expect(await bk(s.bookingId)).toMatchObject({ noShowChargePaise: 25000, noShowMappedDefaultPaise: 10000, noShowChargeException: true, noShowReason: "customer agreed by phone" });
+    expect(await bk(s.bookingId)).toMatchObject({ noShowChargePaise: 25000, noShowMappedDefaultPaise: 18000, noShowChargeException: true, noShowReason: "customer agreed by phone" });
   });
 
   it("waive refunds nothing inline, reserves the full amount and is marked waived", async () => {
@@ -79,7 +86,7 @@ describe("no-show resolution (fixture money, reservation only)", () => {
   });
 
   it("a second resolution is refused and creates no second reservation", async () => {
-    const s = await seed({ category: "washing", total: 100000, paid: 100000 });
+    const s = await seed({ category: "washing", total: 100000, paid: 100000, snapshot: true });
     await resolve({ bookingId: s.bookingId, resolution: "charge", reason: "no contact" });
     await expect(resolve({ bookingId: s.bookingId, resolution: "waive", reason: "changed mind" })).rejects.toMatchObject({ code: "already-exists" });
     const reqs = await db.collection("refundRequests").where("paymentId", "==", s.paymentId).get();
@@ -96,7 +103,7 @@ describe("no-show resolution (fixture money, reservation only)", () => {
   it("charge above the captured amount is refused; manual-payment refund is refused; reopen is held", async () => {
     const a = await seed({ category: "washing", total: 100000, paid: 100000 });
     await expect(resolve({ bookingId: a.bookingId, resolution: "charge", chargePaise: 200000, reason: "too much" })).rejects.toMatchObject({ code: "invalid-argument" });
-    const c = await seed({ category: "washing", total: 100000, paid: 100000, method: "cash" });
+    const c = await seed({ category: "washing", total: 100000, paid: 100000, method: "cash", snapshot: true });
     await expect(resolve({ bookingId: c.bookingId, resolution: "charge", reason: "cash no show" })).rejects.toMatchObject({ code: "failed-precondition" });
     await expect(resolve({ bookingId: a.bookingId, resolution: "reopen", reason: "try reopen" })).rejects.toMatchObject({ code: "failed-precondition" });
     expect((await bk(a.bookingId))["noShowResolution"]).toBeUndefined();
@@ -115,14 +122,14 @@ describe("no-show resolution (fixture money, reservation only)", () => {
   });
 
   it("the audit entry carries the admin actor, the reason, the mapped default and the exception flag", async () => {
-    const s = await seed({ category: "washing", total: 100000, paid: 100000 });
+    const s = await seed({ category: "washing", total: 100000, paid: 100000, snapshot: true });
     const auth = admin();
     await resolve({ bookingId: s.bookingId, resolution: "charge", chargePaise: 25000, reason: "customer agreed by phone" }, auth);
     const logs = await db.collection("auditLog").where("entityId", "==", s.bookingId).where("action", "==", "booking.noshow_resolved").get();
     expect(logs.size).toBe(1);
     expect(logs.docs[0]!.data()).toMatchObject({
       performedBy: auth.uid, performedByRole: "admin",
-      after: { resolution: "charge", chargePaise: 25000, reason: "customer agreed by phone", mappedDefaultPaise: 10000, exception: true },
+      after: { resolution: "charge", chargePaise: 25000, reason: "customer agreed by phone", mappedDefaultPaise: 18000, exception: true },
     });
     expect((await bk(s.bookingId))["noShowResolvedBy"]).toBe(auth.uid);
   });

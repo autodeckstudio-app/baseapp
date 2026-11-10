@@ -16,4 +16,10 @@ describe("gatePrice", () => {
     expect(gatePrice(v, { role: "customer", uid: "u1", sellerId: "u1", asked: new Set() }).askingPrice).toBe(111100000);
     expect(gatePrice(v, { role: "admin", uid: "a", sellerId: "x", asked: new Set() }).askingPrice).toBe(111100000);
   });
+  it("shows it to the seller under their pre-migration auth-uid key", () => {
+    expect(gatePrice(v, { role: "customer", uid: "cust-staged", legacyUid: "u1", sellerId: "u1", asked: new Set() }).askingPrice).toBe(111100000);
+  });
+  it("still hides it when neither the doc id nor the legacy uid matches", () => {
+    expect(gatePrice(v, { role: "customer", uid: "cust-staged", legacyUid: "u1", sellerId: "other", asked: new Set() }).priceHidden).toBe(true);
+  });
 });

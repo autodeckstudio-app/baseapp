@@ -286,3 +286,10 @@ it('editing uses only one selected cover preview, compact controls and cancellin
 });
 
 it("garage detail mounts shared swipe handlers on its tab content",async()=>{const el=await mount();const area=()=>el.root.findByProps({testID:"garage-detail-swipe-area"});expect(area().props.onMoveShouldSetResponder).toBeDefined();const handler=area().props.onMoveShouldSetResponder;expect(typeof handler).toBe('function');expect(textOf(el)).toContain('Upcoming');await act(async()=>el.unmount())});
+
+import{getMyBookings}from'../../../lib/booking-service';
+it('Upcoming uses confirmed empty only after bookings resolve; pending and failed reads are not empty',async()=>{
+ let resolve!:(x:any[])=>void;vi.mocked(getMyBookings).mockImplementationOnce(()=>new Promise(r=>{resolve=r}) as any);
+ const el=await mount();expect(textOf(el)).toContain('Loading upcoming bookings...');expect(textOf(el)).not.toContain('No upcoming bookings');await act(async()=>resolve([]));expect(textOf(el)).toContain('No upcoming bookings');expect(el.root.findAll(n=>n.props.label==='Book a service'&&typeof n.props.onPress==='function')).toHaveLength(1);await act(async()=>el.unmount());
+ vi.mocked(getMyBookings).mockRejectedValueOnce(Error('read failure'));const failed=await mount();expect(textOf(failed)).toContain('Car records unavailable');expect(textOf(failed)).not.toContain('No upcoming bookings');await act(async()=>failed.unmount());
+});

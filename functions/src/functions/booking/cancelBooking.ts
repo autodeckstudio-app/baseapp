@@ -47,7 +47,7 @@ export const cancelBooking = onCall({ region: "asia-south1", secrets: ["RAZORPAY
   if (isCustomer) return runCancel(user, { bookingId: data.bookingId, reason: data.reason, feeAction: "charge" }, "customer");
 
   // Only the new unresolved LINK path enters shared waiting logic for legacy admin cancellation.
-  if (isStudioOrAbove && booking.advancePaymentId) return runCancel(user, { bookingId: data.bookingId, reason: data.reason, feeAction: "waive" }, "admin");
+  if (isStudioOrAbove && (booking.advancePaymentId||booking.combinedPayment)) return runCancel(user, { bookingId: data.bookingId, reason: data.reason, feeAction: "waive" }, "admin");
   if (isStudioOrAbove) {
     const js = await db.collection(COLLECTIONS.jobs()).where("bookingId", "==", data.bookingId).limit(1).get();
     if(js.docs[0]?.data()["offlineSettlement"])return runCancel(user,{bookingId:data.bookingId,reason:data.reason,feeAction:"waive"},"admin");

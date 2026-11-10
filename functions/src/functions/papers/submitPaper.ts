@@ -6,7 +6,7 @@ import { extractUser, assertRole, assertStudio } from "../../middleware/auth.js"
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
-import { submitPaperSchema } from "../../schemas/paper.js";
+import { submitPaperSchema, normalizeRcReference } from "../../schemas/paper.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Studio-and-above: register a customer vehicle document for verification.
@@ -53,6 +53,12 @@ export const submitPaper = onCall({ region: "asia-south1", timeoutSeconds: 60, c
   };
 
   await db.runTransaction(async (tx) => {
+    const freshSnap = await tx.get(db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId));
+    const fresh = freshSnap.data() as Vehicle | undefined;
+    if (!freshSnap.exists || !fresh || fresh.deletedAt) throw new HttpsError("failed-precondition", "This car is not active.");
+    if (fresh.tenantId !== vehicle.tenantId || fresh.ownerId !== vehicle.ownerId) throw new HttpsError("aborted", "The car owner changed. Reload before saving the document.");
+    if (data.kind === "RC" && (!fresh.registrationNumber || normalizeRcReference(data.reference) !== normalizeRcReference(fresh.registrationNumber))) throw new HttpsError("failed-precondition", "The RC number does not match this car. Check the plate before saving.");
+    if (data.kind === "RC") paper.reference = normalizeRcReference(data.reference);
     tx.set(ref, paper);
     writeAuditLog(tx, {
       action: "paper.submitted",

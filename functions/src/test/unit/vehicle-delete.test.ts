@@ -12,7 +12,7 @@ const seed = () => ({
   payments: { p1: { tenantId: "t", jobId: "j1" } },
   warranties: { w1: { tenantId: "t", vehicleId: "v1" } },
 }) as Record<string, Record<string, Record<string, unknown>>>;
-const owner = { uid: "c1", role: "customer", tenantId: "t" };
+const owner = { uid: "auth-uid", customerId: "c1", role: "customer", tenantId: "t" };
 const noAudit = () => {};
 
 describe("permanentlyDeleteVehicle", () => {
@@ -23,7 +23,7 @@ describe("permanentlyDeleteVehicle", () => {
     expect(data.vehicles!.v1).toBeUndefined();
     expect(data.vehicles!.v2).toBeDefined();
     expect(data.vehicles!.vx).toBeDefined();
-    expect(data.deletedVehicles!.v1).toMatchObject({ ownerId: "c1", tenantId: "t", deletedBy: "c1", snapshot: { registrationNumber: "GJ01AB1234", model: "Nexon" } });
+    expect(data.deletedVehicles!.v1).toMatchObject({ ownerId: "c1", tenantId: "t", deletedBy: "auth-uid", snapshot: { registrationNumber: "GJ01AB1234", model: "Nexon" } });
     for (const [col, id] of [["bookings", "b1"], ["jobs", "j1"], ["jobs", "j2"], ["invoices", "i1"]] as const) {
       expect(data[col]![id]!.vehicleSnapshot).toMatchObject({ registrationNumber: "GJ01AB1234" });
       expect(data[col]![id]!.vehicleId).toBe("v1");

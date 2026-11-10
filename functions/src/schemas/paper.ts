@@ -43,6 +43,8 @@ export const reviewPaperSchema = z.object({
   paperId: z.string().min(1),
   decision: z.enum(["VERIFIED", "REJECTED"]),
   rejectionReason: z.string().trim().min(1).max(300).optional(),
+  inspectedPlate: z.string().trim().min(1).max(30).optional(),
+  originalInspected: z.boolean().optional(),
 }).strict();
 
 export const updatePaperSchema = z.object({

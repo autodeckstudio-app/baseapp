@@ -33,7 +33,7 @@ function addDaysLocal(dateStr: string, days: number): string {
 type GetStudioJobsInput = { studioId: string; date?: string };
 type GetStudioJobsOutput = { jobs: ServiceJob[]; date: string };
 
-type AdvanceJobStatusInput = { jobId: string; notes?: string; rework?: boolean; protectionWork?: ProtectionWorkEvent[] };
+type AdvanceJobStatusInput = { jobId: string; notes?: string; rework?: boolean; protectionWork?: ProtectionWorkEvent[]; recordedWorkRevision?: number };
 type AdvanceJobStatusOutput = { jobId: string; previousStatus: string; newStatus: string };
 
 type CreateWalkinJobInput = {
@@ -68,6 +68,7 @@ export async function advanceJobStatus(
   notes?: string,
   rework?: boolean,
   protectionWork?: ProtectionWorkEvent[],
+  recordedWorkRevision?: number,
 ): Promise<AdvanceJobStatusOutput> {
   const fn = httpsCallable<AdvanceJobStatusInput, AdvanceJobStatusOutput>(
     functions,
@@ -79,6 +80,7 @@ export async function advanceJobStatus(
   // READY_FOR_DELIVERY -> DELIVERED advance (the backend rejects it on any
   // other transition and requires it on that one).
   if (protectionWork !== undefined) input.protectionWork = protectionWork;
+  if (recordedWorkRevision !== undefined) input.recordedWorkRevision = recordedWorkRevision;
   const result = await fn(input);
   return result.data;
 }

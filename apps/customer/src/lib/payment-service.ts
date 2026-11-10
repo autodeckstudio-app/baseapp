@@ -19,9 +19,9 @@ export type RequestAdvanceOutput = { paymentId: string; paymentUrl: string | nul
  *  ADVANCE_SPLIT_ENABLED is on). The server claims the booking's advance
  *  slot, reconciles with the provider and returns a payable URL, or
  *  status "manual_review" (never a URL) when a human must reconcile. */
-export async function requestAdvancePayment(bookingId: string): Promise<RequestAdvanceOutput> {
-  const fn = httpsCallable<{ bookingId: string }, RequestAdvanceOutput>(functions, "requestAdvancePayment");
-  const result = await fn({ bookingId });
+export async function requestAdvancePayment(bookingId: string, expectedAdvancePaise?: number): Promise<RequestAdvanceOutput> {
+  const fn = httpsCallable<{ bookingId: string; expectedAdvancePaise?: number }, RequestAdvanceOutput>(functions, "requestAdvancePayment");
+  const result = await fn({ bookingId, ...(expectedAdvancePaise !== undefined ? { expectedAdvancePaise } : {}) });
   return result.data;
 }
 

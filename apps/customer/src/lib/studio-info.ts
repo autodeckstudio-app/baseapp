@@ -1,4 +1,4 @@
-import { cancellationPolicySummary } from "@autodeck/core";
+import { cancellationPolicySummary, CANCEL_SHORT, CANCEL_BIGGER } from "@autodeck/core";
 // Public contact details shown on the Help screen. Fill these in once with the
 // studio's real details; any empty value hides its button. No private data here.
 export const STUDIO_INFO = {
@@ -10,12 +10,25 @@ export const STUDIO_INFO = {
   hours: "Mon to Sat, 10 am to 9 pm. Sunday, 10 am to 7 pm", // shown on Help
 } as const;
 
-export const FAQ: { q: string; a: string }[] = [
-  { q: "How do I book a service?", a: "Tap Services below, choose a service, then pick your car and a time. Review the details and request your booking." },
-  { q: "Can I change or cancel a booking?", a: `Open your booking to see the change options available for that service. A change request is not confirmed until the studio approves it. ${cancellationPolicySummary()} If you miss your slot, the booking stays valid that day during studio hours. At close (7 pm Sunday, 9 pm other days), unarrived bookings are auto-cancelled. Make a new booking when you are ready.` },
-  { q: "How will I know my car is ready?", a: "Your booking page shows each step, and you get an update in Notifications." },
-  { q: "Where do I find my invoice and warranty?", a: "Invoices are on the booking. Warranties and papers are under your car in Garage." },
-  { q: "I need something not listed", a: "Call or message us on WhatsApp above and we will help." },
+export type FaqFact={label:string;detail:string};
+export type FaqItem={q:string;a:string;facts:FaqFact[]};
+const faq=(q:string,facts:FaqFact[],searchText?:string):FaqItem=>({q,facts,a:searchText??facts.map(f=>`${f.label}: ${f.detail}`).join(' ')});
+export const FAQ:FaqItem[]=[
+ faq("How do I book a service?",[{label:"Start",detail:"Services: choose the work."},{label:"Car & time",detail:"Pick your car and a time."},{label:"Review",detail:"Review. Request the booking."}]),
+ faq("Change or cancel?",[
+  {label:"Change options",detail:"Open booking for options."},
+  {label:"Change approval",detail:"Wait for studio approval."},
+  {label:"Short jobs: free cancel",detail:`Until ${CANCEL_SHORT.freeUntilHours} hours before.`},
+  {label:"Short jobs: late fee",detail:`Rs ${CANCEL_SHORT.feePaise/100} inside that window.`},
+  {label:"Bigger jobs: free cancel",detail:`Until ${CANCEL_BIGGER.freeUntilHours} hours before.`},
+  {label:"Bigger jobs: late fee",detail:`${CANCEL_BIGGER.feePercent}% of service + GST.`},{label:"Transport fee basis",detail:"Unused pickup/drop excluded."},
+  {label:"Missed slot",detail:"Valid that day in open hours."},
+  {label:"At studio close",detail:"No arrival: auto-cancelled."},
+  {label:"Next visit",detail:"Book again when ready."},
+ ],`Open your booking to see the change options available for that service. Studio approval is required. ${cancellationPolicySummary(true)} A missed slot stays valid that day during studio hours. At close unarrived bookings auto-cancel. Book again when ready.`),
+ faq("Is my car ready?",[{label:"Progress",detail:"See each step on your booking."},{label:"Updates",detail:"Check Notifications."}]),
+ faq("Invoice and warranty?",[{label:"Invoice",detail:"Open the booking."},{label:"Warranty & papers",detail:"Open your car in Garage."}]),
+ faq("Other services?",[{label:"Help",detail:"Call or WhatsApp above."}]),
 ];
 
 // Live studio info from the same record the booking engine uses (read-only public subset).

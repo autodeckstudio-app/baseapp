@@ -16,3 +16,4 @@ describe("sell field validation", () => {
     expect(validateSellStep({ ...form, name: "", phone: "123" }, 2, 1)).toMatchObject({ name: expect.any(String), phone: expect.any(String) });
   });
 });
+it('future car year is rejected, current and1990 accepted; dynamic message follows supplied current year',()=>{expect(validateSellStep({...form,year:'2027'},0,1,2026).year).toBe('Enter a year between 1990 and 2026.');for(const year of['1990','2021','2026'])expect(validateSellStep({...form,year},0,1,2026).year).toBeUndefined();expect(validateSellStep({...form,year:'1989'},0,1,2026).year).toBeTruthy();expect(validateSellStep({...form,year:'2027'},0,1,2027).year).toBeUndefined()});

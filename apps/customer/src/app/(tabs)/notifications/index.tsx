@@ -119,7 +119,7 @@ export default function NotificationsScreen() {
   if (error) {
     return (
       <Screen>
-        <Notice title="Can't load notifications" body={error} action={<Button label="Retry" onPress={() => setRetryTick((n) => n + 1)} />} />
+        <Notice title="Can't load notifications" body={error} action={<Button icon="refresh" label="Retry" onPress={() => setRetryTick((n) => n + 1)} />} />
       </Screen>
     );
   }

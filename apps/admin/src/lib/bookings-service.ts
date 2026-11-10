@@ -125,9 +125,9 @@ export async function setBookingQuote(bookingId: string, basePricePaise: number)
   await httpsCallable<{ bookingId: string; basePricePaise: number }, { bookingId: string }>(functions, "setBookingQuote")({ bookingId, basePricePaise });
 }
 
-export interface CancelSummary { paidPaise: number; policyFeePaise: number; feePaise: number; feeStatus: string; refundPaise: number; method: string | null; manualRefund?: boolean }
+export interface CancelSummary { cancellationPending?:boolean; paidPaise: number; policyFeePaise: number; feePaise: number; feeStatus: string; refundPaise: number; method: string | null; manualRefund?: boolean }
 
-export async function adminCancelBooking(input: { bookingId: string; reason: string; feeAction: "charge" | "waive"; preview?: boolean }): Promise<CancelSummary> {
+export async function adminCancelBooking(input: { bookingId: string; reason: string; feeAction: "charge" | "waive"; preview?: boolean;paymentCheck?:{confirmed:true;note:string}|undefined }): Promise<CancelSummary> {
   const { httpsCallable } = await import("firebase/functions");
   const { functions } = await import("./firebase");
   const res = await httpsCallable<typeof input, CancelSummary>(functions, "adminCancelBooking")(input);

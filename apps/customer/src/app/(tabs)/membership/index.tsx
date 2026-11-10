@@ -88,7 +88,7 @@ export default function MembershipScreen() {
         <Notice
           title="Could not load membership"
           body={error}
-          action={<Button kind="quiet" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>}
+          action={<Button kind="quiet" icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>}
         />
       </Screen>
     );
@@ -118,7 +118,7 @@ export default function MembershipScreen() {
               <Button label="Book a wash with my plan" onPress={() => router.push(washIds.length === 1 ? `/(tabs)/catalogue/${washIds[0]}` : "/(tabs)/catalogue")} />
             ) : null}
             {current.status === "pending" && current.planId ? <Button label="Pay online" onPress={() => router.push({ pathname: "/(tabs)/membership/purchase", params: { planId: current.planId } })} /> : null}
-            <Button label="Usage and history" kind="quiet" onPress={() => router.push("/(tabs)/membership/usage")} />
+            <Button icon="history" label="Usage and history" kind="quiet" onPress={() => router.push("/(tabs)/membership/usage")} />
           </View>
         </>
       ) : (

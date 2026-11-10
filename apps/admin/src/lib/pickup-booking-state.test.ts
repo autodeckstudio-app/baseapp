@@ -42,3 +42,5 @@ describe("admin pickup counts", () => {
     expect(pickupCounts(rows, null, 300)).toMatchObject({ REQUESTED: 2, CONFIRMED: 2, closeRequested: 0, closeConfirmed: 0 });
   });
 });
+
+it('tab totals count both waiting rows once, without confusing plus arithmetic or changing eligibility',async()=>{const{pickupTabCount}=await import('./pickup-booking-state');const c=pickupCounts([{kind:'pickup',status:'REQUESTED',bookingId:'ok'},{kind:'pickup',status:'REQUESTED',bookingId:'gone'}],{ok:'ACTIVE'},300);expect(pickupTabCount(c,'REQUESTED')).toBe(2);expect(c.REQUESTED).toBe(1);expect(c.closeRequested).toBe(1);expect(pickupTabCount(c,'ALL')).toBe(2);const page=readFileSync(join(__dirname,'../app/(admin)/pickups/page.tsx'),'utf8');expect(page).not.toContain('to close`');expect(page).not.toContain('Rs 100 per leg');expect(page).toContain('need booking review');expect(page).toContain('PICKUP_FREE_ROAD_METERS/1000');});

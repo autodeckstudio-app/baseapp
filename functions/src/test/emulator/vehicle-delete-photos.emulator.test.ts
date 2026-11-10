@@ -31,6 +31,7 @@ beforeAll(async () => {
 describe("deleteVehicle photo sweep (emulator)", () => {
   it("deletes only the cover picture and records durable cleanup truth on the tombstone", async () => {
     const me = uid("c"); const v = uid("v"); const other = uid("v");
+    await db.collection("customers").doc(me).set({ id: me, authUid: me, tenantId: TENANT, deletedAt: null });
     await db.collection("vehicles").doc(v).set({
       id: v, tenantId: TENANT, ownerId: me, registrationNumber: "GJ01XX9999",
       make: "Tata", model: "Nexon", year: 2022, color: "Blue",
@@ -72,6 +73,7 @@ describe("deleteVehicle photo sweep (emulator)", () => {
 
   it("a refused delete (open booking) removes nothing", async () => {
     const me = uid("c"); const v = uid("v");
+    await db.collection("customers").doc(me).set({ id: me, authUid: me, tenantId: TENANT, deletedAt: null });
     await db.collection("vehicles").doc(v).set({
       id: v, tenantId: TENANT, ownerId: me, registrationNumber: "GJ02YY1111",
       make: "Tata", model: "Punch", year: 2023, color: "Red", photoUrl: null,

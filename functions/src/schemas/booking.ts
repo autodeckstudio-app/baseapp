@@ -24,7 +24,12 @@ export const getAvailabilitySchema = z.object({
   extraServiceIds: z.array(z.string().min(1)).max(4).optional(),
 }).strict();
 
+export const combinedBookingReviewSchema=z.object({
+  version:z.literal(2),paymentChoice:z.enum(['advance20','full']),expectedTotalPaise:z.number().int().safe().nonnegative(),expectedPayNowPaise:z.number().int().safe().nonnegative(),
+  transport:z.object({quoteId:z.string().min(1).max(80),kind:z.enum(['pickup','drop','both']),lat:z.number().min(-90).max(90),lng:z.number().min(-180).max(180),address:z.string().trim().min(8).max(300),requestedPickupTime:z.string().trim().max(100).optional()}).strict().optional(),
+}).strict();
 export const createBookingSchema = z.object({
+  combinedReview:combinedBookingReviewSchema.optional(),
   quoteJourneyId: z.string().min(1).max(120).regex(/^[A-Za-z0-9_-]+$/).optional(),
   quoteRevision: z.number().int().positive().optional(),
   quoteTermsVersion: z.string().min(1).max(120).optional(),
@@ -56,6 +61,7 @@ export const cancelBookingSchema = z.object({
 export const requestAdvancePaymentSchema = z
   .object({
     bookingId: z.string().min(1),
+    expectedAdvancePaise: z.number().int().positive().safe().optional(),
   })
   .strict();
 

@@ -29,7 +29,7 @@ let testEnv: RulesTestEnvironment;
 beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
     projectId: TEST_PROJECT_ID,
-    firestore: { host: "localhost", port: 8080 },
+    firestore: { host: "localhost", port: Number(process.env["FIRESTORE_EMULATOR_TEST_PORT"] ?? "8099") },
   });
 });
 

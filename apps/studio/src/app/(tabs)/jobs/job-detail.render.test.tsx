@@ -1,3 +1,4 @@
+vi.mock('../../../lib/work-targets-service',()=>({listenToWorkTargets:(_s:any,cb:any)=>{cb([]);return()=>{}}}));
 // Mounts the REAL JobDetailScreen (the actual route component) with firebase
 // and services mocked at the module boundary, and drives the route-level
 // integration the reviewer asked for: a route change while the old job's
@@ -8,6 +9,10 @@ import { create, act } from "react-test-renderer";
 import { createElement } from "react";
 import type { ServiceJob } from "@autodeck/core";
 
+vi.mock('../../../lib/work-extras-service',()=>({listenToWorkExtras:(_s:any,cb:any)=>{cb([]);return()=>{}}}));
+vi.mock('../../../lib/work-coverage-service',()=>({getStaffJobWorkCoverage:async(jobId:string)=>({jobId,status:'not_recorded',revision:null,workLock:'open',items:[]})}));
+vi.mock('expo-crypto',()=>({randomUUID:()=> '318c5ddc-de7c-4427-b36f-e4981ed97530'}));
+vi.mock('../../../lib/work-command-journal',()=>({createWorkCommandJournal:()=>({restore:async()=>null,prepare:async()=>{},send:async()=>{throw Error('not authorized by this fixture')},check:async()=>null})}));
 const params = { id: "jA" };
 vi.mock("expo-router", () => ({
   useLocalSearchParams: () => params,

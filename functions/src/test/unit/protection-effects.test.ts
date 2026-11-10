@@ -168,7 +168,7 @@ describe("advanceJobStatusSchema protectionWork events", () => {
 describe("advanceJobStatus wiring", () => {
   it("declaration gating, fresh revalidation, and in-transaction event writes are all present", () => {
     const s = readFileSync("src/functions/job/advanceJobStatus.ts", "utf8");
-    expect(s).toContain('data.protectionWork !== undefined && nextStatus !== "DELIVERED"'); // reject off-delivery
+    expect(s).toContain('(data.protectionWork !== undefined || data.recordedWorkRevision !== undefined) && nextStatus !== "DELIVERED"'); // reject off-delivery
     expect(s).toContain("REQUIRES an explicit performed-work declaration"); // deployed-live lineage adopted: declaration REQUIRED at the server - absent is refused, never a silent none
     const tx = s.slice(s.indexOf("db.runTransaction"));
     const deliver = tx.slice(tx.indexOf('if (nextStatus === "DELIVERED")'));
@@ -178,7 +178,7 @@ describe("advanceJobStatus wiring", () => {
     expect(deliver).toContain("protection.installed");
     expect(deliver).toContain("protection.superseded");
     expect(deliver).toContain("protection.removed");
-    expect(deliver).toContain("protectionWork: data.protectionWork ?? []"); // live contract: the gating above guarantees the field is present here
+    expect(deliver).toContain("protectionWork: performedEvents ?? []"); // live contract: the gating above guarantees the field is present here
   });
   it("the job document id is authoritative: stored-id mismatch fails closed, ids/provenance/audit use the doc id", () => {
     const s = readFileSync("src/functions/job/advanceJobStatus.ts", "utf8");

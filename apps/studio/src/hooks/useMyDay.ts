@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import{useBreakCheckoutConfirmation}from "./useBreakCheckoutConfirmation";
+import { useEffect, useState,useRef } from "react";
 import { httpsCallable } from "firebase/functions";
 import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 import { COLLECTIONS } from "@autodeck/database";
@@ -19,6 +20,7 @@ const hhmm = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString("en
 /** The signed-in staff member's attendance for today, live, with the same four actions the Account page has. */
 export function useMyDay() {
   const authState = useAuth();
+  const checkoutConfirmation=useBreakCheckoutConfirmation(authState.status==="ready"?authState.user.uid:null),runLock=useRef(false);
   const [me, setMe] = useState<Employee | null>(null);
   const [meLoaded, setMeLoaded] = useState(false);
   const [today, setToday] = useState<AttendanceRecord | null>(null);
@@ -38,11 +40,12 @@ export function useMyDay() {
   const onBreak = !!today?.breaks?.some((b) => !b.endedAt);
   const state = !today?.checkInAt ? "Not checked in yet" : today.checkOutAt ? `Checked out ${hhmm(today.checkOutAt)} · ${Math.floor(today.workedMinutes / 60)}h ${today.workedMinutes % 60}m worked` : onBreak ? `On break · in since ${hhmm(today.checkInAt)}` : `Working · in since ${hhmm(today.checkInAt)}`;
   async function run(a: DayAction) {
-    if (busy) return;
+    if (busy||runLock.current) return;
+    runLock.current=true;
     setBusy(a); setNote(null);
-    try { await httpsCallable(functions, CALL[a][0])({}); setNote(CALL[a][1]); }
+    try { if(a==="out"&&onBreak&&!await checkoutConfirmation.confirm())return;await httpsCallable(functions, CALL[a][0])(a==="out"&&onBreak?{endOpenBreak:true}:{}); setNote(CALL[a][1]); }
     catch (e) { setNote(dayErrorNote(e)); }
-    finally { setBusy(null); }
+    finally { runLock.current=false;setBusy(null); }
   }
-  return { ready: !!me, noProfile: meLoaded && !me, state, actions: dayActions(today), busy, note, run };
+  return { confirmDialog:checkoutConfirmation.dialog,ready: !!me, noProfile: meLoaded && !me, state, onBreak, actions: dayActions(today), busy, note, run };
 }

@@ -4,7 +4,6 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import {
   onIdTokenChanged,
   GoogleAuthProvider,
-  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
   signOut as firebaseSignOut,
@@ -19,7 +18,6 @@ import type { AutoDeckClaims } from "@autodeck/auth";
 import { auth } from "./firebase";
 import { isMultiFactorRequiredError, pickPhoneHint } from "./mfa";
 import { claimsForSignedInUser } from "./session-heal";
-import { currentUserAgent, isInAppBrowser, isIosBrowser, shouldFallBackToRedirect } from "./browser";
 
 function googleProvider(): GoogleAuthProvider {
   const provider = new GoogleAuthProvider();
@@ -71,8 +69,8 @@ interface AdminAuthState {
   loading: boolean;
   error: string | null;
   mfaRequired: boolean;
-  // Google sign-in. Resolves "redirect" when the browser is being sent to
-  // Google (in-app webviews); the result is picked up on return.
+  // Google sign-in stays in this window on every browser. The verified
+  // redirect result is picked up on return; no orphan popup is created.
   signIn: () => Promise<"signed-in" | "mfa" | "redirect">;
   confirmMfaCode: (code: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -150,6 +148,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   // session exists". onAuthStateChanged fires inside that window and must
   // not treat the missing cookie as a revoked session.
   const signingInRef = useRef(false);
+  const signInFlightRef = useRef<Promise<"signed-in" | "mfa" | "redirect"> | null>(null);
 
   useEffect(() => {
     const returningFromRedirect = takeRedirectFlag();
@@ -178,7 +177,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       if (!nextUser) {
         setUser(null);
         setClaims(null);
-        setLoading(false);
+        if (!signingInRef.current) setLoading(false);
         return;
       }
 
@@ -238,7 +237,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
           }
           // Final binding check: whatever the source, publish only claims the
           // server bound to the CURRENT token's principal.
-          if (effective && effective.uid !== nextUser.uid) effective = null;
+          if (effective && (effective.uid !== nextUser.uid||!["admin","superadmin","accountant"].includes(effective.role))) effective = null;
           if (!effective) {
             // Client SDK still thinks it's signed in but the server session is
             // absent/expired/revoked - bring the two back into agreement
@@ -266,6 +265,14 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       })();
     });
 
+    // Revalidate the host session on return and while this tab is visible. No account-wide revocation.
+    let checkingHostSession=false;
+    const recheckHostSession=async()=>{if(!active||checkingHostSession||signingInRef.current||!auth.currentUser||document.visibilityState==="hidden")return;checkingHostSession=true;const nextUser=auth.currentUser,my=authGen;try{const session=await fetchSessionClaims();if(!active||my!==authGen)return;if(!session||session.uid!==nextUser.uid||!["admin","superadmin","accountant"].includes(session.role)){++authGen;setUser(null);setClaims(null);setLoading(false);setError("Admin access is unavailable. Studio staff should use the Studio app.");}else{setUser(nextUser);setClaims(session)}}finally{checkingHostSession=false}};
+    const focusRecheck=()=>{void recheckHostSession()};
+    if(typeof window!=="undefined")window.addEventListener("focus",focusRecheck);
+    if(typeof document!=="undefined")document.addEventListener("visibilitychange",focusRecheck);
+    const hostSessionTimer=typeof window!=="undefined"?window.setInterval(focusRecheck,60000):null;
+
     // Returning from a redirect sign-in (in-app browsers): finish it the
     // same way the popup path does.
     void getRedirectResult(auth)
@@ -291,7 +298,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       });
 
-    return () => { active = false; unsubscribe(); };
+    return () => { active = false; unsubscribe();if(typeof window!=="undefined"){window.removeEventListener("focus",focusRecheck);if(hostSessionTimer!==null)window.clearInterval(hostSessionTimer);}if(typeof document!=="undefined")document.removeEventListener("visibilitychange",focusRecheck); };
   }, []);
 
   async function establishServerSession(nextUser: User): Promise<void> {
@@ -324,12 +331,12 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     }
     if (resolved.changed) idToken = await nextUser.getIdToken(true);
     const sessionClaims = await exchangeIdTokenForSession(idToken);
-    if (!sessionClaims) {
+    if (!sessionClaims || sessionClaims.uid !== nextUser.uid||!["admin","superadmin","accountant"].includes(sessionClaims.role)) {
       await firebaseSignOut(auth);
       setUser(null);
       setClaims(null);
       setError(
-        "This Google account isn't on the AutoDeck staff roster. Ask the studio owner to add your Gmail address, then sign in again.",
+        "This account does not have Admin access. Studio staff should use the Studio app.",
       );
       setLoading(false);
       throw new Error("not-admin");
@@ -366,35 +373,27 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function signIn(): Promise<"signed-in" | "mfa" | "redirect"> {
+  function signIn(): Promise<"signed-in" | "mfa" | "redirect"> {
+    // The ref, not a render-time disabled button, is the duplicate-attempt gate.
+    if (signInFlightRef.current) return signInFlightRef.current;
     setError(null);
     setLoading(true);
-    if (isInAppBrowser(currentUserAgent()) || isIosBrowser(currentUserAgent(), typeof navigator === "undefined" ? 0 : navigator.maxTouchPoints)) return startRedirect();
     signingInRef.current = true;
-    try {
-      const credential = await signInWithPopup(auth, googleProvider());
-      await establishServerSession(credential.user);
-      return "signed-in";
-    } catch (err) {
-      // establishServerSession already set a precise error + cleared state
-      // for this case - don't overwrite it with the generic message below.
+    const attempt = startRedirect().catch((err: unknown) => {
       signingInRef.current = false;
-      if (err instanceof Error && err.message === "not-admin") throw err;
-      if (isMultiFactorRequiredError(err)) return handleMfaError(err);
+      signInFlightRef.current = null;
+      try { sessionStorage.removeItem(REDIRECT_FLAG); } catch { /* storage unavailable */ }
       const code = errorCode(err);
-      if (shouldFallBackToRedirect(code)) return startRedirect();
-      setError(
-        code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request"
-          ? null
-          : code === "auth/unauthorized-domain"
-            ? `Sign-in isn't enabled for ${window.location.hostname} yet. Add it under Firebase Authentication > Settings > Authorized domains.`
-            : code === "auth/operation-not-allowed"
-              ? "Google sign-in isn't turned on for this project yet."
-              : `Google sign-in failed (${code ?? "unknown error"}). Please try again.`,
-      );
+      setError(code === "auth/unauthorized-domain"
+        ? `Sign-in isn't enabled for ${window.location.hostname} yet. Add it under Firebase Authentication > Settings > Authorized domains.`
+        : code === "auth/operation-not-allowed"
+          ? "Google sign-in isn't turned on for this project yet."
+          : "Could not open Google sign-in. Please try again.");
       setLoading(false);
-      throw new Error("sign-in-failed");
-    }
+      throw err;
+    });
+    signInFlightRef.current = attempt;
+    return attempt;
   }
 
   async function confirmMfaCode(code: string) {

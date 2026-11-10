@@ -55,6 +55,8 @@ function listTsFilesRecursive(dir: string): string[] {
 // the admin app gets a genuine free App Check provider (ReCaptchaV3Provider)
 // with no native/EAS blocker.
 const ENFORCED = [
+  "work/recordJobPerformedWork.ts", // combined candidate, staged enforcement wiring
+  "work/getJobWorkCoverage.ts", // combined read candidate; uses staged enforcement wiring
   "service/catalogueDrafts.ts",
   "service/catalogueManaged.ts",
   "service/catalogueRescue.ts",
@@ -104,6 +106,7 @@ const ENFORCED = [
   "customer/recordWebVital.ts",
   "dailyclose/getDailyClose.ts",
   "dailyclose/performDailyClose.ts",
+  "employee/staffDocuments.ts",
   "employee/addStaffMember.ts",
   "employee/deactivateStaffMember.ts",
   "employee/updateStaffRole.ts",
@@ -172,6 +175,7 @@ const ENFORCED = [
   "payment/processRefundOutbox.ts",
   "payment/reconcileRefundClaims.ts",
   "payment/recordOfflineReceipt.ts",
+  "payment/combinedReturnReview.ts",
   "payment/offlineReceiptReview.ts",
   "payment/recordManualPayment.ts",
   "payment/requestAdvancePayment.ts",
@@ -216,6 +220,7 @@ const ENFORCED = [
 // all (unlike onCall/onRequest) — they cannot become publicly callable
 // regardless of App Check.
 const EXCLUDED_NON_CALLABLE = [
+  "employee/cleanExpiredStaffDocumentUploads.ts",
   "invoice/onInvoiceCreatedPdf.ts",
   "service/catalogueRuntime.ts",
   "approval/expireStaleApprovalsScheduled.ts",

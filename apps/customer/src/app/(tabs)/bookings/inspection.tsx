@@ -44,7 +44,7 @@ export default function InspectionScreen() {
   if (error) {
     return (
       <Screen>
-        <Notice title="Couldn't load the inspection" body={error} action={<Button label="Retry" onPress={() => setRetryTick(n=>n+1)} />} />
+        <Notice title="Couldn't load the inspection" body={error} action={<Button icon="refresh" label="Retry" onPress={() => setRetryTick(n=>n+1)} />} />
       </Screen>
     );
   }

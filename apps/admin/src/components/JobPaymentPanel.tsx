@@ -63,21 +63,24 @@ export function JobPaymentPanel({
   function whatsappHref(url: string): string {
     const digits = (customer?.phone ?? "").replace(/\D/g, "");
     const first = (customer?.name ?? "").split(" ")[0] || "there";
-    const text = `Hi ${first}, here is your AutoDeck bill of ${formatPaise(job.totalAmount)}. Pay securely: ${url}`;
+    const text = `Hi ${first}, here is your AutoDeck bill of ${formatPaise(payment?.amount??job.totalAmount)}. Pay securely: ${url}`;
     return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
   }
 
   // Gate ON + covered + unsettled: the MembershipSettlement panel on this page is the
   // single tile for this state (status + one settle action); this panel stays out of the way.
-  if(job.offlineSettlement && job.paymentStatus!=="paid")return <section className="ax-panel"><span className="ax-label">Offline receipt balance</span><p className="ax-note">Actual receipts already exist. Use the receipt register to record only new money actually received. Do not collect or record the full invoice total again.</p><div className="kv"><span>Balance due</span><span>{formatPaise(job.status==="CANCELLED"?0:Math.max(0,job.totalAmount-job.offlineSettlement.appliedPaise))}</span></div></section>;
+  if(job.offlineSettlement && job.paymentStatus!=="paid")return <section className="ax-panel"><span className="ax-label">Offline receipt balance</span><p className="ax-note">Actual receipts already exist. Use the receipt register to record only new money actually received. Do not collect or record the full invoice total again.</p><div className="kv"><span>Balance due</span><span>{formatPaise(job.status==="CANCELLED"?0:Math.max(0,job.totalAmount-(job.combinedSettlement?.advanceCapturedPaise??0)-job.offlineSettlement.appliedPaise))}</span></div></section>;
   if (coveredSettlePanelVisible(job, booking)) return null;
 
+  const payable=job.combinedPayment?(job.combinedSettlement?.balanceDuePaise??job.combinedPayment.payNowPaise):job.totalAmount;
+  const combinedReady=!job.combinedPayment||job.combinedPayment.choice==="full"||Boolean(job.combinedSettlement?.advancePaymentId);
   const settled=compact&&job.paymentStatus==="paid"&&payment?.status==="completed"&&!(payment as Payment & {invoiceReviewNeeded?:boolean}).invoiceReviewNeeded;
   const Panel=settled?"details":"section";
   return (
           <Panel className="ax-panel ax-job-payment">
             {settled?<summary>Payment details · Paid</summary>:<span className="ax-label">Payment</span>}
             {payment?.status==="completed"&&job.paymentStatus!=="paid"&&!(payment as Payment & {invoiceReviewNeeded?:boolean}).invoiceReviewNeeded?<p className="ax-note">Payment records are syncing. Do not collect another payment. Delivery stays on hold until the job is marked paid.</p>:null}
+            {job.combinedPayment?<><div className="kv"><span>Verified advance</span><span>{formatPaise(job.combinedSettlement?.advanceCapturedPaise??0)}</span></div><div className="kv"><span>Balance due</span><span>{formatPaise(job.paymentStatus==="paid"?0:payable)}</span></div><p className="ax-note">Actual cash or account receipts: use the receipt register.</p></>:null}
             {status && <p className="ax-status-msg" role="status">{status}</p>}
             {paymentPanelMode(payment) === "loading" ? (
               <p className="ax-note" style={{ marginTop: 0 }}>Loading payment…</p>
@@ -121,14 +124,14 @@ export function JobPaymentPanel({
             {coveredVisitSettlementNote(job, booking) ? (
               <p className="ax-note" style={{ marginTop: 8 }}>{coveredVisitSettlementNote(job, booking)}</p>
             ) : null}
-            {!(booking?.cancelIntent?.state === "waiting" || booking?.cancelIntent?.state === "needs_review") && !membershipCoveredLabel(job) && !(booking && membershipCoveredLabel(booking)) && canOfferPayment(payment, job.paymentStatus).link && (
+            {!(booking?.cancelIntent?.state === "waiting" || booking?.cancelIntent?.state === "needs_review") && !membershipCoveredLabel(job) && !(booking && membershipCoveredLabel(booking)) && combinedReady && (job.combinedPayment ? payment!==undefined&&(!payment||["failed","cancelled"].includes(payment.status))&&job.paymentStatus!=="paid"&&job.status!=="CANCELLED" : canOfferPayment(payment, job.paymentStatus).link) && (
               <div className="ax-panel-actions" style={{ marginTop: 12 }}>
                 <button type="button" className="ax-button ax-button--primary" style={{ width: "100%" }} onClick={() => void onCreateLink()} disabled={linking}>
-                  {linking ? "Creating link…" : `Send ${formatPaise(job.totalAmount)} payment link`}
+                  {linking ? "Creating link…" : `Send ${formatPaise(payable)} payment link`}
                 </button>
               </div>
             )}
-            {!(booking?.cancelIntent?.state === "waiting" || booking?.cancelIntent?.state === "needs_review") && !membershipCoveredLabel(job) && !(booking && membershipCoveredLabel(booking)) && canOfferPayment(payment, job.paymentStatus).counter && (
+            {!(booking?.cancelIntent?.state === "waiting" || booking?.cancelIntent?.state === "needs_review") && !membershipCoveredLabel(job) && !(booking && membershipCoveredLabel(booking)) && !job.combinedPayment && canOfferPayment(payment, job.paymentStatus).counter && (
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--ad-border-subtle)" }}>
                 <p className="ax-label" style={{ margin: "0 0 12px" }}>Record a payment taken at the counter</p>
                 <label className="ax-form-row">

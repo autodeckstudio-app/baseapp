@@ -5,6 +5,8 @@ import { httpsCallable } from "firebase/functions";
 import { SUBCOLLECTIONS } from "@autodeck/database";
 import { useAdminAuth } from "../lib/auth-context";
 import { buildProtectionWork, newInstallDraft, newRemoveDraft, newReplaceDraft, selectTarget, targetableRecords, type DeclarationDraft, type DraftEvent, type Protection, type ProtectionCoverageScope, type ProtectionCosmeticKind, type ProtectionWorkEvent, type ServiceJob } from "@autodeck/core";
+import{getStaffJobWorkCoverage}from"../lib/work-coverage-service";
+import type{JobWorkCoverage}from"@autodeck/core";
 import { db, functions } from "../lib/firebase";
 
 const KIND_LABELS: Record<ProtectionCosmeticKind, string> = { ppf: "PPF", ceramic: "Ceramic" };
@@ -20,7 +22,7 @@ const recordLabel = (p: Protection) => {
 };
 
 type OperatorAuth = { uid: string; role: string | null; tenantId: string | null; studioId: string | null };
-type FrozenContext = { jobId: string; vehicleId: string; tenantId: string; studioId: string; auth: OperatorAuth | null };
+type FrozenContext = { jobId: string; vehicleId: string; customerId:string; tenantId: string; studioId: string; auth: OperatorAuth | null };
 type InvalidReason = "verifying" | "job" | "stage" | "account" | null;
 
 const sameAuth = (a: OperatorAuth | null, b: OperatorAuth | null) =>
@@ -43,7 +45,7 @@ const affirmable = (a: OperatorAuth | null, job: { tenantId: string; studioId: s
  * synchronously at render time, so a prop or auth change invalidates the
  * open declaration in the SAME render - no effect needs to flush first. */
 const contextSig = (job: ServiceJob, auth: OperatorAuth | null): string =>
-  [job.id, job.vehicleId, job.tenantId, job.studioId, job.status,
+  [job.id, job.vehicleId, job.customerId, job.tenantId, job.studioId, job.status,
    auth ? `${auth.uid}:${auth.role ?? "-"}:${auth.tenantId ?? "-"}:${auth.studioId ?? "-"}` : "signed-out"].join("|");
 
 /** Admin delivery declaration: the same explicit staff-declared contract as
@@ -65,6 +67,8 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [integrityError, setIntegrityError] = useState(false);
+  const[work,setWork]=useState<JobWorkCoverage|null>(null);
+  const[useRecorded,setUseRecorded]=useState(false);
   const [draft, setDraft] = useState<DeclarationDraft>({ choice: null });
   const [pending, setPending] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -89,7 +93,7 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
   // delivery-capable role, tenant/studio scope matching THIS job. Signed-out
   // or wrong-scope operators never become a frozen valid context.
   if (frozen.current === null && authReady && affirmable(liveAuth, job)) {
-    frozen.current = { jobId: job.id, vehicleId: job.vehicleId, tenantId: job.tenantId, studioId: job.studioId, auth: liveAuth };
+    frozen.current = { jobId: job.id, vehicleId: job.vehicleId, customerId:job.customerId, tenantId: job.tenantId, studioId: job.studioId, auth: liveAuth };
   }
 
   const f = frozen.current;
@@ -97,7 +101,7 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
     !authReady ? "verifying"
     : !affirmable(liveAuth, job) ? "account"
     : !f ? null
-    : (job.id !== f.jobId || job.vehicleId !== f.vehicleId || job.tenantId !== f.tenantId || job.studioId !== f.studioId) ? "job"
+    : (job.id !== f.jobId || job.vehicleId !== f.vehicleId || job.customerId!==f.customerId || job.tenantId !== f.tenantId || job.studioId !== f.studioId) ? "job"
     : !sameAuth(liveAuth, f.auth) ? "account"
     : job.status !== "READY_FOR_DELIVERY" ? "stage"
     : null;
@@ -107,13 +111,13 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
   const load = useCallback(async (ctx: FrozenContext) => {
     const gen = ++generation.current;
     const startSig = liveSigRef.current;
-    setLoading(true); setLoadError(false); setIntegrityError(false);
+    setLoading(true); setLoadError(false); setIntegrityError(false);setWork(null);setUseRecorded(false);
     try {
-      const snap = await getDocs(query(collection(db, SUBCOLLECTIONS.vehicleProtections(ctx.vehicleId)), where("tenantId", "==", ctx.tenantId)));
+      const [snap,recorded] = await Promise.all([getDocs(query(collection(db, SUBCOLLECTIONS.vehicleProtections(ctx.vehicleId)), where("tenantId", "==", ctx.tenantId))),getStaffJobWorkCoverage(ctx.jobId)]);
       if (gen !== generation.current || liveSigRef.current !== startSig) return; // superseded, invalidated, or unmounted
       const records = snap.docs.map((d) => ({ ...d.data(), id: d.id }) as Protection);
       if (records.some((r) => r.vehicleId !== ctx.vehicleId)) { setIntegrityError(true); setProtections([]); return; }
-      setProtections(records);
+      setProtections(records);setWork(recorded);
     } catch {
       if (gen !== generation.current || liveSigRef.current !== startSig) return;
       setLoadError(true); setProtections([]);
@@ -138,7 +142,7 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
   useEffect(() => {
     if (invalid !== null && invalid !== "verifying") {
       generation.current += 1;
-      setLoading(false); setLoadError(false); setIntegrityError(false); setProtections([]); setDraft({ choice: null });
+      setLoading(false); setLoadError(false); setIntegrityError(false); setProtections([]); setDraft({ choice: null });setWork(null);setUseRecorded(false);
       setPending(false); setSubmitError(null);
     }
   }, [invalid]);
@@ -146,22 +150,25 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
   function reload() {
     if (inFlight.current || !authReady) return; // never re-aim while a commit is in flight or the session is unverified
     if (!affirmable(liveAuth, job)) return; // signed-out / wrong-scope operators cannot re-aim a declaration
-    frozen.current = { jobId: job.id, vehicleId: job.vehicleId, tenantId: job.tenantId, studioId: job.studioId, auth: liveAuth };
+    frozen.current = { jobId: job.id, vehicleId: job.vehicleId, customerId:job.customerId, tenantId: job.tenantId, studioId: job.studioId, auth: liveAuth };
     setDraft({ choice: null });
     setSubmitError(null);
     setReset((k) => k + 1);
     void load(frozen.current);
   }
 
+  const recordedRevision=work?.jobId===f?.jobId&&work?.status==='recorded'&&work.workLock==='locked'&&work.handoverReady===true&&useRecorded?work.revision:null;
+  const declarationReady=recordedRevision!==null||work?.status==='not_recorded'&&payload!==null;
   async function confirm() {
     if (inFlight.current) return;
-    if (!contextValid || loading || loadError || integrityError || payload === null) return;
+    if (!contextValid || loading || loadError || integrityError || !declarationReady) return;
     inFlight.current = true;
     setPending(true); setSubmitError(null);
     const ctx = f as FrozenContext;
     const startSig = liveSigRef.current;
     const startGen = invalidGen.current;
     const frozenPayload = payload;
+    const frozenRecordedRevision=recordedRevision;
     // The attempt publishes ONLY if the context is still exactly the one that
     // started it, judged against the render-time live signature - so a route,
     // stage or auth change invalidates it even before any effect runs. A
@@ -170,7 +177,7 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
     // readback claim: the operator reloads and looks.
     const stillCurrent = () => mounted.current && liveSigRef.current === startSig && invalidGen.current === startGen;
     try {
-      await httpsCallable(functions, "advanceJobStatus")({ jobId: ctx.jobId, protectionWork: frozenPayload });
+      await httpsCallable(functions, "advanceJobStatus")({ jobId: ctx.jobId, ...(frozenRecordedRevision!==null?{recordedWorkRevision:frozenRecordedRevision}:{protectionWork:frozenPayload}) });
       if (!stillCurrent()) { inFlight.current = false; return; }
       onDelivered();
     } catch (err) {
@@ -208,13 +215,13 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
       ) : loadError ? (
         <>
           <p role="alert">Could not load the car's protection records. Reload and try again before delivering.</p>
-          <button className="ax-button" disabled={dis} onClick={reload}>Reload records</button>
+          <button className="ax-button" style={{justifySelf:"start"}} disabled={dis} onClick={reload}>Reload records</button>
         </>
       ) : integrityError ? (
         <p role="alert">The car's protection records failed an integrity check (a record does not belong to this car). Go back and reopen the job before delivering.</p>
       ) : (
         <>
-          <fieldset disabled={dis} style={{ display: "grid", gap: 8, border: "none", padding: 0, margin: 0, minWidth: 0 }}>
+          {work?.status==='recorded'||work?.status==='needs_review'?<div style={{display:'grid',gap:10}}><strong>Recorded work</strong><p>{work.handoverReady&&work.workLock==='locked'?'Use the checked work record for this visit. No re-entry or new warranty confirmation.':'Finish recording, QC and locking this visit before handover. Missing details are not a no-work declaration.'}</p>{work.handoverReady&&work.workLock==='locked'?<div><button type="button" className="ax-button" disabled={dis||useRecorded} onClick={()=>setUseRecorded(true)}>{useRecorded?'Recorded work selected':'Use recorded work'}</button></div>:null}</div>:<fieldset disabled={dis} style={{ display: "grid", gap: 8, border: "none", padding: 0, margin: 0, minWidth: 0 }}>
             <legend className="ax-label">Protection work on this visit</legend>
             <p>Record exactly the protection work performed on this visit - this becomes the car's protection history. Choose "none" only if no protection work was done.</p>
             <div style={{ display: "flex", gap: 8 }}>
@@ -267,13 +274,13 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
                 {payload === null ? <p>Finish each entry to continue - every install needs a type and scope, every replace/removal needs a current record.</p> : null}
               </div>
             ) : null}
-          </fieldset>
-          <button className="ax-button" disabled={dis} onClick={reload}>Reload records</button>
+          </fieldset>}
+          <button className="ax-button" style={{justifySelf:"start"}} disabled={dis} onClick={reload}>Reload records</button>
         </>
       )}
       {submitError ? <p role="alert">{submitError}</p> : null}
-      <button className="ax-button" disabled={dis || !contextValid || loading || loadError || integrityError || payload === null} onClick={() => void confirm()}>Confirm mark delivered</button>
-      <button className="ax-button" disabled={dis} onClick={onCancel}>Cancel</button>
+      <button className="ax-button" style={{justifySelf:"start"}} disabled={dis || !contextValid || loading || loadError || integrityError || !declarationReady} onClick={() => void confirm()}>Confirm mark delivered</button>
+      <button className="ax-button" style={{justifySelf:"start"}} disabled={dis} onClick={onCancel}>Cancel</button>
     </div>
   );
 }

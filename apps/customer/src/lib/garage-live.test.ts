@@ -25,7 +25,7 @@ describe("care ring", () => {
 describe("garage showroom guards", () => {
   const g = read("../app/(tabs)/garage/index.tsx"); const s = read("../ui/GarageShowroom.tsx");
   it("keeps the All chip and the due chip", () => { expect(g).toContain('label: "All"'); expect(g).toContain("dueChip("); });
-  it("has one Book a service button", () => { expect((g.match(/label="Book a service"/g) ?? []).length).toBe(1); });
+  it("has one Book a service button", () => { expect((g.match(/<GarageActions /g) ?? []).length).toBe(1); expect((read("../ui/GarageActions.tsx").match(/label="Book a service"/g) ?? []).length).toBe(1); });
   it("respects Reduce Motion in the care ring", () => { expect(read("../ui/CareRing.tsx")).toContain("useReduceMotion"); });
   it("garage floor: snap carousel between cars with a single-car fallback, honest 2D depth", () => {
     expect(s).toContain("snapToInterval");
@@ -60,7 +60,8 @@ describe("garage services have one price for every car", () => {
   it("the service page has no car-size chips at all (size comes from the saved car) and labels garage price plainly", () => {
     const c = read("../app/(tabs)/catalogue/[id].tsx");
     expect(c).not.toContain("setSelectedCategory");
-    expect(c).toContain('service.category === "garage" ? "Price" : "Price for your car"');
+    expect(c).toContain('<ServicePrice inlineBreakdown');
+    expect(c).toContain("service.category==='garage'?'Price':'Price for your car'");
   });
 });
 describe("garage All view and selected view share one language", () => {

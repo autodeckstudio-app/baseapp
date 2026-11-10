@@ -69,7 +69,7 @@ export function ServicesView(p: {
   };
 
   return (
-    <div className="ax-page">
+    <div className="ax-page ax-pricing-page">
       <style>{`@media(max-width:480px){.ax-service-fields{grid-template-columns:minmax(0,1fr)!important;}}`}</style>
       <PageHead eyebrow="Office" title="Pricing" kpis={[{ value: p.services.filter((s) => s.active).length, label: "On the menu", tone: "premium" }, { value: p.services.filter((s) => !s.active).length, label: "Hidden" }]}>
         <button type="button" className="ax-button ax-button--primary" onClick={() => {p.onOpenLive?.();setDraft(EMPTY_SERVICE)}}>New service</button>
@@ -118,11 +118,11 @@ export function ServicesView(p: {
                           <button type="button" className="ax-button" onClick={() => {p.onOpenLive?.();setDraft(draftFromService(s))}}>Edit</button>
                           {confirmId === s.id ? (
                             <>
-                              <button type="button" className={`ax-button${s.active ? " ax-button--danger" : ""}`} disabled={p.busy} onClick={() => { p.onToggle(s); setConfirmId(null); }}>{p.draftMode ? (s.active ? "Draft hide from menu" : "Draft show on menu") : s.active ? "Hide from menu" : "Show on menu"}</button>
+                              <button type="button" className={`ax-button${s.active ? " ax-button--danger" : ""}`} disabled={p.busy} onClick={() => { p.onToggle(s); setConfirmId(null); }}>{p.draftMode ? (s.active ? "Draft removal from menu" : "Draft show on menu") : s.active ? "Remove from menu" : "Show on menu"}</button>
                               <button type="button" className="ax-button" onClick={() => setConfirmId(null)}>Cancel</button>
                             </>
                           ) : (
-                            <button type="button" className="ax-button" onClick={() => setConfirmId(s.id)}>{s.active ? "Hide" : "Show"}</button>
+                            <button type="button" className="ax-button" onClick={() => setConfirmId(s.id)}>{s.active ? "Remove from menu" : "Show on menu"}</button>
                           )}
                         </div>
                       </div>
@@ -137,9 +137,9 @@ export function ServicesView(p: {
 
       {draft && (
         <Drawer portal eyebrow={draft.serviceId ? "Edit service" : "New service"} title={draft.name || "Untitled service"} onClose={() => {setDraft(null);p.onCloseDraft?.()}}>
-          <form onSubmit={async(e) => { e.preventDefault(); if (result?.ok) { const saved=await p.onSave(draft.serviceId, result.payload);if(saved!==false)setDraft(null); } }}>
+          <form className="ax-service-editor" onSubmit={async(e) => { e.preventDefault(); if (result?.ok) { const saved=await p.onSave(draft.serviceId, result.payload);if(saved!==false)setDraft(null); } }}>
             <label className="ax-form-row"><span>Name customers see</span><input value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="Ceramic coat" /></label>
-            <label className="ax-form-row"><span>Internal rating (staff only)</span><select value={draft.internalRating ?? ""} onChange={(e) => set({ratingChanged:true, internalRating: e.target.value ? e.target.value as "A" | "B" | "C" | "D" : null})}><option value="">Unrated</option>{["A", "B", "C", "D"].map(r => <option key={r} value={r}>{r}</option>)}</select><small>Never shown to customers. Keep the public name and brand factual.</small></label>
+            <label className="ax-form-row"><span>Staff rating</span><select value={draft.internalRating ?? ""} onChange={(e) => set({ratingChanged:true, internalRating: e.target.value ? e.target.value as "A" | "B" | "C" | "D" : null})}><option value="">Unrated</option>{["A", "B", "C", "D"].map(r => <option key={r} value={r}>{r}</option>)}</select><small>Staff only; keep public details factual.</small></label>
             <div className="ax-form-pair ax-service-fields">
               <label className="ax-form-row"><span>Kind</span>
                 <select value={draft.category} onChange={(e) => set({ category: e.target.value as ServiceCategory })}>{CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_NAME[c]}</option>)}</select>
@@ -147,7 +147,7 @@ export function ServicesView(p: {
               <label className="ax-form-row"><span>Brand (optional)</span><input value={draft.brand} onChange={(e) => set({ brand: e.target.value })} placeholder="e.g. Gyeon" /></label>
             </div>
             <div className="ax-form-pair ax-service-fields">
-              <label className="ax-form-row"><span>PPF coverage (PPF only)</span>
+              <label className="ax-form-row"><span>PPF coverage</span>
                 <select value={draft.coverageLevel} onChange={(e) => set({ coverageLevel: e.target.value as ServiceDraft["coverageLevel"] })}>
                   <option value="">Not applicable</option><option value="high_impact">High-impact kit</option><option value="full_front">Full front</option><option value="full_body">Full body</option>
                 </select>
@@ -160,24 +160,24 @@ export function ServicesView(p: {
             </div>
             <div className="ax-form-row">
               <span>Service photo (optional)</span>
-              <p className="ax-sub">Shown on this service's card in the customer app. Use a real photo of the work - wide, at least 1200 px.</p>
-              {draft.imageUrl ? <img src={draft.imageUrl} alt="Service photo" style={{ width: "100%", maxWidth: 280, height: 150, objectFit: "cover", borderRadius: 14 }} /> : <p className="ax-sub">No photo yet. Customers see a standard picture.</p>}
-              <input type="file" accept="image/*" disabled={photoBusy} onChange={(e) => void pickPhoto(e.target.files?.[0])} aria-label="Upload service photo" />
+              <p className="ax-sub">Customer card photo · wide · 1200px+.</p>
+              {draft.imageUrl ? <img src={draft.imageUrl} alt="Service photo" style={{ width: "100%", maxWidth: 280, height: 150, objectFit: "cover", borderRadius: 14 }} /> : <p className="ax-sub">No photo · standard image shown.</p>}
+              <input className="ax-service-file" type="file" accept="image/*" disabled={photoBusy} onChange={(e) => void pickPhoto(e.target.files?.[0])} aria-label="Upload service photo" />
               {photoBusy ? <p className="ax-sub">Uploading...</p> : null}
               {photoError ? <p className="ax-status-msg">{photoError}</p> : null}
               {draft.imageUrl ? <button type="button" className="ax-link" onClick={() => set({ imageUrl: "", imageChanged: true })}>Remove photo</button> : null}
             </div>
-            <label className="ax-form-row"><span>Description and included work (shown to customers)</span><textarea rows={5} placeholder="Describe the service, then list the included work on separate lines. Only include what the studio actually provides." value={draft.description} onChange={(e) => set({ description: e.target.value })} /></label>
-            {draft.internalNotes ? <label className="ax-form-row"><span>Internal notes (admin only, customers never see this)</span><textarea rows={3} value={draft.internalNotes} readOnly /></label> : null}
+            <label className="ax-form-row"><span>Included work · customer-facing</span><textarea rows={5} placeholder="Describe the service, then list the included work on separate lines. Only include what the studio actually provides." value={draft.description} onChange={(e) => set({ description: e.target.value })} /></label>
+            {draft.internalNotes ? <label className="ax-form-row"><span>Internal notes · staff only</span><textarea rows={3} value={draft.internalNotes} readOnly /></label> : null}
 
             <p className="ax-label ax-form-section">Price and time</p>
             <div className="ax-form-pair ax-service-fields">
-              <label className="ax-form-row"><span>{draft.priceMode === "consult" ? "Price reference (₹, optional)" : "Starting price (₹)"}</span><input inputMode="decimal" value={draft.priceRupees} onChange={(e) => set({ priceRupees: e.target.value })} placeholder="1299" /></label>
+              <label className="ax-form-row"><span>{draft.priceMode === "consult" ? "Price reference (₹)" : "Starting price (₹)"}</span><input inputMode="decimal" value={draft.priceRupees} onChange={(e) => set({ priceRupees: e.target.value })} placeholder="1299" /></label>
               <label className="ax-form-row"><span>Time needed (min)</span><input inputMode="numeric" value={draft.minutes} onChange={(e) => set({ minutes: e.target.value })} /></label>
             </div>
             {draft.category === "ppf" ? (
             <>
-              <p className="ax-note">Bigger cars can cost more and take longer. Add a rule per size; smaller cars pay the starting price.</p>
+              <p className="ax-note">Add extra price and time by car size.</p>
               {draft.sizes.length > 0 && <div className="ax-size-rule ax-size-head"><span>Car size</span><span>Extra ₹</span><span>Extra min</span><span /></div>}
               {draft.sizes.map((r, i) => (
                 <div key={i} className="ax-size-rule">
@@ -192,11 +192,11 @@ export function ServicesView(p: {
               <button type="button" className="ax-button" onClick={() => set({ sizes: [...draft.sizes, { vehicleCategory: SIZES.find((z) => !draft.sizes.some((x) => x.vehicleCategory === z)) ?? "suv", extraRupees: "", extraMinutes: "" }] })}>Add a size rule</button>
             </>
             ) : (
-              <p className="ax-note">Only paint film is priced by car size. Every other service has one price for every car.{draft.sizes.length > 0 ? " Size rules saved earlier on this service are kept, not shown, and not used for pricing." : ""}</p>
+              <p className="ax-note">One price for every car; size rules apply only to PPF.{draft.sizes.length > 0 ? " Size rules saved earlier on this service are kept, not shown, and not used for pricing." : ""}</p>
             )}
 
             <p className="ax-label ax-form-section">Care tips</p>
-            <p className="ax-note">Short aftercare lines customers see on this service. Leave empty to hide the card.</p>
+            <p className="ax-note">Optional aftercare · shown to customers.</p>
             {draft.careTips.map((tip, i) => (
               <div key={i} className="ax-form-pair ax-service-fields">
                 <label className="ax-form-row"><span>Tip {i + 1}</span><input value={tip} maxLength={200} onChange={(e) => set({ careTips: draft.careTips.map((t, j) => (j === i ? e.target.value : t)) })} placeholder="e.g. Wipe bird droppings off early." /></label>
@@ -228,14 +228,14 @@ export function ServicesView(p: {
               </label>
               <label className="ax-form-row"><span>Menu position</span><input inputMode="numeric" value={draft.displayOrder} onChange={(e) => set({ displayOrder: e.target.value })} /></label>
             </div>
-            <label className="ax-check"><input type="checkbox" checked={draft.washEligible} onChange={(e) => set({ washEligible: e.target.checked })} /> Members can use an included wash for this</label>
+            <label className="ax-check"><input type="checkbox" checked={draft.washEligible} onChange={(e) => set({ washEligible: e.target.checked })} /> Included member wash</label>
 
             {result && !result.ok && draft.name && <p className="ax-note" style={{ color: "var(--ad-warning)" }}>{result.problem}</p>}
             <div className="ax-panel-actions">
               <button type="submit" className="ax-button ax-button--primary" disabled={p.busy || !result?.ok}>{p.draftMode ? "Save draft" : draft.serviceId ? "Save changes" : "Add to menu"}</button>
               <button type="button" className="ax-button" onClick={() => {setDraft(null);p.onCloseDraft?.()}}>Cancel</button>
             </div>
-            <p className="ax-note">Past bookings, invoices and issued warranties keep the terms they were sold with.</p>
+            <p className="ax-note">Past bookings, bills and warranties stay unchanged.</p><details><summary>Photo and pricing details</summary><p className="ax-note">Use a real photo of the work, at least 1200px wide. PPF size rules add to the starting price and time; smaller cars pay the starting price. Non-PPF services keep one price per car.</p></details>
           </form>
         </Drawer>
       )}

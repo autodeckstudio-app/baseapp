@@ -15,13 +15,13 @@ describe("admin refund recovery surface", () => {
   });
   it("shows held and ambiguous requests with the provider error and a manual run action", () => {
     expect(panel).toContain("RefundWorkPanel");
-    expect(panel).toContain("needs review");
-    expect(panel).toContain("held");
-    expect(panel).toContain("Run outbox now");
+    expect(panel).toContain("Needs checking");
+    expect(panel).toContain("On hold");
+    expect(panel).toContain("Send ready refunds");
     expect(panel).toContain("lastError");
-    expect(panel).toContain("Invoices to review");
+    expect(panel).toContain("Check invoice");
     expect(panel).toContain("captured");
-    expect(panel).toContain("Sends reserved refunds to the provider");
+    expect(panel).toContain("Send reserved refunds to Razorpay?");
     expect(panel).toContain("/bookings/");
     expect(page).toContain("held for review");
     expect(panel).not.toContain("—");
@@ -29,11 +29,11 @@ describe("admin refund recovery surface", () => {
   it("surfaces retained legacy claims with a reconciliation-only action, scan progress and accumulation", () => {
     expect(service).toContain('"reconcileRefundClaims"');
     expect(service).toContain("legacyScanComplete");
-    expect(panel).toContain("Retained refund claims");
-    expect(panel).toContain("Reconcile retained refunds");
+    expect(panel).toContain("Check refund record");
+    expect(panel).toContain("Check status");
     expect(panel).toContain("never submits a new refund");
-    expect(panel).toContain("Continue scan");
-    expect(panel).toContain("shown so far, more may exist");
+    expect(panel).toContain("Load older records");
+    expect(panel).toContain("legacyScanComplete?'':'+'");
     expect(panel).toContain("reconcileNote");
     expect(page).toContain("legacyAccum");
     expect(cycle).toContain("mergeWorkIntoAccum");
@@ -82,7 +82,7 @@ describe("admin refund recovery surface", () => {
     expect(service).toContain("refundActionsEnabled = true");
     expect(service).not.toContain("failed-precondition");
     expect(panel).toContain("actionsEnabled");
-    expect(panel).toContain("Not yet activated in production - held for activation review");
+    expect(panel).toContain("Refund actions unavailable");
     expect(panel).toContain("!p.actionsEnabled");
   });
 });

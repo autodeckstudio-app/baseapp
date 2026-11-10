@@ -1,3 +1,5 @@
+import {GarageDisclosure} from '../../../ui/GarageDisclosure';
+import {GarageActions} from '../../../ui/GarageActions';
 import { JourneySheet } from "../../../ui/JourneySheet";
 import { SceneIntro } from "../../../ui/SceneIntro";
 // Garage: one lead car with its state, the rest compact (spec §6.4).
@@ -172,10 +174,10 @@ export default function GarageScreen() {
     <Screen appBar="Garage">
       <SceneIntro eyebrow="Your garage" compact title="Your cars"/>
       <View testID="garage-swipe-area" style={{ gap: 20, minHeight: Math.max(winH - 240, 400) }}>
-      {ownerUnknown ? <Notice title="Couldn't confirm your profile" body="Try again in a moment." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
+      {ownerUnknown ? <Notice title="Couldn't confirm your profile" body="Try again in a moment." action={<Button icon="refresh" label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {ownerLinking ? <Notice title="Your profile is waiting to be claimed" body="Claim it to see your cars, bookings and bills here." action={<Button label="Claim your profile" onPress={() => router.push("/(auth)/claim")} />} /> : null}
-      {ownerNoProfile ? <Notice title="We couldn't find your profile" body="Try again in a moment." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
-      {error ? <Notice title="Can't load your cars" body="Check your connection and try again." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
+      {ownerNoProfile ? <Notice title="We couldn't find your profile" body="Try again in a moment." action={<Button icon="refresh" label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
+      {error ? <Notice title="Can't load your cars" body="Check your connection and try again." action={<Button icon="refresh" label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {list.length > 0 ? (
         <FilterPills fixedFirst items={[{ key: null as string | null, label: "All" }, ...list.map((v) => ({ key: v.id as string | null, label: `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber }))]} value={sel} onChange={setPick} flat trailing={<Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={() => router.push("/(tabs)/garage/add")} style={{ paddingHorizontal: 2, paddingVertical: 9, flexDirection: "row", alignItems: "center", gap: 4 }}><Text style={{ color: ink.premium, fontSize: 16, fontWeight: "800" }}>+</Text><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "700" }}>Add car</Text></Pressable>} />
       ) : null}
@@ -214,10 +216,7 @@ export default function GarageScreen() {
         </View>
       )}
       {list.length > 0 ? (
-        <View style={{ gap: 20 }}>
-          <Button label="Book a service" style={{marginTop:0}} onPress={() => router.navigate("/(tabs)/catalogue")} />
-          <Button label="Service history" kind="quiet" onPress={() => router.push(one ? { pathname: "/(tabs)/garage/history", params: { vehicleId: one.id } } : "/(tabs)/garage/history")} />
-        </View>
+        <GarageActions onBook={() => router.navigate("/(tabs)/catalogue")} onHistory={() => router.push(one ? { pathname: "/(tabs)/garage/history", params: { vehicleId: one.id } } : "/(tabs)/garage/history")} />
       ) : null}
       <JourneySheet kind="garage"/>
       {archived.length > 0 ? (
@@ -237,14 +236,14 @@ export default function GarageScreen() {
               </View>
               {deleting?.id === v.id ? (
                 <View style={{ gap: 8 }}>
-                  <T tone="secondary">Delete this car forever? Its cover photo will be removed. Documents, service history, bills and inspection photos are kept. This cannot be undone.</T>
-                  <View style={{ flexDirection: "row", gap: 10 }}>
+                  <GarageDisclosure kind="delete"/>
+                  <View style={{ flexDirection: "row", flexWrap:"wrap", gap: 10 }}>
                     <Button label="Yes, delete forever" kind="danger" busy={archiveActionBusy === v.id} onPress={() => void confirmDeletePermanently()} />
                     <Button label="Keep it" kind="quiet" onPress={() => setDeleting(null)} />
                   </View>
                 </View>
               ) : (
-                <View style={{ flexDirection: "row", gap: 10 }}>
+                <View style={{ flexDirection: "row", flexWrap:"wrap", gap: 10 }}>
                   <Button label="Restore" kind="quiet" busy={archiveActionBusy === v.id} onPress={() => void restore(v)} />
                   <Button label="Delete permanently" kind="danger" onPress={() => setDeleting(v)} />
                 </View>
@@ -255,7 +254,7 @@ export default function GarageScreen() {
       ) : null}
       <GarageCarSheet car={sheet} onClose={() => setSheet(null)} onOpenRoom={openRoom} jobs={jobs} svcNames={Object.fromEntries(Object.values(svcMap).map((s) => [s.id, s.name]))} papers={sheetPapers} />
       {photoCleanupNote?<Notice title="Photo removal pending" body={photoCleanupNote} action={<Button label="Got it" kind="quiet" onPress={()=>setPhotoCleanupNote(null)}/>}/>:null}
-      {archiveActionError?<Notice title="Archived cars" body={archiveActionError} action={<View style={{gap:space.line}}>{archiveActionError.includes("booking")?<Button label="Open bookings to cancel" kind="quiet" onPress={()=>router.navigate("/(tabs)/bookings")}/>:null}<Button label="Retry" onPress={()=>{setArchiveActionError(null);setRetryTick(n=>n+1);}}/></View>}/>:null}
+      {archiveActionError?<Notice title="Archived cars" body={archiveActionError} action={<View style={{gap:space.line}}>{archiveActionError.includes("booking")?<Button label="Open bookings to cancel" kind="quiet" onPress={()=>router.navigate("/(tabs)/bookings")}/>:null}<Button icon="refresh" label="Retry" onPress={()=>{setArchiveActionError(null);setRetryTick(n=>n+1);}}/></View>}/>:null}
       </View>
     </Screen>
   );

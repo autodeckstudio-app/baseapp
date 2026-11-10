@@ -167,7 +167,7 @@ function SellHub({ mine, onSell, onOpen }: { mine: CarListingView[]; onSell: () 
 }
 
 
-export function CarsHub({ all, mine, error, initialTab = "buy", onRetry, onOpen, onSell, header, initialFiltersOpen = false }: { initialFiltersOpen?: boolean; header?: React.ReactNode; all: CarListingView[] | null; mine: CarListingView[]; error: boolean; initialTab?: Tab; onRetry: () => void; onOpen: (id: string) => void; onSell: () => void }) {
+export function CarsHub({ all, mine, error, mineError = false, initialTab = "buy", onRetry, onOpen, onSell, header, initialFiltersOpen = false }: { initialFiltersOpen?: boolean; header?: React.ReactNode; all: CarListingView[] | null; mine: CarListingView[]; error: boolean; mineError?: boolean; initialTab?: Tab; onRetry: () => void; onOpen: (id: string) => void; onSell: () => void }) {
   const [tab, setTab] = useState<Tab>(initialTab);
   useEffect(() => { setTab(initialTab); }, [initialTab]);
   const [query, setQuery] = useState("");
@@ -185,6 +185,7 @@ export function CarsHub({ all, mine, error, initialTab = "buy", onRetry, onOpen,
     <Screen {...(header ? { header } : { appBar: "Cars" })}>
     <View style={{ gap: 14 }}>
       <TabSwitch tab={tab} onChange={setTab} />
+      {tab === "sell" && mineError ? <Notice title="Can't load your listings" body="Check your connection and retry before submitting again." action={<Button label="Retry" onPress={onRetry}/>} /> : null}
       {tab === "sell" ? <SellHub mine={mine} onSell={onSell} onOpen={onOpen} /> : null}
       {tab === "buy" ? <View style={{ gap: 2 }}><T role="bodyStrong" style={{ fontSize: 18 }}>Cars for sale</T><T role="caption" tone="secondary" style={{ fontSize: 12, lineHeight: 16 }}>Find a car. Enquire with the studio.</T></View> : null}
       {tab === "buy" && all && all.length > 0 ? (

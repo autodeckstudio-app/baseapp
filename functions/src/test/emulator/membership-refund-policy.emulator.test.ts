@@ -640,17 +640,124 @@ describe("membership refund policy: upgrade restoration (approved 30 Oct 2026)",
     const { oldMid, newMid, p } = await seedUpgradePair(futureEnd());
     await db.collection(COLLECTIONS.memberships()).doc(oldMid).update({ washesTotal: 5, washesUsed: 4 });
     const bid = await seedCoveredBooking(newMid);
+    // The race is genuinely nondeterministic: either the cancel lands (possibly after a
+    // transaction retry) or its transaction aborts under contention and the callable
+    // surfaces the error. Both end states are valid; a SILENT wrong count is not.
+    // The outcome is recorded, never swallowed, and each branch is asserted explicitly.
+    const cancelErrors: { code?: unknown; message?: unknown }[] = [];
     const [outcome] = await Promise.all([
       processProviderEvent(db, refundEvent(p, 29900)),
-      (async () => { try { await cancelBooking.run({ data: { bookingId: bid, reason: "changed plans" }, auth: customerAuthC1 } as never); } catch { /* may lose the race */ } })(),
+      (async () => {
+        try {
+          await cancelBooking.run({ data: { bookingId: bid, reason: "changed plans" }, auth: customerAuthC1 } as never);
+        } catch (e) {
+          const anyE = e as { code?: unknown; message?: unknown };
+          cancelErrors.push({ code: anyE?.code ?? null, message: String(anyE?.message ?? e) });
+        }
+      })(),
     ]);
     expect(outcome.outcome).toBe("refunded");
+    // Shared refund-side markers: exactly one refund ledger entry, payment terminally
+    // refunded, the predecessor restore audit written exactly once by the refund itself.
+    const refundLedger = await db.collection(COLLECTIONS.paymentRefunds()).get();
+    expect(refundLedger.size).toBe(1);
+    const payDoc = () => db.collection(COLLECTIONS.payments()).doc(p.id).get().then((s) => s.data()!);
+    expect((await payDoc()).status).toBe("refunded");
+    expect((await payDoc()).refundAmount).toBe(29900);
+    const restoredAudits = () => db.collection(COLLECTIONS.auditLog()).where("action", "==", "membership.restored").get().then((s) => s.size);
+    expect(await restoredAudits()).toBe(1);
+    const washRestores = () => db.collection(COLLECTIONS.auditLog()).where("action", "==", "membership.wash_restored").get().then((s) => s.docs);
+    const bookingNow = () => db.collection(COLLECTIONS.bookings()).doc(bid).get().then((s) => s.data() as { status?: string; membershipId?: string });
     const oldM = await membership(oldMid);
     expect(oldM.status).toBe("active");
-    // Either interleaving nets the same: 4 + (3 - 1 cancelled) = 6. Never a minted credit, never a lost wash.
-    expect(oldM.washesUsed).toBe(6);
-    const washRestores = (await db.collection(COLLECTIONS.auditLog()).where("action", "==", "membership.wash_restored").get()).docs;
-    expect(washRestores.length).toBe(1);
+    if (cancelErrors.length === 0) {
+      // Cancel won the race (or retried onto fresh state): 4 + (3 - 1 cancelled) = 6.
+      // Never a minted credit, never a lost wash.
+      expect(oldM.washesUsed).toBe(6);
+      expect((await bookingNow()).status).toBe("CANCELLED");
+      expect((await washRestores()).length).toBe(1);
+    } else {
+      // The cancel's transaction aborted under contention. The error must be a
+      // contention abort by code AND message: a bare invalid-argument/unknown/internal
+      // code is NOT accepted, because that is also how a real guard bug would surface.
+      // Observed causal chain: Firestore contention abort = gRPC 10 ABORTED; the
+      // Firestore emulator lock-timeout bug (googleapis/google-cloud-node#9693,
+      // captured in this repo's firestore-debug.log as "Transaction lock timeout" at
+      // ReactiveLockManager.acquireLocks then "Transaction is invalid or closed")
+      // re-surfaces as 3 INVALID_ARGUMENT with that transaction message.
+      const cancelError = cancelErrors[0]!;
+      const codeStr = String(cancelError.code);
+      const msg = String(cancelError.message);
+      // Only the specifically observed causes qualify: an explicit gRPC ABORTED (10), or
+      // the emulator lock-timeout chain's exact messages. Generic deadline/unavailable/
+      // unknown/internal are NOT accepted - they are not the observed cause and could
+      // mask a real guard bug.
+      const observedMessage = /transaction lock timeout|transaction is invalid or closed/i.test(msg);
+      const contentionCode = ["10", "aborted"].includes(codeStr)
+        || (["3", "invalid-argument"].includes(codeStr) && observedMessage);
+      expect(contentionCode, `cancel failed with non-contention error: ${codeStr} ${msg.slice(0, 200)}`).toBe(true);
+      // Independently verified failed-cancel state (nothing assumed from the count):
+      // booking still exactly CONFIRMED and already bound to the restored predecessor,
+      // refunded plan deactivated with its 3 used washes untouched, predecessor holds
+      // all 4 + 3 = 7, and NO wash restore was written: no false success, no partial
+      // side effects.
+      const b = await bookingNow();
+      expect(b.status).toBe("CONFIRMED");
+      expect(b.membershipId).toBe(oldMid);
+      expect(oldM.washesUsed).toBe(7);
+      expect((await membership(newMid)).status).toBe("cancelled");
+      expect((await membership(newMid)).washesUsed).toBe(3);
+      expect((await washRestores()).length).toBe(0);
+      // The customer retrying the cancel must succeed and restore exactly once.
+      await cancelBooking.run({ data: { bookingId: bid, reason: "changed plans" }, auth: customerAuthC1 } as never);
+      expect((await membership(oldMid)).washesUsed).toBe(6);
+      expect((await bookingNow()).status).toBe("CANCELLED");
+      expect((await washRestores()).length).toBe(1);
+      // Refund-side markers unchanged by the cancel retry: no double refund, no second
+      // restore audit, payment still terminally refunded with the same amount.
+      expect((await db.collection(COLLECTIONS.paymentRefunds()).get()).size).toBe(1);
+      expect((await payDoc()).status).toBe("refunded");
+      expect((await payDoc()).refundAmount).toBe(29900);
+      expect(await restoredAudits()).toBe(1);
+      // A further cancel attempt is a no-op: acknowledged already-cancelled, counters
+      // and audits untouched.
+      const again = await cancelBooking.run({ data: { bookingId: bid, reason: "changed plans" }, auth: customerAuthC1 } as never);
+      expect((again as { alreadyCancelled?: boolean }).alreadyCancelled).toBe(true);
+      expect((await membership(oldMid)).washesUsed).toBe(6);
+      expect((await washRestores()).length).toBe(1);
+    }
+  });
+
+  it("sequential refund-then-cancel on the same covered booking: retry restores exactly once", async () => {
+    // Deterministic form of the race's losing branch: the refund completes fully BEFORE
+    // the cancel starts. This is NOT an abort-injection test - no transaction is made to
+    // fail here; it proves the post-abort state shape the concurrent test's failure
+    // branch expects (booking open, 4 + 3 = 7, no restore written) and that the
+    // customer's retry then recovers the exactly-once cancellation contract.
+    const { cancelBooking } = await import("../../functions/booking/cancelBooking.js");
+    const { oldMid, newMid, p } = await seedUpgradePair(futureEnd());
+    await db.collection(COLLECTIONS.memberships()).doc(oldMid).update({ washesTotal: 5, washesUsed: 4 });
+    const bid = await seedCoveredBooking(newMid);
+    const outcome = await processProviderEvent(db, refundEvent(p, 29900));
+    expect(outcome.outcome).toBe("refunded");
+    const washRestores = () => db.collection(COLLECTIONS.auditLog()).where("action", "==", "membership.wash_restored").get().then((s) => s.docs);
+    const bookingNow = () => db.collection(COLLECTIONS.bookings()).doc(bid).get().then((s) => s.data() as { status?: string; membershipId?: string });
+    const bBefore = await bookingNow();
+    expect(bBefore.status).toBe("CONFIRMED"); // no cancel happened yet
+    expect(bBefore.membershipId).toBe(oldMid); // refund moved the open booking to the restored plan
+    expect((await membership(oldMid)).washesUsed).toBe(7); // refund carried all 3 used washes (4 + 3)
+    expect((await washRestores()).length).toBe(0); // nothing restored, no false success
+    expect((await db.collection(COLLECTIONS.paymentRefunds()).get()).size).toBe(1);
+    await cancelBooking.run({ data: { bookingId: bid, reason: "changed plans" }, auth: customerAuthC1 } as never);
+    expect((await membership(oldMid)).washesUsed).toBe(6);
+    expect((await bookingNow()).status).toBe("CANCELLED");
+    expect((await washRestores()).length).toBe(1);
+    // Refund markers unchanged by the late cancel; a second attempt is already-cancelled.
+    expect((await db.collection(COLLECTIONS.paymentRefunds()).get()).size).toBe(1);
+    const again = await cancelBooking.run({ data: { bookingId: bid, reason: "changed plans" }, auth: customerAuthC1 } as never);
+    expect((again as { alreadyCancelled?: boolean }).alreadyCancelled).toBe(true);
+    expect((await membership(oldMid)).washesUsed).toBe(6);
+    expect((await washRestores()).length).toBe(1);
   });
 
   it("legacy initiateRefund full refund of an upgrade payment also restores the eligible predecessor", async () => {

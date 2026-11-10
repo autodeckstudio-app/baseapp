@@ -1,0 +1,4 @@
+// Private candidate: no write UI/activation. Pending-command journal still required.
+import{httpsCallable}from'firebase/functions';import{parseWorkRecordReceipt,type WorkRecordCommand,type WorkRecordReceipt}from'@autodeck/core';import{functions}from'./firebase';
+export async function recordJobWork(command:WorkRecordCommand):Promise<WorkRecordReceipt>{const{data}=await httpsCallable<WorkRecordCommand,WorkRecordReceipt>(functions,'recordJobPerformedWork',{timeout:30000})(command);return parseWorkRecordReceipt(data,command)}
+export async function checkJobWork(command:WorkRecordCommand):Promise<WorkRecordReceipt|null>{const{data}=await httpsCallable<WorkRecordCommand,{status:'not_found'}|{status:'committed';receipt:WorkRecordReceipt}>(functions,'getWorkRecordReceipt',{timeout:15000})(command);if(data?.status==='not_found')return null;if(data?.status!=='committed')throw Error('Work submission not confirmed.');return parseWorkRecordReceipt(data.receipt,command)}

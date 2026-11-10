@@ -1,3 +1,5 @@
+import {isDeepStrictEqual} from 'node:util';
+import {checkedCombinedPayment} from '@autodeck/core';
 // LOCAL waiting-cancel workflow. No provider call. Private operational facts never live on readable booking docs.
 import type { Firestore, Transaction } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
@@ -71,11 +73,23 @@ export async function resolveWaitingCancel(tx: Transaction, db: Firestore, p: Pa
     const next = { ...i, state: "needs_review" as const };
     tx.update(iRef, { state: next.state, linkTerminalWhileProcessing: ev.eventType });
     tx.update(bRef, { cancelIntent: publicIntent(next), updatedAt: now });
-    tx.set(db.collection("staffAlerts").doc(`waiting_cancel_${b.id}`), alert(i, "waiting_cancel_link_terminal_processing", now));
-    return null;
+    tx.set(db.collection("staffAlerts").doc(`waiting_cancel_${b.id}`), alert(i,b.combinedPayment?"combined_cancel_payment_check":"waiting_cancel_link_terminal_processing",now));
+    return b.combinedPayment?(ev.eventType==='payment_link.expired'?'link_expired':'link_cancelled'):null;
   }
   if (paid && !["pending", "processing", "completed"].includes(p.status)) return "amount_mismatch";
   if (!["PENDING", "CONFIRMED"].includes(b.status) || (j&&!["PENDING_VEHICLE", "STANDBY", "VEHICLE_RECEIVED"].includes(j.status))) return "amount_mismatch";
+  if(b.combinedPayment){
+    let cp;try{cp=checkedCombinedPayment(b.combinedPayment,b.totalAmount);}catch{return 'amount_mismatch';}
+    const advance=cp.choice==='advance20'&&b.advancePaymentId===p.id;
+    if((i as CancelIntent&{version?:number}).version!==2||!j||!jRef||j.totalAmount!==b.totalAmount||!isDeepStrictEqual(j.combinedPayment,b.combinedPayment)||!isDeepStrictEqual(j.priceBreakdown,b.priceBreakdown)||p.currency!==b.priceBreakdown.currency||(advance?(p.targetType!=='booking'||p.jobId!==null||p.amount!==cp.payNowPaise):(p.targetType!=='job'||p.jobId!==j.id||p.amount!==(cp.choice==='advance20'?cp.balancePaise:cp.totalPaise)))||p.refundAmount||p.externalReturnRecordId||p.overpayments?.length||(p as Payment&{invoiceReviewNeeded?:boolean}).invoiceReviewNeeded)return 'amount_mismatch';
+    // Expected capture while cancellation waits is recorded, never auto-refunded or used to confirm the slot.
+    tx.update(db.collection('payments').doc(p.id),{status:'completed',razorpayPaymentId:ev.providerPaymentId,providerEventId:ev.providerEventId,completedAt:p.completedAt??now,updatedAt:now});
+    const next={...i,state:'needs_review' as const};tx.update(iRef,{state:next.state,verifiedCapturePaymentId:p.id,verifiedCaptureAt:now});
+    tx.update(bRef,{cancelIntent:publicIntent(next),paymentStatus:'partial',...(advance?{advancePaidAt:b.advancePaidAt??now}:{}),updatedAt:now});
+    tx.update(jRef,{paymentStatus:'partial',updatedAt:now});
+    tx.set(db.collection('staffAlerts').doc(`waiting_cancel_${b.id}`),alert(i,'combined_cancel_capture_review',now));
+    return 'completed';
+  }
   const reads = await readCancelReads(tx, db, b, b.id);
   const plan = paid ? await planReserveInTx(tx, db, { payment: { ...p, status: "completed" }, amountPaise: p.amount, reason: "waiting_cancel_capture", createdBy: "system", completingInThisTx: true }) : null;
   const prior = plan && !plan.ok && plan.code === "same_reservation" ? await tx.get(db.collection("refundRequests").where("paymentId", "==", p.id)) : null;

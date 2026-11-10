@@ -144,7 +144,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
   // price block above carries the one action (Garage / Try again), so there is no second, enabled-looking Book button.
   const showBar = !!service && sheetBarVisible({ priceOnRequest: service.priceOnRequest === true, loading: priceLoading, hasTotal: priceBreakdown !== null, needsCarType, error: priceError !== null });
   if (loading) return <Loading label="Opening the menu" />;
-  if (loadError) return <Screen><Notice title="Can't load this service" body="Check your connection and try again." action={<Button label="Try again" onPress={onRetry}/>} /></Screen>;
+  if (loadError) return <Screen><Notice title="Can't load this service" body="Check your connection and try again." action={<Button icon="refresh" label="Try again" onPress={onRetry}/>} /></Screen>;
   if (!service) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." action={<Button kind="quiet" label="Browse services" onPress={()=>router.navigate("/(tabs)/catalogue")}/>} /></Screen>;
 
   const sc = showcaseFor(service);
@@ -172,6 +172,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         </Pane>
 
         <>
+        <ServiceScope placement="description" service={service} onAsk={()=>router.push({pathname:"/(tabs)/help",params:{service:service.name}})}/>
         <ServiceVisitFacts nextAction={focused&&showBar?<ServiceNextAction label={service.priceOnRequest===true?(service.category==="garage"||service.category==="modifications"?"Inspection":"Get quote"):"Book now"} disabled={!service.priceOnRequest&&priceBreakdown===null} onPress={()=>service.priceOnRequest===true&&SERVICE_QUOTE_JOURNEY_READY?router.push({pathname:"/(tabs)/quote-request",params:{serviceId:String(id)}}):router.push(`/(tabs)/book/${id}`)}/>:null} duration={dur} warranty={service.warrantyLabel} brand={service.brand} quote={service.priceOnRequest===true} inspection={service.priceOnRequest===true&&(service.category==='garage'||service.category==='modifications')}/>
 
         {service.priceEstimate ? <T role="caption" tone="tertiary">Estimated price. The studio confirms the final amount before work starts.</T> : null}
@@ -212,17 +213,13 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
           <T role="caption" tone="tertiary">Illustrative photo, not studio work.</T>
         </View> : null}
 
-        <View style={{ gap: space.line }}>
-          {H(service.category === "garage" ? "Price" : "Price for your car")}
-
-          <ServicePrice category={service.category} priceOnRequest={service.priceOnRequest === true} needsCarType={needsCarType} hasCar={!!pricingVehicle.vehicle} carSizeKnown={!!selectedCategory} loading={priceLoading} error={priceError} breakdown={priceBreakdown} onRetry={onRetry} onHelp={() => router.navigate("/(tabs)/help")} onGarage={() => router.push(pricingVehicle.vehicle ? `/(tabs)/garage/${pricingVehicle.vehicle.id}` : "/(tabs)/garage/add")} />
-        </View>
+        <Kicker>{service.category==='garage'?'Price':'Price for your car'}</Kicker><ServicePrice inlineBreakdown {...{category:service.category,priceOnRequest:service.priceOnRequest===true,needsCarType,hasCar:!!pricingVehicle.vehicle,carSizeKnown:!!selectedCategory,loading:priceLoading,error:priceError,breakdown:priceBreakdown,onRetry,onHelp:()=>router.navigate("/(tabs)/help"),onGarage:()=>router.push(pricingVehicle.vehicle?`/(tabs)/garage/${pricingVehicle.vehicle.id}`:"/(tabs)/garage/add")}}/>
 
         </>
 
         <>
 
-        <ServiceScope service={service} careTip={(service.careTips ?? [])[0] ?? null} onAsk={() => router.push({ pathname: "/(tabs)/help", params: { service: service.name } })} />
+        <ServiceScope placement="details" service={service} careTip={(service.careTips ?? [])[0] ?? null} onAsk={() => router.push({ pathname: "/(tabs)/help", params: { service: service.name } })} />
 
         {sc.benefits.length > 0 ? (
           <View style={{ gap: space.breath }}>

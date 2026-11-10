@@ -33,6 +33,6 @@ export function SavedLicensePhotoView({r}:{r:SavedLicenseState}){
  useEffect(()=>{setImgErr(false)},[r.url]);
  if(r.state==='loading')return <Loading label="Opening saved licence"/>;
  if(r.state==='missing')return <T role="caption" tone="secondary">No saved licence photo is available to open.</T>;
- if(r.state==='error'||imgErr)return <View style={{gap:8}}><T role="caption" tone="secondary">The saved licence photo could not be shown. This does not mean it was deleted.</T><Button label="Retry saved photo" onPress={()=>{setImgErr(false);r.retry();}}/></View>;
+ if(r.state==='error'||imgErr)return <View style={{gap:8}}><T role="caption" tone="secondary">The saved licence photo could not be shown. This does not mean it was deleted.</T><Button icon="refresh" label="Retry saved photo" onPress={()=>{setImgErr(false);r.retry();}}/></View>;
  return <View style={{gap:8}}><Image accessibilityLabel="Saved driving licence" source={{uri:r.url!}} resizeMode="contain" onError={()=>setImgErr(true)} style={{width:'100%',height:200,borderRadius:16}}/><T role="caption" tone="secondary">Saved licence photo</T></View>;
 }

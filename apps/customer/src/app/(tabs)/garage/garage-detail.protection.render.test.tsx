@@ -1,3 +1,4 @@
+vi.mock("../../../ui/NavIcon",()=>({NavIcon:(p:Record<string,unknown>)=>createElement("NavIcon",p)}));
 import type * as ProtectionService from "../../../lib/protection-service";
 import type * as PaperService2 from "../../../lib/paper-service";
 // Mounted-screen proof for the protection editor orchestration: the REAL
