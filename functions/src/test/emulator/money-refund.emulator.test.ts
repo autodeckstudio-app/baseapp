@@ -69,9 +69,16 @@ describe("concurrent reservations", () => {
     const requests = all.docs.filter((d) => d.id.startsWith("rr_"));
     expect(requests).toHaveLength(1);
     expect(all.size).toBe(2);
-    // Loser gets the duplicate error, not a silent second reservation.
+    // Loser never reserves silently. Two precise observed classes for its
+    // rejection, both safe: (a) its transaction runs after the winner commits
+    // and hits the coded guard ("already has an active refund request"); (b) the
+    // emulator invalidates its transaction under contention before the guard
+    // runs (code 3, "Transaction is invalid or closed." - the class
+    // transaction-read.ts documents; runTransaction aborts surface raw here).
+    // The counts above are the invariant; the message check only proves the
+    // loser failed, never that a second reservation exists.
     const loser = [r1, r2].find((r) => r.status === "rejected") as PromiseRejectedResult;
-    expect(String(loser.reason)).toMatch(/already has an active refund request/);
+    expect(String(loser.reason)).toMatch(/already has an active refund request|Transaction is invalid or closed/);
   });
 });
 
