@@ -50,13 +50,27 @@ vi.mock("firebase-admin/firestore", async (importOriginal) => {
           const wrapped = new Proxy(tx, {
             get(t, prop) {
               if (prop === "get") {
-                const origGet = t.get.bind(t);
-                return ((ref: FirebaseFirestore.DocumentReference) => {
+                // The real Transaction.get is overloaded (Query, DocumentReference,
+                // aggregate). This wrapper honestly accepts the document/query
+                // shapes the transaction can pass, arms the abort only on the
+                // exact target document path, and passes every other read
+                // through to the real bound get unchanged. The double cast is
+                // intentional: the proxy stands in for the full overloaded
+                // signature while only implementing the passthrough + abort,
+                // and the abortAttempts assertion below proves the injection
+                // actually engaged the transaction's real document read.
+                const origGet = t.get.bind(t) as (
+                  ref: FirebaseFirestore.DocumentReference | FirebaseFirestore.Query,
+                ) => Promise<unknown>;
+                const guarded = (
+                  ref: FirebaseFirestore.DocumentReference | FirebaseFirestore.Query,
+                ): Promise<unknown> => {
+                  const docRef = ref as FirebaseFirestore.DocumentReference;
                   if (
                     h.abortsRemaining > 0 &&
                     h.targetPath &&
-                    typeof ref?.path === "string" &&
-                    ref.path === h.targetPath
+                    typeof docRef?.path === "string" &&
+                    docRef.path === h.targetPath
                   ) {
                     h.abortsRemaining -= 1;
                     h.abortAttempts += 1;
@@ -66,8 +80,9 @@ vi.mock("firebase-admin/firestore", async (importOriginal) => {
                     err.code = 10;
                     throw err;
                   }
-                  return origGet(ref as never);
-                }) as typeof t.get;
+                  return origGet(ref);
+                };
+                return guarded as unknown as typeof t.get;
               }
               const v = (t as unknown as Record<PropertyKey, unknown>)[prop];
               return typeof v === "function" ? (v as (...a: unknown[]) => unknown).bind(t) : v;
