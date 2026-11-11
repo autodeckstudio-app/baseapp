@@ -114,7 +114,7 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
   // Membership benefit, if any (Phase 5B P1-9 fix — see Invoice.discount
   // doc comment). pb.membershipDiscount is already computed against this
   // same gross subtotal by applyMembershipBenefit(), so
-  // subtotal - discount + tax === total holds by construction.
+  // subtotal - discount + tax + explicit round off === total.
   const discount = pb.membershipDiscount ?? 0;
   const discountDescription =
     discount === 0
@@ -124,7 +124,7 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
         : "Membership wash credit";
 
   // Without additional work this is exactly the snapshot's total and tax.
-  // With it, total == job.totalAmount and tax is whatever closes subtotal - discount + tax = total.
+  // Additional approved work retains its own existing gross/tax policy; round off remains separate.
   const total = pb.total + additionalGross;
   const tax = additionalGross === 0 ? pb.tax : total - (subtotal - discount) - (pb.roundOffPaise ?? 0);
 

@@ -124,13 +124,13 @@ export interface Invoice {
   // previously this amount existed on PriceBreakdown but was silently
   // dropped when building the Invoice, leaving subtotal+tax != total with
   // nothing on the document explaining why). 0 / null when no membership
-  // benefit applied. Invariant: subtotal - discount + tax === total.
+  // benefit applied. Invariant: subtotal - discount + tax + (roundOffPaise ?? 0) === total.
   discount: number; // paise; 0 when no membership benefit applied
   discountDescription: string | null; // e.g. "Membership discount (20%)" / "Membership wash credit" — null when discount is 0
   taxRatePercent: number; // snapshotted at booking creation
   taxDescription: string; // e.g. "GST 18%"
   tax: number; // paise — computed on the POST-discount (taxable) subtotal
-  total: number; // paise — must equal booking.totalAmount; = subtotal - discount + tax
+  total: number; // paise — must equal booking.totalAmount; = subtotal - discount + tax + roundOffPaise
   currency: string; // "INR"
   status: InvoiceStatus;
   pdfUrl: string | null;

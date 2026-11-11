@@ -29,7 +29,7 @@ import {
   advancePaymentEnabled,
   buildAdvancePaymentRequest,
 } from "../../lib/advance-payment.js";
-import{combinedCheckoutEnabled,combinedPaymentAmounts}from'../../lib/combined-booking.js';
+import{combinedCheckoutEnabled}from'../../lib/combined-booking.js';
 import{requireCustomerDocId}from'../../lib/customer-identity.js';
 import { isHoldExpired } from "../../lib/booking-hold.js";
 import { ensureAdvanceLink, type AdvanceLinkDeps } from "../../lib/advance-link.js";
