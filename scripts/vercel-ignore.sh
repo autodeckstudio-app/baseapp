@@ -5,6 +5,74 @@
 # Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
 # Unknown base commit or git error => build (safe default).
 app="$1"
+# Pinned inert Customer hardening release. No other linked project may build.
+# Exact base + changed-path allowlist, on the release branch and its main landing.
+release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-hardening-20261111 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$release_parent" = f853fb733b99eb8eb46888f36baa545a64cdad88 ]; }; then
+  release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$release_root" ] || exit 0
+  cd "$release_root" || exit 0
+  release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  [ "$release_parent" = f853fb733b99eb8eb46888f36baa545a64cdad88 ] || { printf 'Customer hardening wrong parent: SKIP (%s)\n' "$app"; exit 0; }
+  release_paths="$(git diff --name-only "$release_parent" HEAD 2>/dev/null)" || exit 0
+  expected_paths=$(cat <<'CUSTOMER_HARDENING_PATHS'
+apps/admin/src/app/(admin)/accountant/page.tsx
+apps/admin/src/components/BookingPanels.tsx
+apps/admin/src/lib/accountant-service.ts
+apps/customer/src/app/(auth)/login.render.test.tsx
+apps/customer/src/app/(auth)/login.tsx
+apps/customer/src/app/(tabs)/book/confirm-combined.render.test.tsx
+apps/customer/src/app/(tabs)/book/confirm.tsx
+apps/customer/src/app/(tabs)/bookings/[id].tsx
+apps/customer/src/app/(tabs)/bookings/booking-canonical-journey.render.test.tsx
+apps/customer/src/app/(tabs)/bookings/bookings-list-states.render.test.tsx
+apps/customer/src/app/(tabs)/bookings/index.tsx
+apps/customer/src/app/(tabs)/bookings/invoice.tsx
+apps/customer/src/app/(tabs)/garage/garage-detail.documents.render.test.tsx
+apps/customer/src/lib/booking-service.ts
+apps/customer/src/lib/cancellation-error.test.ts
+apps/customer/src/lib/cancellation-error.ts
+apps/customer/src/lib/combined-checkout.test.ts
+apps/customer/src/lib/combined-checkout.ts
+apps/customer/src/lib/invoice-display.test.ts
+apps/customer/src/ui/CombinedPaymentOptions.tsx
+apps/customer/src/ui/CombinedPaymentSheet.tsx
+apps/customer/src/ui/QuoteSchedule.tsx
+apps/customer/src/ui/ServicePrice.tsx
+apps/customer/src/ui/combined-payment-sheet.render.test.tsx
+apps/customer/src/ui/quote-schedule.render.test.tsx
+docs/combined-rounding-v3.md
+functions/src/functions/booking/createBooking.ts
+functions/src/functions/office/getAccountantMoney.ts
+functions/src/functions/payment/requestAdvancePayment.ts
+functions/src/lib/combined-booking.ts
+functions/src/lib/invoice-builder.ts
+functions/src/lib/invoice-pdf.ts
+functions/src/lib/pickup-fee.ts
+functions/src/schemas/booking.ts
+functions/src/test/emulator/combined-create.emulator.test.ts
+functions/src/test/emulator/combined-return.emulator.test.ts
+functions/src/test/emulator/combined-settlement.emulator.test.ts
+functions/src/test/unit/combined-booking.test.ts
+functions/src/test/unit/invoice-builder.test.ts
+functions/src/test/unit/invoice-pdf.test.ts
+packages/core/src/combined-checkout.ts
+packages/core/src/combined-rounding.test.ts
+packages/core/src/customer-job.ts
+packages/core/src/types/booking.ts
+packages/core/src/types/payment.ts
+packages/ui/src/invoice/index.ts
+scripts/vercel-ignore.sh
+scripts/visual/customer-payment/README.md
+scripts/visual/customer-payment/entry.tsx
+CUSTOMER_HARDENING_PATHS
+)
+  [ "$release_paths" = "$expected_paths" ] || { printf 'Customer hardening unexpected paths: SKIP (%s)\n' "$app"; exit 0; }
+  case "$app" in
+    customer) printf 'Pinned Customer hardening: BUILD\n'; exit 1 ;;
+    *) printf 'Pinned Customer hardening: SKIP (%s)\n' "$app"; exit 0 ;;
+  esac
+fi
 # This isolated emulator-fixture branch never builds or promotes a website/app.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = qa/quote-fixtures-20261106 ]; then
   printf 'isolated fixture QA branch: SKIP (%s)\n' "$app"

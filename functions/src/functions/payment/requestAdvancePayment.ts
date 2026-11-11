@@ -29,7 +29,7 @@ import {
   advancePaymentEnabled,
   buildAdvancePaymentRequest,
 } from "../../lib/advance-payment.js";
-import{combinedCheckoutEnabled,combinedPaymentAmounts}from'../../lib/combined-booking.js';
+import{combinedCheckoutEnabled}from'../../lib/combined-booking.js';
 import{requireCustomerDocId}from'../../lib/customer-identity.js';
 import { isHoldExpired } from "../../lib/booking-hold.js";
 import { ensureAdvanceLink, type AdvanceLinkDeps } from "../../lib/advance-link.js";
@@ -117,7 +117,7 @@ export const requestAdvancePayment = onCall(
         { enabled: advancePaymentEnabled() },
       );
       const snap=b.combinedPayment;
-      const advance=snap?(()=>{const checked=combinedPaymentAmounts(b.totalAmount,snap.choice);if(snap.choice!=='advance20'||checked.payNowPaise!==snap.payNowPaise||checked.balancePaise!==snap.balancePaise)throw new HttpsError('failed-precondition','Combined payment snapshot changed.');return{amountPaise:snap.payNowPaise,currency:b.priceBreakdown.currency??'INR',bookingId:b.id,description:'20% advance for combined service and transport',referenceId:`advance-${b.id}`,advancePaise:snap.payNowPaise,dueAtStudioPaise:snap.balancePaise}})():legacyAdvance();
+      const advance=snap?(()=>{const checked=checkedCombinedPayment(snap,b.totalAmount);if(snap.choice!=='advance20'||checked.payNowPaise!==snap.payNowPaise||checked.balancePaise!==snap.balancePaise)throw new HttpsError('failed-precondition','Combined payment snapshot changed.');return{amountPaise:snap.payNowPaise,currency:b.priceBreakdown.currency??'INR',bookingId:b.id,description:'20% advance for combined service and transport',referenceId:`advance-${b.id}`,advancePaise:snap.payNowPaise,dueAtStudioPaise:snap.balancePaise}})():legacyAdvance();
       assertDisplayedAmount(advance.amountPaise);
       const payment: Payment = {
         id: paymentRef.id,

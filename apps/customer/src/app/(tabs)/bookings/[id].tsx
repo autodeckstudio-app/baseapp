@@ -1,3 +1,4 @@
+import { cancellationErrorMessage } from "../../../lib/cancellation-error";
 import { JobWorkAndCoverage } from "../../../ui/JobWorkAndCoverage";
 import{verifyMyCustomerDocId}from'../../../lib/auth-service';
 import { bookingPayOutcomeMessage } from "../../../lib/native-pay-core";
@@ -322,7 +323,7 @@ export default function BookingDetailScreen() {
       if (!result.cancellationPending) setBooking((prev) => (prev ? { ...prev, status: "CANCELLED" } : prev));
       setConfirmingCancel(false);
     } catch (err) {
-      if(current())setActionError(err instanceof Error && err.message && !/^(internal|functions)/i.test(err.message) ? err.message : "We could not cancel this booking. Check your connection and try again, or call the studio.");
+      if(current())setActionError(cancellationErrorMessage(err));
     } finally {
       if(current()){actionLock.current=false;setCancelling(false);}
     }
@@ -553,6 +554,7 @@ export default function BookingDetailScreen() {
           ) : null}
           {(booking.priceBreakdown.pickupFee??0)>0?<Row title="Pickup" trailing={<T role="data">{rupees(booking.priceBreakdown.pickupFee??0)}</T>}/>:null}
           {(booking.priceBreakdown.dropFee??0)>0?<Row title="Drop-off" trailing={<T role="data">{rupees(booking.priceBreakdown.dropFee??0)}</T>}/>:null}
+          {booking.priceBreakdown.roundOffPaise ? <Row title="Round off" trailing={<T role="data">{rupees(booking.priceBreakdown.roundOffPaise)}</T>} /> : null}
           {booking.priceBreakdown.tax > 0 ? <Row title={booking.priceBreakdown.taxDescription} trailing={<T role="data">{rupees(booking.priceBreakdown.tax)}</T>} /> : null}
           <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(booking.priceBreakdown.total)}</T>} />
           <Row detailTone="secondary" title="Payment" detail={membershipCoveredLabel(booking) ?? (noPaymentDue?giftCovered?"Included with your gift - no payment needed":"No payment needed":job?.offlineSettlement && job.paymentStatus==="partial" ? "Part payment recorded - balance due" : payment?.status==='completed'&&job?.paymentStatus!=='paid'&&!(payment as Payment & {invoiceReviewNeeded?:boolean}).invoiceReviewNeeded?'Payment records syncing - do not pay again':customerPaymentLabel(payment,paymentIsCurrent||isMock?'ready':paymentOwnerCurrent&&paymentScope===currentPaymentScope?paymentRead:'loading'))} last />
