@@ -24,7 +24,8 @@ import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import type { ServiceJob } from "@autodeck/core";
 import { metrics } from "../../../lib/metrics";
 import { Button, Loading, Notice, Plate, Screen, T } from "../../../ui/kit";
-import { FloorCar } from "../../../ui/GarageShowroom";
+import { GarageShowroom } from "../../../ui/GarageShowroom";
+import { garageBrands, garageCarsForBrand } from "../../../lib/garage-brands";
 import { CareRing } from "../../../ui/CareRing";
 import { careRing, jobStep, liveJobForCar, LIVE_STEP_NAMES, readyBy } from "../../../lib/garage-live";
 import { liveTrackTarget } from "../../../lib/bookings-view";
@@ -57,6 +58,7 @@ export default function GarageScreen() {
   const [archiveActionBusy,setArchiveActionBusy]=useState<string|null>(null);
   const [photoCleanupNote,setPhotoCleanupNote]=useState<string|null>(null);
   const [deleting, setDeleting] = useState<Vehicle | null>(null);
+  const [focusedCarId, setFocusedCarId] = useState<string | null>(null);
   const [pick, setPick] = useState<string | null>(mock ? q.pick ?? null : null);
   // Car preview pop-up: tapping a stacked card opens it; tapping outside closes it.
   const [sheet, setSheet] = useState<Vehicle | null>(null);
@@ -124,8 +126,6 @@ export default function GarageScreen() {
   }, [auth.status, retryTick, vehicles]);
 
   const { height: winH } = useWindowDimensions();
-  const swipeList = [...(vehicles ?? [])].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
-  const pickRef = useRef(pick); pickRef.current = pick;
 
   if (!vehicles && !error && !ownerMissing) return <Loading label="Opening your garage" />;
   const open = (v: Vehicle) => {
@@ -159,8 +159,10 @@ export default function GarageScreen() {
     }
   }
   const list = [...(vehicles ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  const sel = pick && list.some((v) => v.id === pick) ? pick : null; // null = the All view
-  const one = sel ? list.find((v) => v.id === sel) ?? null : null;
+  const brands = garageBrands(list);
+  const sel = pick && brands.some((b) => b.key === pick) ? pick : null;
+  const filtered = garageCarsForBrand(list, sel);
+  const one = sel ? filtered.find(v => v.id === focusedCarId) ?? filtered[0] ?? null : null;
   const light = themeName === "light";
   const chip = (v: Vehicle) => dueChip(jobs, v.id, svcMap);
   // One chip on the card, nothing below it: Track when the car is in the bay, otherwise what is due.
@@ -179,7 +181,7 @@ export default function GarageScreen() {
       {ownerNoProfile ? <Notice title="We couldn't find your profile" body="Try again in a moment." action={<Button icon="refresh" label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {error ? <Notice title="Can't load your cars" body="Check your connection and try again." action={<Button icon="refresh" label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {list.length > 0 ? (
-        <FilterPills fixedFirst items={[{ key: null as string | null, label: "All" }, ...list.map((v) => ({ key: v.id as string | null, label: `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber }))]} value={sel} onChange={setPick} flat trailing={<Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={() => router.push("/(tabs)/garage/add")} style={{ paddingHorizontal: 2, paddingVertical: 9, flexDirection: "row", alignItems: "center", gap: 4 }}><Text style={{ color: ink.premium, fontSize: 16, fontWeight: "800" }}>+</Text><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "700" }}>Add car</Text></Pressable>} />
+        <FilterPills fixedFirst items={[{ key: null as string | null, label: "All" }, ...brands.map((b) => ({ key: b.key as string | null, label: b.label }))]} value={sel} onChange={setPick} flat trailing={<Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={() => router.push("/(tabs)/garage/add")} style={{ paddingHorizontal: 2, paddingVertical: 9, flexDirection: "row", alignItems: "center", gap: 4 }}><Text style={{ color: ink.premium, fontSize: 16, fontWeight: "800" }}>+</Text><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "700" }}>Add car</Text></Pressable>} />
       ) : null}
       {list.length === 0 && !error && !ownerUnknown && !ownerLinking && !ownerNoProfile ? (
         <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.breath }}>
@@ -187,11 +189,9 @@ export default function GarageScreen() {
           <T tone="secondary">Add your car once. Bookings, bills and papers attach to it from then on.</T>
           <Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} testID="garage-add" />
         </View>
-      ) : one ? (
+      ) : filtered.length > 0 ? (
         <View style={{ gap: metrics.sectionGap }}>
-          <View>
-            <FloorCar car={one} width="100%" height={metrics.heroTall + 40} focused onOpen={open} chip={overlay(one)} />
-          </View>
+          <GarageShowroom key={sel ?? "all"} cars={filtered} onSelect={setFocusedCarId} onOpen={open} chipFor={overlay} />
           {careRing(plan) ? (() => {
             const r = careRing(plan)!;
             return (
@@ -206,15 +206,7 @@ export default function GarageScreen() {
             );
           })() : null}
         </View>
-      ) : (
-        // "All": every car stacked one below the other, so no car hides behind a
-        // sideways swipe. Tapping a card opens its preview pop-up.
-        <View style={{ gap: 20 }}>
-          {list.map((v) => (
-            <FloorCar key={v.id} car={v} width="100%" height={metrics.heroTall + 40} focused onOpen={open} chip={overlay(v)} />
-          ))}
-        </View>
-      )}
+      ) : null}
       {list.length > 0 ? (
         <GarageActions onBook={() => router.navigate("/(tabs)/catalogue")} onHistory={() => router.push(one ? { pathname: "/(tabs)/garage/history", params: { vehicleId: one.id } } : "/(tabs)/garage/history")} />
       ) : null}

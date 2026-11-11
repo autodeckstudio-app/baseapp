@@ -9,9 +9,9 @@ import type { Vehicle } from "@autodeck/core";
 import { CarThumb } from "./CarThumb";
 import { Plate } from "./kit";
 import { metrics } from "../lib/metrics";
+import { useReduceMotion } from "../lib/reduce-motion";
 
 const GAP = 16;
-const PEEK = 28; // how much of the next car shows at the edge, signalling the swipe
 
 export function CarPhotoCard({ car: v, height, badge, onOpen, chip }: { car: Vehicle; height: number; badge?: string | null; onOpen: (v: Vehicle) => void; chip?: React.ReactNode }) {
   const name = `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber;
@@ -84,35 +84,41 @@ export function FloorCar({ car: v, width, height, focused, onOpen, chip }: { car
   );
 }
 
+/** A measured, touch-scrollable row. Brand filtering is owned by GarageScreen. */
 export function GarageShowroom({ cars, selectedId, onOpen, onSelect, chipFor }: { cars: Vehicle[]; selectedId?: string | null; onSelect?: (id: string) => void; onOpen: (v: Vehicle) => void; chipFor: (v: Vehicle) => React.ReactNode }) {
   const { width: winW } = useWindowDimensions();
-  const cardW = Math.min(winW - PEEK * 2, 480);
-  const interval = cardW + GAP;
-  const heroH = metrics.heroTall + 40;
+  const [available, setAvailable] = useState(Math.max(240, winW - 40));
+  const [focusIdx, setFocusIdx] = useState(Math.max(0, cars.findIndex(c => c.id === selectedId)));
   const scrollRef = useRef<ScrollView>(null);
-  // Focus follows the swipe locally; a selection from outside (the car list) moves the floor.
-  const controlled = selectedId !== null && selectedId !== undefined;
-  const initialIdx = Math.max(0, cars.findIndex((c) => c.id === (selectedId ?? cars[0]?.id)));
-  const [focusIdx, setFocusIdx] = useState(initialIdx);
-  const scrollX = useRef(initialIdx * interval);
-  const snapT = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const focusId = cars[focusIdx]?.id ?? cars[0]?.id;
-  useEffect(() => () => { if (snapT.current) clearTimeout(snapT.current); }, []);
+  const snapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reduce = useReduceMotion();
+  useEffect(() => () => { if (snapTimer.current) clearTimeout(snapTimer.current); }, []);
+  const cardW = Math.max(200, Math.min(available - (cars.length > 1 ? 24 : 0), 720));
+  const interval = cardW + GAP;
+  const index = Math.min(focusIdx, Math.max(0, cars.length - 1));
+  const focusedId = cars[index]?.id;
+  const ids = cars.map(c => c.id).join("|");
   useEffect(() => {
-    if (!controlled) return;
-    const i = Math.max(0, cars.findIndex((c) => c.id === selectedId));
-    setFocusIdx(i);
-    scrollX.current = i * interval;
-    scrollRef.current?.scrollTo({ x: i * interval, animated: true });
-  }, [selectedId]);
-  if (cars.length === 0) return null;
-  if (cars.length === 1) {
-    const v = cars[0]!;
-    return <FloorCar car={v} width={Math.min(winW, 536)} height={heroH} focused onOpen={onOpen} chip={chipFor(v)} />;
-  }
+    const next = Math.max(0, cars.findIndex(c => c.id === selectedId));
+    setFocusIdx(next);
+    if (cars[next]) onSelect?.(cars[next]!.id);
+    scrollRef.current?.scrollTo({ x: next * interval, animated: false });
+  }, [selectedId, ids, interval]);
+  const move = (i: number) => {
+    const next = Math.max(0, Math.min(cars.length - 1, i));
+    setFocusIdx(next);
+    scrollRef.current?.scrollTo({ x: next * interval, animated: !reduce });
+    onSelect?.(cars[next]!.id);
+  };
+  if (!cars.length) return null;
   return (
-    <View style={{ marginHorizontal: -PEEK }}>
+    <View testID="garage-carousel" style={{ width: "100%", minWidth: 0, gap: 10 }} onLayout={e => {
+      const width = e.nativeEvent.layout.width;
+      if (width > 0) setAvailable(width);
+    }}>
       <ScrollView
+        testID="garage-car-scroll"
+        accessibilityLabel="Your cars. Swipe left or right to browse."
         ref={scrollRef}
         horizontal
         snapToInterval={interval}
@@ -120,28 +126,28 @@ export function GarageShowroom({ cars, selectedId, onOpen, onSelect, chipFor }: 
         decelerationRate="fast"
         disableIntervalMomentum
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: GAP, paddingHorizontal: PEEK }}
+        scrollEnabled={cars.length > 1}
+        style={{ width: "100%" }}
+        contentContainerStyle={{ gap: GAP, paddingRight: Math.max(0, available - cardW) }}
         scrollEventThrottle={16}
-        onLayout={() => scrollRef.current?.scrollTo({ x: initialIdx * interval, animated: false })}
-        onScroll={(e) => {
-          scrollX.current = e.nativeEvent.contentOffset.x;
-          const i = Math.max(0, Math.min(cars.length - 1, Math.round(scrollX.current / interval)));
-          if (i !== focusIdx) {
-            setFocusIdx(i);
-            if (controlled) onSelect?.(cars[i]!.id);
-          }
-          // Snap after the scroll goes quiet: RN web does not fire momentum-end reliably.
-          if (snapT.current) clearTimeout(snapT.current);
-          snapT.current = setTimeout(() => {
-            const target = Math.max(0, Math.min(cars.length - 1, Math.round(scrollX.current / interval))) * interval;
-            if (Math.abs(target - scrollX.current) > 2) scrollRef.current?.scrollTo({ x: target, animated: true });
-          }, 140);
+        onScroll={e => {
+          const i = Math.max(0, Math.min(cars.length - 1, Math.round(e.nativeEvent.contentOffset.x / interval)));
+          setFocusIdx(i);
+          if (snapTimer.current) clearTimeout(snapTimer.current);
+          const x = e.nativeEvent.contentOffset.x;
+          snapTimer.current = setTimeout(() => {
+            if (Math.abs(x - i * interval) > 2) scrollRef.current?.scrollTo({ x: i * interval, animated: !reduce });
+          }, 150);
+          if (cars[i] && cars[i]!.id !== focusedId) onSelect?.(cars[i]!.id);
         }}
       >
-        {cars.map((v) => (
-          <FloorCar key={v.id} car={v} width={cardW} height={heroH} focused={v.id === focusId} onOpen={onOpen} chip={chipFor(v)} />
-        ))}
+        {cars.map(v => <FloorCar key={v.id} car={v} width={cardW} height={metrics.heroTall + 40} focused={v.id === focusedId} onOpen={onOpen} chip={chipFor(v)} />)}
       </ScrollView>
+      {cars.length > 1 ? <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Previous car" accessibilityState={{ disabled: index === 0 }} disabled={index === 0} onPress={() => move(index - 1)} style={{ padding: 10, minHeight: 44, minWidth: 72, justifyContent: "center", opacity: index === 0 ? 0.35 : 1 }}><Text style={{ color: "#EC8638", fontWeight: "700" }}>Previous</Text></Pressable>
+        <Text accessibilityLiveRegion="polite" style={{ color: "#898990", fontSize: 12 }}>{index + 1} / {cars.length}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Next car" accessibilityState={{ disabled: index === cars.length - 1 }} disabled={index === cars.length - 1} onPress={() => move(index + 1)} style={{ padding: 10, minHeight: 44, minWidth: 72, justifyContent: "center", opacity: index === cars.length - 1 ? 0.35 : 1 }}><Text style={{ color: "#EC8638", fontWeight: "700" }}>Next</Text></Pressable>
+      </View> : null}
     </View>
   );
 }

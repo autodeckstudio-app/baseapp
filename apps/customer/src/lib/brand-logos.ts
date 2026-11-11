@@ -13,8 +13,10 @@ import logo10 from '../../assets/imagery/brands/llumar-logo.png';
 import logo11 from '../../assets/imagery/brands/garware-logo.png';
 import logo12 from '../../assets/imagery/brands/fireball-logo.png';
 import logo13 from '../../assets/imagery/brands/kovalent-logo.png';
+import logo14 from '../../assets/imagery/brands/gtechniq-logo.png';
 /** Official brand marks, contained without recolouring, distortion or crop. */
 export const BRAND_LOGOS: Record<string, {src: ImageSourcePropType; background: string}> = {
+  Gtechniq: {src:logo14,background:'#15171B'},
   CarPro: {src:logo0,background:"#15171B"},
   "Koch-Chemie": {src:logo1,background:"#FFFFFF"},
   "Avery Dennison": {src:logo2,background:"#FFFFFF"},

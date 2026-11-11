@@ -5,6 +5,7 @@ import { listOwnerKey } from "../../../lib/owner-key";
 import { VISIT_FALLBACK, visitAlso, visitServices, visitTitle } from "../../../lib/visit-services";
 import { lastFinishedJob } from "../../../lib/care-due";
 import { buildCarStory } from "../../../lib/car-story";
+import { CarStoryAchievements } from "../../../ui/CarStoryAchievements";
 import { shareStoryHtml, shareStoryReady } from "../../../lib/share-story";
 import { buildCarePlan } from "../../../lib/care-plan";
 import { glassSurface, glassInner, glassOrange } from "../../../lib/glass";
@@ -701,8 +702,7 @@ export default function VehicleDetailScreen() {
         return story ? (
         <Pane pad="gap">
           <Kicker>Your car&apos;s story</Kicker>
-          {story.since ? <Row title="First recorded completed visit" detail={story.since} /> : null}
-          {story.visits > 0 ? <Row title="Visits completed" detail={String(story.visits)} /> : null}
+          <CarStoryAchievements story={story} />
           {story.protections.map((sp, i) => (
             <Row key={sp.title} title={sp.title} detail={sp.detail || undefined} last={i === story.protections.length - 1} />
           ))}
@@ -903,7 +903,7 @@ export default function VehicleDetailScreen() {
                 <FileUploader files={docPhoto&&"blob"in docPhoto&&docPhoto.blob?[{blob:docPhoto.blob,type:docPhoto.contentType??docPhoto.blob.type}]:[]} onChange={fs=>{const f=fs[0];if(f)setRemoveDocPhoto(false);setDocPhoto(f?{blob:f.blob,contentType:f.type}:null);}} nativeEnabled nativeFileCount={docPhoto?1:0} onNativeChange={nf=>{const f=nf[0];if(f)setRemoveDocPhoto(false);setDocPhoto(f?{bytes:f.bytes,contentType:f.type}:null);}}/>
                 {docPhoto ? <T role="caption" tone="tertiary">Photo selected - it uploads when you save.</T> : null}
               </View>
-              {docError ? <Notice title={/^Saved, but the photo did not upload/.test(docError) ? "Photo did not upload" : docEditing ? "Can't save this document" : "Can't add this document"} body={docError} /> : null}
+              {docError ? <Notice title={/^Saved, but automatic checks/.test(docError) ? "Document saved, checks unfinished" : /^Saved, but the photo did not upload/.test(docError) ? "Photo did not upload" : docEditing ? "Can't save this document" : "Can't add this document"} body={docError} /> : null}
               <Button label={docEditing ? "Save changes" : "Submit for verification"} busy={docBusy} onPress={() => void handleSaveDoc()} />
               <Button label="Cancel" kind="quiet" onPress={resetDocForm} />
             </View>

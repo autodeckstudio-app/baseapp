@@ -35,3 +35,17 @@ describe("putPaperPhoto transport choice", () => {
     await expect(putPaperPhoto("https://signed.example/put", headers, { bytes: new Uint8Array([1]) })).rejects.toThrow("Saved, but the photo did not upload (403).");
   });
 });
+
+// The document exists before finalize: a worker crash must not tell its owner the add failed.
+describe("partial document save", () => {
+  it("retains the saved-state message when finalization fails after a successful upload", async () => {
+    const { httpsCallable } = await import("firebase/functions");
+    const { submitMyPaper } = await import("./paper-service");
+    vi.mocked(httpsCallable).mockImplementation(((_f: unknown, name: string) => name === "submitMyPaper"
+      ? async () => ({data:{id:"saved-paper",uploadUrl:"https://signed.example/put",requiredHeaders:headers,photoState:"awaiting_upload"}})
+      : async () => {throw new Error("internal");}) as any);
+    (globalThis.fetch as any).mockResolvedValue({ok:true,status:200});
+    await expect(submitMyPaper({studioId:"s",vehicleId:"v",kind:"RC",reference:"GJ01AB1234",photo:{blob:new Blob(["x"]),contentType:"image/jpeg"}})).rejects.toThrow("Saved, but automatic checks did not finish.");
+    expect(vi.mocked(httpsCallable).mock.calls.filter(c=>c[1]==="submitMyPaper")).toHaveLength(1);
+  });
+});

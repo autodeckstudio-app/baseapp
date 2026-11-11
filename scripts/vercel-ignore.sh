@@ -5,6 +5,85 @@
 # Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
 # Unknown base commit or git error => build (safe default).
 app="$1"
+# Pinned Customer correction batch. Shared dependency pin must not redeploy sibling apps.
+release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = fix/customer-garage-paper-20261112 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$release_parent" = 03c929b74ddbfc0cd63e09e04df308cc661a0562 ]; }; then
+  release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$release_root" ] || exit 0
+  cd "$release_root" || exit 0
+  release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  [ "$release_parent" = 03c929b74ddbfc0cd63e09e04df308cc661a0562 ] || { printf 'Customer correction wrong parent: SKIP (%s)\n' "$app"; exit 0; }
+  release_paths="$(git diff --name-only "$release_parent" HEAD 2>/dev/null)" || exit 0
+  expected_paths=$(cat <<'CUSTOMER_CORRECTION_PATHS'
+apps/customer/assets/imagery/brands/gtechniq-logo.png
+apps/customer/assets/imagery/brands/gtechniq-logo.svg
+apps/customer/assets/imagery/service-types/ceramic.jpg
+apps/customer/assets/imagery/service-types/film-aftercare.jpg
+apps/customer/assets/imagery/service-types/lights-plastics.jpg
+apps/customer/assets/imagery/service-types/manifest.json
+apps/customer/assets/imagery/service-types/paint-sealant.jpg
+apps/customer/assets/imagery/service-types/tyres-rubber.jpg
+apps/customer/src/app/(tabs)/catalogue/[id].tsx
+apps/customer/src/app/(tabs)/catalogue/enquiry.tsx
+apps/customer/src/app/(tabs)/garage/[id].tsx
+apps/customer/src/app/(tabs)/garage/garage-detail.documents.render.test.tsx
+apps/customer/src/app/(tabs)/garage/garage-sheet.render.test.tsx
+apps/customer/src/app/(tabs)/garage/index.tsx
+apps/customer/src/lib/brand-logos.ts
+apps/customer/src/lib/catalogue-local-polish.test.ts
+apps/customer/src/lib/ceramic-type-image.test.ts
+apps/customer/src/lib/detailing-family-images.test.ts
+apps/customer/src/lib/garage-brands.test.ts
+apps/customer/src/lib/garage-brands.ts
+apps/customer/src/lib/garage-live.test.ts
+apps/customer/src/lib/no-sparkle.test.ts
+apps/customer/src/lib/paper-service.test.ts
+apps/customer/src/lib/paper-service.ts
+apps/customer/src/lib/service-scope-items.test.ts
+apps/customer/src/lib/service-scope-items.ts
+apps/customer/src/lib/service-type-images.ts
+apps/customer/src/lib/vercel-correction-guard.test.ts
+apps/customer/src/ui/CarStoryAchievements.tsx
+apps/customer/src/ui/GarageShowroom.tsx
+apps/customer/src/ui/HomeView.tsx
+apps/customer/src/ui/NavIcon.tsx
+apps/customer/src/ui/ReferenceProductDetail.tsx
+apps/customer/src/ui/ServicePageHeader.tsx
+apps/customer/src/ui/ServiceScope.tsx
+apps/customer/src/ui/ServicesExplorer.tsx
+apps/customer/src/ui/brand-identity.render.test.tsx
+apps/customer/src/ui/car-story-achievements.render.test.tsx
+apps/customer/src/ui/design-contract.test.ts
+apps/customer/src/ui/home-merged.test.ts
+apps/customer/src/ui/home-studio-card.render.test.tsx
+apps/customer/src/ui/preview-navigation.render.test.tsx
+apps/customer/src/ui/reference-product-detail.render.test.tsx
+apps/customer/src/ui/service-detail-booking.render.test.tsx
+apps/customer/src/ui/uc-review-contract.test.ts
+docs/customer-correction-batch-20261112.md
+functions/package.json
+functions/src/test/unit/paper-ocr-runtime-pin.test.ts
+package.json
+packages/ui/src/theme/glyphs.ts
+packages/ui/src/theme/icons.ts
+pnpm-lock.yaml
+scripts/vercel-ignore.sh
+scripts/visual/customer-correction/.gitignore
+scripts/visual/customer-correction/README.md
+scripts/visual/customer-correction/build.mjs
+scripts/visual/customer-correction/entry.tsx
+scripts/visual/customer-correction/garage-full-proof.cjs
+scripts/visual/customer-correction/index.html
+scripts/visual/customer-correction/mocks.ts
+scripts/visual/customer-correction/photo-proof.cjs
+CUSTOMER_CORRECTION_PATHS
+)
+  [ "$release_paths" = "$expected_paths" ] || { printf 'Customer correction unexpected paths: SKIP (%s)\n' "$app"; exit 0; }
+  case "$app" in
+    customer) printf 'Pinned Customer correction: BUILD\n'; exit 1 ;;
+    *) printf 'Pinned Customer correction: SKIP (%s)\n' "$app"; exit 0 ;;
+  esac
+fi
 # Pinned inert Customer hardening release. No other linked project may build.
 # Exact base + changed-path allowlist, on the release branch and its main landing.
 release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"

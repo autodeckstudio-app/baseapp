@@ -293,3 +293,14 @@ it('Upcoming uses confirmed empty only after bookings resolve; pending and faile
  const el=await mount();expect(textOf(el)).toContain('Loading upcoming bookings...');expect(textOf(el)).not.toContain('No upcoming bookings');await act(async()=>resolve([]));expect(textOf(el)).toContain('No upcoming bookings');expect(el.root.findAll(n=>n.props.label==='Book a service'&&typeof n.props.onPress==='function')).toHaveLength(1);await act(async()=>el.unmount());
  vi.mocked(getMyBookings).mockRejectedValueOnce(Error('read failure'));const failed=await mount();expect(textOf(failed)).toContain('Car records unavailable');expect(textOf(failed)).not.toContain('No upcoming bookings');await act(async()=>failed.unmount());
 });
+
+it('finalize failure after a committed document uses the partial-save title, never generic add failure',async()=>{
+ const el=await mount();act(()=>switchTab(el,'Documents'));await act(async()=>press(el,'Add a document'));await act(async()=>typeReference(el,'POL-PARTIAL'));
+ h.submitMyPaper.mockRejectedValueOnce(new Error('Saved, but automatic checks did not finish. Open Documents to review the saved photo. Do not add it again.'));
+ await act(async()=>press(el,'Submit for verification'));
+ expect(textOf(el)).toContain('Document saved, checks unfinished');expect(textOf(el)).toContain('Do not add it again.');expect(textOf(el)).not.toContain("Can't add this document");expect(h.submitMyPaper).toHaveBeenCalledTimes(1);await act(async()=>el.unmount());
+});
+it('real car History mounts earned visit achievements only from delivered job records',async()=>{
+ const el=await mount();await act(async()=>h.jobCb?.([{id:'d1',vehicleId:'v1',status:'DELIVERED',sealedAt:'2026-10-11T09:00:00Z',createdAt:'2026-10-10T09:00:00Z',services:[]},{id:'not-complete',vehicleId:'v1',status:'IN_PROGRESS',createdAt:'2026-10-09T09:00:00Z',services:[]}]));
+ act(()=>switchTab(el,'History'));expect(textOf(el)).toContain('First Spark');expect(textOf(el)).toContain('1 visit · Earned');expect(textOf(el)).toContain('2 more completed visits');expect(textOf(el)).not.toContain('3 more completed visits');await act(async()=>el.unmount());
+});

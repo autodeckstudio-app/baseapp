@@ -43,11 +43,11 @@ const text = (r: ReturnType<typeof create>) => JSON.stringify(r.toJSON());
 const byLabel = (r: ReturnType<typeof create>, label: string) =>
   r.root.findAll((n) => n.props && n.props.accessibilityLabel === label && typeof n.props.onPress === 'function')[0];
 
-it('cars stack vertically, a tap opens the preview pop-up, an outside tap closes it', async () => {
+it('car browser keeps every car available, a tap opens the preview pop-up, an outside tap closes it', async () => {
   let r!: ReturnType<typeof create>;
   await act(async () => { r = create(<Page />); });
   await act(async () => {});
-  // Both cars render at once - no horizontal pager hiding the second card.
+  // Both cars remain mounted in the touch carousel; pixel/touch proof is separate.
   expect(byLabel(r, 'Open BMW M340i')).toBeTruthy();
   expect(byLabel(r, 'Open Mahindra Thar')).toBeTruthy();
   expect(text(r)).not.toContain('Registration Certificate');
@@ -77,4 +77,20 @@ it('Open full details closes the pop-up and routes to the car room', async () =>
   expect(h.push).toHaveBeenCalledWith({ pathname: '/(tabs)/garage/[id]', params: { id: 'a' } });
   expect(text(r)).not.toContain('Registration Certificate');
   await act(async () => r.unmount());
+});
+
+it('brand-only filter includes both BMW models, car swipe selection keeps scoped history on its visible car',async()=>{
+ CARS.push({...CARS[0]!,id:'c',model:'X1',year:2025,registrationNumber:'SAMPLE C',updatedAt:'2026-11-05T00:00:00Z'});
+ try{
+ let r!:ReturnType<typeof create>;await act(async()=>{r=create(<Page/>)});await act(async()=>{});
+ const filter=()=>r.root.findAll(n=>Array.isArray(n.props.items)&&typeof n.props.onChange==='function')[0]!;
+ expect(filter().props.items.map((i:any)=>i.label)).toEqual(['All','BMW','Mahindra']);
+ await act(async()=>filter().props.onChange('bmw'));
+ expect(byLabel(r,'Open BMW M340i')).toBeTruthy();expect(byLabel(r,'Open BMW X1')).toBeTruthy();expect(byLabel(r,'Open Mahindra Thar')).toBeUndefined();
+ const showroom=r.root.findAll(n=>Array.isArray(n.props.cars)&&typeof n.props.onSelect==='function')[0]!;
+ await act(async()=>showroom.props.onSelect('c'));
+ const history=r.root.findAll(n=>typeof n.props.onHistory==='function')[0]!;await act(async()=>history.props.onHistory());
+ expect(h.push).toHaveBeenLastCalledWith({pathname:'/(tabs)/garage/history',params:{vehicleId:'c'}});
+ await act(async()=>r.unmount());
+ }finally{CARS.pop()}
 });

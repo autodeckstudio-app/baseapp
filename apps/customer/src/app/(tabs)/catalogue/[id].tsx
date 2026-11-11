@@ -4,7 +4,6 @@ import{ServicePageHeader}from"../../../ui/ServicePageHeader";
 import { customerOfferingVisible } from '../../../lib/customer-offering-visibility';
 import{SERVICE_QUOTE_JOURNEY_READY}from "../../../lib/service-quote";
 import { customerRatingPrivacy } from "@autodeck/core";
-import { ServiceVisitFacts } from "../../../ui/ServiceVisitFacts";
 import { ServiceScope } from "../../../ui/ServiceScope";
 import { formatDurationWithDays } from "../../../lib/duration";
 import { usePricingVehicle } from "../../../lib/vehicle-size";
@@ -172,7 +171,6 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
 
         <>
         <ServiceScope placement="description" showContactAndTip={false} service={service} onAsk={()=>router.push({pathname:"/(tabs)/help",params:{service:service.name}})}/>
-        <ServiceVisitFacts duration={dur} warranty={service.warrantyLabel} brand={service.brand} quote={service.priceOnRequest===true} inspection={service.priceOnRequest===true&&(service.category==='garage'||service.category==='modifications')}/>
 
         {service.priceEstimate ? <T role="caption" tone="tertiary">Estimated price. The studio confirms the final amount before work starts.</T> : null}
 
@@ -212,7 +210,9 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
           <T role="caption" tone="tertiary">Illustrative photo, not studio work.</T>
         </View> : null}
 
-        <Kicker>{service.category==='garage'?'Price':'Price for your car'}</Kicker><ServicePrice inlineBreakdown {...{category:service.category,priceOnRequest:service.priceOnRequest===true,needsCarType,hasCar:!!pricingVehicle.vehicle,carSizeKnown:!!selectedCategory,loading:priceLoading,error:priceError,breakdown:priceBreakdown,onRetry,onHelp:()=>router.navigate("/(tabs)/help"),onGarage:()=>router.push(pricingVehicle.vehicle?`/(tabs)/garage/${pricingVehicle.vehicle.id}`:"/(tabs)/garage/add")}}/>
+        <Kicker>{service.category==='garage'?'Price':'Price for your car'}</Kicker>
+        <T role="caption" tone="secondary">{[`Estimated service time: ${dur}`,service.brand&&service.brand!=="Add-ons"?`Product brand: ${service.brand}`:null,service.warrantyLabel?`Listed warranty: ${service.warrantyLabel}`:null].filter(Boolean).join(" · ")}. The studio confirms timing before work starts.</T>
+        <ServicePrice inlineBreakdown {...{category:service.category,priceOnRequest:service.priceOnRequest===true,needsCarType,hasCar:!!pricingVehicle.vehicle,carSizeKnown:!!selectedCategory,loading:priceLoading,error:priceError,breakdown:priceBreakdown,onRetry,onHelp:()=>router.navigate("/(tabs)/help"),onGarage:()=>router.push(pricingVehicle.vehicle?`/(tabs)/garage/${pricingVehicle.vehicle.id}`:"/(tabs)/garage/add")}}/>
 
         {focused&&showBar?<Button label={service.priceOnRequest===true?(service.category==="garage"||service.category==="modifications"?"Inspection":"Get quote"):"Book now"} disabled={!service.priceOnRequest&&priceBreakdown===null} onPress={()=>service.priceOnRequest===true&&SERVICE_QUOTE_JOURNEY_READY?router.push({pathname:"/(tabs)/quote-request",params:{serviceId:String(id)}}):router.push(`/(tabs)/book/${id}`)}/>:null}
 
@@ -227,7 +227,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
             <Pane pad="gap">
               <Row title="Why choose this service" detail={benefitsOpen?"Hide benefits":"See service benefits"} onPress={()=>setBenefitsOpen(!benefitsOpen)} last={!benefitsOpen}/>
               {benefitsOpen?sc.benefits.map((x, i) => (
-                <Row key={x} title={<View style={{ flexDirection: "row", gap: space.line }}><Icon name="ceramic" color={colors.accent} size={18} /><View style={{ flex: 1 }}><T>{x}</T></View></View>} last={i === sc.benefits.length - 1} />
+                <Row key={x} title={<View style={{ flexDirection: "row", gap: space.line }}><View style={{ flex: 1 }}><T>{x}</T></View></View>} last={i === sc.benefits.length - 1} />
               )):null}
             </Pane>
           </View>

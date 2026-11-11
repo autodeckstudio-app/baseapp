@@ -283,7 +283,7 @@ export function HomeView(p: HomeViewProps) {
   const { name, colors } = useExperienceTheme();
   const reduceContactMotion = useReduceMotion();
   const { width } = useWindowDimensions();
-  const heroHeight = width < 380 ? 224 : width < 600 ? 240 : 280;
+  const heroHeight = width < 380 ? 192 : width < 600 ? 200 : 208;
   const r = raised(name);
   const top = pickTopServices(p.services);
   const [active, setActive] = useState(0);
@@ -315,16 +315,12 @@ export function HomeView(p: HomeViewProps) {
               {p.unread > 0 ? <View style={{ position: "absolute", top: 11, right: 12, width: 9, height: 9, borderRadius: 5, backgroundColor: "#EC8638" }} /> : null}
             </Pressable>
           </View>
-          <Rise delay={60} style={{ position: "absolute", left: 20, right: 20, bottom: 44, gap: 6 }}>
-            <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase" }}>{p.greeting}{car ? ` · ${car.title}` : ""}</Text>
+          <Rise delay={60} style={{ position: "absolute", left: 20, right: 20, bottom: 20, gap: 6 }}>
+            <Text testID="home-greeting" numberOfLines={1} style={{ color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase" }}>{p.greeting}</Text>
             <Text style={[textStyle("display"), { fontSize: width < 380 ? 26 : 30, lineHeight: width < 380 ? 30 : 34, color: "#FFFFFF", letterSpacing: -0.8 }]}>{"Complete car care.\nAll under one roof."}</Text>
           </Rise>
         </View>
       </View>
-
-      <Rise delay={140} style={{ marginTop: -30 }}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Search services" onPress={p.onSearch} style={{minHeight:48,borderRadius:24,paddingHorizontal:16,flexDirection:'row',alignItems:'center',gap:12,...glassPane(name === "light")}}><NavIcon name="search" color={colors.textSecondary} size={20} cut="#18181C"/><Text style={{color:colors.textSecondary,fontSize:15}}>Search services</Text></Pressable>
-      </Rise>
 
       {p.stories}
 

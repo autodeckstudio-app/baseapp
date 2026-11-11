@@ -1,0 +1,17 @@
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createRequire} from 'node:module';
+const dir=path.dirname(fileURLToPath(import.meta.url));
+const root=path.resolve(dir,'../../..');
+const require=createRequire(path.join(root,'functions/package.json'));
+const {build}=require('esbuild');
+const customerRequire=createRequire(path.join(root,'apps/customer/package.json'));
+const blurPath=path.join(path.dirname(customerRequire.resolve('expo-blur/package.json')),'build/BlurView.web.js');
+await build({entryPoints:[dir+'/entry.tsx'],bundle:true,jsx:'automatic',outfile:dir+'/preview.js',nodePaths:[root+'/apps/customer/node_modules'],platform:'browser',format:'iife',define:{global:'globalThis','process.env':'{}',__DEV__:'false','process.env.NODE_ENV':'"production"'},loader:{'.js':'jsx','.ttf':'dataurl','.png':'dataurl','.jpg':'dataurl','.webp':'dataurl'},plugins:[{name:'aliases',setup(b){
+b.onLoad({filter:/^blur-web$/,namespace:'preview'},()=>({contents:`export {default as BlurView} from ${JSON.stringify(blurPath)}`,resolveDir:root,loader:'js'}));
+b.onResolve({filter:/^react-native$/},()=>({path:customerRequire.resolve('react-native-web')}));
+b.onResolve({filter:/^expo-blur$/},()=>({path:'blur-web',namespace:'preview'}));
+b.onResolve({filter:/^expo-router$/},()=>({path:root+'/apps/customer/test/stubs/expo-router.ts'}));
+b.onResolve({filter:/^\.\/AppBar$/},()=>({path:root+'/apps/customer/test/stubs/app-bar.tsx'}));
+b.onResolve({filter:/\/(firebase|useAuth|useCustomerHome|vehicle-service|job-service|home-service|catalogue-service|paper-service|dev-garage-loader)$/},()=>({path:dir+'/mocks.ts'}));
+}}]});
