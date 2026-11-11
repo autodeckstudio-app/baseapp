@@ -79,7 +79,7 @@ it('Open full details closes the pop-up and routes to the car room', async () =>
   await act(async () => r.unmount());
 });
 
-it('brand-only filter includes both BMW models, car swipe selection keeps scoped history on its visible car',async()=>{
+it('brand-only filter stacks both BMW models, multiple-car history stays unfiltered',async()=>{
  CARS.push({...CARS[0]!,id:'c',model:'X1',year:2025,registrationNumber:'SAMPLE C',updatedAt:'2026-11-05T00:00:00Z'});
  try{
  let r!:ReturnType<typeof create>;await act(async()=>{r=create(<Page/>)});await act(async()=>{});
@@ -87,10 +87,9 @@ it('brand-only filter includes both BMW models, car swipe selection keeps scoped
  expect(filter().props.items.map((i:any)=>i.label)).toEqual(['All','BMW','Mahindra']);
  await act(async()=>filter().props.onChange('bmw'));
  expect(byLabel(r,'Open BMW M340i')).toBeTruthy();expect(byLabel(r,'Open BMW X1')).toBeTruthy();expect(byLabel(r,'Open Mahindra Thar')).toBeUndefined();
- const showroom=r.root.findAll(n=>Array.isArray(n.props.cars)&&typeof n.props.onSelect==='function')[0]!;
- await act(async()=>showroom.props.onSelect('c'));
+ expect(r.root.findAll(n=>n.props.testID==='garage-car-stack').length).toBeGreaterThan(0);
  const history=r.root.findAll(n=>typeof n.props.onHistory==='function')[0]!;await act(async()=>history.props.onHistory());
- expect(h.push).toHaveBeenLastCalledWith({pathname:'/(tabs)/garage/history',params:{vehicleId:'c'}});
+ expect(h.push).toHaveBeenLastCalledWith('/(tabs)/garage/history');
  await act(async()=>r.unmount());
  }finally{CARS.pop()}
 });

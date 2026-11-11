@@ -11,6 +11,8 @@ await build({entryPoints:[dir+'/entry.tsx'],bundle:true,jsx:'automatic',outfile:
 b.onLoad({filter:/^blur-web$/,namespace:'preview'},()=>({contents:`export {default as BlurView} from ${JSON.stringify(blurPath)}`,resolveDir:root,loader:'js'}));
 b.onResolve({filter:/^react-native$/},()=>({path:customerRequire.resolve('react-native-web')}));
 b.onResolve({filter:/^expo-blur$/},()=>({path:'blur-web',namespace:'preview'}));
+b.onResolve({filter:/^expo-image-picker$/},()=>({path:'image-picker',namespace:'preview'}));
+b.onLoad({filter:/^image-picker$/,namespace:'preview'},()=>({contents:'export const launchImageLibraryAsync=()=>{throw new Error("LOCAL PREVIEW ONLY")};export const requestMediaLibraryPermissionsAsync=async()=>({granted:false});',loader:'js'}));
 b.onResolve({filter:/^expo-router$/},()=>({path:root+'/apps/customer/test/stubs/expo-router.ts'}));
 b.onResolve({filter:/^\.\/AppBar$/},()=>({path:root+'/apps/customer/test/stubs/app-bar.tsx'}));
 b.onResolve({filter:/\/(firebase|useAuth|useCustomerHome|vehicle-service|job-service|home-service|catalogue-service|paper-service|dev-garage-loader)$/},()=>({path:dir+'/mocks.ts'}));

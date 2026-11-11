@@ -1,0 +1,11 @@
+import {Linking,View} from 'react-native';
+import{Icon,useExperienceTheme}from'@autodeck/ui/native';
+import {Pane,Row,T} from './kit';
+import type{ManufacturerFacts}from'../lib/reference-manufacturer-facts';
+/** Original card geometry; source-backed product USPs, never inferred studio promises. */
+export function ProductFactRows({facts}:{facts:ManufacturerFacts}){
+ const{colors}=useExperienceTheme();const visual=Boolean(facts.highlights?.length);
+ return <View style={{gap:10}}><Pane pad="gap">
+  {visual?<View style={{gap:22}}><View style={{gap:8}}><T role="caption" tone="tertiary">WHAT IT IS</T><T style={{fontSize:18,lineHeight:26,fontWeight:'500'}}>{facts.rows[0]?.value}</T></View><View style={{height:1,backgroundColor:colors.borderSubtle}}/><View style={{flexDirection:'row',flexWrap:'wrap',gap:16}}>{facts.highlights!.map(h=><View key={h.text} style={{width:'46%',gap:10}}><View style={{width:36,height:36,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:colors.accentHaze}}><Icon name={h.icon} size={20} color={colors.accent}/></View><T style={{fontSize:14,lineHeight:20,fontWeight:'500'}}>{h.text}</T></View>)}</View><View style={{height:1,backgroundColor:colors.borderSubtle}}/><View style={{gap:10}}><T role="caption" tone="tertiary">WHERE IT APPLIES</T><View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{facts.surfaces?.map(surface=><View key={surface} style={{paddingHorizontal:11,paddingVertical:7,borderRadius:999,borderWidth:1,borderColor:colors.borderSubtle,backgroundColor:colors.accentHaze}}><T role="caption">{surface}</T></View>)}</View></View>{facts.rows.filter(r=>!['What it is','What it does','Where it applies'].includes(r.label)).map(row=><View key={row.label} style={{gap:6}}><T role="caption" tone="tertiary">{row.label}</T><T>{row.value}</T></View>)}</View>:facts.rows.map((row,i)=><Row key={row.label} title={<T role="caption" tone="tertiary">{row.label}</T>} detail={<T role="body">{row.value}</T>} last={i===facts.rows.length-1}/>)}
+ </Pane><Row title={<T role="caption" tone="secondary">Product details · {new URL(facts.source).hostname.replace(/^www\./,'')}</T>} onPress={()=>void Linking.openURL(facts.source)} last/></View>;
+}

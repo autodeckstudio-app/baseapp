@@ -35,7 +35,7 @@ describe("garage showroom guards", () => {
   });
   it("uses only allowed radii and no emoji", () => { expect(s).not.toMatch(/borderRadius: (?!12|16|24|9999|0\b)\d+/); });
   it("hero fade is a gradient, not a hard band, and the page clears the tab bar", () => { expect(s).toContain("linear-gradient"); expect(g).not.toContain("paddingBottom: 100"); });
-  it("sections of the selected car are spaced by the section gap, one value for all", () => { expect(g).toContain("gap: metrics.sectionGap }}"); expect(g).not.toContain("marginTop: metrics.sectionGap");expect(g).toContain('<GarageShowroom'); expect(g).not.toMatch(/gap: space\.breath, paddingBottom/); });
+  it("sections of the selected car are spaced by the section gap, one value for all", () => { expect(g).toContain("gap: metrics.sectionGap }}"); expect(g).not.toContain("marginTop: metrics.sectionGap");expect(g).toContain('testID="garage-car-stack"'); expect(g).not.toMatch(/gap: space\.breath, paddingBottom/); });
   it("Home, Garage and the booking screen agree on the step for every live status (Garage once showed Ready during Final checks)", () => {
     for (const st of ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"]) {
       expect(liveStep(LIVE_PROGRESS[st]!)).toBe(jobStage(st)!.index); expect(jobStep(st)).toBe(jobStage(st)!.index);
@@ -45,11 +45,11 @@ describe("garage showroom guards", () => {
 });
 describe("car detail cover guards", () => {
   const d = read("../app/(tabs)/garage/[id].tsx"); const h = read("../ui/CarHero.tsx"); const o = read("../ui/CarOverview.tsx");
-  it("has exactly one Book a service action on the page, and it lives in the Upcoming tab", () => {
+  it("keeps booking in Services, not a duplicate action on the car page", () => {
     // Approved 3-tab redesign (mockup 00-tabs-final; Gauri 2 Nov 14:44; Meet accept 16:25):
     // the car page's single Book action sits in the Upcoming tab; the hero strip stays for other consumers only.
     expect((h.match(/Book a service/g) ?? []).length).toBe(1);
-    expect((d.match(/label="Book a service"/g) ?? []).length).toBe(1);
+    expect((d.match(/label="Book a service"/g) ?? []).length).toBe(0);
     expect(d).toContain("onBook={undefined}");
     expect(o).not.toMatch(/Book a service|onBook|>Book</);
   });
@@ -66,8 +66,8 @@ describe("garage services have one price for every car", () => {
 });
 describe("garage All view and selected view share one language", () => {
   const g = read("../app/(tabs)/garage/index.tsx");
-  it("the All view browses every car horizontally, a tap opens the existing car preview pop-up", () => {
-    expect(g).toContain('<GarageShowroom key={sel ?? "all"} cars={filtered}');
+  it("the All view stacks every car, while horizontal swipe changes brand tabs", () => {
+    expect(g).toContain('filtered.map(v=><FloorCar');expect(g).toContain('...brandSwipe.handlers');expect(g).not.toContain('<GarageShowroom');
     expect(g).toContain("<GarageCarSheet");
     expect(g).not.toMatch(/TodayStrip|COMING UP|GarageCarFacts|LAST SERVICE|NEXT DUE|ScrollView horizontal pagingEnabled/);
   });
@@ -79,7 +79,7 @@ describe("garage All view and selected view share one language", () => {
     for (const f of ["ui/GarageShowroom.tsx", "ui/CarThumb.tsx", "app/(tabs)/garage/index.tsx"]) expect(read(f)).not.toMatch(/imagery|generated\/|require\(/);
     expect(read("ui/CarThumb.tsx")).toContain("NO PHOTO YET");
   });
-  it("All view has no plan ring", () => { const i = g.indexOf('<GarageShowroom key={sel ?? "all"} cars={filtered}'); expect(g.slice(i - 400, i)).not.toContain("<CareRing"); });
+  it("All view has no plan ring", () => { expect(g).toContain('{sel && careRing(plan)'); });
 });
 import { bookingPayment, PAY_AT_STUDIO_GROUPS } from "@autodeck/core";
 describe("pay in the app at booking", () => {

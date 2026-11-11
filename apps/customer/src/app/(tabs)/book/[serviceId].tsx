@@ -189,7 +189,7 @@ export default function BookServiceScreen() {
 
 
       <View style={{ gap: space.line }}>
-        <Kicker>Pick a time</Kicker>
+        <Kicker>Choose a date</Kicker>
         {dayMissed ? <T role="caption" tone="secondary">No free time {day === "weekend" ? "this weekend" : day} for this service. Showing the earliest day instead.</T> : null}
         {slotsError ? <Notice title="Can't load times" body="Check your connection and try again." action={<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /> : null}
         {slotsLoading ? (

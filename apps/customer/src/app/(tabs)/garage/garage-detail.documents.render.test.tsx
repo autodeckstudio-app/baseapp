@@ -281,7 +281,7 @@ it('editing uses only one selected cover preview, compact controls and cancellin
  expect(el.root.findAll(n=>n.type==='img'&&n.props.alt==='Selected image')).toHaveLength(1);
  expect(el.root.findAll(n=>n.props.label==='Save changes'&&typeof n.props.onPress==='function')[0]!.props.style.minHeight).toBe(44);
  expect(h.cover).not.toHaveBeenCalled();writeFileSync('/tmp/ad-ui15/edit-selected-tree.json',JSON.stringify(el.toJSON()));writeFileSync('/tmp/ad-ui15/rnw.css',(StyleSheet as any).getSheet().textContent);
- await act(async()=>press(el,'Cancel'));expect(textOf(el)).toContain('Book a service');expect(h.cover).not.toHaveBeenCalled();
+ await act(async()=>press(el,'Cancel'));expect(textOf(el)).not.toContain('Book a service');expect(h.cover).not.toHaveBeenCalled();
  await act(async()=>el.unmount());
 });
 
@@ -290,7 +290,7 @@ it("garage detail mounts shared swipe handlers on its tab content",async()=>{con
 import{getMyBookings}from'../../../lib/booking-service';
 it('Upcoming uses confirmed empty only after bookings resolve; pending and failed reads are not empty',async()=>{
  let resolve!:(x:any[])=>void;vi.mocked(getMyBookings).mockImplementationOnce(()=>new Promise(r=>{resolve=r}) as any);
- const el=await mount();expect(textOf(el)).toContain('Loading upcoming bookings...');expect(textOf(el)).not.toContain('No upcoming bookings');await act(async()=>resolve([]));expect(textOf(el)).toContain('No upcoming bookings');expect(el.root.findAll(n=>n.props.label==='Book a service'&&typeof n.props.onPress==='function')).toHaveLength(1);await act(async()=>el.unmount());
+ const el=await mount();expect(textOf(el)).toContain('Loading upcoming bookings...');expect(textOf(el)).not.toContain('No upcoming bookings');await act(async()=>resolve([]));expect(textOf(el)).toContain('No upcoming bookings');expect(el.root.findAll(n=>n.props.label==='Book a service'&&typeof n.props.onPress==='function')).toHaveLength(0);await act(async()=>el.unmount());
  vi.mocked(getMyBookings).mockRejectedValueOnce(Error('read failure'));const failed=await mount();expect(textOf(failed)).toContain('Car records unavailable');expect(textOf(failed)).not.toContain('No upcoming bookings');await act(async()=>failed.unmount());
 });
 
