@@ -73,7 +73,7 @@ export default function AccountantPage() {
           <section className="ax-panel" aria-label="Invoices">
             <span className="ax-label">Invoices ({data.invoices.length})</span>
             <table className="ax-table"><thead><tr><th>Number</th><th>Issued</th><th>Customer</th><th>Status</th><th>Tax</th><th>Total</th></tr></thead>
-              <tbody>{data.invoices.map((i) => <tr key={i.id}><td>{i.invoiceNumber}</td><td>{formatDate(i.issuedAt)}</td><td>{i.customerName ?? "-"}</td><td>{i.status}</td><td>{formatPaise(i.tax)} ({i.taxRatePercent}%)</td><td>{formatPaise(i.total)}</td></tr>)}</tbody></table>
+              <tbody>{data.invoices.map((i) => <tr key={i.id}><td>{i.invoiceNumber}</td><td>{formatDate(i.issuedAt)}</td><td>{i.customerName ?? "-"}</td><td>{i.status}</td><td>{formatPaise(i.tax)} ({i.taxRatePercent}%)</td><td>{formatPaise(i.total)}{i.roundOffPaise ? <small> (round off {formatPaise(i.roundOffPaise)})</small> : null}</td></tr>)}</tbody></table>
           </section>
           <section className="ax-panel" aria-label="Payments">
             <span className="ax-label">Payments ({data.payments.length})</span>

@@ -106,3 +106,5 @@ describe("buildInvoice — reconciliation (Phase 5B P1-9)", () => {
     expect(invoice.subtotal - invoice.discount + invoice.tax).toBe(invoice.total);
   });
 });
+
+it.each([2108955,2108949])('new nearest-rupee snapshot%s preserves tax and explains signed round off',async exact=>{const {roundedCombinedBreakdown}=await import('@autodeck/core');const raw={...calculatePrice({basePrice:exact,serviceCategory:'washing',vehicleCategory:'hatchback',vehicleCategoryPricing:[],taxRatePercent:0}),tax:0,total:exact};const pb=roundedCombinedBreakdown(raw);const inv=buildInvoice(baseParams(pb));expect(inv.total%100).toBe(0);expect(inv.tax).toBe(0);expect(inv.roundOffPaise).toBe(inv.total-exact);expect(inv.subtotal-inv.discount+inv.tax+inv.roundOffPaise!).toBe(inv.total);expect(raw.total).toBe(exact)});

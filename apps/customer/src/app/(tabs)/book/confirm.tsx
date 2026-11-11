@@ -488,6 +488,7 @@ export default function BookingConfirmScreen() {
       ) : service?.priceOnRequest !== true && breakdown ? (
         <Sheet>
           <SheetTotal label="Total" value={rupees(visitTotal ?? breakdown.total)} />
+          {combinedMode&&combinedReview?.breakdown.roundOffPaise?<SheetLine small label="Round off" value={rupees(combinedReview.breakdown.roundOffPaise)}/>:null}
           {combinedMode&&giftCode?<SheetLine small label="Gifted service" value="Included"/>:combinedMode&&washOn?<SheetLine small label="Membership wash" value="Included"/>:null}
           <SheetDivider />
           {combinedMode&&(giftCode||washOn)?null:<SheetLine small label="Base" value={rupees(breakdown.basePrice)} />}
