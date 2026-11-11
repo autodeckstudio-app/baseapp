@@ -120,6 +120,7 @@ export function BookingPanels({ booking, job, service, bayName, onError, compact
           <div className="kv"><span>Membership</span><span className="ax-data" style={{ color: "var(--ad-premium)" }}>-{formatPaise(pb.membershipDiscount)}</span></div>
         )}
         <div className="kv"><span>Subtotal</span><span className="ax-data">{formatPaise(pb.subtotal)}</span></div>
+        {pb.roundOffPaise ? <div className="kv"><span>Round off</span><span className="ax-data">{formatPaise(pb.roundOffPaise)}</span></div> : null}
         {pb.tax > 0 ? <div className="kv"><span>{pb.taxDescription}</span><span className="ax-data">{formatPaise(pb.tax)}</span></div> : null}
         <div className="kv"><span>Total</span><span className="ax-data" style={{ color: "var(--ad-text-primary)" }}>{formatPaise(pb.total)}</span></div>
         </>)}

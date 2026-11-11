@@ -16,5 +16,5 @@ export function applyPickupFees(pb: PriceBreakdown, pickup: number, drop: number
   const subtotal = pb.subtotal - pb.pickupFee - pb.dropFee + pickup + drop;
   const discount = pb.membershipDiscount ?? 0;
   const tax = calculateTax(subtotal - discount, pb.taxRatePercent);
-  return { ...pb, pickupFee: pickup, dropFee: drop, subtotal, tax, total: subtotal - discount + tax };
+  return { ...pb, ...(pb.roundOffPaise!==undefined?{roundOffPaise:0}:{}), pickupFee: pickup, dropFee: drop, subtotal, tax, total: subtotal - discount + tax };
 }

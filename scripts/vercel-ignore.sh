@@ -5,6 +5,11 @@
 # Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
 # Unknown base commit or git error => build (safe default).
 app="$1"
+# Code-only persistence branch: no app or website build, never a release.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = backup/customer-local-20261111 ]; then
+  printf 'source backup branch: SKIP (%s)\n' "$app"
+  exit 0
+fi
 # This isolated emulator-fixture branch never builds or promotes a website/app.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = qa/quote-fixtures-20261106 ]; then
   printf 'isolated fixture QA branch: SKIP (%s)\n' "$app"

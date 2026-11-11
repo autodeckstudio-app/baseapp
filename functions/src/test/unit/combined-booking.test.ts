@@ -10,3 +10,11 @@ it.each([-1,NaN,Infinity,1.5,Number.MAX_SAFE_INTEGER+1])('invalid total %s rejec
 it('no selected transport leaves service snapshot intact; free is not a missing quote',()=>{const r=reviewCombinedBooking(pb,{version:2,paymentChoice:'full',expectedTotalPaise:118000,expectedPayNowPaise:118000},null,scope);expect(r.transport).toBe(null);expect(r.breakdown).toBe(pb);expect(()=>reviewCombinedBooking(pb,review,null,scope)).toThrow()});
 
 it("benefit sub-gates cannot activate with the main candidate",()=>{expect(combinedGiftCheckoutEnabled()).toBe(false);expect(combinedWashCheckoutEnabled()).toBe(false);expect(combinedPickupBenefitEnabled()).toBe(false);expect(combinedQuoteCheckoutEnabled()).toBe(false)});
+
+it('version3 nearest total and20percent preserve exact tax with explicit round off; v2 remains immutable',()=>{
+ const r=reviewCombinedBooking(pb,{...review,version:3,expectedTotalPaise:126900,expectedPayNowPaise:25400},quote,scope);expect(r.breakdown).toMatchObject({subtotal:107500,tax:19350,roundOffPaise:50,total:126900});expect(r.payment).toEqual({version:3,choice:'advance20',totalPaise:126900,payNowPaise:25400,balancePaise:101500});expect(reviewCombinedBooking(pb,review,quote,scope).breakdown.total).toBe(126850);
+});
+it('version3 distinction21092total→4218advance,16874balance and stale rounded quote refusal',()=>{
+ const p={...pb,basePrice:2109200,subtotal:2109200,tax:0,taxRatePercent:0,total:2109200};const v:CombinedBookingReview={version:3,paymentChoice:'advance20',expectedTotalPaise:2109200,expectedPayNowPaise:421800};expect(reviewCombinedBooking(p,v,null,scope).payment.balancePaise).toBe(1687400);expect(()=>reviewCombinedBooking(p,{...v,expectedPayNowPaise:421900},null,scope)).toThrow('changed');
+});
+it('version3 zero rounded advance on positive total refuses rather than creating an unpayable hold',()=>{const p={...pb,subtotal:100,tax:0,taxRatePercent:0,total:100};expect(()=>reviewCombinedBooking(p,{version:3,paymentChoice:'advance20',expectedTotalPaise:100,expectedPayNowPaise:0},null,scope)).toThrow('Choose full');expect(reviewCombinedBooking(p,{version:3,paymentChoice:'full',expectedTotalPaise:100,expectedPayNowPaise:100},null,scope).payment.payNowPaise).toBe(100)});

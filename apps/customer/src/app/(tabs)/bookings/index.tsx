@@ -1,3 +1,4 @@
+import { cancellationErrorMessage } from "../../../lib/cancellation-error";
 import { metrics } from "../../../lib/metrics";
 import { bookingSections } from "../../../lib/booking-sections";
 import { useExperienceTheme } from "@autodeck/ui/native";
@@ -167,7 +168,7 @@ export default function BookingsScreen() {
       if(ownerRef.current!==scope)return;setConfirmCancel(false);
       await load();
     } catch (err) {
-      if(ownerRef.current===scope)setCancelError("We could not cancel this booking. Refresh before trying again.");
+      if(ownerRef.current===scope)setCancelError(cancellationErrorMessage(err));
     } finally {
       if(ownerRef.current===scope){cancelLock.current=false;setCancelBusy(false);}
     }
@@ -229,7 +230,7 @@ export default function BookingsScreen() {
               }
             />
           ) : null}
-          {cancelError ? <Notice title="Not cancelled" body={cancelError} /> : null}
+          {cancelError ? <Notice title="Cancellation not confirmed" body={cancelError} /> : null}
           {upcoming.length > 1 ? <View style={{ gap: space.line }}><SectionTitle>Also coming up</SectionTitle>{list(upcoming.slice(1))}</View> : null}
         </View>
       ) : null}

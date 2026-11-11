@@ -24,7 +24,7 @@ export function projectInvoice(i: Invoice) {
     id: i.id, invoiceNumber: i.invoiceNumber, status: i.status, issuedAt: i.issuedAt, voidedAt: i.voidedAt,
     customerName: i.customerSnapshot?.name ?? null,
     lineItems: (i.lineItems ?? []).map((l) => ({ quantity: l.quantity, unitPrice: l.unitPrice, total: l.total })),
-    subtotal: i.subtotal, discount: i.discount, taxRatePercent: i.taxRatePercent, tax: i.tax, total: i.total, currency: i.currency,
+    ...(i.roundOffPaise!==undefined?{roundOffPaise:i.roundOffPaise}:{}), subtotal: i.subtotal, discount: i.discount, taxRatePercent: i.taxRatePercent, tax: i.tax, total: i.total, currency: i.currency,
   };
 }
 export function projectPayment(p: Payment) {

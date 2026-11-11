@@ -1,4 +1,4 @@
-import {writeFileSync} from "node:fs";
+import {mkdirSync,writeFileSync} from "node:fs";
 import {StyleSheet} from "react-native";
 import type * as PaperService from "../../../lib/paper-service";
 // Mounted-screen proof for the document-add retry path: the REAL
@@ -274,7 +274,7 @@ it('editing uses only one selected cover preview, compact controls and cancellin
  await act(async()=>press(el,'Edit vehicle'));
  expect(textOf(el)).toContain('Edit vehicle');expect(textOf(el)).not.toContain('Book a service');
  const uploader=()=>el.root.findAll(n=>n.props.label==='Replace car photo'&&typeof n.props.onChange==='function')[0]!;
- expect(uploader().props.compact).toBe(true);writeFileSync('/tmp/ad-ui15/edit-saved-tree.json',JSON.stringify(el.toJSON()));
+ expect(uploader().props.compact).toBe(true);mkdirSync('/tmp/ad-ui15',{recursive:true});writeFileSync('/tmp/ad-ui15/edit-saved-tree.json',JSON.stringify(el.toJSON()));
  const blob=new Blob(['fixture'],{type:'image/jpeg',lastModified:0});
  await act(async()=>uploader().props.onChange([{blob,type:'image/jpeg'}]));
  expect(el.root.findAll(n=>n.type==='img'&&n.props.alt==='New car photo')).toHaveLength(0);

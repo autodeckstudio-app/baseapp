@@ -143,5 +143,10 @@
       ]
     }
   ],
-  "ignoreCommand": "bash ../../scripts/vercel-ignore.sh site"
+  "ignoreCommand": "bash ../../scripts/vercel-ignore.sh site",
+  "git": {
+    "deploymentEnabled": {
+      "backup/customer-local-20261111": false
+    }
+  }
 }

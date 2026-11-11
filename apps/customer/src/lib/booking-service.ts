@@ -39,7 +39,7 @@ type GetAvailabilityInput = {
 type GetAvailabilityOutput = { slots: AvailableSlot[] };
 
 type CreateBookingInput = {
-  combinedReview?:{version:2;paymentChoice:'advance20'|'full';expectedTotalPaise:number;expectedPayNowPaise:number;transport?:{quoteId:string;kind:'pickup'|'drop'|'both';lat:number;lng:number;address:string;requestedPickupTime?:string}};
+  combinedReview?:{version:2|3;paymentChoice:'advance20'|'full';expectedTotalPaise:number;expectedPayNowPaise:number;transport?:{quoteId:string;kind:'pickup'|'drop'|'both';lat:number;lng:number;address:string;requestedPickupTime?:string}};
   serviceId: string;
   /** More services in the same visit (up to 4). The server prices them and checks they fit one slot. */
   extraServiceIds?: string[];
