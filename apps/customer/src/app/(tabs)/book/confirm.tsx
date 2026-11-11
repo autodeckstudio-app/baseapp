@@ -1,3 +1,4 @@
+import { CombinedPaymentSheet } from "../../../ui/CombinedPaymentSheet";
 import{COMBINED_CHECKOUT_ENABLED,COMBINED_GIFT_CHECKOUT_ENABLED,COMBINED_WASH_CHECKOUT_ENABLED,COMBINED_PICKUP_BENEFIT_ENABLED,washCombinedServicePreview,giftCombinedServicePreview,combinedCheckoutReview}from'../../../lib/combined-checkout';
 import{CombinedPaymentOptions}from'../../../ui/CombinedPaymentOptions';
 import type{CombinedPaymentChoice}from'@autodeck/core';
@@ -91,6 +92,7 @@ export default function BookingConfirmScreen() {
   // Pay online holds the slot for 15 minutes. The booking exists (pending) while the customer pays or retries.
   const [held, setHeld] = useState<{ bookingId: string; paymentJobId: string | null; expiresAt: number; pickupSent: boolean; advance?: boolean; expectedAdvancePaise?: number } | null>(null);
   const [advanceSheet, setAdvanceSheet] = useState(false);
+  const [combinedSheetKey,setCombinedSheetKey]=useState<string|null>(null);
   const [now, setNow] = useState(() => Date.now());
   const heldOver = held !== null && now >= held.expiresAt;
   const payBusy = useRef(false);
@@ -198,6 +200,16 @@ export default function BookingConfirmScreen() {
   if(combinedMode&&breakdown){try{combinedAdvance=reviewedCombined("advance20")}catch{ /* selection/action remains unavailable until the quote is complete */ }}
 
   const combinedNoPayment=combinedMode&&combinedReview?.payment.totalPaise===0;
+  const combinedReviewKey=combinedMode&&combinedChoice&&combinedReview?JSON.stringify([scopeKey,giftCode,washOn?washOffer?.membershipId:null,freePickupMembership,combinedReview.review,combinedReview.payment]):null;
+  useEffect(()=>{setCombinedSheetKey(null)},[combinedReviewKey]);
+  const combinedSheetVisible=combinedSheetKey!==null&&combinedSheetKey===combinedReviewKey;
+  function openCombinedReview(){if(held||combinedNoPayment){void handleConfirm();return;}if(combinedReviewKey)setCombinedSheetKey(combinedReviewKey);}
+  function payCombinedReview(){
+    if(!combinedSheetVisible||booking||confirmBusy.current||!combinedReviewKey)return;
+    if(pickupKind&&!currentPickupQuote(transportDraft,Date.now())){setCombinedSheetKey(null);setBookError("Recheck pickup/drop before paying. The quote expired.");return;}
+    void handleConfirm();
+  }
+
 
   function choosePickupKind(k: "pickup" | "drop" | "both") {
     actionGeneration.current++;
@@ -554,9 +566,10 @@ export default function BookingConfirmScreen() {
       {heldOver ? <Notice title="Time ran out" body="Payment was not completed in 15 minutes, so the slot was released. Pick a time again." action={<Button label="Pick a time" onPress={() => router.back()} />} /> : null}
 
       <View style={{ gap: space.breath }}>
-        {heldOver ? null : <Button label={combinedNoPayment?"Confirm booking":combinedMode?combinedChoice==="advance20"?"Pay 20% & confirm":"Pay in full & confirm":service?.priceOnRequest === true ? "Request quote" : payNow || held ? "Pay & confirm" : advanceDue ? "Pay 20% advance" : "Confirm booking"} busy={booking} disabled={booking||combinedMode&&(!combinedReview||!combinedNoPayment&&!combinedChoice)} onPress={() => { if (!combinedMode&&advanceDue && !held) { setAdvanceSheet(true); return; } void handleConfirm(); }} />}
+        {heldOver ? null : <Button label={combinedNoPayment?"Confirm booking":combinedMode?combinedChoice==="advance20"?"Pay 20% & confirm":"Pay in full & confirm":service?.priceOnRequest === true ? "Request quote" : payNow || held ? "Pay & confirm" : advanceDue ? "Pay 20% advance" : "Confirm booking"} busy={booking} disabled={booking||combinedMode&&(!combinedReview||!combinedNoPayment&&!combinedChoice)} onPress={() => { if(combinedMode){openCombinedReview();return;} if (!combinedMode&&advanceDue && !held) { setAdvanceSheet(true); return; } void handleConfirm(); }} />}
         {held && !heldOver ? <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>Your booking is pending until the payment goes through.</T> : <Button label="Go back" kind="quiet" onPress={() => router.back()} />}
       </View>
+      {combinedMode&&combinedChoice&&combinedReview&&!combinedNoPayment?<CombinedPaymentSheet visible={combinedSheetVisible} serviceName={service?.name??"Service"} choice={combinedChoice} totalPaise={combinedReview.payment.totalPaise} payNowPaise={combinedReview.payment.payNowPaise} balancePaise={combinedReview.payment.balancePaise} busy={booking} onPay={payCombinedReview} onGoBack={()=>setCombinedSheetKey(null)}/>:null}
       {!combinedMode&&ADVANCE_SPLIT_ENABLED && advancePreview ? (
         <AdvancePaymentSheet
           visible={advanceSheet}
