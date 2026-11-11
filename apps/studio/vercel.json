@@ -37,5 +37,10 @@
         }
       ]
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "backup/customer-local-20261111": false
+    }
+  }
 }
