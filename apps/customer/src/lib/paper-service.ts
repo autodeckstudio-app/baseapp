@@ -65,7 +65,13 @@ async function uploadAndFinalize(res: UploadReply, photo?: PaperPhotoPayload | n
   // Finalize is guarded and idempotent, so a replay of an already-decided record is a no-op.
   if (photo && (uploaded || res.photoState === "uploaded")) {
     const finalize = httpsCallable<{ paperId: string }, { status: string }>(functions, "finalizeMyPaper");
-    await finalize({ paperId: res.id });
+    try {
+      await finalize({ paperId: res.id });
+    } catch {
+      // submit already returned a real record id and the bytes landed. A failed
+      // check is not a failed add: never invite a second record or claim verification.
+      throw new Error("Saved, but automatic checks did not finish. Open Documents to review the saved photo. Do not add it again.");
+    }
   }
   return uploaded;
 }

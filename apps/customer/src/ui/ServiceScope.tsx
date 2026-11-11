@@ -4,14 +4,14 @@ import type {Service} from '@autodeck/core';
 import {space} from '@autodeck/ui/theme';
 import {Icon,useExperienceTheme} from '@autodeck/ui/native';
 import {Button,Kicker,Notice,Pane,Row,T} from './kit';
-import {showcaseFor} from '../lib/showcase';
+import {serviceScopeItems} from '../lib/service-scope-items';
 import {manufacturerInfo} from '../lib/manufacturer-info';
 /** Only catalogue-authored scope; confirmation questions never become promises. One visual scope section on the service page: Includes, one care tip and a single Ask-the-studio row - booking FAQ questions are no longer listed on the page. */
 export function ServiceScope({service,onAsk,careTip,placement="combined",showContactAndTip=true}:{placement?:"combined"|"description"|"details";showContactAndTip?:boolean;service:Pick<Service,'name'|'description'|'category'> & Partial<Pick<Service,'brand'>>;onAsk:()=>void;careTip?:string|null}) {
  const {colors}=useExperienceTheme();const[productOpen,setProductOpen]=useState(false);
  useEffect(()=>setProductOpen(false),[service.name,service.brand,service.description]);
  const maker=manufacturerInfo({...service,brand:service.brand??null});
- const scope=showcaseFor(service).included;
+ const scope=serviceScopeItems(service);
  return <>
   {placement!=="details"&&scope.length ? <View style={{gap:space.breath}}>{placement==="combined"?<Kicker>What's included</Kicker>:null}<Pane pad="gap">{scope.map((text,i)=>{
    // Only a "Where used:" line renders as chips, and each chip is a complete

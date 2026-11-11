@@ -3,6 +3,11 @@ import { catalogueAsset } from "./catalogue-assets";
 import { serviceHomeImages } from "./service-home-images";
 import type { ServiceHomeKey } from "@autodeck/core";
 const generated: Record<string, ImageSourcePropType> = {
+  "Tyres & rubber": require("../../assets/imagery/service-types/tyres-rubber.jpg"),
+  "Lights & plastics": require("../../assets/imagery/service-types/lights-plastics.jpg"),
+  "Film aftercare": require("../../assets/imagery/service-types/film-aftercare.jpg"),
+  "Paint sealant": require("../../assets/imagery/service-types/paint-sealant.jpg"),
+  Ceramic: require("../../assets/imagery/service-types/ceramic.jpg"),
   PPF: require("../../assets/imagery/service-types/ppf.jpg"),
   PPS: require("../../assets/imagery/service-types/pps.jpg"),
   "Colour PPF": require("../../assets/imagery/service-types/colour-ppf.jpg"),
@@ -14,6 +19,7 @@ const serviceIds: Record<string, string> = {
   Leather: "menu-coat-leather",
   "Wheels & trim": "menu-coat-wheels",
   "Trim restoration": "menu-coat-trim",
+  Maintenance: "svc-coating-maintenance",
   "Exterior wash": "menu-wash-exterior",
   "Interior cleaning": "menu-wash-interior",
   "Complete wash": "menu-wash-full",
