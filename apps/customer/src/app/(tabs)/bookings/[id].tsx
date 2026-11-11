@@ -1,3 +1,4 @@
+import { cancellationErrorMessage } from "../../../lib/cancellation-error";
 import { JobWorkAndCoverage } from "../../../ui/JobWorkAndCoverage";
 import{verifyMyCustomerDocId}from'../../../lib/auth-service';
 import { bookingPayOutcomeMessage } from "../../../lib/native-pay-core";
@@ -322,7 +323,7 @@ export default function BookingDetailScreen() {
       if (!result.cancellationPending) setBooking((prev) => (prev ? { ...prev, status: "CANCELLED" } : prev));
       setConfirmingCancel(false);
     } catch (err) {
-      if(current())setActionError(err instanceof Error && err.message && !/^(internal|functions)/i.test(err.message) ? err.message : "We could not cancel this booking. Check your connection and try again, or call the studio.");
+      if(current())setActionError(cancellationErrorMessage(err));
     } finally {
       if(current()){actionLock.current=false;setCancelling(false);}
     }
