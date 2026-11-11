@@ -57,6 +57,7 @@ export function ServicePrice(p: ServicePriceProps) {
               {priceBreakdown.membershipDiscount !== null && priceBreakdown.membershipDiscount > 0 ? (
                 <Row title="Membership discount" trailing={<T role="data" tone="premium">-{rupees(priceBreakdown.membershipDiscount)}</T>} />
               ) : null}
+              {priceBreakdown.roundOffPaise ? <Row title="Round off" trailing={<T role="data">{rupees(priceBreakdown.roundOffPaise)}</T>} /> : null}
               {priceBreakdown.tax > 0 ? <Row title={priceBreakdown.taxDescription} trailing={<T role="data">{rupees(priceBreakdown.tax)}</T>} /> : null}
 </View>:null}
             </Pane>

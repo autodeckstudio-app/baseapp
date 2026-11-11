@@ -216,6 +216,7 @@ export default function InvoiceScreen() {
               <T role="body" style={{ color: INK }}>{rupees(invoice.tax)}</T>
             </View>
           ) : null}
+          {invoice.roundOffPaise ? <View style={{ flexDirection: "row", justifyContent: "space-between" }}><T role="body" style={{ color: INK_SOFT }}>Round off</T><T role="body" style={{ color: INK }}>{rupees(invoice.roundOffPaise)}</T></View> : null}
           <View style={{ height: 1, backgroundColor: HAIRLINE, marginVertical: 4 }} />
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
             <T role="heading" style={{ color: INK }}>Total</T>

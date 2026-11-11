@@ -13,6 +13,7 @@ export type BookingStatus =
 // All amounts in paise (INR * 100). No floating-point arithmetic for money.
 // (doc06 §6.4 Historical Truth Rule 1)
 export interface PriceBreakdown {
+  roundOffPaise?: number; // new checkout only: signed explicit total adjustment, never tax
   vehicleCategory: VehicleCategory; // snapshotted — drives scopeAdjustment
   basePrice: number; // paise — service.basePrice at snapshot time
   scopeAdjustment: number; // paise — vehicle category adjustment (V1); scope adjustment (V2+)

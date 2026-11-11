@@ -5,6 +5,7 @@
 // walk-in Job; this function has no dependency on either — it only needs the
 // resolved PriceBreakdown and the entity references to stamp onto the Invoice.
 import type { ApprovalRequest, Invoice, PriceBreakdown, VehicleSnapshot } from "@autodeck/core";
+import { roundedCombinedBreakdown } from "@autodeck/core";
 import { calculateTax } from "./pricing.js";
 import { randomUUID } from "node:crypto";
 
@@ -58,6 +59,7 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
     vehicleSnapshot,
     customerSnapshot,
   } = params;
+  if(pb.roundOffPaise!==undefined){const rounded=roundedCombinedBreakdown(pb);if(rounded.total!==pb.total||rounded.roundOffPaise!==pb.roundOffPaise)throw Error("Invoice round-off snapshot needs review.");}
   const now = new Date().toISOString();
 
   // Line items reflect the immutable price snapshot
@@ -124,7 +126,7 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
   // Without additional work this is exactly the snapshot's total and tax.
   // With it, total == job.totalAmount and tax is whatever closes subtotal - discount + tax = total.
   const total = pb.total + additionalGross;
-  const tax = additionalGross === 0 ? pb.tax : total - (subtotal - discount);
+  const tax = additionalGross === 0 ? pb.tax : total - (subtotal - discount) - (pb.roundOffPaise ?? 0);
 
   return {
     ...(params.coveredMembershipId ? { settlementKind: "membership_covered" as const, membershipId: params.coveredMembershipId } : {}),
@@ -148,6 +150,7 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
     taxRatePercent: pb.taxRatePercent,
     taxDescription: pb.taxDescription,
     tax,
+    ...(pb.roundOffPaise!==undefined?{roundOffPaise:pb.roundOffPaise}:{}),
     total, // must equal the job's totalAmount — never editable
     currency: pb.currency,
     status: paymentId || params.coveredMembershipId ? "issued" : "draft",

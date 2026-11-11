@@ -86,6 +86,7 @@ export interface Payment {
 }
 
 export interface Invoice {
+  roundOffPaise?: number; // subtotal - discount + tax + roundOffPaise = total
   paymentAllocation?:{advancePaymentId:string;advancePaidPaise:number;settlementPaymentId:string;settlementPaidPaise:number};
   issuerSnapshot?: InvoiceIssuer;
   pdfStatus?: "ready" | "needs_office_review";
