@@ -1,4 +1,3 @@
-import{useEffect}from'react';
 import{Modal,Pressable,ScrollView,View}from'react-native';
 import{useExperienceTheme}from'@autodeck/ui/native';
 import type{CombinedPaymentChoice}from'@autodeck/core';
@@ -7,7 +6,6 @@ export type CombinedPaymentSheetProps={visible:boolean;serviceName:string;summar
 /** Presentation only. Caller supplies its checked snapshot verbatim. No rounding or payment policy lives here. */
 export function CombinedPaymentSheet(p:CombinedPaymentSheetProps){
  const{colors,name}=useExperienceTheme();
- useEffect(()=>{const doc=(globalThis as {document?:{addEventListener:(t:string,l:(e:{key?:string})=>void)=>void;removeEventListener:(t:string,l:(e:{key?:string})=>void)=>void}}).document;if(!p.visible||!doc)return;const close=(e:{key?:string})=>{if(e.key==='Escape'&&!p.busy)p.onGoBack()};doc.addEventListener('keydown',close);return()=>doc.removeEventListener('keydown',close)},[p.visible,p.busy,p.onGoBack]);
  const back=()=>{if(!p.busy)p.onGoBack()};
  return <Modal visible={p.visible} transparent animationType="fade" onRequestClose={back}><View style={{flex:1,justifyContent:'flex-end',backgroundColor:colors.scrim}}><Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={back} style={{flex:1}}/><ScrollView accessibilityViewIsModal style={{maxHeight:'90%',flexGrow:0}} contentContainerStyle={{alignSelf:'center',width:'100%',maxWidth:640,padding:20,paddingBottom:28,gap:12,borderTopLeftRadius:26,borderTopRightRadius:26,borderWidth:1,borderColor:colors.borderSubtle,backgroundColor:name==='light'?'#FAF9F6':colors.surfaceElevated}}>
  <T role="title">Review payment</T><T role="bodyStrong">{p.serviceName}</T>

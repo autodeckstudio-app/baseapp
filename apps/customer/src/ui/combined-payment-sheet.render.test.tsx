@@ -14,16 +14,12 @@ it.each(['advance20','full']as const)('new sheet preserves supplied %s amounts a
  await act(async()=>r.root.findAllByType(Pressable).filter((n:any)=>n.props.accessibilityLabel==='Go back').at(-1).props.onPress());expect(back).toHaveBeenCalledTimes(1);
  await act(async()=>r.unmount());
 });
-it.each([true,false])('new sheet busy=%s gates backdrop, hardware close, Escape and action disabled state',async busy=>{
- let r:any;const back=vi.fn(),listener=vi.fn(),remove=vi.fn();const old=(globalThis as any).document;
- (globalThis as any).document={addEventListener:listener,removeEventListener:remove};
- try{
-  await act(async()=>{r=create(<CombinedPaymentSheet {...props} busy={busy} onGoBack={back}/>)});
-  const button=r.root.findByType(Button);expect(button.props.disabled).toBe(busy);expect(button.props.busy).toBe(busy);
-  await act(async()=>r.root.findAllByType(Pressable).find((n:any)=>n.props.accessibilityLabel==='Go back').props.onPress());
-  await act(async()=>r.root.findByType('modal').props.onRequestClose());
-  await act(async()=>listener.mock.calls[0]![1]({key:'Escape'}));expect(back).toHaveBeenCalledTimes(busy?0:3);
-  await act(async()=>r.unmount());expect(remove).toHaveBeenCalledWith('keydown',listener.mock.calls[0]![1]);
- }finally{(globalThis as any).document=old}
+it.each([true,false])('new sheet busy=%s gates backdrop, modal close and action disabled state',async busy=>{
+ let r:any;const back=vi.fn();
+ await act(async()=>{r=create(<CombinedPaymentSheet {...props} busy={busy} onGoBack={back}/>)});
+ const button=r.root.findByType(Button);expect(button.props.disabled).toBe(busy);expect(button.props.busy).toBe(busy);
+ await act(async()=>r.root.findAllByType(Pressable).find((n:any)=>n.props.accessibilityLabel==='Go back').props.onPress());
+ await act(async()=>r.root.findByType('modal').props.onRequestClose());expect(back).toHaveBeenCalledTimes(busy?0:2);
+ await act(async()=>r.unmount());
 });
 it('new sheet hidden renders no content or keydown listener',async()=>{let r:any;await act(async()=>{r=create(<CombinedPaymentSheet {...props} visible={false}/>)});expect(r.toJSON()).toBeNull();await act(async()=>r.unmount())});
