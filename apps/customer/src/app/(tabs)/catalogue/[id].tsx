@@ -1,4 +1,3 @@
-import{ServiceNextAction}from"../../../ui/ServiceNextAction";
 import { SERVICE_HOMES } from "@autodeck/core";
 import { servicePlacement } from "../../../lib/services-navigation";
 import{ServicePageHeader}from"../../../ui/ServicePageHeader";
@@ -133,7 +132,7 @@ export type ServiceDetailViewProps = {
 export function ServiceDetailView(props: ServiceDetailViewProps) {
   const { id, service, loading, loadError, reviews, pricingVehicle, selectedCategory, needsCarType, priceLoading, priceError, priceBreakdown, onRetry } = props;
   const router = useRouter();
-  // Inline booking action follows the price; never overlays scrollable content.
+  // Separate labelled booking action follows the price; duration stays informational.
   const [focused, setFocused] = useState(true);
   useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
   const { colors } = useExperienceTheme();
@@ -172,8 +171,8 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         </Pane>
 
         <>
-        <ServiceScope placement="description" service={service} onAsk={()=>router.push({pathname:"/(tabs)/help",params:{service:service.name}})}/>
-        <ServiceVisitFacts nextAction={focused&&showBar?<ServiceNextAction label={service.priceOnRequest===true?(service.category==="garage"||service.category==="modifications"?"Inspection":"Get quote"):"Book now"} disabled={!service.priceOnRequest&&priceBreakdown===null} onPress={()=>service.priceOnRequest===true&&SERVICE_QUOTE_JOURNEY_READY?router.push({pathname:"/(tabs)/quote-request",params:{serviceId:String(id)}}):router.push(`/(tabs)/book/${id}`)}/>:null} duration={dur} warranty={service.warrantyLabel} brand={service.brand} quote={service.priceOnRequest===true} inspection={service.priceOnRequest===true&&(service.category==='garage'||service.category==='modifications')}/>
+        <ServiceScope placement="description" showContactAndTip={false} service={service} onAsk={()=>router.push({pathname:"/(tabs)/help",params:{service:service.name}})}/>
+        <ServiceVisitFacts duration={dur} warranty={service.warrantyLabel} brand={service.brand} quote={service.priceOnRequest===true} inspection={service.priceOnRequest===true&&(service.category==='garage'||service.category==='modifications')}/>
 
         {service.priceEstimate ? <T role="caption" tone="tertiary">Estimated price. The studio confirms the final amount before work starts.</T> : null}
 
@@ -215,11 +214,13 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
 
         <Kicker>{service.category==='garage'?'Price':'Price for your car'}</Kicker><ServicePrice inlineBreakdown {...{category:service.category,priceOnRequest:service.priceOnRequest===true,needsCarType,hasCar:!!pricingVehicle.vehicle,carSizeKnown:!!selectedCategory,loading:priceLoading,error:priceError,breakdown:priceBreakdown,onRetry,onHelp:()=>router.navigate("/(tabs)/help"),onGarage:()=>router.push(pricingVehicle.vehicle?`/(tabs)/garage/${pricingVehicle.vehicle.id}`:"/(tabs)/garage/add")}}/>
 
+        {focused&&showBar?<Button label={service.priceOnRequest===true?(service.category==="garage"||service.category==="modifications"?"Inspection":"Get quote"):"Book now"} disabled={!service.priceOnRequest&&priceBreakdown===null} onPress={()=>service.priceOnRequest===true&&SERVICE_QUOTE_JOURNEY_READY?router.push({pathname:"/(tabs)/quote-request",params:{serviceId:String(id)}}):router.push(`/(tabs)/book/${id}`)}/>:null}
+
         </>
 
         <>
 
-        <ServiceScope placement="details" service={service} careTip={(service.careTips ?? [])[0] ?? null} onAsk={() => router.push({ pathname: "/(tabs)/help", params: { service: service.name } })} />
+        <ServiceScope placement="details" showContactAndTip={false} service={service} careTip={(service.careTips ?? [])[0] ?? null} onAsk={() => router.push({ pathname: "/(tabs)/help", params: { service: service.name } })} />
 
         {sc.benefits.length > 0 ? (
           <View style={{ gap: space.breath }}>
