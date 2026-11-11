@@ -1,4 +1,6 @@
 import{useEffect,useState}from'react';
+import {serviceManufacturerFacts} from '../lib/service-manufacturer-facts';
+import {ProductFactRows} from './ProductFactRows';
 import {Linking,View} from 'react-native';
 import type {Service} from '@autodeck/core';
 import {space} from '@autodeck/ui/theme';
@@ -10,6 +12,8 @@ import {manufacturerInfo} from '../lib/manufacturer-info';
 export function ServiceScope({service,onAsk,careTip,placement="combined",showContactAndTip=true}:{placement?:"combined"|"description"|"details";showContactAndTip?:boolean;service:Pick<Service,'name'|'description'|'category'> & Partial<Pick<Service,'brand'>>;onAsk:()=>void;careTip?:string|null}) {
  const {colors}=useExperienceTheme();const[productOpen,setProductOpen]=useState(false);
  useEffect(()=>setProductOpen(false),[service.name,service.brand,service.description]);
+ const productFacts=serviceManufacturerFacts({...service,brand:service.brand??null});
+ if(service.brand&&['ceramic','coating','ppf'].includes(service.category))return placement==='details'?null:productFacts?<ProductFactRows facts={productFacts}/>:null;
  const maker=manufacturerInfo({...service,brand:service.brand??null});
  const scope=serviceScopeItems(service);
  return <>

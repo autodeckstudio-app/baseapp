@@ -24,7 +24,8 @@ import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import type { ServiceJob } from "@autodeck/core";
 import { metrics } from "../../../lib/metrics";
 import { Button, Loading, Notice, Plate, Screen, T } from "../../../ui/kit";
-import { GarageShowroom } from "../../../ui/GarageShowroom";
+import { FloorCar } from "../../../ui/GarageShowroom";
+import { useSegmentSwipe } from "../../../lib/segment-swipe";
 import { garageBrands, garageCarsForBrand } from "../../../lib/garage-brands";
 import { CareRing } from "../../../ui/CareRing";
 import { careRing, jobStep, liveJobForCar, LIVE_STEP_NAMES, readyBy } from "../../../lib/garage-live";
@@ -58,7 +59,6 @@ export default function GarageScreen() {
   const [archiveActionBusy,setArchiveActionBusy]=useState<string|null>(null);
   const [photoCleanupNote,setPhotoCleanupNote]=useState<string|null>(null);
   const [deleting, setDeleting] = useState<Vehicle | null>(null);
-  const [focusedCarId, setFocusedCarId] = useState<string | null>(null);
   const [pick, setPick] = useState<string | null>(mock ? q.pick ?? null : null);
   // Car preview pop-up: tapping a stacked card opens it; tapping outside closes it.
   const [sheet, setSheet] = useState<Vehicle | null>(null);
@@ -127,6 +127,8 @@ export default function GarageScreen() {
 
   const { height: winH } = useWindowDimensions();
 
+  const brandKeys = garageBrands([...(vehicles ?? [])].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt))).map(b=>b.key);
+  const brandSwipe = useSegmentSwipe(["__all__", ...brandKeys], () => pick ?? "__all__", key => setPick(key === "__all__" ? null : key));
   if (!vehicles && !error && !ownerMissing) return <Loading label="Opening your garage" />;
   const open = (v: Vehicle) => {
     void setActiveVehicle(v.id);
@@ -162,7 +164,7 @@ export default function GarageScreen() {
   const brands = garageBrands(list);
   const sel = pick && brands.some((b) => b.key === pick) ? pick : null;
   const filtered = garageCarsForBrand(list, sel);
-  const one = sel ? filtered.find(v => v.id === focusedCarId) ?? filtered[0] ?? null : null;
+  const one = sel && filtered.length === 1 ? filtered[0] ?? null : null;
   const light = themeName === "light";
   const chip = (v: Vehicle) => dueChip(jobs, v.id, svcMap);
   // One chip on the card, nothing below it: Track when the car is in the bay, otherwise what is due.
@@ -175,7 +177,7 @@ export default function GarageScreen() {
   return (
     <Screen appBar="Garage">
       <SceneIntro eyebrow="Your garage" compact title="Your cars"/>
-      <View testID="garage-swipe-area" style={{ gap: 20, minHeight: Math.max(winH - 240, 400) }}>
+      <View testID="garage-swipe-area" {...brandSwipe.handlers} style={[{ gap: 20, minHeight: Math.max(winH - 240, 400) }, brandSwipe.style]}>
       {ownerUnknown ? <Notice title="Couldn't confirm your profile" body="Try again in a moment." action={<Button icon="refresh" label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {ownerLinking ? <Notice title="Your profile is waiting to be claimed" body="Claim it to see your cars, bookings and bills here." action={<Button label="Claim your profile" onPress={() => router.push("/(auth)/claim")} />} /> : null}
       {ownerNoProfile ? <Notice title="We couldn't find your profile" body="Try again in a moment." action={<Button icon="refresh" label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
@@ -191,8 +193,10 @@ export default function GarageScreen() {
         </View>
       ) : filtered.length > 0 ? (
         <View style={{ gap: metrics.sectionGap }}>
-          <GarageShowroom key={sel ?? "all"} cars={filtered} onSelect={setFocusedCarId} onOpen={open} chipFor={overlay} />
-          {careRing(plan) ? (() => {
+          <View testID="garage-car-stack" style={{gap:20}}>
+            {filtered.map(v=><FloorCar key={v.id} car={v} width="100%" height={metrics.heroTall+40} focused onOpen={open} chip={overlay(v)}/>)}
+          </View>
+          {sel && careRing(plan) ? (() => {
             const r = careRing(plan)!;
             return (
               <View style={{ ...glassPane(light), padding: metrics.cardPad, flexDirection: "row", alignItems: "center", gap: 14 }}>

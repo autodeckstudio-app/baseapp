@@ -210,11 +210,11 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
           <T role="caption" tone="tertiary">Illustrative photo, not studio work.</T>
         </View> : null}
 
-        <Kicker>{service.category==='garage'?'Price':'Price for your car'}</Kicker>
-        <T role="caption" tone="secondary">{[`Estimated service time: ${dur}`,service.brand&&service.brand!=="Add-ons"?`Product brand: ${service.brand}`:null,service.warrantyLabel?`Listed warranty: ${service.warrantyLabel}`:null].filter(Boolean).join(" · ")}. The studio confirms timing before work starts.</T>
-        <ServicePrice inlineBreakdown {...{category:service.category,priceOnRequest:service.priceOnRequest===true,needsCarType,hasCar:!!pricingVehicle.vehicle,carSizeKnown:!!selectedCategory,loading:priceLoading,error:priceError,breakdown:priceBreakdown,onRetry,onHelp:()=>router.navigate("/(tabs)/help"),onGarage:()=>router.push(pricingVehicle.vehicle?`/(tabs)/garage/${pricingVehicle.vehicle.id}`:"/(tabs)/garage/add")}}/>
+        {!service.priceOnRequest?<Kicker>{service.category==='garage'?'Price':'Price for your car'}</Kicker>:null}
+        {!service.brand||!['ceramic','ppf','coating'].includes(service.category)?<T role="caption" tone="secondary">{[`Estimated service time: ${dur}`,service.brand&&service.brand!=="Add-ons"?`Product brand: ${service.brand}`:null,service.warrantyLabel?`Listed warranty: ${service.warrantyLabel}`:null].filter(Boolean).join(" · ")}</T>:null}
+        <ServicePrice inlineBreakdown compactQuote {...{category:service.category,priceOnRequest:service.priceOnRequest===true,needsCarType,hasCar:!!pricingVehicle.vehicle,carSizeKnown:!!selectedCategory,loading:priceLoading,error:priceError,breakdown:priceBreakdown,onRetry,onHelp:()=>router.navigate("/(tabs)/help"),onGarage:()=>router.push(pricingVehicle.vehicle?`/(tabs)/garage/${pricingVehicle.vehicle.id}`:"/(tabs)/garage/add")}}/>
 
-        {focused&&showBar?<Button label={service.priceOnRequest===true?(service.category==="garage"||service.category==="modifications"?"Inspection":"Get quote"):"Book now"} disabled={!service.priceOnRequest&&priceBreakdown===null} onPress={()=>service.priceOnRequest===true&&SERVICE_QUOTE_JOURNEY_READY?router.push({pathname:"/(tabs)/quote-request",params:{serviceId:String(id)}}):router.push(`/(tabs)/book/${id}`)}/>:null}
+        {focused&&showBar?<Button kind={service.priceOnRequest===true?"quiet":"primary"} label={service.priceOnRequest===true?(service.category==="garage"||service.category==="modifications"?"Inspection":"Get quote"):"Book now"} disabled={!service.priceOnRequest&&priceBreakdown===null} onPress={()=>service.priceOnRequest===true&&SERVICE_QUOTE_JOURNEY_READY?router.push({pathname:"/(tabs)/quote-request",params:{serviceId:String(id)}}):router.push(`/(tabs)/book/${id}`)}/>:null}
 
         </>
 

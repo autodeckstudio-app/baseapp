@@ -554,7 +554,7 @@ export default function VehicleDetailScreen() {
     ...(verifiedProtections.length > 0 ? [{ label: "Protection", value: `${verifiedProtections.length} ${verifiedProtections.length === 1 ? "protection" : "protections"} on file` }] : []),
   ];
 
-  const bookServiceAction = <Button label="Book a service" style={{marginTop:0,marginBottom:0}} onPress={()=>router.navigate("/(tabs)/catalogue")}/>;
+
   return (
     <Screen
       header={
@@ -613,7 +613,7 @@ export default function VehicleDetailScreen() {
             ))}
           </Pane>
         </View>
-      ) : !editing ? bookingsReady===contextKey ? <Notice title="No upcoming bookings" body="Choose a service for your next visit." action={bookServiceAction} /> : <T role="caption" tone="secondary">Loading upcoming bookings...</T> : null}
+      ) : !editing ? bookingsReady===contextKey ? <Notice title="No upcoming bookings" body="Choose your next visit from Services." /> : <T role="caption" tone="secondary">Loading upcoming bookings...</T> : null}
       {!editing && !vehicle.category ? (
         <Pane pad="inset">
           <View style={{ gap: space.line }}>
@@ -631,6 +631,7 @@ export default function VehicleDetailScreen() {
             reminders={reminders}
           /> : null}
 
+          {editing && newPhoto ? (Platform.OS === "web" ? createElement("img", { src: newPhoto.previewUrl, alt: "Selected image", style: { width: "100%", height: 160, objectFit: "cover", borderRadius: 12 } }) : <Image source={{uri:newPhoto.previewUrl}} accessibilityLabel="Selected image" style={{width:"100%",height:160,borderRadius:12}} resizeMode="cover" />) : null}
           {editing && !newPhoto && vehicle.photoUrl ? (
             <View style={{ borderRadius: 12, overflow: "hidden" }}>
               <CarThumb car={vehicle} height={160} radius={0} />
@@ -641,18 +642,20 @@ export default function VehicleDetailScreen() {
             <View style={{ gap: space.line }}>
               <>
                 <View style={{ gap: space.hair }}>
-                  <Kicker>Car photo</Kicker>
-                  <FileUploader label={vehicle.photoUrl ? "Replace car photo" : "Add car photo"} compact files={newPhoto && !(newPhoto.blob instanceof Uint8Array)?[{blob:newPhoto.blob,type:newPhoto.contentType}]:[]} nativeEnabled nativeFileCount={newPhoto?1:0} onNativeChange={fs=>{const f=fs[0];setNewPhoto(f?{blob:f.bytes,contentType:f.type,previewUrl:f.previewUri}:null);}} onChange={fs=>{const f=fs[0];setNewPhoto(f?{blob:f.blob,contentType:f.type,previewUrl:URL.createObjectURL(f.blob)}:null);}}/>
+                  <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                  <Kicker>Car photo</Kicker><View style={{flexDirection:"row",alignItems:"center",gap:4}}>
+                  <FileUploader iconOnly label={vehicle.photoUrl ? "Replace car photo" : "Add car photo"} compact files={newPhoto && !(newPhoto.blob instanceof Uint8Array)?[{blob:newPhoto.blob,type:newPhoto.contentType}]:[]} nativeEnabled nativeFileCount={newPhoto?1:0} onNativeChange={fs=>{const f=fs[0];setNewPhoto(f?{blob:f.bytes,contentType:f.type,previewUrl:f.previewUri}:null);}} onChange={fs=>{const f=fs[0];setNewPhoto(f?{blob:f.blob,contentType:f.type,previewUrl:URL.createObjectURL(f.blob)}:null);}}/>
 
-                  {VEHICLE_IMAGE_REMOVE_ENABLED && vehicle.photoUrl && !newPhoto ? <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><IconAction kind="delete" label="Remove car photo" onPress={() => setRemoveImage("cover")} /><T role="caption" tone="tertiary">Remove the saved car photo</T></View> : null}
+                  {VEHICLE_IMAGE_REMOVE_ENABLED && vehicle.photoUrl && !newPhoto ? <IconAction kind="delete" label="Remove car photo" onPress={() => setRemoveImage("cover")} /> : null}</View></View>
                   <T role="caption" tone="tertiary">{newPhoto ? "New photo ready. It uploads when you save." : "Choose a JPEG, PNG or WebP to replace the photo."}</T>
                 </View>
               </>
               <>
                 <View style={{ gap: space.hair }}>
-                  <Kicker>RC photo</Kicker>
-                  <FileUploader label={vehicle.rcPhotoUrl ? "Replace RC photo" : "Add RC photo"} compact files={newRc && !(newRc.blob instanceof Uint8Array) ? [{ blob: newRc.blob, type: newRc.contentType }] : []} nativeEnabled nativeFileCount={newRc?1:0} onNativeChange={fs=>{const f=fs[0];setNewRc(f?{blob:f.bytes,contentType:f.type}:null);}} onChange={(fs) => { const f = fs[0]; setNewRc(f ? { blob: f.blob, contentType: f.type } : null); }} />
-                  {VEHICLE_IMAGE_REMOVE_ENABLED && vehicle.rcPhotoUrl && !newRc ? <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><IconAction kind="delete" label="Remove RC photo" onPress={() => setRemoveImage("rc")} /><T role="caption" tone="tertiary">Remove the saved RC photo</T></View> : null}
+                  <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                  <Kicker>RC photo</Kicker><View style={{flexDirection:"row",alignItems:"center",gap:4}}>
+                  <FileUploader iconOnly label={vehicle.rcPhotoUrl ? "Replace RC photo" : "Add RC photo"} compact files={newRc && !(newRc.blob instanceof Uint8Array) ? [{ blob: newRc.blob, type: newRc.contentType }] : []} nativeEnabled nativeFileCount={newRc?1:0} onNativeChange={fs=>{const f=fs[0];setNewRc(f?{blob:f.bytes,contentType:f.type}:null);}} onChange={(fs) => { const f = fs[0]; setNewRc(f ? { blob: f.blob, contentType: f.type } : null); }} />
+                  {VEHICLE_IMAGE_REMOVE_ENABLED && vehicle.rcPhotoUrl && !newRc ? <IconAction kind="delete" label="Remove RC photo" onPress={() => setRemoveImage("rc")} /> : null}</View></View>
                   <T role="caption" tone="tertiary">{newRc ? "RC photo ready. It uploads when you save." : vehicle.rcPhotoUrl ? "An RC photo is on file. Choose a JPEG, PNG or WebP to replace it." : "Add a clear photo of the registration certificate (JPEG, PNG or WebP)."}</T>
                 </View>
               </>
@@ -686,9 +689,9 @@ export default function VehicleDetailScreen() {
 
       {!editing ? <>
         <View testID="garage-detail-actions" style={{flexDirection:"row",alignItems:"center",flexWrap:"wrap",gap:12}}>
-          {upcomingBookings.length>0?bookServiceAction:null}
-          <LinkAction label="Edit vehicle" onPress={()=>setEditing(true)}/>
-          <LinkAction label="Remove from garage" onPress={()=>setConfirmingArchive(true)}/>
+
+          <View style={{flexDirection:"row",alignItems:"center",gap:4}}><IconAction kind="edit" label="Edit vehicle" onPress={()=>setEditing(true)}/><T role="caption" tone="secondary">Edit vehicle</T></View>
+          <View style={{flexDirection:"row",alignItems:"center",gap:4}}><IconAction kind="delete" label="Remove from garage" onPress={()=>setConfirmingArchive(true)}/><T role="caption" tone="secondary">Remove from garage</T></View>
         </View>
         {confirmingArchive?<Notice title="Remove from your garage?" body="Service history stays on record." action={<View style={{flexDirection:"row",flexWrap:"wrap",gap:12}}><Button label="Yes, remove" kind="danger" onPress={()=>void handleArchiveConfirmed()}/><Button label="Keep it" kind="quiet" onPress={()=>setConfirmingArchive(false)}/></View>}/>:null}
       </>:null}

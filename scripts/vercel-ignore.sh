@@ -5,6 +5,60 @@
 # Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
 # Unknown base commit or git error => build (safe default).
 app="$1"
+# Approved Customer-only second batch, exact parent + path contract.
+release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = preview/garage-all-stack-20261112 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$release_parent" = d91fdada8398aaa830a58e9e124f069c612c6702 ]; }; then
+  release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$release_root" ] || exit 0
+  cd "$release_root" || exit 0
+  [ "$release_parent" = d91fdada8398aaa830a58e9e124f069c612c6702 ] || { printf 'Customer second batch wrong parent: SKIP (%s)\n' "$app"; exit 0; }
+  release_paths="$(git diff --name-only "$release_parent" HEAD 2>/dev/null)" || exit 0
+  expected_paths=$(cat <<'CUSTOMER_SECOND_BATCH_PATHS'
+apps/customer/src/app/(tabs)/book/[serviceId].tsx
+apps/customer/src/app/(tabs)/book/confirm.tsx
+apps/customer/src/app/(tabs)/catalogue/[id].tsx
+apps/customer/src/app/(tabs)/garage/[id].tsx
+apps/customer/src/app/(tabs)/garage/garage-detail.documents.render.test.tsx
+apps/customer/src/app/(tabs)/garage/garage-sheet.render.test.tsx
+apps/customer/src/app/(tabs)/garage/index.tsx
+apps/customer/src/lib/car-photo-source.test.ts
+apps/customer/src/lib/catalogue-local-polish.test.ts
+apps/customer/src/lib/day-surfaces.test.ts
+apps/customer/src/lib/garage-live.test.ts
+apps/customer/src/lib/no-sparkle.test.ts
+apps/customer/src/lib/reference-manufacturer-facts.ts
+apps/customer/src/lib/service-manufacturer-facts.json
+apps/customer/src/lib/service-manufacturer-facts.test.ts
+apps/customer/src/lib/service-manufacturer-facts.ts
+apps/customer/src/lib/vercel-second-batch-guard.test.ts
+apps/customer/src/ui/BookingTerms.tsx
+apps/customer/src/ui/NavIcon.tsx
+apps/customer/src/ui/ProductFactRows.tsx
+apps/customer/src/ui/ReferenceProductDetail.tsx
+apps/customer/src/ui/ServicePrice.tsx
+apps/customer/src/ui/ServiceScope.tsx
+apps/customer/src/ui/ServiceTimePicker.tsx
+apps/customer/src/ui/design-contract.test.ts
+apps/customer/src/ui/inputs.tsx
+apps/customer/src/ui/preview-navigation.render.test.tsx
+apps/customer/src/ui/reference-product-detail.render.test.tsx
+apps/customer/src/ui/service-detail-booking.render.test.tsx
+apps/customer/src/ui/service-price-clean.render.test.tsx
+apps/customer/src/ui/uc-review-contract.test.ts
+docs/customer-second-batch-20261112.md
+scripts/vercel-ignore.sh
+scripts/visual/customer-correction/build.mjs
+scripts/visual/customer-correction/entry.tsx
+scripts/visual/customer-correction/gauri-controls.tsx
+scripts/visual/customer-correction/icon-options.tsx
+CUSTOMER_SECOND_BATCH_PATHS
+)
+  [ "$release_paths" = "$expected_paths" ] || { printf 'Customer second batch unexpected paths: SKIP (%s)\n' "$app"; exit 0; }
+  case "$app" in
+    customer) printf 'Pinned Customer second batch: BUILD\n'; exit 1 ;;
+    *) printf 'Pinned Customer second batch: SKIP (%s)\n' "$app"; exit 0 ;;
+  esac
+fi
 # Pinned Customer correction batch. Shared dependency pin must not redeploy sibling apps.
 release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = fix/customer-garage-paper-20261112 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$release_parent" = 03c929b74ddbfc0cd63e09e04df308cc661a0562 ]; }; then

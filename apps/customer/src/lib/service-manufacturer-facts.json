@@ -1,0 +1,1721 @@
+[
+  {
+    "brand": "Kovalent",
+    "names": [
+      "Borophene"
+    ],
+    "source": "https://kovalentcoatings.com/products/borophene-coating/",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Boron nitride-based nano ceramic coating."
+      },
+      {
+        "label": "What it does",
+        "value": "Adds deep gloss and water repellency, with resistance to heat and chemicals."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Painted vehicle surfaces."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Deep gloss"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "shield",
+        "text": "Heat resistance"
+      },
+      {
+        "icon": "shield",
+        "text": "Chemical resistance"
+      }
+    ],
+    "surfaces": [
+      "Paintwork"
+    ]
+  },
+  {
+    "brand": "Kovalent",
+    "names": [
+      "Graphene"
+    ],
+    "source": "https://kovalentcoatings.com/products/graphene/",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Ceramic coating with graphene reduced oxide, silicon dioxide and silicon carbide."
+      },
+      {
+        "label": "What it does",
+        "value": "Adds gloss and water repellency while resisting UV, heat and environmental contaminants."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Automotive paintwork."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Deep gloss"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "sun",
+        "text": "UV resistance"
+      },
+      {
+        "icon": "shield",
+        "text": "Heat resistance"
+      }
+    ],
+    "surfaces": [
+      "Paintwork"
+    ]
+  },
+  {
+    "brand": "Kovalent",
+    "names": [
+      "Prolong"
+    ],
+    "source": "https://kovalentcoatings.com/products/prolong-9h-ceramic-coating/",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Ceramic coating made with silica nanoparticles and silicon carbide."
+      },
+      {
+        "label": "What it does",
+        "value": "Creates a glossy, hydrophobic surface with resistance to environmental contaminants."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Automotive painted surfaces."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Gloss enhancement"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "shield",
+        "text": "Contaminant resistance"
+      }
+    ],
+    "surfaces": [
+      "Paintwork"
+    ]
+  },
+  {
+    "brand": "Kovalent",
+    "names": [
+      "Glass"
+    ],
+    "source": "https://kovalentcoatings.com/products/glass/",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Transparent protective coating for glass."
+      },
+      {
+        "label": "What it does",
+        "value": "Creates a water-repellent surface that helps maintain clarity."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Vehicle glass."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "check",
+        "text": "Transparent finish"
+      },
+      {
+        "icon": "check",
+        "text": "Clarity retained"
+      }
+    ],
+    "surfaces": [
+      "Vehicle glass"
+    ]
+  },
+  {
+    "brand": "Kovalent",
+    "names": [
+      "Restore"
+    ],
+    "source": "https://kovalentcoatings.com/products/restore/",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Ceramic coating for leather, vinyl and plastic."
+      },
+      {
+        "label": "What it does",
+        "value": "Preserves a natural matte finish with water repellency and UV resistance."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Leather, vinyl, plastic and exterior trim."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Natural matte finish"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "sun",
+        "text": "UV resistance"
+      }
+    ],
+    "surfaces": [
+      "Leather",
+      "Vinyl",
+      "Plastic trim"
+    ]
+  },
+  {
+    "brand": "Fireball",
+    "names": [
+      "Aegis"
+    ],
+    "source": "https://www.fireballkorea.com/ceramic-coating/aegis",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Ceramic coating with a blend of SiO\u2082 and titanium."
+      },
+      {
+        "label": "What it does",
+        "value": "Adds deep gloss and water beading, with resistance to UV and rain."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Vehicle exterior surfaces."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Deep gloss"
+      },
+      {
+        "icon": "wash",
+        "text": "Water beading"
+      },
+      {
+        "icon": "sun",
+        "text": "UV resistance"
+      },
+      {
+        "icon": "shield",
+        "text": "Rain resistance"
+      }
+    ],
+    "surfaces": [
+      "Vehicle exterior"
+    ]
+  },
+  {
+    "brand": "Fireball",
+    "names": [
+      "Butterfly"
+    ],
+    "source": "https://www.fireballkorea.com/ceramic-coating/butterfly",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Single-layer ceramic coating."
+      },
+      {
+        "label": "What it does",
+        "value": "Provides protection designed for a range of weather conditions."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Vehicle exterior surfaces."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Single-layer protection"
+      },
+      {
+        "icon": "check",
+        "text": "All-weather formulation"
+      }
+    ],
+    "surfaces": [
+      "Vehicle exterior"
+    ]
+  },
+  {
+    "brand": "Fireball",
+    "names": [
+      "Butterfly Graphene"
+    ],
+    "source": "https://www.fireballkorea.com/ceramic-coating/butterfly-graphene",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Butterfly-derived coating infused with graphene oxides and oils."
+      },
+      {
+        "label": "What it does",
+        "value": "Forms a high-solids protective coating; Fireball specifies hardness greater than 9H."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Vehicle exterior surfaces."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Graphene-infused formula"
+      },
+      {
+        "icon": "check",
+        "text": "Over 80% solids"
+      },
+      {
+        "icon": "check",
+        "text": "Greater than 9H hardness"
+      }
+    ],
+    "surfaces": [
+      "Vehicle exterior"
+    ]
+  },
+  {
+    "brand": "Fireball",
+    "names": [
+      "Devil's Blood"
+    ],
+    "source": "https://www.fireballkorea.com/ceramic-coating/devilsblood",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Ceramic coating combining six SiO\u2082 compounds."
+      },
+      {
+        "label": "What it does",
+        "value": "Emphasises water repellency and gloss, with abrasion and environmental resistance."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Vehicle exterior surfaces."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "check",
+        "text": "Gloss enhancement"
+      },
+      {
+        "icon": "shield",
+        "text": "Abrasion resistance"
+      },
+      {
+        "icon": "shield",
+        "text": "Environmental resistance"
+      }
+    ],
+    "surfaces": [
+      "Vehicle exterior"
+    ]
+  },
+  {
+    "brand": "Fireball",
+    "names": [
+      "Dok Do"
+    ],
+    "source": "https://www.fireballkorea.com/ceramic-coating/dok-do",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Dual-layer ceramic system."
+      },
+      {
+        "label": "What it does",
+        "value": "Combines a hard base coat with a chemical-resistant, glossy top coat."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Vehicle exterior surfaces; professional installer application."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Hard base coat"
+      },
+      {
+        "icon": "check",
+        "text": "Chemical-resistant top coat"
+      },
+      {
+        "icon": "check",
+        "text": "Gloss enhancement"
+      }
+    ],
+    "surfaces": [
+      "Vehicle exterior"
+    ]
+  },
+  {
+    "brand": "Fireball",
+    "names": [
+      "Silla"
+    ],
+    "source": "https://www.fireballkorea.com/ceramic-coating/silla",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Corrosion-resistant ceramic coating."
+      },
+      {
+        "label": "What it does",
+        "value": "Provides chemical resistance against salt, rust and grime."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Vehicle exterior surfaces."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "shield",
+        "text": "Corrosion resistance"
+      },
+      {
+        "icon": "shield",
+        "text": "Salt resistance"
+      },
+      {
+        "icon": "shield",
+        "text": "Grime resistance"
+      }
+    ],
+    "surfaces": [
+      "Vehicle exterior"
+    ]
+  },
+  {
+    "brand": "Fireball",
+    "names": [
+      "Talon"
+    ],
+    "source": "https://www.fireballkorea.com/ceramic-coating/talon",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Heat-resistant SiO\u2082 ceramic coating for wheels."
+      },
+      {
+        "label": "What it does",
+        "value": "Enhances gloss and colour while making dirt easier to wash away."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Wheels."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "shield",
+        "text": "Heat resistance"
+      },
+      {
+        "icon": "check",
+        "text": "Gloss & colour enhancement"
+      },
+      {
+        "icon": "check",
+        "text": "Easier wheel cleaning"
+      }
+    ],
+    "surfaces": [
+      "Wheels"
+    ]
+  },
+  {
+    "brand": "Fireball",
+    "names": [
+      "RAPTOR"
+    ],
+    "source": "https://www.fireballkorea.com/new-coating-items/raptor",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Ceramic coating for wheels and trim."
+      },
+      {
+        "label": "What it does",
+        "value": "Adds lustre and hydrophobic water repellency."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Wheels, plastics and exterior trim."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Gloss enhancement"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      }
+    ],
+    "surfaces": [
+      "Wheels",
+      "Plastics",
+      "Exterior trim"
+    ]
+  },
+  {
+    "brand": "Fireball",
+    "names": [
+      "RED EYE"
+    ],
+    "source": "https://www.fireballkorea.com/new-coating-items/red-eye",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Quick-curing ceramic coating."
+      },
+      {
+        "label": "What it does",
+        "value": "Creates a water-repellent surface with strong beading."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Vehicle exterior surfaces."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "wash",
+        "text": "Water beading"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "check",
+        "text": "Quick-curing formulation"
+      }
+    ],
+    "surfaces": [
+      "Vehicle exterior"
+    ]
+  },
+  {
+    "brand": "Fireball",
+    "names": [
+      "HERA"
+    ],
+    "source": "https://www.fireballkorea.com/new-coating-items/hera",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Ceramic coating with a smooth, soft surface finish."
+      },
+      {
+        "label": "What it does",
+        "value": "Adds water repellency and high gloss."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Vehicle exterior surfaces."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Smooth surface"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "check",
+        "text": "High gloss"
+      }
+    ],
+    "surfaces": [
+      "Vehicle exterior"
+    ]
+  },
+  {
+    "brand": "Fireball",
+    "names": [
+      "FX88"
+    ],
+    "source": "https://www.fireballkorea.com/new-coating-items/fx88",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Flexible hybrid ceramic coating."
+      },
+      {
+        "label": "What it does",
+        "value": "Enriches paint colour and depth of shine, with water repellency and resistance to temperature cycling."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Painted vehicle surfaces."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Colour depth"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "shield",
+        "text": "Temperature-cycle resistance"
+      }
+    ],
+    "surfaces": [
+      "Paintwork"
+    ]
+  },
+  {
+    "brand": "Fireball",
+    "names": [
+      "WIZARD"
+    ],
+    "source": "https://www.fireballkorea.com/new-coating-items/wizard",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Flexible hybrid nanoceramic coating."
+      },
+      {
+        "label": "What it does",
+        "value": "Adds slickness, colour depth and hydrophobic self-cleaning properties."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Painted vehicle surfaces."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Colour depth"
+      },
+      {
+        "icon": "check",
+        "text": "Surface slickness"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "check",
+        "text": "Self-cleaning properties"
+      }
+    ],
+    "surfaces": [
+      "Paintwork"
+    ]
+  },
+  {
+    "brand": "Gtechniq",
+    "names": [
+      "C1 Crystal Lacquer"
+    ],
+    "source": "https://gtechniq.com/shop/auto/ceramic-coatings/c1-crystal-lacquer/",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Chemically bonding quartz ceramic coating."
+      },
+      {
+        "label": "What it does",
+        "value": "Forms a hard crystalline film that helps resist minor wash scratches and swirl marks, bird droppings, tree sap and UV exposure."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Automotive paintwork, including matte, satin and single-stage finishes. Adds little extra gloss, helping preserve those finishes."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "shield",
+        "text": "Minor wash-scratch resistance"
+      },
+      {
+        "icon": "sun",
+        "text": "UV protection"
+      },
+      {
+        "icon": "check",
+        "text": "Bird-dropping & tree-sap resistance"
+      },
+      {
+        "icon": "check",
+        "text": "Little added gloss"
+      }
+    ],
+    "surfaces": [
+      "Paintwork",
+      "Matte & satin",
+      "Single-stage paint"
+    ]
+  },
+  {
+    "brand": "Gtechniq",
+    "names": [
+      "Crystal Serum Light"
+    ],
+    "source": "https://gtechniq.com/shop/auto/ceramic-coatings/crystal-serum-light/",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Silicon dioxide-based ceramic paint coating."
+      },
+      {
+        "label": "What it does",
+        "value": "Adds gloss and depth with resistance to swirl marks, bird droppings, UV and wash chemicals."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Painted surfaces and factory clear coats."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Gloss & depth"
+      },
+      {
+        "icon": "shield",
+        "text": "Swirl-mark resistance"
+      },
+      {
+        "icon": "sun",
+        "text": "UV resistance"
+      },
+      {
+        "icon": "shield",
+        "text": "Chemical resistance"
+      }
+    ],
+    "surfaces": [
+      "Paintwork",
+      "Factory clear coats"
+    ]
+  },
+  {
+    "brand": "Gtechniq",
+    "names": [
+      "HALOv2 Flexible Film Coating"
+    ],
+    "source": "https://gtechniq.com/shop/auto/ceramic-coatings/halo/",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Flexible protective coating for PPF and vinyl film."
+      },
+      {
+        "label": "What it does",
+        "value": "Improves dirt and water repellency and reduces the risk of UV damage without compromising film self-healing."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Gloss, satin and matte PPF and vinyl wrap."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Dirt repellency"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "sun",
+        "text": "UV protection"
+      },
+      {
+        "icon": "check",
+        "text": "Self-healing film compatible"
+      }
+    ],
+    "surfaces": [
+      "Gloss film",
+      "Satin film",
+      "Matte film",
+      "Vinyl wrap"
+    ]
+  },
+  {
+    "brand": "Gtechniq",
+    "names": [
+      "C4 Permanent Trim Restorer"
+    ],
+    "source": "https://v2.gtechniq.com/products/auto/perfect/exterior/paint/c4-permanent-trim-restorer",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Chemically bonding protective coating for trim."
+      },
+      {
+        "label": "What it does",
+        "value": "Restores faded trim and helps prevent further fading without adding an artificial gloss."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Exterior plastic trim."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Faded-trim restoration"
+      },
+      {
+        "icon": "check",
+        "text": "Fade prevention"
+      },
+      {
+        "icon": "check",
+        "text": "No artificial gloss"
+      }
+    ],
+    "surfaces": [
+      "Exterior plastic trim"
+    ]
+  },
+  {
+    "brand": "Gtechniq",
+    "names": [
+      "C5 Wheel Armour"
+    ],
+    "source": "https://v2.gtechniq.com/products/auto/perfect/exterior/paint/c5-wheel-armour",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Chemically bonding wheel coating."
+      },
+      {
+        "label": "What it does",
+        "value": "Repels brake dust and contaminants to make wheels easier to maintain."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Wheel rims and brake callipers."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Brake-dust repellency"
+      },
+      {
+        "icon": "shield",
+        "text": "Contaminant resistance"
+      },
+      {
+        "icon": "check",
+        "text": "Easier maintenance"
+      }
+    ],
+    "surfaces": [
+      "Wheel rims",
+      "Brake callipers"
+    ]
+  },
+  {
+    "brand": "CarPro",
+    "names": [
+      "CQUARTZ Fabric 2.0"
+    ],
+    "source": "https://nyc3.digitaloceanspaces.com/carpro/CARPRO_Catalogue_2026_2cba97f196.pdf",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Breathable, transparent fabric coating."
+      },
+      {
+        "label": "What it does",
+        "value": "Repels water and stains without clogging the weave or changing the feel of fabric."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Fabrics and cabriolet soft tops."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "shield",
+        "text": "Stain resistance"
+      },
+      {
+        "icon": "check",
+        "text": "Breathability retained"
+      },
+      {
+        "icon": "check",
+        "text": "Fabric feel retained"
+      }
+    ],
+    "surfaces": [
+      "Fabrics",
+      "Cabriolet soft tops"
+    ]
+  },
+  {
+    "brand": "CarPro",
+    "names": [
+      "CQUARTZ Skin"
+    ],
+    "source": "https://nyc3.digitaloceanspaces.com/carpro/CARPRO_Catalogue_2026_2cba97f196.pdf",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Specialised protective coating for film and plastics."
+      },
+      {
+        "label": "What it does",
+        "value": "Adds water and dirt repellency with UVA/UVB blockers and resistance to chemicals and salts."
+      },
+      {
+        "label": "Where it applies",
+        "value": "PPF, vinyl film, clear bra and soft or hard plastic trim."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "sun",
+        "text": "UV protection"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "check",
+        "text": "Dirt repellency"
+      },
+      {
+        "icon": "shield",
+        "text": "Chemical resistance"
+      }
+    ],
+    "surfaces": [
+      "PPF",
+      "Vinyl film",
+      "Clear bra",
+      "Plastic trim"
+    ]
+  },
+  {
+    "brand": "CarPro",
+    "names": [
+      "DQUARTZ Go"
+    ],
+    "source": "https://nyc3.digitaloceanspaces.com/carpro/CARPRO_Catalogue_2026_2cba97f196.pdf",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Nano-diamond ceramic coating."
+      },
+      {
+        "label": "What it does",
+        "value": "Helps reduce swirls and wear while adding smoothness, hydrophobicity and UV/solvent resistance."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Automotive painted surfaces."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "shield",
+        "text": "Swirl & wear resistance"
+      },
+      {
+        "icon": "check",
+        "text": "Smooth finish"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "sun",
+        "text": "UV resistance"
+      }
+    ],
+    "surfaces": [
+      "Paintwork"
+    ]
+  },
+  {
+    "brand": "CarPro",
+    "names": [
+      "DQUARTZ GForce"
+    ],
+    "source": "https://nyc3.digitaloceanspaces.com/carpro/CARPRO_Catalogue_2026_2cba97f196.pdf",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Hydrophobic glass coating using DQUARTZ nano-diamond technology."
+      },
+      {
+        "label": "What it does",
+        "value": "Helps water droplets glide off while providing wiper-abrasion, UV and chemical resistance."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Vehicle windows."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "shield",
+        "text": "Wiper-abrasion resistance"
+      },
+      {
+        "icon": "sun",
+        "text": "UV resistance"
+      },
+      {
+        "icon": "shield",
+        "text": "Chemical resistance"
+      }
+    ],
+    "surfaces": [
+      "Vehicle windows"
+    ]
+  },
+  {
+    "brand": "CarPro",
+    "names": [
+      "CQUARTZ Leather 2.0"
+    ],
+    "source": "https://nyc3.digitaloceanspaces.com/carpro/CARPRO_Catalogue_2026_2cba97f196.pdf",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Water-based coating for leather and vinyl."
+      },
+      {
+        "label": "What it does",
+        "value": "Repels water and helps resist UV, abrasion, dye transfer and stains while preserving leather colour."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Leather, including Nappa, and vinyl."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "shield",
+        "text": "Dye-transfer resistance"
+      },
+      {
+        "icon": "sun",
+        "text": "UV resistance"
+      },
+      {
+        "icon": "check",
+        "text": "Colour retained"
+      }
+    ],
+    "surfaces": [
+      "Leather",
+      "Nappa leather",
+      "Vinyl"
+    ]
+  },
+  {
+    "brand": "CarPro",
+    "names": [
+      "CQUARTZ UK 3.0"
+    ],
+    "source": "https://nyc3.digitaloceanspaces.com/carpro/CARPRO_Catalogue_2026_2cba97f196.pdf",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Third-generation CQUARTZ UK nano ceramic coating."
+      },
+      {
+        "label": "What it does",
+        "value": "Provides resistance to salt buildup and chemicals, with high temperature tolerance."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Automotive paintwork."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "shield",
+        "text": "Salt-buildup resistance"
+      },
+      {
+        "icon": "shield",
+        "text": "Chemical resistance"
+      },
+      {
+        "icon": "check",
+        "text": "High temperature tolerance"
+      }
+    ],
+    "surfaces": [
+      "Paintwork"
+    ]
+  },
+  {
+    "brand": "CarPro",
+    "names": [
+      "CQUARTZ SiC"
+    ],
+    "source": "https://nyc3.digitaloceanspaces.com/carpro/CARPRO_Catalogue_2026_2cba97f196.pdf",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Ceramic coating incorporating silicon carbide."
+      },
+      {
+        "label": "What it does",
+        "value": "Adds chemical and water-spot resistance with a smooth, deep-gloss finish."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Automotive paintwork."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "shield",
+        "text": "Chemical resistance"
+      },
+      {
+        "icon": "wash",
+        "text": "Water-spot resistance"
+      },
+      {
+        "icon": "check",
+        "text": "Smooth finish"
+      },
+      {
+        "icon": "check",
+        "text": "Deep gloss"
+      }
+    ],
+    "surfaces": [
+      "Paintwork"
+    ]
+  },
+  {
+    "brand": "CarPro",
+    "names": [
+      "CQUARTZ DLight"
+    ],
+    "source": "https://www.carpro.global/product/cq_dlight/",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "UV-blocking protective coating."
+      },
+      {
+        "label": "What it does",
+        "value": "Helps prevent yellowing, fading and cracking with UVA/UVB protection and water repellency."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Headlights, PPF and other automotive plastics."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "sun",
+        "text": "UV protection"
+      },
+      {
+        "icon": "check",
+        "text": "Anti-yellowing protection"
+      },
+      {
+        "icon": "shield",
+        "text": "Fade & crack resistance"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      }
+    ],
+    "surfaces": [
+      "Headlights",
+      "PPF",
+      "Automotive plastics"
+    ]
+  },
+  {
+    "brand": "CarPro",
+    "names": [
+      "CQUARTZ Lite 2.0"
+    ],
+    "source": "https://carpro.global/product/cq_lite/",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Ceramic coating formulated for versatile application."
+      },
+      {
+        "label": "What it does",
+        "value": "Adds rich gloss and a slick, water-repellent finish with chemical and UV resistance."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Automotive painted surfaces."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Rich gloss"
+      },
+      {
+        "icon": "check",
+        "text": "Slick finish"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "sun",
+        "text": "Chemical & UV resistance"
+      }
+    ],
+    "surfaces": [
+      "Paintwork"
+    ]
+  },
+  {
+    "brand": "CarPro",
+    "names": [
+      "CQUARTZ DLUX 2.0"
+    ],
+    "source": "https://www.carpro.global/product/cq_dlux2/",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Protective coating for alloy wheels and plastics."
+      },
+      {
+        "label": "What it does",
+        "value": "Restores a rich, glossy finish; resists brake dust, road grime and water spots."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Painted, polished or chromed wheels and exterior plastics."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Gloss restoration"
+      },
+      {
+        "icon": "shield",
+        "text": "Brake-dust resistance"
+      },
+      {
+        "icon": "shield",
+        "text": "Road-grime resistance"
+      },
+      {
+        "icon": "wash",
+        "text": "Water-spot resistance"
+      }
+    ],
+    "surfaces": [
+      "Wheels",
+      "Exterior plastics"
+    ]
+  },
+  {
+    "brand": "CarPro",
+    "names": [
+      "CQUARTZ BlackOut 2.0"
+    ],
+    "source": "https://carpro.global/product/cq_blackout/",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Polysiloxane and acrylic-resin tyre and rubber coating."
+      },
+      {
+        "label": "What it does",
+        "value": "Preserves a black satin finish with water repellency and resistance to UV, salt and chemicals."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Tyres, rubber and unpainted resin materials."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Black satin finish"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "sun",
+        "text": "UV resistance"
+      },
+      {
+        "icon": "shield",
+        "text": "Salt & chemical resistance"
+      }
+    ],
+    "surfaces": [
+      "Tyres",
+      "Rubber",
+      "Unpainted resin"
+    ]
+  },
+  {
+    "brand": "Kovalent",
+    "names": [
+      "Graphene Matrix"
+    ],
+    "source": "https://kovalentcoatings.com/products/graphene-matrix/",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Graphene ceramic coating."
+      },
+      {
+        "label": "What it does",
+        "value": "Adds gloss and water repellency, with heat-activated self-healing for minor scratches at approximately 100\u00b0C."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Painted surfaces, excluding matte paint."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Gloss enhancement"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "check",
+        "text": "Heat-activated self-healing at 100\u00b0C"
+      }
+    ],
+    "surfaces": [
+      "Paintwork",
+      "Not for matte paint"
+    ]
+  },
+  {
+    "brand": "Kovalent",
+    "names": [
+      "Prolong Light"
+    ],
+    "source": "https://kovalentcoatings.com/products/prolong-light/",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Nano ceramic coating for paint."
+      },
+      {
+        "label": "What it does",
+        "value": "Adds gloss, surface depth and water repellency with UV and environmental resistance."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Automotive painted surfaces."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Gloss & depth"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "sun",
+        "text": "UV resistance"
+      },
+      {
+        "icon": "shield",
+        "text": "Environmental resistance"
+      }
+    ],
+    "surfaces": [
+      "Paintwork"
+    ]
+  },
+  {
+    "brand": "Kovalent",
+    "names": [
+      "Overlay"
+    ],
+    "source": "https://kovalentcoatings.com/products/overlay-ppf-coating/",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Silicon dioxide-based coating for paint protection film."
+      },
+      {
+        "label": "What it does",
+        "value": "Makes film easier to clean with water repellency and resistance to dirt and contaminants."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Solvent-resistant PPF. This coating is not a substitute for the film itself."
+      },
+      {
+        "label": "Film coating",
+        "value": "Applied over solvent-resistant PPF. Not a substitute for paint protection film."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Easier PPF cleaning"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "shield",
+        "text": "Contaminant resistance"
+      }
+    ],
+    "surfaces": [
+      "Solvent-resistant PPF"
+    ]
+  },
+  {
+    "brand": "Kovalent",
+    "names": [
+      "Matte"
+    ],
+    "source": "https://kovalentcoatings.com/products/matte/",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Ceramic coating formulated without gloss enhancers."
+      },
+      {
+        "label": "What it does",
+        "value": "Preserves the non-reflective finish while adding water repellency and resistance to UV and oxidation."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Matte painted surfaces."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Non-reflective finish retained"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "sun",
+        "text": "UV resistance"
+      },
+      {
+        "icon": "shield",
+        "text": "Oxidation resistance"
+      }
+    ],
+    "surfaces": [
+      "Matte paint"
+    ]
+  },
+  {
+    "brand": "Kovalent",
+    "names": [
+      "Fabric"
+    ],
+    "source": "https://kovalentcoatings.com/products/fabric/",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Protective coating for textile fibres."
+      },
+      {
+        "label": "What it does",
+        "value": "Repels liquids and stains without changing softness or breathability. Hydrophobic, not fully waterproof."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Fabric car seats, upholstery and other suitable textiles."
+      },
+      {
+        "label": "Water resistance",
+        "value": "Hydrophobic, not fully waterproof."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "wash",
+        "text": "Liquid repellency"
+      },
+      {
+        "icon": "shield",
+        "text": "Stain resistance"
+      },
+      {
+        "icon": "check",
+        "text": "Breathability retained"
+      },
+      {
+        "icon": "check",
+        "text": "Softness retained"
+      }
+    ],
+    "surfaces": [
+      "Fabric seats",
+      "Upholstery",
+      "Suitable textiles"
+    ]
+  },
+  {
+    "brand": "Koch-Chemie",
+    "names": [
+      "Ceramic Allround C0.02"
+    ],
+    "source": "https://www.koch-chemie.com/en/products/ceramic_allround_c002",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Hydrophobic ceramic coating."
+      },
+      {
+        "label": "What it does",
+        "value": "Creates a water-repellent, easy-to-clean surface with resistance to UV, road salt and environmental contamination."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Exterior paintwork, plastics and rims."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "check",
+        "text": "Easier cleaning"
+      },
+      {
+        "icon": "sun",
+        "text": "UV resistance"
+      },
+      {
+        "icon": "shield",
+        "text": "Road-salt resistance"
+      }
+    ],
+    "surfaces": [
+      "Paintwork",
+      "Exterior plastics",
+      "Rims"
+    ]
+  },
+  {
+    "brand": "Koch-Chemie",
+    "names": [
+      "Ceramic Body Cb0.01"
+    ],
+    "source": "https://www.koch-chemie.com/en/products/ceramic_body_cb001",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Ceramic sealant for painted bodywork."
+      },
+      {
+        "label": "What it does",
+        "value": "Creates water beading and an easy-to-clean surface with resistance to oxidation, salt, acids and insects."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Painted exterior surfaces."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "wash",
+        "text": "Water beading"
+      },
+      {
+        "icon": "check",
+        "text": "Easier cleaning"
+      },
+      {
+        "icon": "shield",
+        "text": "Oxidation resistance"
+      },
+      {
+        "icon": "shield",
+        "text": "Salt & acid resistance"
+      }
+    ],
+    "surfaces": [
+      "Painted bodywork"
+    ]
+  },
+  {
+    "brand": "Koch-Chemie",
+    "names": [
+      "Ceramic Rims Cr0.01"
+    ],
+    "source": "https://www.koch-chemie.com/en/products/ceramic_rims_cr001",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Ceramic coating for painted rims."
+      },
+      {
+        "label": "What it does",
+        "value": "Creates a water-beading surface that helps resist salt and brake-dust buildup."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Painted wheel rims."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "wash",
+        "text": "Water beading"
+      },
+      {
+        "icon": "shield",
+        "text": "Salt resistance"
+      },
+      {
+        "icon": "shield",
+        "text": "Brake-dust resistance"
+      }
+    ],
+    "surfaces": [
+      "Painted wheel rims"
+    ]
+  },
+  {
+    "brand": "Koch-Chemie",
+    "names": [
+      "Ceramic Neo C0.03"
+    ],
+    "source": "https://www.koch-chemie.com/en/products/ceramic_neo_c003",
+    "rows": [
+      {
+        "label": "What it is",
+        "value": "Ceramic sealant for vehicle paint."
+      },
+      {
+        "label": "What it does",
+        "value": "Adds deep gloss, colour enhancement and water repellency with resistance to UV, salt and environmental contamination."
+      },
+      {
+        "label": "Where it applies",
+        "value": "Painted exterior surfaces."
+      }
+    ],
+    "highlights": [
+      {
+        "icon": "check",
+        "text": "Deep gloss"
+      },
+      {
+        "icon": "check",
+        "text": "Colour enhancement"
+      },
+      {
+        "icon": "wash",
+        "text": "Water repellency"
+      },
+      {
+        "icon": "sun",
+        "text": "UV resistance"
+      }
+    ],
+    "surfaces": [
+      "Paintwork"
+    ]
+  }
+]

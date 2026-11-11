@@ -18,7 +18,7 @@ describe("one car photo source", () => {
     const g = read("app/(tabs)/garage/[id].tsx");
     expect(g).toMatch(/car photo"/);
     expect(g).toMatch(/RC photo"/);
-    const labels = [...g.matchAll(/<FileUploader label=\{[^}]*"((?:Add|Replace) (?:car|RC) photo)"/g)].map((m) => m[1]);
+    const labels = [...g.matchAll(/<FileUploader iconOnly label=\{[^}]*"((?:Add|Replace) (?:car|RC) photo)"/g)].map((m) => m[1]);
     expect(labels.length).toBe(2);
   });
 });

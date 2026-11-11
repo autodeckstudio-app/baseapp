@@ -152,7 +152,7 @@ it("takes hero heights from metrics on car and booking detail",()=>{expect(read(
 it("uses the card padding rule on list cards",()=>{for(const f of ["bookings/index","membership/index","garage/index"])expect(read(`src/app/(tabs)/${f}.tsx`)).toContain("padding: metrics.cardPad")});
 it("shows the price total on the booking confirm screen",()=>{const s=read("src/app/(tabs)/book/confirm.tsx");expect(s).toContain("breakdown.total");expect(s).toContain("breakdown.tax")});
 it("keeps the service price bar on the card edges, hides empty story circles, and names walk-in visits",()=>{
-    const svc=read("src/app/(tabs)/catalogue/[id].tsx");expect(svc).toContain('{focused&&showBar?<Button label=');expect(svc).not.toContain('<ServiceVisitFacts nextAction=');expect(svc.indexOf('{focused&&showBar?<Button')).toBeGreaterThan(svc.indexOf('<ServicePrice'));expect(svc).toContain('showContactAndTip={false}');expect(svc).not.toContain('<ServiceActionBar');expect(svc).not.toContain('bottom: 92');expect(svc).not.toContain('setBarH');expect(svc).not.toContain('<ServiceVisitFacts');expect(svc).toContain('Estimated service time:');
+    const svc=read("src/app/(tabs)/catalogue/[id].tsx");expect(svc).toContain('{focused&&showBar?<Button kind=');expect(svc).not.toContain('<ServiceVisitFacts nextAction=');expect(svc.indexOf('{focused&&showBar?<Button')).toBeGreaterThan(svc.indexOf('<ServicePrice'));expect(svc).toContain('showContactAndTip={false}');expect(svc).not.toContain('<ServiceActionBar');expect(svc).not.toContain('bottom: 92');expect(svc).not.toContain('setBarH');expect(svc).not.toContain('<ServiceVisitFacts');expect(svc).toContain('Estimated service time:');
     expect(read("src/ui/StoryCircles.tsx")).toContain("if (shown.length === 0) return null;"); // no groups, no row; a group without a photo shows its initial
     expect(read("src/app/(tabs)/bookings/index.tsx")).toContain("visitTitle(nameOf(");expect(read("src/app/(tabs)/bookings/index.tsx")).not.toContain('?? "Service"');
   });
@@ -245,14 +245,14 @@ describe("Home hero stage", () => {
 });
 
 describe("one confirm button", () => {
-  it("the Review step has one full-width confirm button with a busy state, no slide and no tap-here link, and keeps Go back", () => {
+  it("the Review step has one full-width confirm button with a busy state, no slide and no tap-here link, and no duplicate bottom back button", () => {
     const c = read("src/app/(tabs)/book/confirm.tsx");
     expect(c).not.toMatch(/SlideToConfirm/);
     expect(c).not.toMatch(/Or tap here/);
     expect(c).toMatch(/Pay & confirm/);
     expect(c).toMatch(/Confirm booking/);
     expect(c).toContain("busy={booking} disabled={booking||combinedMode&&(!combinedReview||!combinedNoPayment&&!combinedChoice)}");
-    expect(c).toMatch(/Go back/);
+    expect(c).not.toContain('label="Go back"');
     expect(c).toMatch(/payMode:/);
     expect(c).toMatch(/bookingPayOutcomeMessage/);
   });
@@ -618,7 +618,7 @@ describe("one Day background across the apps", () => {
 });
 
 describe("car detail and add car (batch 1)", () => {
-  it("car detail has Upcoming, History and Documents tabs and one Book a service; add car has RC and photo upload", () => {
+  it("car detail has Upcoming, History and Documents tabs and no duplicate booking CTA; add car has RC and photo upload", () => {
     const d = read("src/app/(tabs)/garage/[id].tsx");
     // Approved 3-tab redesign supersedes the earlier no-tabs contract (mockup 00-tabs-final;
     // Gauri "looks nice" 2 Nov 14:44; Meet "Accept gauris changes" 16:25).
@@ -627,7 +627,7 @@ describe("car detail and add car (batch 1)", () => {
     expect(d).toContain('key: "history"');
     expect(d).toContain('key: "documents"');
     expect(d).not.toContain('label="Book maintenance"');
-    expect((d.match(/label="Book a service"/g) ?? []).length).toBe(1); // single Book action, in the Upcoming tab
+    expect((d.match(/label="Book a service"/g) ?? []).length).toBe(0); // Booking remains in Services.
     expect(d).toContain("<Kicker>Documents</Kicker>"); // one consolidated Documents list (expiry timeline folded in)
     const a = read("src/app/(tabs)/garage/add.tsx");
     expect(a).not.toContain("uploadVehicleRc"); // round7 point 3 (adopted requirement): RC upload moved to Add Document only

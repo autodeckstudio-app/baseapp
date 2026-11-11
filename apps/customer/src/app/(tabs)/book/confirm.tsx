@@ -1,3 +1,4 @@
+import{BookingTerms}from'../../../ui/BookingTerms';
 import { CombinedPaymentSheet } from "../../../ui/CombinedPaymentSheet";
 import{COMBINED_CHECKOUT_ENABLED,COMBINED_GIFT_CHECKOUT_ENABLED,COMBINED_WASH_CHECKOUT_ENABLED,COMBINED_PICKUP_BENEFIT_ENABLED,washCombinedServicePreview,giftCombinedServicePreview,combinedCheckoutReview}from'../../../lib/combined-checkout';
 import{CombinedPaymentOptions}from'../../../ui/CombinedPaymentOptions';
@@ -78,7 +79,6 @@ export default function BookingConfirmScreen() {
   // Optional pickup/drop chosen here and sent with "Confirm booking" (round 8):
   // nothing is selected by default, and tapping the chosen chip again clears
   // the whole selection so nothing pickup-related is sent.
-  const [showTerms, setShowTerms] = useState(false);
   const transportScope=pickupDraftScope(auth.status==='ready'?{uid:auth.user.uid,customerId:auth.customerDocId??null,tenantId:auth.claims?.tenantId??null}:null,params.serviceId);
   const {draft:transportDraft,update:transportUpdate}=usePickupDraft(transportScope);
   const {kind:pickupKind,address:pickupAddress,where:pickupWhere,quote:pickupQuote}=transportDraft;
@@ -107,7 +107,7 @@ export default function BookingConfirmScreen() {
   const idempotencyKey=useRef(generateIdempotencyKey());
   const [pickupPlans,setPickupPlans]=useState<{scope:string;status:'ready'|'error';list:Membership[]}|null>(null);
   useEffect(()=>{if(!COMBINED_CHECKOUT_ENABLED||!COMBINED_PICKUP_BENEFIT_ENABLED)return;let alive=true;setPickupPlans(null);void getMyMemberships().then(list=>{if(alive)setPickupPlans({scope:scopeKey,status:'ready',list})}).catch(()=>{if(alive)setPickupPlans({scope:scopeKey,status:'error',list:[]})});return()=>{alive=false}},[scopeKey]);
-  useEffect(()=>{actionGeneration.current++;confirmBusy.current=false;payBusy.current=false;idempotencyKey.current=generateIdempotencyKey();setBooking(false);setHeld(null);setFriendCode('');setUseWash(false);setWash(null);setPayAtStudio(false);setCombinedChoice(null);setPickupSlot('');setPickupQuoteError(null);setLocating(false);setShowTerms(false);setAdvanceSheet(false);return()=>{actionGeneration.current++}},[scopeKey]);
+  useEffect(()=>{actionGeneration.current++;confirmBusy.current=false;payBusy.current=false;idempotencyKey.current=generateIdempotencyKey();setBooking(false);setHeld(null);setFriendCode('');setUseWash(false);setWash(null);setPayAtStudio(false);setCombinedChoice(null);setPickupSlot('');setPickupQuoteError(null);setLocating(false);setAdvanceSheet(false);return()=>{actionGeneration.current++}},[scopeKey]);
 
   useEffect(() => {
     let alive=true;setService(null);setVehicle(null);setBreakdown(null);setBookError(null);setHeld(null);if (!params.serviceId || !params.vehicleId || !params.vehicleCategory) {setLoading(false);setLoadError(true);return;}
@@ -547,21 +547,7 @@ export default function BookingConfirmScreen() {
         </Pane>
       </View>}
 
-      <Pane pad="gap">
-        <Pressable accessibilityRole="button" accessibilityState={{ expanded: showTerms }} onPress={() => setShowTerms(!showTerms)}>
-          <Row title="Changes, cancellation and visit terms" detail={showTerms ? undefined : <T role="caption" tone="secondary">Change and cancellation options, pickup terms and help.</T>} trailing={<T role="bodyStrong" tone="accent">{showTerms ? "Hide" : "View"}</T>} last />
-        </Pressable>
-        {showTerms ? (
-          <View style={{ gap: space.line }}>
-            <Row title="Changes" detail="Request from your booking. Approval is separate."/>
-            <Row title="Cancellation" detail="Review the fee before confirming."/>
-            <Row title="Transport" detail={combinedMode?"Selected pickup/drop is included in this total.":"Pickup/drop is a separate request."}/>
-            <Row title="Timing" detail="The studio confirms transport timing with you."/>
-            {combinedMode?<><Row title="Bigger-service late cancel" detail="20% of service including GST."/><Row title="Late cancel window" detail="Free until 24 hours before."/><Row title="Unused pickup/drop" detail="Excluded from that percentage fee."/><Row title="No-show retention" detail="20% of discounted service, including GST."/><Row title="Unused transport" detail="Excluded from no-show retention."/><Row title="Refund remainder" detail="Sent for approval. Not refunded until processed."/></>:null}
-            <Pressable accessibilityRole="button" onPress={() => router.navigate("/(tabs)/help")}><T role="caption" tone="secondary">Questions before booking? <T role="caption" tone="accent">Open Help & contact.</T></T></Pressable>
-          </View>
-        ) : null}
-      </Pane>
+      <BookingTerms key={scopeKey} combinedMode={combinedMode} onHelp={()=>router.navigate("/(tabs)/help")}/>
 
       {bookError ? <Notice title={held ? "Payment pending" : "Could not confirm the request"} body={bookError} /> : null}
 
@@ -570,7 +556,7 @@ export default function BookingConfirmScreen() {
 
       <View style={{ gap: space.breath }}>
         {heldOver ? null : <Button label={combinedNoPayment?"Confirm booking":combinedMode?combinedChoice==="advance20"?"Pay 20% & confirm":"Pay in full & confirm":service?.priceOnRequest === true ? "Request quote" : payNow || held ? "Pay & confirm" : advanceDue ? "Pay 20% advance" : "Confirm booking"} busy={booking} disabled={booking||combinedMode&&(!combinedReview||!combinedNoPayment&&!combinedChoice)} onPress={() => { if(combinedMode){openCombinedReview();return;} if (!combinedMode&&advanceDue && !held) { setAdvanceSheet(true); return; } void handleConfirm(); }} />}
-        {held && !heldOver ? <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>Your booking is pending until the payment goes through.</T> : <Button label="Go back" kind="quiet" onPress={() => router.back()} />}
+        {held && !heldOver ? <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>Your booking is pending until the payment goes through.</T> : null}
       </View>
       {combinedMode&&combinedChoice&&combinedReview&&!combinedNoPayment?<CombinedPaymentSheet visible={combinedSheetVisible} serviceName={service?.name??"Service"} summary={giftCode||washOn?"Your service is included. Any selected payable pickup/drop is in this total.":freePickupMembership?"Your pickup/drop benefit is included. This total is for your service.":"Includes your service and selected pickup/drop."} choice={combinedChoice} totalPaise={combinedReview.payment.totalPaise} payNowPaise={combinedReview.payment.payNowPaise} balancePaise={combinedReview.payment.balancePaise} busy={booking} onPay={payCombinedReview} onGoBack={()=>setCombinedSheetKey(null)}/>:null}
       {!combinedMode&&ADVANCE_SPLIT_ENABLED && advancePreview ? (
