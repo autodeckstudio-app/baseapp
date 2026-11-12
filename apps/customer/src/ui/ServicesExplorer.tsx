@@ -10,7 +10,7 @@ import { SceneCard } from "./SceneCard";
 import { ServicePackageCard } from "./ServicePackageCard";
 import { ServicePhoto } from "./ServicePhoto";
 import {ServicePageHeader}from"./ServicePageHeader";
-import { Button, Pane, T } from "./kit";
+import { Button, Pane, Row, T } from "./kit";
 import { serviceTypeImage } from "../lib/service-type-images";
 import { useState } from "react";
 import { serviceHomeImages } from "../lib/service-home-images";
@@ -25,6 +25,7 @@ import {
   FAMILY_COPY,
   familySummary,
   serviceSearch,
+  workFirstFamily,
   type ServicesPath,
 } from "../lib/services-navigation";
 import type { BrandEnquiry } from "../lib/brand-enquiries";
@@ -156,12 +157,42 @@ export function ReferencePackageCard({
     </SceneCard>
   );
 }
+/** Work-first product journey: the work is the page; the named product sits inside it
+ *  as compact facts with one clear action. Only catalogue-record facts are shown. */
+function WorkFirstProduct({
+  service,
+  onQuote,
+  onOpen,
+}: {
+  service: Service;
+  onQuote?: ((s: Service) => void) | undefined;
+  onOpen: (s: Service) => void;
+}) {
+  const whereUsed = /^\s*[-•]?\s*Where used:\s*(.+)$/im.exec(service.description ?? "")?.[1]?.trim();
+  return (
+    <View style={{ gap: 20 }}>
+      <Pane pad="none">
+        <ServicePhoto service={service} aspect={16 / 9} radius={26} />
+      </Pane>
+      <Pane pad="gap">
+        <Row title="Product" detail={service.name} last={!whereUsed} />
+        {whereUsed ? <Row title="Where used" detail={whereUsed} last /> : null}
+      </Pane>
+      {service.priceOnRequest === true ? (
+        <Button kind="quiet" label="Get quote" onPress={() => (onQuote ?? onOpen)(service)} />
+      ) : (
+        <Button kind="primary" label="View service" onPress={() => onOpen(service)} />
+      )}
+    </View>
+  );
+}
 export function ServicesExplorer({
   services,
   path,
   query,
   onPath,
   onOpen,
+  onQuote,
   onReference,
   onHelp,
   priceLabel,
@@ -171,6 +202,7 @@ export function ServicesExplorer({
   query: string;
   onPath: (p: ServicesPath) => void;
   onOpen: (s: Service) => void;
+  onQuote?: ((s: Service) => void) | undefined;
   onReference: (r: BrandEnquiry) => void;
   onHelp: (scope: string) => void;
   priceLabel: (s: Service) => string | null | undefined;
@@ -318,6 +350,44 @@ export function ServicesExplorer({
   const workLabel = PPF_CUSTOMER_OPTIONS.find(
     (w) => w.key === path.work,
   )?.label;
+  // Work-first families (owner-approved model): the family page is the work itself.
+  // Named products and fixed-price studio applications keep their own records and
+  // quote/booking targets; only the presentation merges them into one work page.
+  const workFirst = workFirstFamily(home.key, family);
+  if (workFirst && !activeBrand) {
+    const named = selected.filter((s) => s.brand && s.brand !== ADDON_BRAND);
+    const studio = selected.filter((s) => !s.brand || s.brand === ADDON_BRAND);
+    return (
+      <View style={{ gap: 20 }}>
+        <ServicePageHeader
+          title={workFirst.work}
+          detail={FAMILY_COPY[family ?? ""]}
+          context={`${home.label} · ${family}`}
+          crumbs={[
+            { title: "All services", onPress: () => onPath({}) },
+            { title: home.label, onPress: () => onPath({ home: home.key }) },
+          ]}
+        />
+        {named.length === 1 ? (
+          <WorkFirstProduct service={named[0]!} onQuote={onQuote} onOpen={onOpen} />
+        ) : named.length > 1 ? (
+          products(named, [])
+        ) : null}
+        {studio.length > 0 ? (
+          <>
+            <T role="caption" tone="secondary">
+              Also available at a fixed price
+            </T>
+            {products(studio, [])}
+          </>
+        ) : null}
+        {selectedRefs.length > 0 ? products([], selectedRefs) : null}
+        <T role="caption" tone="tertiary">
+          Service visuals are illustrative, not product or completed-job photos.
+        </T>
+      </View>
+    );
+  }
   // The confirm pane reads as a sentence, so work names map to noun phrases.
   const askLabel =
     path.work === "removal"
