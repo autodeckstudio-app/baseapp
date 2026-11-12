@@ -276,7 +276,7 @@ export default function HomeScreen() {
         onBell={() => router.navigate("/(tabs)/notifications")}
         onAllServices={() => router.navigate("/(tabs)/catalogue")}
         onCategory={() => undefined}
-        onService={(sv) => router.push(homeServiceTarget(sv) as never)}
+        onService={(sv, key) => router.push(homeServiceTarget(sv, key) as never)}
         onCar={(c) => router.push(`/(tabs)/garage/${c.id}`)}
         onAddCar={() => router.push("/(tabs)/garage/add")}
         onReminders={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : undefined)}

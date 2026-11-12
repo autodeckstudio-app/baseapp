@@ -52,3 +52,4 @@ describe("pickTopServices ceramic card regression", () => {
 });
 
 it('Quick wash starting price only uses its Exterior wash options, not a cheaper interior or headlight service',()=>{const all=[svc('interior','washing','Interior cleaning','₹200'),svc('light','washing','Headlight restoration','₹100'),svc('regular','washing','Regular Wash','₹500')];expect(pickTopServices(all).find(p=>p.key==='wash')?.service.id).toBe('regular')});
+it('Inspection card uses the inspection price rather than a repairs quote',()=>{const result=pickTopServices([{id:'repair',name:'Repairs and other work (book an inspection)',category:'garage',price:'Quote on request'},{id:'inspection',name:'Multi-point inspection',category:'inspection',price:'₹1,000'}]);expect(result.find(x=>x.key==='inspect')?.service.id).toBe('inspection')});
