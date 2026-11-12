@@ -267,7 +267,7 @@ describe("updatePickupRequest — unpriced (no-pin) requests cannot be confirmed
 
   it("a server-quoted pin request (fee fixed by the stored quote) confirms without admin involvement", async () => {
     process.env.GOOGLE_ROUTES_API_KEY = "test-routes-key";
-    // 8,000 m both directions: pickup leg fee = (8 - 3) km x Rs 25 = Rs 125, fixed in the stored quote.
+    // Mocked 8,000 m route: Rs 20 + 3 km x Rs 12 = Rs 56, fixed in the stored v2 quote.
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => new Response(JSON.stringify({ routes: [{ distanceMeters: 8000 }] }), { status: 200 })),
@@ -278,7 +278,7 @@ describe("updatePickupRequest — unpriced (no-pin) requests cannot be confirmed
       data: { kind: "pickup", ...pin },
       auth: customerAuth(customerId),
     } as never)) as { quoteId: string; feePaise: number };
-    expect(quote.feePaise).toBe(12_500);
+    expect(quote.feePaise).toBe(5_600);
     await requestPickupDrop.run({
       data: {
         bookingId: booking.id,
@@ -290,7 +290,7 @@ describe("updatePickupRequest — unpriced (no-pin) requests cannot be confirmed
       auth: customerAuth(customerId),
     } as never);
     const snap = await db.collection(COLLECTIONS.pickupRequests()).doc(booking.id).get();
-    expect(snap.data()?.feePaise).toBe(12_500);
+    expect(snap.data()?.feePaise).toBe(5_600);
     const confirmed = (await updatePickupRequest.run({
       data: { requestId: booking.id, status: "CONFIRMED", agreedPickupAt: `${nextDate()} 10:30` },
       auth: studioAuth(uid("staff")),

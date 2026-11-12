@@ -36,6 +36,7 @@ functions/src/functions/booking/pickupRequests.ts
 functions/src/lib/booking-transport-snapshot.ts
 functions/src/test/emulator/combined-create.emulator.test.ts
 functions/src/test/emulator/pickup-quote.emulator.test.ts
+functions/src/test/emulator/studio-backend-batch.emulator.test.ts
 functions/src/test/unit/booking-transport-snapshot.test.ts
 packages/core/src/combined-checkout.ts
 packages/core/src/index.ts
