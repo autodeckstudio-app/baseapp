@@ -23,6 +23,8 @@ vi.mock("../../lib/advance-payment.js", async (orig) => {
   return { ...m, advancePaymentEnabled: () => h.enabled };
 });
 
+vi.mock("../../lib/combined-booking.js",async orig=>({...await orig<any>(),combinedCheckoutEnabled:()=>false}));
+
 import { requestAdvancePayment } from "../../functions/payment/requestAdvancePayment.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 import type { MockPaymentProvider } from "../../lib/mock-payment-provider.js";

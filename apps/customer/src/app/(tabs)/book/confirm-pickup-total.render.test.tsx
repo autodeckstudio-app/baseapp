@@ -1,3 +1,5 @@
+// Legacy contract: explicitly select the unchanged non-combined client path.
+vi.mock('../../../lib/combined-checkout',async orig=>({...await orig<any>(),COMBINED_CHECKOUT_ENABLED:false}));
 import React from 'react';
 import { it, expect, vi, beforeEach } from 'vitest';
 import { create, act } from 'react-test-renderer';

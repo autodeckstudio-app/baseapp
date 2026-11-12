@@ -1,3 +1,5 @@
+// Legacy contract: explicitly select the unchanged non-combined client path.
+vi.mock('../../../lib/combined-checkout',async orig=>({...await orig<any>(),COMBINED_CHECKOUT_ENABLED:false}));
 import React from'react';import{it,expect,vi,beforeEach,afterEach}from'vitest';import{create,act}from'react-test-renderer';
 const h=vi.hoisted(()=>({params:{serviceId:'menu-coat-kovalent-graphene'}as any,navigate:vi.fn(),create:vi.fn(),open:vi.fn(),pay:vi.fn(),replace:vi.fn(),job:vi.fn(),key:0}));
 vi.mock('expo-router',()=>({useLocalSearchParams:()=>h.params,useRouter:()=>({replace:h.replace,push:(v:any)=>h.navigate(v),back:vi.fn()}),useNavigation:()=>({getState:()=>({routes:[]}),dispatch:vi.fn()})}));
