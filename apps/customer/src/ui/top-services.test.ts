@@ -50,3 +50,5 @@ describe("pickTopServices ceramic card regression", () => {
     expect(pickTopServices(all).find((t) => t.key === "coat")?.service.id).toBe("c1");
   });
 });
+
+it('Quick wash starting price only uses its Exterior wash options, not a cheaper interior or headlight service',()=>{const all=[svc('interior','washing','Interior cleaning','₹200'),svc('light','washing','Headlight restoration','₹100'),svc('regular','washing','Regular Wash','₹500')];expect(pickTopServices(all).find(p=>p.key==='wash')?.service.id).toBe('regular')});

@@ -1,3 +1,4 @@
+import {detailHomeBack} from "../../../lib/home-service-navigation";
 import { SERVICE_HOMES } from "@autodeck/core";
 import { servicePlacement } from "../../../lib/services-navigation";
 import{ServicePageHeader}from"../../../ui/ServicePageHeader";
@@ -131,6 +132,8 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
   const { id, service, loading, loadError, reviews, pricingVehicle, selectedCategory, needsCarType, priceLoading, priceError, priceBreakdown, onRetry } = props;
   const router = useRouter();
   // Separate labelled booking action follows the price; duration stays informational.
+  const origin=useLocalSearchParams<{returnTo?:string;homeEntry?:string;catalogueHome?:string;catalogueFamily?:string;catalogueBrand?:string;catalogueWork?:string}>();
+  const homeBack=detailHomeBack(origin);
   const [focused, setFocused] = useState(true);
   useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
   const { colors } = useExperienceTheme();
@@ -141,8 +144,8 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
   // price block above carries the one action (Garage / Try again), so there is no second, enabled-looking Book button.
   const showBar = !!service && sheetBarVisible({ priceOnRequest: service.priceOnRequest === true, loading: priceLoading, hasTotal: priceBreakdown !== null, needsCarType, error: priceError !== null });
   if (loading) return <Loading label="Opening the menu" />;
-  if (loadError) return <Screen><Notice title="Can't load this service" body="Check your connection and try again." action={<Button icon="refresh" label="Try again" onPress={onRetry}/>} /></Screen>;
-  if (!service) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." action={<Button kind="quiet" label="Browse services" onPress={()=>router.navigate("/(tabs)/catalogue")}/>} /></Screen>;
+  if (loadError) return <Screen onBack={homeBack?()=>router.replace(homeBack as never):undefined}><Notice title="Can't load this service" body="Check your connection and try again." action={<Button icon="refresh" label="Try again" onPress={onRetry}/>} /></Screen>;
+  if (!service) return <Screen onBack={homeBack?()=>router.replace(homeBack as never):undefined}><Notice title="Service not found" body="It may have been taken off the menu." action={<Button kind="quiet" label="Browse services" onPress={()=>router.navigate("/(tabs)/catalogue")}/>} /></Screen>;
 
   const sc = showcaseFor(service);
   const H = (t: string, extra?: ReactNode) => (
@@ -155,7 +158,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
 
   return (
     <View style={{ flex: 1 }}>
-      <Screen
+      <Screen onBack={homeBack?()=>router.replace(homeBack as never):undefined}
         header={
           <View style={{ gap: space.hair }}>
             <ServicePageHeader context={[SERVICE_HOMES.find(h=>h.key===servicePlacement(service)?.home)?.label,servicePlacement(service)?.family].filter(Boolean).join(" · ") || "Service"} title={service.name} crumbs={[{title:"All services",onPress:()=>router.navigate("/(tabs)/catalogue")}]} />

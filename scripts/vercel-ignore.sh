@@ -5,6 +5,38 @@
 # Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
 # Unknown base commit or git error => build (safe default).
 app="$1"
+# Approved Home/story batch: exact parent and path list, Customer only.
+home_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = preview/home-stories-routing-20261112 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$home_parent" = 5882e9de691b11550c8bb12da151a193070c6d78 ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0
+  cd "$root" || exit 0
+  actual="$(git diff --name-only 5882e9de691b11550c8bb12da151a193070c6d78 HEAD 2>/dev/null)" || exit 0
+  expected=$(cat <<'HOME_STORY_PATHS'
+apps/customer/src/app/(tabs)/catalogue/[id].tsx
+apps/customer/src/app/(tabs)/catalogue/enquiry.tsx
+apps/customer/src/app/(tabs)/catalogue/index.tsx
+apps/customer/src/app/(tabs)/index.tsx
+apps/customer/src/lib/catalogue-sole-redirect.test.ts
+apps/customer/src/lib/home-service-navigation.test.ts
+apps/customer/src/lib/home-service-navigation.ts
+apps/customer/src/lib/story-groups.test.ts
+apps/customer/src/lib/top-services.ts
+apps/customer/src/ui/ReferenceProductDetail.tsx
+apps/customer/src/ui/StoryCircles.tsx
+apps/customer/src/ui/StoryCover.tsx
+apps/customer/src/ui/StoryVideoThumbnail.tsx
+apps/customer/src/ui/StoryVideoThumbnail.web.tsx
+apps/customer/src/ui/design-contract.test.ts
+apps/customer/src/ui/story-cover.render.test.tsx
+apps/customer/src/ui/top-services.test.ts
+docs/customer-home-preview-20261112.md
+scripts/vercel-ignore.sh
+HOME_STORY_PATHS
+)
+  [ "$actual" = "$expected" ] || exit 0
+  case "$app" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
+
 # Pinned transport release: exact parent + complete path list, Customer only.
 transport_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-transport-20261112 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$transport_parent" = c1aefce6c4482ace2353ed8a3c93b2da53a88fe3 ]; }; then

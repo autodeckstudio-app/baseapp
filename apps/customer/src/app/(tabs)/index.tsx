@@ -1,3 +1,4 @@
+import {homeServiceTarget} from "../../lib/home-service-navigation";
 import { RateCard } from "../../ui/RateCard";
 import { listOwnerKey } from "../../lib/owner-key";
 import { rateCandidate } from "../../lib/rate-card";
@@ -275,7 +276,7 @@ export default function HomeScreen() {
         onBell={() => router.navigate("/(tabs)/notifications")}
         onAllServices={() => router.navigate("/(tabs)/catalogue")}
         onCategory={() => undefined}
-        onService={(sv) => router.push(`/(tabs)/catalogue/${sv.id}`)}
+        onService={(sv) => router.push(homeServiceTarget(sv) as never)}
         onCar={(c) => router.push(`/(tabs)/garage/${c.id}`)}
         onAddCar={() => router.push("/(tabs)/garage/add")}
         onReminders={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : undefined)}
