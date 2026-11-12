@@ -8,6 +8,8 @@ export async function completeVerifiedCheckout(
   db: Firestore,
   p: { paymentId: string; orderId: string; providerPaymentId: string },
 ): Promise<WebhookOutcome> {
+  const payment=(await db.collection("payments").doc(p.paymentId).get()).data();
+  if(!payment||payment["razorpayOrderId"]!==p.orderId||!Number.isSafeInteger(payment["amount"])||payment["amount"]<=0||payment["currency"]!=="INR") return "amount_mismatch";
   const r = await processProviderEvent(db, {
     eventType: "payment.captured",
     providerEventId: `verify_${p.providerPaymentId}`,
@@ -16,7 +18,7 @@ export async function completeVerifiedCheckout(
     providerRefundId: null,
     providerOrderId: p.orderId,
     referenceId: p.paymentId,
-    amount: 0, // amount was fixed server-side when the order was created; 0 skips the event amount check
+    amount: payment["amount"], // Verified server-created order retains its exact immutable amount.
     currency: "INR",
   });
   return r.outcome;

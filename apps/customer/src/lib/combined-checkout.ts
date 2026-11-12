@@ -1,6 +1,7 @@
+import {Platform} from 'react-native';
 import{combinedBreakdown,roundedCombinedCheckoutAmounts,roundedCombinedBreakdown,type PriceBreakdown,type CombinedPaymentChoice}from'@autodeck/core';
-/** Candidate capability remains inactive. No old-native client silently opts into changed finances. */
-export const COMBINED_CHECKOUT_ENABLED=false;
+/** Scoped Customer web release capability. Separate gift, wash, benefit and quote gates stay off. */
+export const COMBINED_CHECKOUT_ENABLED=Platform.OS==='web';
 /** Independent qualification gate, not a live capability. */
 export const COMBINED_GIFT_CHECKOUT_ENABLED=false;
 export const COMBINED_WASH_CHECKOUT_ENABLED=false;

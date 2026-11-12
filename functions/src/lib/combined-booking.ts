@@ -1,6 +1,6 @@
 import{combinedCheckoutAmounts,roundedCombinedCheckoutAmounts,roundedCombinedBreakdown,type PriceBreakdown}from'@autodeck/core';import{applyPickupFees}from'./pickup-fee.js';import{freezeBookingTransportQuote,type BookingTransportScope,type BookingTransportSnapshot}from'./booking-transport-snapshot.js';
-/** New combined checkout stays inactive until exact-tree financial/provider/native qualification. */
-export function combinedCheckoutEnabled():boolean{return false}
+/** Scoped combined checkout activation. Independent benefit/quote gates remain inactive. */
+export function combinedCheckoutEnabled():boolean{return true}
 /** Separate qualification gate. Gift service is covered, transport is not gifted. */
 export function combinedGiftCheckoutEnabled():boolean{return false}
 /** Service-wash qualification is separate from free transport reservation. */

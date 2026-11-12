@@ -98,19 +98,17 @@ describe("late membership capture: atomic reservation (emulator)", () => {
       expect(al).toMatchObject({ reason: "late_membership_payment", owedAmountPaise: 29900, currency: "INR", paymentId: s.pid });
     }
   });
-  it("invalid amount (stored amount 0, event carries no amount: the existing shared amount check is skipped): receipt completes, owed-not-reserved alert outcome invalid, no request", async () => {
+  it("invalid amount (stored amount 0, event carries no amount): fail closed, payment stays pending, no refund or completion alert", async () => {
     const s = await seed("cancelled");
     await db.collection("payments").doc(s.pid).update({ amount: 0 });
     const raw = JSON.stringify({ entity: "event", event: "payment.link.paid", payload: {
       payment: { entity: { id: "pay_x" + s.pid, order_id: "o1", currency: "INR" } },
       payment_link: { entity: { id: s.plink, reference_id: s.pid } } }, _id: "E7" + s.pid });
     const e = provider.parseWebhookEvent(raw); e.providerEventId = "E7" + s.pid;
-    expect((await processProviderEvent(db, e)).outcome).toBe("completed");
-    expect((await db.collection("payments").doc(s.pid).get()).data()!["status"]).toBe("completed");
-    const al = (await db.collection("staffAlerts").doc(`late_membership_payment_${s.pid}`).get()).data()!;
-    expect(al["kind"]).toBe("late_membership_refund_not_reserved");
-    expect(al["reservationOutcome"]).toBe("invalid");
-    expect(al["owedAmountPaise"]).toBeNull(); // stored 0: no amount is invented
+    expect((await processProviderEvent(db, e)).outcome).toBe("amount_mismatch");
+    expect((await db.collection("payments").doc(s.pid).get()).data()!["status"]).toBe("pending");
+    expect((await db.collection("memberships").doc(s.mid).get()).data()!["status"]).toBe("cancelled");
+    expect((await db.collection("staffAlerts").doc(`late_membership_payment_${s.pid}`).get()).exists).toBe(false);
     expect(await reqs(s.pid)).toHaveLength(0);
   });
   it("pending membership: activates, reserves nothing; ACTIVE membership second capture untouched", async () => {

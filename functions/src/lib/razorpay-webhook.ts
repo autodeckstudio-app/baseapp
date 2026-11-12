@@ -1,4 +1,4 @@
-import{readConsultPaymentBinding}from"./consult-payment.js";
+import{readConsultPaymentBinding,assertPaymentConsultBinding}from"./consult-payment.js";
 import{isDeepStrictEqual}from "node:util";
 import {readCombinedPaymentBasis,assertCombinedSettlementPayment,type CombinedPaymentBasis}from "./combined-settlement.js";
 import {checkedCombinedPayment}from "@autodeck/core";
@@ -257,7 +257,7 @@ export async function processProviderEvent(
         return "overpayment_review";
       }
       if (payment.status === "completed" || payment.status === "refunded") { record("already_final"); return "already_final"; }
-      if (ev.amount && ev.amount !== payment.amount) { record("amount_mismatch"); return "amount_mismatch"; }
+      if (!Number.isSafeInteger(ev.amount) || ev.amount<=0 || ev.amount !== payment.amount || ev.currency!==payment.currency) { record("amount_mismatch"); return "amount_mismatch"; }
 
       if (payment.targetType === "membership") {
         const mRef = payment.membershipId ? db.collection(COLLECTIONS.memberships()).doc(payment.membershipId) : null;
@@ -431,7 +431,8 @@ export async function processProviderEvent(
       // record the payment as completed (it IS received) but touch nothing else, and flag it.
       let combinedBasis:CombinedPaymentBasis|null=null,combinedAnomaly:string|null=null;
       if(job?.combinedPayment){try{combinedBasis=await readCombinedPaymentBasis(db,tx,job);assertCombinedSettlementPayment(job,payment,combinedBasis);}catch{combinedAnomaly="combined_balance_needs_review";}}
-      const anomaly = !job ? "job_missing" : job.status === "CANCELLED" ? "job_cancelled" : job.paymentStatus === "paid" ? "job_already_paid" : combinedAnomaly;
+      let consultMismatch=false;if(job){try{const binding=await readConsultPaymentBinding(db,tx,job,booking as unknown as Record<string,unknown>|undefined);assertPaymentConsultBinding(payment,binding);}catch{consultMismatch=true;}}
+      const anomaly = consultMismatch ? 'consult_approval_mismatch' : !job ? "job_missing" : job.status === "CANCELLED" ? "job_cancelled" : job.paymentStatus === "paid" ? "job_already_paid" : combinedAnomaly;
       const prepared = job && !anomaly ? await prepareJobInvoice(db, tx, job, payment.id) : null;
       record("completed");
       if (!job || anomaly || !prepared || prepared.existing) {

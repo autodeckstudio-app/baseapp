@@ -5,6 +5,42 @@
 # Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
 # Unknown base commit or git error => build (safe default).
 app="$1"
+# Scoped web payment release: exact parent and changed-path guard.
+# Only the Customer app builds from this commit; all sibling apps skip.
+release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-payment-20261112 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$release_parent" = 6b019cd3199213000c07909bd51834a6d816754f ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$root" ] || exit 0
+  cd "$root" || exit 0
+  actual="$(git diff --name-only 6b019cd3199213000c07909bd51834a6d816754f HEAD 2>/dev/null)" || exit 0
+  expected=$(cat <<'PAYMENT_WEB_PATHS'
+apps/customer/src/app/(tabs)/book/advance-modal-flow.render.test.tsx
+apps/customer/src/app/(tabs)/book/confirm-pickup-total.render.test.tsx
+apps/customer/src/app/(tabs)/book/confirm-states.render.test.tsx
+apps/customer/src/app/(tabs)/book/connected-coating-addon.render.test.tsx
+apps/customer/src/app/(tabs)/book/connected-standard-booking.render.test.tsx
+apps/customer/src/lib/combined-checkout.test.ts
+apps/customer/src/lib/combined-checkout.ts
+apps/customer/src/ui/CombinedPaymentSheet.tsx
+apps/customer/src/ui/combined-payment-sheet.render.test.tsx
+docs/customer-payment-release-20261112.md
+docs/payment-backend-artifacts-20261112.json
+docs/payment-backend-release-20261112.md
+functions/src/functions/payment/requestAdvancePayment.ts
+functions/src/lib/combined-booking.ts
+functions/src/lib/razorpay-verified-checkout.ts
+functions/src/lib/razorpay-webhook.ts
+functions/src/test/emulator/advance-callable.emulator.test.ts
+functions/src/test/emulator/late-membership-atomic.emulator.test.ts
+functions/src/test/emulator/release-legacy-off.emulator.test.ts
+functions/src/test/unit/combined-booking.test.ts
+functions/src/test/unit/razorpay-webhook.test.ts
+scripts/vercel-ignore.sh
+PAYMENT_WEB_PATHS
+)
+  [ "$actual" = "$expected" ] || exit 0
+  case "$app" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
 # Approved Customer-only second batch, exact parent + path contract.
 release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = preview/garage-all-stack-20261112 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$release_parent" = d91fdada8398aaa830a58e9e124f069c612c6702 ]; }; then
