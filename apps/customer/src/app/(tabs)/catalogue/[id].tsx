@@ -5,7 +5,6 @@ import { customerOfferingVisible } from '../../../lib/customer-offering-visibili
 import{SERVICE_QUOTE_JOURNEY_READY}from "../../../lib/service-quote";
 import { customerRatingPrivacy } from "@autodeck/core";
 import { ServiceScope } from "../../../ui/ServiceScope";
-import { formatDurationWithDays } from "../../../lib/duration";
 import { usePricingVehicle } from "../../../lib/vehicle-size";
 import { useState, useEffect } from "react";
 import { Pressable, View } from "react-native";
@@ -152,8 +151,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
       {extra}
     </View>
   );
-  const mins = service.estimatedDurationMinutes;
-  const dur = formatDurationWithDays(mins);
+  // Owner rule (12 Nov): catalogue pages never show the configured service time.
 
   return (
     <View style={{ flex: 1 }}>
@@ -211,7 +209,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         </View> : null}
 
         {!service.priceOnRequest?<Kicker>{service.category==='garage'?'Price':'Price for your car'}</Kicker>:null}
-        {!service.brand||!['ceramic','ppf','coating'].includes(service.category)?<T role="caption" tone="secondary">{[`Estimated service time: ${dur}`,service.brand&&service.brand!=="Add-ons"?`Product brand: ${service.brand}`:null,service.warrantyLabel?`Listed warranty: ${service.warrantyLabel}`:null].filter(Boolean).join(" · ")}</T>:null}
+        {!service.brand||!['ceramic','ppf','coating'].includes(service.category)?(()=>{const facts=[service.brand&&service.brand!=="Add-ons"?`Product brand: ${service.brand}`:null,service.warrantyLabel?`Listed warranty: ${service.warrantyLabel}`:null].filter(Boolean).join(" · ");return facts?<T role="caption" tone="secondary">{facts}</T>:null})():null}
         <ServicePrice inlineBreakdown compactQuote {...{category:service.category,priceOnRequest:service.priceOnRequest===true,needsCarType,hasCar:!!pricingVehicle.vehicle,carSizeKnown:!!selectedCategory,loading:priceLoading,error:priceError,breakdown:priceBreakdown,onRetry,onHelp:()=>router.navigate("/(tabs)/help"),onGarage:()=>router.push(pricingVehicle.vehicle?`/(tabs)/garage/${pricingVehicle.vehicle.id}`:"/(tabs)/garage/add")}}/>
 
         {focused&&showBar?<Button kind={service.priceOnRequest===true?"quiet":"primary"} label={service.priceOnRequest===true?(service.category==="garage"||service.category==="modifications"?"Inspection":"Get quote"):"Book now"} disabled={!service.priceOnRequest&&priceBreakdown===null} onPress={()=>service.priceOnRequest===true&&SERVICE_QUOTE_JOURNEY_READY?router.push({pathname:"/(tabs)/quote-request",params:{serviceId:String(id)}}):router.push(`/(tabs)/book/${id}`)}/>:null}

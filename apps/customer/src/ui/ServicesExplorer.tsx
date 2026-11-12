@@ -10,7 +10,7 @@ import { SceneCard } from "./SceneCard";
 import { ServicePackageCard } from "./ServicePackageCard";
 import { ServicePhoto } from "./ServicePhoto";
 import {ServicePageHeader}from"./ServicePageHeader";
-import { Button, Pane, T } from "./kit";
+import { Button, Pane, Row, T } from "./kit";
 import { serviceTypeImage } from "../lib/service-type-images";
 import { useState } from "react";
 import { serviceHomeImages } from "../lib/service-home-images";
@@ -25,6 +25,7 @@ import {
   FAMILY_COPY,
   familySummary,
   serviceSearch,
+  workFirstFamily,
   type ServicesPath,
 } from "../lib/services-navigation";
 import type { BrandEnquiry } from "../lib/brand-enquiries";
@@ -156,12 +157,36 @@ export function ReferencePackageCard({
     </SceneCard>
   );
 }
+/** Brand product that applies to the service on this page. It stays part of the
+ *  service as a Get quote option until the owner sets a brand price; the AutoDeck
+ *  fixed price remains the primary offer. */
+function BrandQuoteOption({
+  service,
+  onQuote,
+  onOpen,
+}: {
+  service: Service;
+  onQuote?: ((s: Service) => void) | undefined;
+  onOpen: (s: Service) => void;
+}) {
+  return (
+    <Pane pad="gap">
+      <Row title={service.brand ?? "Brand product"} detail={service.name} last />
+      <Button
+        kind="quiet"
+        label="Get quote"
+        onPress={() => (onQuote ?? onOpen)(service)}
+      />
+    </Pane>
+  );
+}
 export function ServicesExplorer({
   services,
   path,
   query,
   onPath,
   onOpen,
+  onQuote,
   onReference,
   onHelp,
   priceLabel,
@@ -171,6 +196,7 @@ export function ServicesExplorer({
   query: string;
   onPath: (p: ServicesPath) => void;
   onOpen: (s: Service) => void;
+  onQuote?: ((s: Service) => void) | undefined;
   onReference: (r: BrandEnquiry) => void;
   onHelp: (scope: string) => void;
   priceLabel: (s: Service) => string | null | undefined;
@@ -318,6 +344,55 @@ export function ServicesExplorer({
   const workLabel = PPF_CUSTOMER_OPTIONS.find(
     (w) => w.key === path.work,
   )?.label;
+  // Work-first detailing pages (owner-approved model, 12 Nov): the page is the service.
+  // AutoDeck's fixed price is primary; brand products that apply to the service are part
+  // of the same page as Get quote options until the owner sets brand prices. Priced
+  // records keep their own price and booking target; nothing merges records or prices.
+  const workFirst = workFirstFamily(home.key, family);
+  if (workFirst && !activeBrand) {
+    const fixed = selected.filter((s) => s.priceOnRequest !== true);
+    const brandQuote = selected.filter(
+      (s) => s.priceOnRequest === true && s.brand && s.brand !== ADDON_BRAND,
+    );
+    const otherQuote = selected.filter(
+      (s) => s.priceOnRequest === true && (!s.brand || s.brand === ADDON_BRAND),
+    );
+    const title = fixed.length === 1 ? fixed[0]!.name : family!;
+    return (
+      <View style={{ gap: 20 }}>
+        <ServicePageHeader
+          title={title}
+          detail={FAMILY_COPY[family ?? ""]}
+          context={`${home.label} · ${family}`}
+          crumbs={[
+            { title: "All services", onPress: () => onPath({}) },
+            { title: home.label, onPress: () => onPath({ home: home.key }) },
+          ]}
+        />
+        {products([...fixed, ...otherQuote], [])}
+        {brandQuote.length > 0 ? (
+          <>
+            <T role="caption" tone="secondary">
+              Prefer a brand product? The studio confirms it for your car and
+              quotes before you book.
+            </T>
+            {brandQuote.map((s) => (
+              <BrandQuoteOption
+                key={s.id}
+                service={s}
+                onQuote={onQuote}
+                onOpen={onOpen}
+              />
+            ))}
+          </>
+        ) : null}
+        {selectedRefs.length > 0 ? products([], selectedRefs) : null}
+        <T role="caption" tone="tertiary">
+          Service visuals are illustrative, not product or completed-job photos.
+        </T>
+      </View>
+    );
+  }
   // The confirm pane reads as a sentence, so work names map to noun phrases.
   const askLabel =
     path.work === "removal"

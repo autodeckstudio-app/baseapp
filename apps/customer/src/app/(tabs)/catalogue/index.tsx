@@ -24,6 +24,7 @@ import {
   servicePriceText,
 } from "../../../lib/vehicle-size";
 import { careEntryPrice } from "../../../lib/service-journey";
+import { SERVICE_QUOTE_JOURNEY_READY } from "../../../lib/service-quote";
 import { useSegmentSwipe } from "../../../lib/segment-swipe";
 import { glassInner } from "../../../lib/glass";
 
@@ -182,6 +183,14 @@ export default function CatalogueScreen() {
               // auth-gated, so open the equivalent fixture detail instead.
               __DEV__ && selfPath.startsWith("/preview")
                 ? router.push({ pathname: "/preview-service" as never, params: { id: s.id } })
+                : router.push(`/(tabs)/catalogue/${s.id}`)
+            }
+            onQuote={(s) =>
+              SERVICE_QUOTE_JOURNEY_READY
+                ? router.push({
+                    pathname: "/(tabs)/quote-request",
+                    params: { serviceId: s.id },
+                  })
                 : router.push(`/(tabs)/catalogue/${s.id}`)
             }
             onReference={(r) =>

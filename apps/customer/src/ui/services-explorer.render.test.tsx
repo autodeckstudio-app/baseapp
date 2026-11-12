@@ -16,6 +16,12 @@ vi.mock("./kit", () => ({
   ),
   T: "Text",
   Pane: "Pane",
+  Row: ({ title, detail }: any) => (
+    <>
+      {title}
+      {detail}
+    </>
+  ),
 }));
 vi.mock("./SceneIntro", () => ({
   SceneIntro: ({ title, eyebrow }: any) => (
@@ -256,3 +262,68 @@ it("Washing presents interior once, exact record on action, and search uses the 
   }
 });
 it('pickup is never a standalone catalogue card, including search, without editing the original record',async()=>{const pickup={id:'svc-pickup',name:'Pickup and drop',category:'pickup',description:'Old flat rate within the city',basePrice:10000,active:true};const source=[...rows,pickup];for(const query of['','pickup']){let r:any;await act(async()=>{r=create(<ServicesExplorer services={source as any} path={{}} query={query} onPath={vi.fn()} onOpen={vi.fn()} onReference={vi.fn()} onHelp={vi.fn()} priceLabel={()=>'₹100'}/>)});expect(JSON.stringify(r.toJSON())).not.toContain('Old flat rate');expect(r.root.findAllByType(Pressable).some((p:any)=>p.props.accessibilityLabel==='View Pickup and drop')).toBe(false);await act(async()=>r.unmount())}expect(pickup.active).toBe(true);expect(pickup.basePrice).toBe(10000);expect(source).toContain(pickup)});
+
+it("work-first detailing page: fixed price primary, brand product inside as Get quote option", async () => {
+  const leatherRows = [
+    {
+      id: "svc_fd82917361ed1bbcac06ae7a0d3e256d",
+      name: "CarPro CQUARTZ Leather 2.0",
+      category: "coating",
+      brand: "CarPro",
+      description: "CarPro's dedicated leather and vinyl coating",
+      active: true,
+      basePrice: 0,
+      priceOnRequest: true,
+    },
+    {
+      id: "menu-coat-leather",
+      name: "Leather coating",
+      category: "coating",
+      brand: "Add-ons",
+      description: "Protective coating for leather seats and trim.",
+      active: true,
+      basePrice: 600000,
+    },
+  ] as any;
+  const opened = vi.fn(),
+    quoted = vi.fn();
+  let r: any;
+  function App() {
+    const [path, set] = useState<ServicesPath>({ home: "detailing" });
+    return (
+      <ServicesExplorer
+        services={leatherRows}
+        path={path}
+        query=""
+        onPath={set}
+        onOpen={opened}
+        onQuote={quoted}
+        onHelp={vi.fn()}
+        onReference={vi.fn()}
+        priceLabel={(s) => (s.id === "menu-coat-leather" ? "₹6,000" : null)}
+      />
+    );
+  }
+  await act(async () => {
+    r = create(<App />);
+  });
+  await press(r, "Leather");
+  const text = JSON.stringify(r.toJSON());
+  // The service is the page: the fixed-price AutoDeck application is primary.
+  expect(text).toContain("Leather coating");
+  expect(text).toContain("DETAILING · LEATHER");
+  expect(text).toContain("₹6,000");
+  expect(text).not.toContain("Choose a brand");
+  // The brand product is part of the same service page as a Get quote option.
+  expect(text).toContain("CarPro");
+  expect(text).toContain("CarPro CQUARTZ Leather 2.0");
+  expect(text).not.toContain("Also available at a fixed price");
+  // Quote goes to the quote action for the brand product's own record.
+  await press(r, "Get quote");
+  expect(quoted).toHaveBeenCalledWith(leatherRows[0]);
+  expect(opened).not.toHaveBeenCalled();
+  // The priced application opens its own service target.
+  await press(r, "View Leather coating");
+  expect(opened).toHaveBeenCalledWith(leatherRows[1]);
+  await act(async () => r.unmount());
+});

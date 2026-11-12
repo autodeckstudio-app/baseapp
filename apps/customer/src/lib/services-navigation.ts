@@ -52,6 +52,13 @@ export const FAMILY_COPY: Record<string, string> = {
 export function familySummary(family: string): string {
   return FAMILY_COPY[family] ?? `${family} for your car`;
 }
+/** Work-first detailing pages (owner-approved 12 Nov, refined same day): every detailing
+ *  family page is the service itself - AutoDeck's fixed price is primary, and brand
+ *  products that apply to the service sit inside the same page as Get quote options until
+ *  the owner supplies brand prices. Presentation only; each record keeps its own target. */
+export function workFirstFamily(home: ServiceHomeKey | undefined, family: string | null | undefined): boolean {
+  return home === "detailing" && !!family;
+}
 /** Display grouping only. Product identity, price, eligibility and scope remain on the original record. */
 export function servicePlacement(
   s: Pick<Service, "id" | "name" | "category" | "description">,
