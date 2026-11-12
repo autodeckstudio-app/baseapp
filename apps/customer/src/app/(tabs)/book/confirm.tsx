@@ -208,7 +208,7 @@ export default function BookingConfirmScreen() {
   const combinedKeyRef=useRef(combinedReviewKey);combinedKeyRef.current=combinedReviewKey;
   const combinedSheetRef=useRef(combinedSheetKey);combinedSheetRef.current=combinedSheetKey;
   const combinedSheetVisible=combinedSheetKey!==null&&combinedSheetKey===combinedReviewKey;
-  function openCombinedReview(){if(held||combinedNoPayment){void handleConfirm();return;}if(combinedReviewKey)setCombinedSheetKey(combinedReviewKey);}
+  function openCombinedReview(){if(pickupKind&&pickupAddress.trim().length<8){setBookError("Enter the full pickup/drop address before continuing.");return;}if(held||combinedNoPayment){void handleConfirm();return;}if(combinedReviewKey)setCombinedSheetKey(combinedReviewKey);}
   function payCombinedReview(){
     if(!combinedSheetVisible||booking||confirmBusy.current||!combinedReviewKey||combinedKeyRef.current!==combinedReviewKey||combinedSheetRef.current!==combinedReviewKey)return;
     if(pickupKind&&!currentPickupQuote(transportDraft,Date.now())){setCombinedSheetKey(null);setBookError("Recheck pickup/drop before paying. The quote expired.");return;}
@@ -329,6 +329,9 @@ export default function BookingConfirmScreen() {
   async function handleConfirm() {
     if(booking || !service || !vehicle || !breakdown) return;
     if(confirmBusy.current)return;
+    // A selected pickup/drop needs its real address on EVERY path (booking create,
+    // review sheet, payment open) - never a silent skip after the fact.
+    if (pickupKind && pickupAddress.trim().length < 8) { setBookError("Enter the full pickup/drop address before continuing."); return; }
     if (combinedMode&&(!combinedReview||!combinedNoPayment&&!combinedChoice)) {setBookError(combinedReviewError??"Choose 20% advance or full payment before continuing.");return;}
     if (!combinedMode&&ADVANCE_SPLIT_ENABLED && !payNow && !giftCode && !washOn && !service.priceOnRequest && !advancePreview) { setBookError("We could not verify the advance amount. Reload this booking review before continuing."); return; }
     if (held) { if (!heldOver) await payHeld(held); return; }
@@ -462,8 +465,9 @@ export default function BookingConfirmScreen() {
                 onChangeText={setPickupAddress}
                 placeholder="e.g. 12, Sunrise Apartments, CG Road"
                 multiline
-                error={pickupAddress.trim().length > 0 && pickupAddress.trim().length < 8 ? "Enter the full address" : undefined}
+                error={pickupAddress.trim().length === 0 ? "Enter the pickup/drop address" : pickupAddress.trim().length < 8 ? "Enter the full address" : undefined}
               />
+              <T role="caption" tone="secondary" style={{ marginTop: space.breath }}>Check your location to see the final pickup/drop fee.</T>
               <Button label={pickupQuoteInfo ? "Check distance again" : "Check distance using my current location"} kind="quiet" busy={locating} onPress={() => void locatePickup()} />
               <T role="caption" tone="secondary">This uses your current location, not the typed address. Use it only if you are at the pickup/drop address.</T>
               {pickupQuoteInfo ? <T role="caption" tone="secondary">{describePickupQuote(pickupQuoteInfo)}</T> : null}
@@ -513,7 +517,7 @@ export default function BookingConfirmScreen() {
       ) : null}
 
       {freePickupMembership?<Pane pad="gap"><Row title="Plan transport benefit" detail="One free pickup/drop request will be reserved with this booking." last/></Pane>:null}
-      {combinedMode?combinedReviewError?<Pane pad="gap"><Notice title="Check pickup/drop" body={combinedReviewError}/><CombinedPaymentOptions choice={combinedChoice} onChange={setCombinedChoice} disabled total={null}/></Pane>:combinedAdvance?<Pane pad="gap"><CombinedPaymentOptions transportIncluded={freePickupMembership!==null} coveredService={giftCode?"gift":washOn?"membership":undefined} choice={combinedChoice} total={combinedAdvance.payment} disabled={booking||held!==null} onChange={setCombinedChoice}/>{combinedReview&&combinedChoice?<View><SheetLine small label="Pay now" value={rupees(combinedReview.payment.payNowPaise)}/><SheetLine small label="Booking balance at studio" value={rupees(combinedReview.payment.balancePaise)} last/></View>:null}</Pane>:null:null}
+      {combinedMode?combinedReviewError?<Pane pad="gap"><T role="caption" tone="secondary">{combinedReviewError}</T><CombinedPaymentOptions choice={combinedChoice} onChange={setCombinedChoice} disabled total={null}/></Pane>:combinedAdvance?<Pane pad="gap"><CombinedPaymentOptions transportIncluded={freePickupMembership!==null} coveredService={giftCode?"gift":washOn?"membership":undefined} choice={combinedChoice} total={combinedAdvance.payment} disabled={booking||held!==null} onChange={setCombinedChoice}/>{combinedReview&&combinedChoice?<View><SheetLine small label="Pay now" value={rupees(combinedReview.payment.payNowPaise)}/><SheetLine small label="Booking balance at studio" value={rupees(combinedReview.payment.balancePaise)} last/></View>:null}</Pane>:null:null}
 
       {saving !== null ? (
         <Pane pad="gap">
@@ -561,7 +565,7 @@ export default function BookingConfirmScreen() {
       {heldOver ? <Notice title="Time ran out" body="Payment was not completed in 15 minutes, so the slot was released. Pick a time again." action={<Button label="Pick a time" onPress={() => router.back()} />} /> : null}
 
       <View style={{ gap: space.breath }}>
-        {heldOver ? null : <Button label={combinedNoPayment?"Confirm booking":combinedMode?combinedChoice==="advance20"?"Pay 20% & confirm":"Pay in full & confirm":service?.priceOnRequest === true ? "Request quote" : payNow || held ? "Pay & confirm" : advanceDue ? "Pay 20% advance" : "Confirm booking"} busy={booking} disabled={booking||combinedMode&&(!combinedReview||!combinedNoPayment&&!combinedChoice)} onPress={() => { if(combinedMode){openCombinedReview();return;} if (!combinedMode&&advanceDue && !held) { setAdvanceSheet(true); return; } void handleConfirm(); }} />}
+        {heldOver ? null : <Button label={combinedNoPayment?"Confirm booking":combinedMode?combinedChoice&&combinedReview?`Pay ${rupees(combinedReview.payment.payNowPaise)} now`:"Pay now":service?.priceOnRequest === true ? "Request quote" : (payNow || held) && breakdown ? `Pay ${rupees(held?.advance && typeof held.expectedAdvancePaise === "number" ? held.expectedAdvancePaise : breakdown.total)} now` : advanceDue && advancePreview ? `Pay ${rupees(advancePreview.advancePaise)} now` : "Confirm booking"} busy={booking} disabled={booking||combinedMode&&(!combinedReview||!combinedNoPayment&&!combinedChoice)} onPress={() => { if(combinedMode){openCombinedReview();return;} if (!combinedMode&&advanceDue && !held) { setAdvanceSheet(true); return; } void handleConfirm(); }} />}
         {held && !heldOver ? <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>Your booking is pending until the payment goes through.</T> : null}
       </View>
       {combinedMode&&combinedChoice&&combinedReview&&!combinedNoPayment?<CombinedPaymentSheet visible={combinedSheetVisible} serviceName={service?.name??"Service"} summary={giftCode||washOn?"Your service is included. Any selected payable pickup/drop is in this total.":freePickupMembership?"Your pickup/drop benefit is included. This total is for your service.":"Includes your service and selected pickup/drop."} choice={combinedChoice} totalPaise={combinedReview.payment.totalPaise} payNowPaise={combinedReview.payment.payNowPaise} balancePaise={combinedReview.payment.balancePaise} busy={booking} onPay={payCombinedReview} onGoBack={()=>setCombinedSheetKey(null)}/>:null}

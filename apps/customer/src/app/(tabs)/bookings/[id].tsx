@@ -15,7 +15,6 @@ import { listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
 import type { Vehicle } from "@autodeck/core";
 import { Linking, Platform, View } from "react-native";
-import { STUDIO_INFO } from "../../../lib/studio-info";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { listenToBooking, cancelBooking, approveBookingQuote, declineBookingQuote } from "../../../lib/booking-service";
 import { getJobIdForBooking } from "../../../lib/job-service";
@@ -97,7 +96,8 @@ const BOOKING_CHIP_TONE: Record<string, "neutral" | "accent" | "premium" | "dang
 // authoritative calendar span is shown separately via "Expected ready").
 
 export default function BookingDetailScreen() {
-  const { id, placed, mock, pickup } = useLocalSearchParams<{ id: string; placed?: string; mock?: string; pickup?: string }>();
+  const { id, placed, mock, pickup, returnTo } = useLocalSearchParams<{ id: string; placed?: string; mock?: string; pickup?: string; returnTo?: string }>();
+  // Opened from Notifications: Back returns to that list, not an unrelated default.
   // Dev preview only (?mock=1/2, __DEV__): sample screens render without a session,
   // but a persisted Firebase session can exist in this browser - so every write and
   // every navigation into a write flow is blocked explicitly, never relying on the
@@ -131,7 +131,7 @@ export default function BookingDetailScreen() {
   const minuteNow = useMinuteNow();
   const [job, setJob] = useState<ServiceJob | null>(null);
   const [payment, setPayment] = useState<Payment | null>(null);
-  const[paymentRead,setPaymentRead]=useState<'loading'|'ready'|'error'>('loading');const[paymentRefresh,setPaymentRefresh]=useState(0);const[paymentScope,setPaymentScope]=useState('');const paymentGeneration=useRef(0);const resumeLock=useRef(false);
+  const[paymentRead,setPaymentRead]=useState<'loading'|'ready'|'error'>('loading');const[paymentScope,setPaymentScope]=useState('');const paymentGeneration=useRef(0);const resumeLock=useRef(false);
 
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const liveApprovalsRef=useRef(approvals);liveApprovalsRef.current=approvals;
@@ -217,7 +217,7 @@ export default function BookingDetailScreen() {
     const scope=[job.id,job.tenantId,job.customerId].join('|');
     const stop=listenToPaymentForJob(job.id,job.tenantId,job.customerId,p=>{if(paymentGeneration.current!==generation)return;if(p&&(p.jobId!==job.id||p.tenantId!==job.tenantId||p.customerId!==job.customerId)){setPayment(null);setPaymentRead('error');setPaymentScope(scope);return}setPayment(p);setPaymentRead('ready');setPaymentScope(scope)},()=>{if(paymentGeneration.current!==generation)return;setPayment(null);setPaymentRead('error');setPaymentScope(scope)});
     return()=>{paymentGeneration.current++;stop()};
-  }, [job?.id,job?.tenantId,job?.customerId,paymentRefresh,authB.status,authB.status==='ready'?authB.user.uid:null,authB.status==='ready'?authB.claims.tenantId:null,resolvedRoute,id,ownerVerified]);
+  }, [job?.id,job?.tenantId,job?.customerId,authB.status,authB.status==='ready'?authB.user.uid:null,authB.status==='ready'?authB.claims.tenantId:null,resolvedRoute,id,ownerVerified]);
 
   useEffect(() => {
     setApprovals([]);if (!job) return;let alive=true;
@@ -329,9 +329,10 @@ export default function BookingDetailScreen() {
     }
   }
 
+  const originBack = returnTo === "notifications" ? () => router.replace("/(tabs)/notifications") : undefined;
   if (loading||(!isMock&&resolvedRoute!==id&&!feedError)) return <Loading label="Opening your booking" />;
-  if(feedError) return <Screen><Notice title="Can't load your booking" body={feedError} action={<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
-  if (!booking) return <Screen><Notice title="Booking not found" body="It may have been removed, or the link is stale." /></Screen>;
+  if(feedError) return <Screen onBack={originBack}><Notice title="Can't load your booking" body={feedError} action={<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
+  if (!booking) return <Screen onBack={originBack}><Notice title="Booking not found" body="It may have been removed, or the link is stale." /></Screen>;
 
   const missed = isBookingMissed(booking);
   const bookingClosed=["CANCELLED","EXPIRED","COMPLETED"].includes(booking.status);
@@ -342,7 +343,6 @@ export default function BookingDetailScreen() {
   const cancel = cancelState(booking, Date.now(), svc?.category);
   const cancelLifecycleOpen=!job||['PENDING_VEHICLE','STANDBY','VEHICLE_RECEIVED'].includes(job.status);
   const canCancel=cancel.canCancel&&cancelLifecycleOpen;
-  const lateToCancel=cancel.lateToCancel||Boolean(job&&!cancelLifecycleOpen&&job.status!=='CANCELLED'&&job.status!=='DELIVERED');
   const paidAlready = !membershipCoveredLabel(booking) && (booking.paymentStatus === "paid" || booking.paymentStatus === "partial");
   const giftCovered = Boolean(booking.giftId) && booking.priceBreakdown.total === 0;
   const waitingCancel = booking.cancelIntent?.state === "waiting" || booking.cancelIntent?.state === "needs_review";
@@ -378,6 +378,7 @@ export default function BookingDetailScreen() {
 
   return (
     <Screen
+      onBack={originBack}
       header={
         <View style={{ borderRadius: 24, overflow: "hidden", backgroundColor: "#0B0B0D", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
           <CarThumb car={car ?? (booking.vehicleSnapshot ? { ...booking.vehicleSnapshot, photoUrl: null, category: booking.vehicleCategory } : undefined)} height={metrics.heroCompact + 60} radius={0} />
@@ -562,7 +563,6 @@ export default function BookingDetailScreen() {
           {resumeAllowed?<View style={{gap:space.line,marginTop:space.line}}><Button label="Continue online payment" busy={payingNow} disabled={payingNow} onPress={()=>void resumePayment()}/></View>:null}
           {job?.combinedSettlement?<View><Row title="Verified advance" detail={rupees(job.combinedSettlement.advanceCapturedPaise)}/><Row title={job.offlineSettlement?"Balance after advance":"Balance due"} detail={rupees(booking.status==="CANCELLED"?0:job.combinedSettlement.balanceDuePaise)}/></View>:null}
           {job?.offlineSettlement ? <View style={{marginTop:space.line}}><T role="caption" tone="secondary">Actual offline receipts</T><Row title="Applied to this visit" detail={rupees(job.offlineSettlement.appliedPaise)}/><Row title="Balance due" detail={rupees(booking.status==="CANCELLED"?0:Math.max(0,job.totalAmount-(job.combinedSettlement?.advanceCapturedPaise??0)-job.offlineSettlement.appliedPaise))}/>{job.offlineSettlement.officeReturnDuePaise>0?<Row title="Office return due" detail={rupees(job.offlineSettlement.officeReturnDuePaise)}/>:null}<Row title="Payment record" detail="Verified money only."/><Row title="Office return" detail="Not automatic credit or a completed refund."/></View>:null}
-          {job?<Button icon="refresh" label="Refresh payment status" kind="quiet" onPress={()=>setPaymentRefresh(n=>n+1)}/>:null}
           {paymentIsCurrent && (payment?.invoiceId || job?.invoiceId || booking.invoiceId) && job ? (
             <View style={{ marginTop: space.line }}>
               <Button label="Invoice" kind="quiet" onPress={() => router.push(invoiceHref((payment?.invoiceId || job.invoiceId || booking.invoiceId) as string))} />
@@ -587,7 +587,7 @@ export default function BookingDetailScreen() {
         </Pane>
       ) : null}
       {booking.status === "EXPIRED" ? <Pane><Kicker>Slot released</Kicker><Row title="Booking" detail="Expired. Payment was not completed."/><Row title="Next step" detail="You can book again." last/></Pane> : null}
-      {combinedReturn?<Pane pad="gap"><Kicker>Original-method returns</Kicker><Row title="Fee retained" detail={rupees(combinedReturn.feePaise)}/><Row title="Return amount" detail={rupees(combinedReturn.refundPaise)}/><Row title="Actually returned" detail={rupees(combinedReturn.entries.reduce((n,e)=>n+e.returnedPaise,0))}/><Row title="Status" detail={combinedReturn.status==="awaiting_admin"?"Awaiting Admin approval":combinedReturn.status==="returned"?"Returns recorded":"Returns still pending"}/>{combinedReturn.entries.some(e=>e.method==="cash"&&e.returnedPaise<e.returnPaise)?<Row title="Cash return" detail="Still owed. Not an automatic refund."/>:null}</Pane>:null}
+      {combinedReturn?<Pane pad="gap"><Kicker>Original-method returns</Kicker><Row title="Return amount" detail={rupees(combinedReturn.refundPaise)}/>{combinedReturn.feePaise>0?<Row title="Fee retained" detail={rupees(combinedReturn.feePaise)}/>:null}<Row title="Status" detail={combinedReturn.status==="awaiting_admin"?"Awaiting Admin approval":combinedReturn.status==="returned"?"Returns recorded":"Returns still pending"}/>{combinedReturn.entries.some(e=>e.method==="cash"&&e.returnedPaise<e.returnPaise)?<Row title="Cash return" detail="Still owed. Not an automatic refund."/>:null}</Pane>:null}
       {!combinedReturn&&(booking.refundStatus === "reserved" || booking.refundStatus === "requested") ? <Notice title="Refund requested" body="Your refund request is recorded. This page shows its status as it changes." /> : null}
       {!combinedReturn&&booking.refundStatus === "initiated" ? <Notice title="Refund recorded" body="The studio has recorded your refund. Paid online? When it reaches you depends on your bank or payment provider." /> : null}
       {!combinedReturn&&booking.refundStatus === "processed" ? <Notice title="Refund processed by Razorpay" body="Razorpay reports your refund as processed. When it reaches you depends on your bank or payment provider." /> : null}
@@ -655,12 +655,6 @@ export default function BookingDetailScreen() {
       {isBookingLateToday(booking) ? <Notice title="Your booking is still valid today" body="Your slot has passed, but you can still come today during studio hours. If not checked in by close (7 pm Sunday, 9 pm other days), the booking auto-cancels." /> : null}
       {autoCancelled ? (
         <Notice title="Booking auto-cancelled" body="Not checked in by studio close (7 pm Sunday, 9 pm other days), so this booking is closed. Book again any time." />
-      ) : null}
-
-      {lateToCancel ? (
-        <>
-          <Button icon="call" label="Call the studio" kind="quiet" onPress={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)} />
-        </>
       ) : null}
 
       {canCancel ? (

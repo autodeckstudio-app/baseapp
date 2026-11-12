@@ -88,7 +88,8 @@ export default function NotificationsScreen() {
     if (!n.readAt) void markNotificationRead(n.id).catch(() => undefined);
 
     if (n.entityType === "Booking" && n.entityId) {
-      router.push(`/(tabs)/bookings/${n.entityId}`);
+      // Back from this booking returns here, to the same Notifications page.
+      router.push({ pathname: "/(tabs)/bookings/[id]", params: { id: n.entityId, returnTo: "notifications" } });
       return;
     }
     if (n.entityType === "Membership") {

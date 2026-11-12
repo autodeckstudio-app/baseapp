@@ -1,5 +1,6 @@
 // The next booked visit as one hero card: a big date block, what and which car, and how soon.
 import { Pressable, View } from "react-native";
+import type { ReactNode } from "react";
 import { glassSurface, glassInner } from "../lib/glass";
 import { metrics } from "../lib/metrics";
 import { daysUntilLabel } from "../lib/bookings-view";
@@ -7,7 +8,7 @@ import { Chip, T } from "./kit";
 
 const MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 
-export function NextVisitHero({ date, today, time, title, car, status, onPress }: { date: string; today: string; time: string; title: string; car: string; status: string; onPress: () => void }) {
+export function NextVisitHero({ date, today, time, title, car, status, onPress, children }: { date: string; today: string; time: string; title: string; car: string; status: string; onPress: () => void; children?: ReactNode }) {
   const day = Number(date.slice(8, 10));
   const mon = MON[Number(date.slice(5, 7)) - 1] ?? "";
   return (
@@ -24,6 +25,7 @@ export function NextVisitHero({ date, today, time, title, car, status, onPress }
         </View>
       </View>
       <View style={{ flexDirection: "row" }}><Chip label={status} tone="premium" /></View>
+      {children}
     </Pressable>
   );
 }

@@ -165,7 +165,7 @@ it("keeps Home glass to three blur surfaces, hides the campaign slot without rea
 });
 it("every journey element has a reason: no None status rows, a call route when online cancel is closed, a next step after pay at the studio",()=>{
   expect(read("src/ui/CarOverview.tsx")).not.toContain('"None"');
-  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain('label="Call the studio"');expect(b).toContain("tel:${STUDIO_INFO.phone}");expect(b).toContain('title="Next step"');expect(b).toContain('"Pay at the studio."');
+  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).not.toContain('icon="call"');expect(b).not.toContain('icon="directions"');expect(b).toContain('title="Next step"');expect(b).toContain('"Pay at the studio."');
 });
 it("audit batch: no spinner price labels, no icon placeholders over titles, labelled remove, headline on You, action on every notification",()=>{
   expect(read("src/app/(tabs)/catalogue/index.tsx")).not.toContain("Checking price");
@@ -249,7 +249,8 @@ describe("one confirm button", () => {
     const c = read("src/app/(tabs)/book/confirm.tsx");
     expect(c).not.toMatch(/SlideToConfirm/);
     expect(c).not.toMatch(/Or tap here/);
-    expect(c).toMatch(/Pay & confirm/);
+    expect(c).not.toMatch(/& confirm/);
+    expect(c).toMatch(/Pay \$\{rupees\(combinedReview\.payment\.payNowPaise\)\} now/);
     expect(c).toMatch(/Confirm booking/);
     expect(c).toContain("busy={booking} disabled={booking||combinedMode&&(!combinedReview||!combinedNoPayment&&!combinedChoice)}");
     expect(c).not.toContain('label="Go back"');
