@@ -157,9 +157,10 @@ export function ReferencePackageCard({
     </SceneCard>
   );
 }
-/** Work-first product journey: the work is the page; the named product sits inside it
- *  as compact facts with one clear action. Only catalogue-record facts are shown. */
-function WorkFirstProduct({
+/** Brand product that applies to the service on this page. It stays part of the
+ *  service as a Get quote option until the owner sets a brand price; the AutoDeck
+ *  fixed price remains the primary offer. */
+function BrandQuoteOption({
   service,
   onQuote,
   onOpen,
@@ -168,22 +169,15 @@ function WorkFirstProduct({
   onQuote?: ((s: Service) => void) | undefined;
   onOpen: (s: Service) => void;
 }) {
-  const whereUsed = /^\s*[-•]?\s*Where used:\s*(.+)$/im.exec(service.description ?? "")?.[1]?.trim();
   return (
-    <View style={{ gap: 20 }}>
-      <Pane pad="none">
-        <ServicePhoto service={service} aspect={16 / 9} radius={26} />
-      </Pane>
-      <Pane pad="gap">
-        <Row title="Product" detail={service.name} last={!whereUsed} />
-        {whereUsed ? <Row title="Where used" detail={whereUsed} last /> : null}
-      </Pane>
-      {service.priceOnRequest === true ? (
-        <Button kind="quiet" label="Get quote" onPress={() => (onQuote ?? onOpen)(service)} />
-      ) : (
-        <Button kind="primary" label="View service" onPress={() => onOpen(service)} />
-      )}
-    </View>
+    <Pane pad="gap">
+      <Row title={service.brand ?? "Brand product"} detail={service.name} last />
+      <Button
+        kind="quiet"
+        label="Get quote"
+        onPress={() => (onQuote ?? onOpen)(service)}
+      />
+    </Pane>
   );
 }
 export function ServicesExplorer({
@@ -350,17 +344,24 @@ export function ServicesExplorer({
   const workLabel = PPF_CUSTOMER_OPTIONS.find(
     (w) => w.key === path.work,
   )?.label;
-  // Work-first families (owner-approved model): the family page is the work itself.
-  // Named products and fixed-price studio applications keep their own records and
-  // quote/booking targets; only the presentation merges them into one work page.
+  // Work-first detailing pages (owner-approved model, 12 Nov): the page is the service.
+  // AutoDeck's fixed price is primary; brand products that apply to the service are part
+  // of the same page as Get quote options until the owner sets brand prices. Priced
+  // records keep their own price and booking target; nothing merges records or prices.
   const workFirst = workFirstFamily(home.key, family);
   if (workFirst && !activeBrand) {
-    const named = selected.filter((s) => s.brand && s.brand !== ADDON_BRAND);
-    const studio = selected.filter((s) => !s.brand || s.brand === ADDON_BRAND);
+    const fixed = selected.filter((s) => s.priceOnRequest !== true);
+    const brandQuote = selected.filter(
+      (s) => s.priceOnRequest === true && s.brand && s.brand !== ADDON_BRAND,
+    );
+    const otherQuote = selected.filter(
+      (s) => s.priceOnRequest === true && (!s.brand || s.brand === ADDON_BRAND),
+    );
+    const title = fixed.length === 1 ? fixed[0]!.name : family!;
     return (
       <View style={{ gap: 20 }}>
         <ServicePageHeader
-          title={workFirst.work}
+          title={title}
           detail={FAMILY_COPY[family ?? ""]}
           context={`${home.label} · ${family}`}
           crumbs={[
@@ -368,17 +369,21 @@ export function ServicesExplorer({
             { title: home.label, onPress: () => onPath({ home: home.key }) },
           ]}
         />
-        {named.length === 1 ? (
-          <WorkFirstProduct service={named[0]!} onQuote={onQuote} onOpen={onOpen} />
-        ) : named.length > 1 ? (
-          products(named, [])
-        ) : null}
-        {studio.length > 0 ? (
+        {products([...fixed, ...otherQuote], [])}
+        {brandQuote.length > 0 ? (
           <>
             <T role="caption" tone="secondary">
-              Also available at a fixed price
+              Prefer a brand product? The studio confirms it for your car and
+              quotes before you book.
             </T>
-            {products(studio, [])}
+            {brandQuote.map((s) => (
+              <BrandQuoteOption
+                key={s.id}
+                service={s}
+                onQuote={onQuote}
+                onOpen={onOpen}
+              />
+            ))}
           </>
         ) : null}
         {selectedRefs.length > 0 ? products([], selectedRefs) : null}

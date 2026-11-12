@@ -263,14 +263,14 @@ it("Washing presents interior once, exact record on action, and search uses the 
 });
 it('pickup is never a standalone catalogue card, including search, without editing the original record',async()=>{const pickup={id:'svc-pickup',name:'Pickup and drop',category:'pickup',description:'Old flat rate within the city',basePrice:10000,active:true};const source=[...rows,pickup];for(const query of['','pickup']){let r:any;await act(async()=>{r=create(<ServicesExplorer services={source as any} path={{}} query={query} onPath={vi.fn()} onOpen={vi.fn()} onReference={vi.fn()} onHelp={vi.fn()} priceLabel={()=>'₹100'}/>)});expect(JSON.stringify(r.toJSON())).not.toContain('Old flat rate');expect(r.root.findAllByType(Pressable).some((p:any)=>p.props.accessibilityLabel==='View Pickup and drop')).toBe(false);await act(async()=>r.unmount())}expect(pickup.active).toBe(true);expect(pickup.basePrice).toBe(10000);expect(source).toContain(pickup)});
 
-it("work-first Leather family: the work is the page, named product inside, priced studio application kept distinct", async () => {
+it("work-first detailing page: fixed price primary, brand product inside as Get quote option", async () => {
   const leatherRows = [
     {
       id: "svc_fd82917361ed1bbcac06ae7a0d3e256d",
       name: "CarPro CQUARTZ Leather 2.0",
       category: "coating",
       brand: "CarPro",
-      description: "CarPro's dedicated leather and vinyl coating\n- Where used: Leather and vinyl",
+      description: "CarPro's dedicated leather and vinyl coating",
       active: true,
       basePrice: 0,
       priceOnRequest: true,
@@ -309,19 +309,16 @@ it("work-first Leather family: the work is the page, named product inside, price
   });
   await press(r, "Leather");
   const text = JSON.stringify(r.toJSON());
-  // The work is the page; no brand pick, no duplicate parallel journey.
+  // The service is the page: the fixed-price AutoDeck application is primary.
   expect(text).toContain("Leather coating");
   expect(text).toContain("DETAILING · LEATHER");
-  expect(text).not.toContain("Choose a brand");
-  // Named product facts come from the catalogue record, inside the work page.
-  expect(text).toContain("Product");
-  expect(text).toContain("CarPro CQUARTZ Leather 2.0");
-  expect(text).toContain("Where used");
-  expect(text).toContain("Leather and vinyl");
-  // The fixed-price studio application stays a distinct visible choice.
-  expect(text).toContain("Also available at a fixed price");
   expect(text).toContain("₹6,000");
-  // Quote goes to the quote action for the named product's own record.
+  expect(text).not.toContain("Choose a brand");
+  // The brand product is part of the same service page as a Get quote option.
+  expect(text).toContain("CarPro");
+  expect(text).toContain("CarPro CQUARTZ Leather 2.0");
+  expect(text).not.toContain("Also available at a fixed price");
+  // Quote goes to the quote action for the brand product's own record.
   await press(r, "Get quote");
   expect(quoted).toHaveBeenCalledWith(leatherRows[0]);
   expect(opened).not.toHaveBeenCalled();

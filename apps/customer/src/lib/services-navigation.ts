@@ -52,16 +52,12 @@ export const FAMILY_COPY: Record<string, string> = {
 export function familySummary(family: string): string {
   return FAMILY_COPY[family] ?? `${family} for your car`;
 }
-/** Work-first families (owner-approved 12 Nov): the family page is the work itself,
- *  with its product/options inside it, instead of a brand pick followed by parallel
- *  product cards. Named products and priced studio applications stay distinct records
- *  with their own quote/booking targets; this only changes presentation. */
-export const WORK_FIRST_FAMILIES: Partial<Record<ServiceHomeKey, Record<string, { work: string }>>> = {
-  detailing: { Leather: { work: "Leather coating" } },
-};
-export function workFirstFamily(home: ServiceHomeKey | undefined, family: string | null | undefined): { work: string } | null {
-  if (!home || !family) return null;
-  return WORK_FIRST_FAMILIES[home]?.[family] ?? null;
+/** Work-first detailing pages (owner-approved 12 Nov, refined same day): every detailing
+ *  family page is the service itself - AutoDeck's fixed price is primary, and brand
+ *  products that apply to the service sit inside the same page as Get quote options until
+ *  the owner supplies brand prices. Presentation only; each record keeps its own target. */
+export function workFirstFamily(home: ServiceHomeKey | undefined, family: string | null | undefined): boolean {
+  return home === "detailing" && !!family;
 }
 /** Display grouping only. Product identity, price, eligibility and scope remain on the original record. */
 export function servicePlacement(
