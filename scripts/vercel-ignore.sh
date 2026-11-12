@@ -338,6 +338,44 @@ CUSTOMER_HARDENING_PATHS
     *) printf 'Pinned Customer hardening: SKIP (%s)\n' "$app"; exit 0 ;;
   esac
 fi
+# Pinned Gauri payment/booking UI batch. Exact parent + complete path list, Customer only.
+gauri_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = fix/gauri-payment-ui-20261112 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$gauri_parent" = eb4b39ccd1ef6c9e49449abbff5149d271942e10 ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0
+  cd "$root" || exit 0
+  gauri_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  [ "$gauri_parent" = eb4b39ccd1ef6c9e49449abbff5149d271942e10 ] || { printf 'Gauri payment UI wrong parent: SKIP (%s)\n' "$app"; exit 0; }
+  actual="$(git diff --name-only "$gauri_parent" HEAD 2>/dev/null)" || exit 0
+  expected=$(cat <<'GAURI_UI_PATHS'
+apps/customer/src/app/(tabs)/book/advance-modal-flow.render.test.tsx
+apps/customer/src/app/(tabs)/book/confirm-combined.render.test.tsx
+apps/customer/src/app/(tabs)/book/confirm-states.render.test.tsx
+apps/customer/src/app/(tabs)/book/confirm.tsx
+apps/customer/src/app/(tabs)/bookings/[id].tsx
+apps/customer/src/app/(tabs)/bookings/booking-payment.render.test.tsx
+apps/customer/src/app/(tabs)/bookings/index.tsx
+apps/customer/src/app/(tabs)/notifications/index.tsx
+apps/customer/src/lib/vercel-gauri-ui-guard.test.ts
+apps/customer/src/ui/CombinedPaymentOptions.tsx
+apps/customer/src/ui/NextVisitHero.tsx
+apps/customer/src/ui/PickupOptions.tsx
+apps/customer/src/ui/PickupTimeField.tsx
+apps/customer/src/ui/design-contract.test.ts
+apps/customer/src/ui/uc-review-contract.test.ts
+docs/customer-gauri-payment-ui-20261112.md
+functions/src/test/unit/booking-transport-snapshot.test.ts
+packages/core/src/pickup-tariff.test.ts
+packages/core/src/pickup-tariff.ts
+scripts/vercel-ignore.sh
+GAURI_UI_PATHS
+)
+  [ "$actual" = "$expected" ] || { printf 'Gauri payment UI unexpected paths: SKIP (%s)\n' "$app"; exit 0; }
+  case "$app" in
+    customer) printf 'Pinned Customer Gauri payment UI: BUILD\n'; exit 1 ;;
+    *) printf 'Pinned Customer Gauri payment UI: SKIP (%s)\n' "$app"; exit 0 ;;
+  esac
+fi
+
 # This isolated emulator-fixture branch never builds or promotes a website/app.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = qa/quote-fixtures-20261106 ]; then
   printf 'isolated fixture QA branch: SKIP (%s)\n' "$app"

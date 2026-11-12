@@ -4,7 +4,7 @@ import { bookingSections } from "../../../lib/booking-sections";
 import { useExperienceTheme } from "@autodeck/ui/native";
 // Bookings: what's coming first, then history.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Linking, Pressable, View, useWindowDimensions } from "react-native";
+import { Pressable, View, useWindowDimensions } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DAYS, dueSoonFor, lastServiceFor } from "../../../lib/booking-ideas";
@@ -30,7 +30,6 @@ import { listenToApprovalsForJob } from "../../../lib/approval-service";
 import { cancelBooking } from "../../../lib/booking-service";
 import { getRescheduleEligibility, cancelState, cancelConfirmBody } from "../../../lib/booking-rules";
 import { liveJobOf, recentDistinctServices, groupByMonth } from "../../../lib/bookings-view";
-import { STUDIO_INFO } from "../../../lib/studio-info";
 import { jobStage, readyIsAhead, STAGES } from "../../../ui/job-stage";
 import { TabPills } from "../../../ui/CarOverview";
 import { useSegmentSwipe } from "../../../lib/segment-swipe";
@@ -210,13 +209,12 @@ export default function BookingsScreen() {
       {seg === "upcoming" && next ? (
         <View style={{ gap: space.line }}>
           <SectionTitle>Next visit</SectionTitle>
-          <NextVisitHero date={next.scheduledDate} today={todayIst} time={next.scheduledTime} title={visitTitle(nameOf(next))} car={nextCar ? `${nextCar.make} ${nextCar.model}` : "Car"} status={isBookingMissed(next) ? "Missed" : (next.status === "PENDING" && next.payMode === "online" ? "Pending payment" : STATUS[next.status].label)} onPress={() => router.push(`/(tabs)/bookings/${next.id}`)} />
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-            {nextElig?.eligible ? <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" label="Reschedule" onPress={() => router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: next.id } })} /></View> : null}
-            {nextCancel?.canCancel && !confirmCancel ? <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" label="Cancel" onPress={() => setConfirmCancel(true)} /></View> : null}
-            <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" icon="directions" label="Directions" onPress={() => void Linking.openURL(STUDIO_INFO.mapsUrl)} /></View>
-            <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" icon="call" label="Call studio" onPress={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)} /></View>
-          </View>
+          <NextVisitHero date={next.scheduledDate} today={todayIst} time={next.scheduledTime} title={visitTitle(nameOf(next))} car={nextCar ? `${nextCar.make} ${nextCar.model}` : "Car"} status={isBookingMissed(next) ? "Missed" : (next.status === "PENDING" && next.payMode === "online" ? "Pending payment" : STATUS[next.status].label)} onPress={() => router.push(`/(tabs)/bookings/${next.id}`)}>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {nextElig?.eligible ? <Button kind="quiet" icon="edit" label="Reschedule" onPress={() => router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: next.id } })} /> : null}
+              {nextCancel?.canCancel && !confirmCancel ? <Button kind="quiet" icon="close" label="Cancel" onPress={() => setConfirmCancel(true)} /> : null}
+            </View>
+          </NextVisitHero>
           {nextElig && !nextElig.eligible && nextElig.reason ? <T role="caption" tone="tertiary">{nextElig.reason}</T> : null}
           {confirmCancel ? (
             <Notice
