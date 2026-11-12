@@ -68,7 +68,7 @@ export type HomeViewProps = {
   onBell: () => void;
   onAllServices: () => void;
   onCategory: (category: string | null) => void;
-  onService: (s: HomeService) => void;
+  onService: (s: HomeService, cardKey?: string) => void;
   onCar: (c: HomeCar) => void;
   onAddCar: () => void;
   onReminders: () => void;
@@ -330,7 +330,7 @@ export function HomeView(p: HomeViewProps) {
         <View style={{ gap: 12 }}>
           <Heading title="Services for you" action="All" onAction={p.onAllServices} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: TILE_GAP }}>
-            {top.map((t, i) => <Rise key={t.key} delay={200 + i * 90}><View style={{ width: 232, height: 160 }}><TopPickCard pick={t} onPress={() => p.onService(t.service)} /></View></Rise>)}
+            {top.map((t, i) => <Rise key={t.key} delay={200 + i * 90}><View style={{ width: 232, height: 160 }}><TopPickCard pick={t} onPress={() => p.onService(t.service, t.key)} /></View></Rise>)}
           </ScrollView>
         </View>
       ) : null}
