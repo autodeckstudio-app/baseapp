@@ -60,3 +60,5 @@ export * from "./recorded-work-handover.js";
 export * from './vehicle-year.js';
 
 export * from './combined-checkout.js';
+
+export * from "./pickup-tariff.js";

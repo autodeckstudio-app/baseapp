@@ -8,8 +8,8 @@ describe("pickup road-distance quote flow", () => {
     expect(confirm).toContain("getPickupQuote({ kind: pickupKind");
     expect(confirm).toContain("describePickupQuote(pickupQuoteInfo)");
     expect(confirm).toContain("quoteId: pickupQuoteInfo.quoteId");
-    expect(policy).toContain("PICKUP_FREE_ROAD_METERS");
-    expect(policy).toContain("PICKUP_ROAD_RATE_PER_KM_PAISE");
+    expect(policy).toContain("final pickup/drop fee");
+    expect(policy).not.toContain("per extra km");
     expect(confirm).not.toMatch(/Rs\s?\d/);
   });
   it("never estimates on routing failure: honest copy, no charge path", () => {

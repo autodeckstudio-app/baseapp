@@ -1,6 +1,6 @@
 // Hourly pickup-time preference slots for the booking day. A pickup must
-// happen before the service starts, so only slots up to the booking's own
-// scheduled time are offered: a 10:00 booking cannot have an 11:00 pickup.
+// happen before the service starts, so only slots strictly earlier than the booking's own
+// scheduled time are offered: a 13:30 booking can request 13:00, not 13:30.
 // Times are "HH:mm" in the studio timezone, the same format the booking
 // flow already carries (AvailableSlot.startTime / confirm screen params).
 //
@@ -26,11 +26,7 @@ export function pickupSlotsFor(scheduledTime: string, openTime: string): string[
   const latest = toMinutes(scheduledTime);
   if (open === null || latest === null) return [];
   const slots: string[] = [];
-  for (let mins = open; mins <= latest; mins += 60) slots.push(toClock(mins));
-  // A booking on a non-hourly mark (e.g. 10:30) still gets its own time as
-  // the last, latest allowed slot.
-  const last = slots.length > 0 ? toMinutes(slots[slots.length - 1] ?? "") : null;
-  if (last === null || last < latest) slots.push(toClock(latest));
+  for (let mins = open; mins < latest; mins += 60) slots.push(toClock(mins));
   return slots;
 }
 

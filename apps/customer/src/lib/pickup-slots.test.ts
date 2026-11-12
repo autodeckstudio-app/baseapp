@@ -21,27 +21,27 @@ const info: LiveStudioInfo = {
 };
 
 describe("pickupSlotsFor", () => {
-  it("offers hourly slots from the booking day's open up to and including the booking time", () => {
-    expect(pickupSlotsFor("12:00", "10:00")).toEqual(["10:00", "11:00", "12:00"]);
+  it("offers hourly slots from the booking day's open strictly before the booking time", () => {
+    expect(pickupSlotsFor("12:00", "10:00")).toEqual(["10:00", "11:00"]);
   });
   it("a 10 AM booking cannot have an 11 AM pickup", () => {
     const slots = pickupSlotsFor("10:00", "10:00");
-    expect(slots).toEqual(["10:00"]);
+    expect(slots).toEqual([]);
     expect(slots).not.toContain("11:00");
   });
   it("never offers a slot after the booking time", () => {
     for (const t of ["10:00", "13:00", "18:30", "21:00"]) {
       const slots = pickupSlotsFor(t, "09:00");
       expect(slots.length).toBeGreaterThan(0);
-      expect(slots.every((s) => s <= t)).toBe(true);
+      expect(slots.every((s) => s < t)).toBe(true);
     }
   });
-  it("keeps a non-hourly booking time choosable as the last slot", () => {
-    expect(pickupSlotsFor("10:30", "10:00")).toEqual(["10:00", "10:30"]);
+  it("excludes a non-hourly booking time from the pickup slots", () => {
+    expect(pickupSlotsFor("10:30", "10:00")).toEqual(["10:00"]);
   });
   it("honours the booking day's actual open, including earlier non-hour opens", () => {
-    expect(pickupSlotsFor("11:00", "09:00")).toEqual(["09:00", "10:00", "11:00"]);
-    expect(pickupSlotsFor("11:00", "09:30")).toEqual(["09:30", "10:30", "11:00"]);
+    expect(pickupSlotsFor("11:00", "09:00")).toEqual(["09:00", "10:00"]);
+    expect(pickupSlotsFor("11:00", "09:30")).toEqual(["09:30", "10:30"]);
   });
   it("returns no slots when the booking time is missing or unreadable", () => {
     expect(pickupSlotsFor("", "09:00")).toEqual([]);
@@ -84,8 +84,8 @@ describe("pickupSlotOptions", () => {
     expect(pickupSlotOptions(undefined, { status: "open", open: "10:00" })).toEqual([]);
   });
   it("lists slots from the grounded open once hours arrive", () => {
-    expect(pickupSlotOptions("12:00", { status: "open", open: "10:00" })).toEqual(["10:00", "11:00", "12:00"]);
-    expect(pickupSlotOptions("12:00", pickupDayHoursFor(info, "2026-10-24"))).toEqual(["09:00", "10:00", "11:00", "12:00"]);
+    expect(pickupSlotOptions("12:00", { status: "open", open: "10:00" })).toEqual(["10:00", "11:00"]);
+    expect(pickupSlotOptions("12:00", pickupDayHoursFor(info, "2026-10-24"))).toEqual(["09:00", "10:00", "11:00"]);
   });
 });
 
@@ -108,4 +108,28 @@ describe("validPickupSlot", () => {
     expect(validPickupSlot("", ["10:00"])).toBe("");
     expect(validPickupSlot("", [])).toBe("");
   });
+});
+
+// Gauri pickup boundary: no payment or booking mutation is involved.
+describe("strict pickup preference boundary", () => {
+  it("13:30 offers 13:00 but never 13:30", () => {
+    expect(pickupSlotsFor("13:30", "10:00")).toEqual(["10:00", "11:00", "12:00", "13:00"]);
+  });
+  it("does not invent a preference before opening or at opening", () => {
+    expect(pickupSlotsFor("09:30", "10:00")).toEqual([]);
+    expect(pickupSlotsFor("10:00", "10:00")).toEqual([]);
+  });
+  it("a selected time at the new service boundary is invalidated", () => {
+    const earlier = pickupSlotOptions("13:00", {status:"open",open:"10:00"});
+    expect(validPickupSlot("13:00", earlier)).toBe("");
+    expect(validPickupSlot("12:00", earlier)).toBe("12:00");
+  });
+});
+
+it("for every service minute, all offered pickups are strictly earlier", () => {
+  for (let minute=0; minute<24*60; minute++) {
+    const service=`${String(Math.floor(minute/60)).padStart(2,"0")}:${String(minute%60).padStart(2,"0")}`;
+    for (const open of ["00:00","09:00","09:30","17:45"])
+      expect(pickupSlotsFor(service,open).every(p=>p<service)).toBe(true);
+  }
 });

@@ -22,10 +22,10 @@ export type PickupQuoteLeg = {
   feePaise: number;
 };
 export type PickupQuote = {
-  quoteId: string; kind: "pickup" | "drop" | "both";
+  tariffVersion?: string; quoteId: string; kind: "pickup" | "drop" | "both";
   /** One entry per selected leg, each measured in the direction actually driven. */
   legs: PickupQuoteLeg[];
-  /** Exact total fee the customer is charged for the whole request, in paise (first 3 road km free per leg, then Rs 25/extra road km). */
+  /** Exact total fee the customer is charged for the whole request, in paise (snapshotted under its tariff version). */
   feePaise: number; freeMeters: number; expiresAt: string;
 };
 
@@ -37,13 +37,7 @@ function rupeesFromPaise(paise: number): string {
 /** Honest one-glance quote text: the distance is approximate, the fee is exact - so near the free 3 km boundary
  *  the free/extra/fee split is spelled out instead of a bare rounded distance next to a small fee. */
 export function describePickupQuote(q: PickupQuote): string {
-  const line = (l: PickupQuoteLeg): string => {
-    const label = l.leg === "pickup" ? "Pickup" : "Drop-off";
-    if (l.feePaise === 0) return `${label}: about ${l.km} km by road, within the free first 3 km - free.`;
-    const extra = Math.round((l.km - 3) * 10) / 10;
-    const extraText = extra > 0 ? `about ${extra} km` : "less than 0.1 km";
-    return `${label}: about ${l.km} km by road - first 3 km free, ${extraText} extra at Rs 25/km - ${rupeesFromPaise(l.feePaise)}.`;
-  };
+  const line = (l: PickupQuoteLeg): string => `${l.leg === "pickup" ? "Pickup" : "Drop-off"}: ${rupeesFromPaise(l.feePaise)}.`;
   const lines = q.legs.map(line).join(" ");
   return q.legs.length > 1 ? `${lines} Total ${rupeesFromPaise(q.feePaise)}.` : lines;
 }

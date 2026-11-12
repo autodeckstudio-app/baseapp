@@ -36,6 +36,7 @@ import { Sheet, SheetTotal, SheetLine, SheetDivider } from "../../../ui/Sheet";
 import { Button, Field, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { REFERRAL_LIVE, normaliseReferralCode, referralCodeToSend } from "../../../lib/referral";
 import { describePickupQuote, getDeviceLocation, getPickupQuote, requestPickupDrop } from "../../../lib/pickup-service";
+import {PickupTimeField} from "../../../ui/PickupTimeField";
 import { pickupDayHoursFor, pickupSlotOptions, validPickupSlot, type PickupDayHours } from "../../../lib/pickup-slots";
 import { PickupOptions } from "../../../ui/PickupOptions";
 import { SelectField } from "../../../ui/inputs";
@@ -179,6 +180,8 @@ export default function BookingConfirmScreen() {
   // A stale choice can never survive: the shown and sent preference is always
   // one of the current options, or nothing.
   const chosenSlot = validPickupSlot(pickupSlot, pickupSlots);
+  const pickupOptionsKey = JSON.stringify(pickupSlots);
+  useEffect(() => { setPickupSlot(current => validPickupSlot(current, pickupSlots)); }, [pickupOptionsKey]);
   const pickupQuoteInfo = currentPickupQuote(transportDraft,now);
 
   const combinedMode=COMBINED_CHECKOUT_ENABLED&&(!giftCode||COMBINED_GIFT_CHECKOUT_ENABLED)&&(!washOn||COMBINED_WASH_CHECKOUT_ENABLED)&&service?.priceOnRequest!==true;
@@ -191,7 +194,7 @@ export default function BookingConfirmScreen() {
   function reviewedCombined(choice:CombinedPaymentChoice){
     if(pickupBenefitError)throw Error(pickupBenefitError);
     if(!breakdown)throw Error("Price unavailable. Reload this review.");
-    if(pickupKind&&(!pickupQuoteInfo||!pickupWhere))throw Error("Recheck the selected pickup/drop distance before continuing.");
+    if(pickupKind&&(!pickupQuoteInfo||!pickupWhere))throw Error(locating?"Checking pickup/drop distance...":pickupQuote&&!pickupQuoteInfo?"Your pickup/drop quote expired. Check distance again.":"Check pickup/drop distance to calculate your total.");
     return combinedCheckoutReview(giftCode?giftCombinedServicePreview(breakdown):washOn?washCombinedServicePreview(breakdown):breakdown,choice,pickupKind&&pickupQuoteInfo&&pickupWhere?{quoteId:pickupQuoteInfo.quoteId,kind:pickupKind,lat:pickupWhere.lat,lng:pickupWhere.lng,address:pickupAddress,legs:pickupQuoteInfo.legs,...(pickupKind!=="drop"&&chosenSlot?{requestedPickupTime:chosenSlot}:{})}:undefined,freePickupMembership!==null);
   }
   let combinedReview:ReturnType<typeof reviewedCombined>|null=null,combinedReviewError:string|null=null;
@@ -238,6 +241,7 @@ export default function BookingConfirmScreen() {
     if(scopeRef.current!==scope||actionGeneration.current!==gen)return;
     if (!p) {
       setPickupWhere(null);
+      setPickupQuoteError("Location access is unavailable. Allow location access and try again, or continue without pickup/drop.");
       setLocating(false);
       return;
     }
@@ -460,7 +464,8 @@ export default function BookingConfirmScreen() {
                 multiline
                 error={pickupAddress.trim().length > 0 && pickupAddress.trim().length < 8 ? "Enter the full address" : undefined}
               />
-              <Button label={pickupWhere ? "Location added" : "Use my location to check distance"} kind="quiet" busy={locating} onPress={() => void locatePickup()} />
+              <Button label={pickupQuoteInfo ? "Check distance again" : "Check distance using my current location"} kind="quiet" busy={locating} onPress={() => void locatePickup()} />
+              <T role="caption" tone="secondary">This uses your current location, not the typed address. Use it only if you are at the pickup/drop address.</T>
               {pickupQuoteInfo ? <T role="caption" tone="secondary">{describePickupQuote(pickupQuoteInfo)}</T> : null}
               {pickupQuoteError ? <T role="caption" tone="secondary">{pickupQuoteError}</T> : null}
               {pickupKind !== "drop" && studioHours.status === "loading" ? (
@@ -468,7 +473,7 @@ export default function BookingConfirmScreen() {
               ) : null}
               {pickupKind !== "drop" && pickupSlots.length > 0 ? (
                 <>
-                  <SelectField
+                  <PickupTimeField context={scopeKey + pickupOptionsKey}
                     label={pickupKind === "both" ? "Preferred pickup time (optional)" : "Preferred time (optional)"}
                     value={chosenSlot}
                     onChange={setPickupSlot}
@@ -487,7 +492,8 @@ export default function BookingConfirmScreen() {
         </Sheet>
       ) : service?.priceOnRequest !== true && breakdown ? (
         <Sheet>
-          <SheetTotal label="Total" value={rupees(visitTotal ?? breakdown.total)} />
+          <SheetTotal label={combinedMode&&pickupKind&&!combinedReview?"Service subtotal":"Total"} value={rupees(visitTotal ?? breakdown.total)} />
+          {combinedMode&&pickupKind&&!combinedReview?<SheetLine small label="Combined total" value="Awaiting distance check"/>:null}
           {combinedMode&&combinedReview?.breakdown.roundOffPaise?<SheetLine small label="Round off" value={rupees(combinedReview.breakdown.roundOffPaise)}/>:null}
           {combinedMode&&giftCode?<SheetLine small label="Gifted service" value="Included"/>:combinedMode&&washOn?<SheetLine small label="Membership wash" value="Included"/>:null}
           <SheetDivider />
@@ -507,7 +513,7 @@ export default function BookingConfirmScreen() {
       ) : null}
 
       {freePickupMembership?<Pane pad="gap"><Row title="Plan transport benefit" detail="One free pickup/drop request will be reserved with this booking." last/></Pane>:null}
-      {combinedMode?combinedReviewError?<Notice title="Review pickup/drop" body={combinedReviewError}/>:combinedAdvance?<Pane pad="gap"><CombinedPaymentOptions transportIncluded={freePickupMembership!==null} coveredService={giftCode?"gift":washOn?"membership":undefined} choice={combinedChoice} total={combinedAdvance.payment} disabled={booking||held!==null} onChange={setCombinedChoice}/>{combinedReview&&combinedChoice?<View><SheetLine small label="Pay now" value={rupees(combinedReview.payment.payNowPaise)}/><SheetLine small label="Booking balance at studio" value={rupees(combinedReview.payment.balancePaise)} last/></View>:null}</Pane>:null:null}
+      {combinedMode?combinedReviewError?<Pane pad="gap"><Notice title="Check pickup/drop" body={combinedReviewError}/><CombinedPaymentOptions choice={combinedChoice} onChange={setCombinedChoice} disabled total={null}/></Pane>:combinedAdvance?<Pane pad="gap"><CombinedPaymentOptions transportIncluded={freePickupMembership!==null} coveredService={giftCode?"gift":washOn?"membership":undefined} choice={combinedChoice} total={combinedAdvance.payment} disabled={booking||held!==null} onChange={setCombinedChoice}/>{combinedReview&&combinedChoice?<View><SheetLine small label="Pay now" value={rupees(combinedReview.payment.payNowPaise)}/><SheetLine small label="Booking balance at studio" value={rupees(combinedReview.payment.balancePaise)} last/></View>:null}</Pane>:null:null}
 
       {saving !== null ? (
         <Pane pad="gap">

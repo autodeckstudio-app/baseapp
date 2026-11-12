@@ -19,7 +19,7 @@ describe("Day surfaces are never the night colour", () => {
   it("Home never calls glassPane without the mode", () => {
     expect(read("ui/HomeView.tsx")).not.toMatch(/glassPane\(\)/);
   });
-  it("service detail uses the theme-aware labelled booking action, not an action on duration",()=>{const s=read("app/(tabs)/catalogue/[id].tsx");expect(s).toContain('{focused&&showBar?<Button kind=');expect(s).not.toContain('<ServiceVisitFacts nextAction=');expect(s).not.toContain('<ServiceActionBar');expect(s).not.toContain('backgroundColor: mode ===');});
+  it("service detail uses the theme-aware labelled booking action, not an action on duration",()=>{const s=read("app/(tabs)/catalogue/[id].tsx");expect(s).toContain('{focused&&showBar?<Button style=');expect(s).not.toContain('<ServiceVisitFacts nextAction=');expect(s).not.toContain('<ServiceActionBar');expect(s).not.toContain('backgroundColor: mode ===');});
   it("components that draw a night card colour also branch on the theme", () => {
     for (const f of ["ui/GarageCard.tsx", "ui/SlideToConfirm.tsx"]) {
       expect(read(f)).toMatch(/"light"/);

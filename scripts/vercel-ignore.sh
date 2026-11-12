@@ -5,6 +5,49 @@
 # Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
 # Unknown base commit or git error => build (safe default).
 app="$1"
+# Pinned transport release: exact parent + complete path list, Customer only.
+transport_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-transport-20261112 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$transport_parent" = c1aefce6c4482ace2353ed8a3c93b2da53a88fe3 ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0
+  cd "$root" || exit 0
+  actual="$(git diff --name-only c1aefce6c4482ace2353ed8a3c93b2da53a88fe3 HEAD 2>/dev/null)" || exit 0
+  expected=$(cat <<'TRANSPORT_PATHS'
+apps/customer/src/app/(tabs)/book/[serviceId].tsx
+apps/customer/src/app/(tabs)/book/confirm-combined.render.test.tsx
+apps/customer/src/app/(tabs)/book/confirm-pickup-total.render.test.tsx
+apps/customer/src/app/(tabs)/book/confirm.tsx
+apps/customer/src/app/(tabs)/catalogue/[id].tsx
+apps/customer/src/lib/day-surfaces.test.ts
+apps/customer/src/lib/pickup-policy.ts
+apps/customer/src/lib/pickup-service.ts
+apps/customer/src/lib/pickup-slots.test.ts
+apps/customer/src/lib/pickup-slots.ts
+apps/customer/src/lib/pickup-zone.test.ts
+apps/customer/src/ui/CombinedPaymentOptions.tsx
+apps/customer/src/ui/PickupOptions.render.test.tsx
+apps/customer/src/ui/PickupTimeField.tsx
+apps/customer/src/ui/design-contract.test.ts
+apps/customer/src/ui/pickup-preference-contract.test.ts
+apps/customer/src/ui/round8-pickup.test.ts
+apps/customer/src/ui/service-placement56.test.ts
+docs/customer-transport-release-20261112.md
+functions/src/functions/booking/pickupQuote.ts
+functions/src/functions/booking/pickupRequests.ts
+functions/src/lib/booking-transport-snapshot.ts
+functions/src/test/emulator/combined-create.emulator.test.ts
+functions/src/test/emulator/pickup-quote.emulator.test.ts
+functions/src/test/unit/booking-transport-snapshot.test.ts
+packages/core/src/combined-checkout.ts
+packages/core/src/index.ts
+packages/core/src/pickup-tariff.test.ts
+packages/core/src/pickup-tariff.ts
+scripts/vercel-ignore.sh
+TRANSPORT_PATHS
+)
+  [ "$actual" = "$expected" ] || exit 0
+  case "$app" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
+
 # Scoped web payment release: exact parent and changed-path guard.
 # Only the Customer app builds from this commit; all sibling apps skip.
 release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
