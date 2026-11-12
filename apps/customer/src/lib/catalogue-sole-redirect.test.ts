@@ -24,7 +24,7 @@ describe("soleServiceRedirect: single-service category opens its service directl
     expect(src).toContain("setServices(await getServiceCatalogue())");
     // The canonical leaf route stays the default open; the preview fixture
     // detour is dev-only and only inside a /preview route.
-    expect(src).toContain("router.push(`/(tabs)/catalogue/${s.id}`)");
+    expect(src).toContain("router.push({pathname:`/(tabs)/catalogue/${s.id}` as never");
     expect(src).toContain('__DEV__ && selfPath.startsWith("/preview")');
   });
 });

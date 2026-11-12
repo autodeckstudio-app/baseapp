@@ -7,7 +7,7 @@ const priceNum = (t: string) => { const n = Number(t.replace(/[^0-9.]/g, "")); r
 export function pickTopServices(all: TopSvc[]): TopPick[] {
   const cheapest = (xs: TopSvc[]) => [...xs].sort((a, b) => priceNum(a.price) - priceNum(b.price))[0];
   const out: TopPick[] = [];
-  const wash = cheapest(all.filter((x) => x.category === "washing"));
+  const wash = cheapest(all.filter((x) => x.category === "washing" && !/interior|headlight|spa|full detail/i.test(x.name)));
   if (wash) out.push({ key: "wash", title: "Quick wash", icon: "wash", service: wash });
   // The card says "Ceramic coating", so it must land on a ceramic service:
   // a ceramic-category service wins on price; otherwise only a coating-category

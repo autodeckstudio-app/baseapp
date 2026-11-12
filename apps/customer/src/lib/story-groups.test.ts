@@ -32,7 +32,8 @@ describe("groupStories", () => {
 describe("tray and viewer follow the Instagram pattern", () => {
   const c = readFileSync(`${__dirname}/../ui/StoryCircles.tsx`, "utf8");
   const v = readFileSync(`${__dirname}/../ui/StoryViewer.tsx`, "utf8");
-  it("circles show an initial instead of hiding a group without a photo", () => { expect(c).not.toMatch(/filter\(\(g\) => g\.cover\)/); expect(c).toContain("toUpperCase()"); });
+  it("video-only circles use the uploaded-media thumbnail instead of a letter", () => { expect(c).not.toMatch(/filter\(\(g\) => g\.cover\)/); expect(c).toContain("<StoryCover");
+    expect(c).not.toContain("toUpperCase()"); });
   it("viewer: progress bars, hold to pause, next group at the end, previous group at the start, swipe down to close", () => {
     for (const x of ["onPressIn", "onPressOut", "onNextGroup", "onPrevGroup", "onTouchStart", "onTouchEnd"]) expect(v).toContain(x);
   });

@@ -1,3 +1,4 @@
+import {homeCatalogueBack,catalogueReturnParams} from "../../../lib/home-service-navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TextInput, View, useWindowDimensions } from "react-native";
 import { useLocalSearchParams, usePathname, useRouter } from "expo-router";
@@ -30,7 +31,7 @@ import { glassInner } from "../../../lib/glass";
 
 export default function CatalogueScreen() {
   const router = useRouter(),
-    params = useLocalSearchParams<{home?:string;family?:string;brand?:string;work?:string;cat?:string;need?:string;p?:string;mock?:string;theme?:string}>();
+    params = useLocalSearchParams<{home?:string;family?:string;brand?:string;work?:string;cat?:string;need?:string;p?:string;mock?:string;theme?:string;returnTo?:string;homeEntry?:string}>();
   const { colors } = useExperienceTheme();
   const [services, setServices] = useState<Service[] | null>(() =>
       peekCatalogue(),
@@ -60,7 +61,7 @@ export default function CatalogueScreen() {
     // and keep dev-only params (mock/theme) across in-screen navigation.
     const href = {
       pathname: selfPath as "/(tabs)/catalogue",
-      params: { ...pathParams(next), ...(params.mock ? { mock: params.mock } : {}), ...(params.theme ? { theme: params.theme } : {}) },
+      params: { ...(params.returnTo==="home"?{returnTo:"home",homeEntry:params.homeEntry??""}:{}), ...pathParams(next), ...(params.mock ? { mock: params.mock } : {}), ...(params.theme ? { theme: params.theme } : {}) },
     };
     if (replace) router.replace(href);
     else router.push(href);
@@ -142,7 +143,7 @@ export default function CatalogueScreen() {
       scrollIdentity={JSON.stringify(path)}
       appBar="Services"
       top={top}
-      onBack={fromRoute ? () => router.canGoBack() ? router.back() : navigate(parentPath(path), true) : undefined}
+      onBack={params.returnTo==="home" ? () => {const parent=homeCatalogueBack(path,params.homeEntry);if(parent)navigate(parent,true);else router.navigate("/(tabs)");} : fromRoute ? () => router.canGoBack() ? router.back() : navigate(parentPath(path), true) : undefined}
     >
       <View
         key={JSON.stringify(path)}
@@ -183,7 +184,7 @@ export default function CatalogueScreen() {
               // auth-gated, so open the equivalent fixture detail instead.
               __DEV__ && selfPath.startsWith("/preview")
                 ? router.push({ pathname: "/preview-service" as never, params: { id: s.id } })
-                : router.push(`/(tabs)/catalogue/${s.id}`)
+                : router.push({pathname:`/(tabs)/catalogue/${s.id}` as never,params:params.returnTo==="home"?catalogueReturnParams(path,params.homeEntry):{}})
             }
             onQuote={(s) =>
               SERVICE_QUOTE_JOURNEY_READY
@@ -191,12 +192,12 @@ export default function CatalogueScreen() {
                     pathname: "/(tabs)/quote-request",
                     params: { serviceId: s.id },
                   })
-                : router.push(`/(tabs)/catalogue/${s.id}`)
+                : router.push({pathname:`/(tabs)/catalogue/${s.id}` as never,params:params.returnTo==="home"?catalogueReturnParams(path,params.homeEntry):{}})
             }
             onReference={(r) =>
               router.push({
                 pathname: "/(tabs)/catalogue/enquiry",
-                params: { id: r.key },
+                params: { id: r.key, ...(params.returnTo==="home"?catalogueReturnParams(path,params.homeEntry):{}) },
               })
             }
             onHelp={(service) =>

@@ -5,6 +5,11 @@
 # Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
 # Unknown base commit or git error => build (safe default).
 app="$1"
+# Preview-only Home/story routing batch. Main promotion needs separate approval/guard.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = preview/home-stories-routing-20261112 ]; then
+  case "$app" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
+
 # Pinned transport release: exact parent + complete path list, Customer only.
 transport_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-transport-20261112 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$transport_parent" = c1aefce6c4482ace2353ed8a3c93b2da53a88fe3 ]; }; then

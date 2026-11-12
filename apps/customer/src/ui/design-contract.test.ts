@@ -464,7 +464,7 @@ describe("nav order and drawer", () => {
   it("Services levels step back through the one header, not a second back link", () => {
     const c = read("src/app/(tabs)/catalogue/index.tsx");
     expect(c).not.toContain("\u2039 {label}");
-    expect(c).toContain("onBack={fromRoute ? () => router.canGoBack() ? router.back() : navigate(parentPath(path), true) : undefined}");
+    expect(c).toContain("router.canGoBack() ? router.back() : navigate(parentPath(path), true) : undefined}");
     expect(read("src/ui/GarageCard.tsx")).toContain("minHeight: 44");
   });
   it("a plan wash is labelled as a wash and its expiry date is human readable", () => {
