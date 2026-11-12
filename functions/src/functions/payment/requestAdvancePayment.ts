@@ -76,6 +76,7 @@ export const requestAdvancePayment = onCall(
       if (b.payMode !== "studio") throw new HttpsError("failed-precondition", "Advance applies to pay-at-studio bookings only.");
     };
     assertActiveHold(booking);
+    if (!booking.combinedPayment && !advancePaymentEnabled()) throw new HttpsError("failed-precondition", "Legacy advance payments are not enabled.");
 
     // Deterministic payment id == provider referenceId: a retry finds the
     // SAME record, and the webhook resolves it without a query.
@@ -91,6 +92,7 @@ export const requestAdvancePayment = onCall(
       const freshBooking = await tx.get(bookingRef);
       const b = freshBooking.data() as Booking;
       assertActiveHold(b);
+      if (!b.combinedPayment && !advancePaymentEnabled()) throw new HttpsError("failed-precondition", "Legacy advance payments are not enabled.");
       if(b.customerId!==owner||b.tenantId!==booking.tenantId||b.studioId!==booking.studioId||b.id!==booking.id)throw new HttpsError("permission-denied","Booking ownership changed.");
       if(b.combinedPayment&&!combinedCheckoutEnabled())throw new HttpsError("failed-precondition","Combined payment is not active.");
       if(b.combinedPayment){try{const snap=checkedCombinedPayment(b.combinedPayment,b.totalAmount);if(snap.choice!=="advance20")throw Error();}catch{throw new HttpsError("failed-precondition","Combined advance snapshot changed.");}}
