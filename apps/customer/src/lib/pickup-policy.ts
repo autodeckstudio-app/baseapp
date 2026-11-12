@@ -1,10 +1,3 @@
-import { PICKUP_FREE_ROAD_METERS, PICKUP_ROAD_RATE_PER_KM_PAISE } from "@autodeck/core";
-
-// Fee and distance wording shown wherever pickup/drop is offered or tracked.
-// One shared source so the booking flow (book/confirm.tsx) and the booking
-// page status card (ui/PickupCard.tsx) never drift apart. Numbers come from
-// core constants, never typed here.
-export const PICKUP_POLICY = `The first ${PICKUP_FREE_ROAD_METERS / 1000} km by road from the studio are free, separately for pickup and for drop-off. Beyond that it is Rs ${PICKUP_ROAD_RATE_PER_KM_PAISE / 100} per extra km by road. Distance is measured by road, and the price you see before booking is the price you are charged. The fee is paid at the studio.`;
-
-// Compact booking disclosure. Same per-leg road-distance rule, not a new price.
-export const PICKUP_COMPACT_POLICY = `First ${PICKUP_FREE_ROAD_METERS / 1000} road km free each way, then ₹${PICKUP_ROAD_RATE_PER_KM_PAISE / 100} per extra km. Price checked by road distance.`;
+// Money comes only from the verified server quote, never from display copy.
+export const PICKUP_POLICY="Pickup and drop-off are checked separately by road. Check your location to see the final fee before confirming.";
+export const PICKUP_COMPACT_POLICY="Check your location to see the final pickup/drop fee.";

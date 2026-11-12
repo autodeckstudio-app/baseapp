@@ -77,7 +77,7 @@ describe("round 8 fixes 3-4: pickup/drop is chosen while booking and sent with C
   });
   it("fee and distance wording has one shared source", () => {
     const policy = read("src/lib/pickup-policy.ts");
-    expect(policy).toContain("PICKUP_FREE_ROAD_METERS");
+    expect(policy).toContain("final pickup/drop fee");
     expect(confirm).toContain("PICKUP_POLICY");
     expect(card).toContain("PICKUP_POLICY");
   });

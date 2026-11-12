@@ -1,0 +1,5 @@
+import{it,expect}from'vitest';import{readFileSync}from'node:fs';
+const s=readFileSync('src/app/(tabs)/book/confirm.tsx','utf8');
+it('date and service-slot scope changes clear the actual review choice',()=>{const scope=s.slice(s.indexOf('const scopeKey='),s.indexOf('const scopeRef='));expect(scope).toContain('params.scheduledDate');expect(scope).toContain('params.scheduledTime');expect(s).toMatch(/useEffect\(\(\)=>\{[^\n]*setPickupSlot\(''\)[^\n]*\[scopeKey\]/)});
+it('invalid hours/options clear stored preference, not only its displayed projection',()=>{expect(s).toContain('setPickupSlot(current => validPickupSlot(current, pickupSlots))');expect(s).toContain('[pickupOptionsKey]');expect(s).toContain('requestedPickupTime: chosenSlot')});
+it('only the pickup field changes; the exact preference-not-promise wording stays',()=>{expect(s).toContain('<PickupTimeField');expect(s).toContain('context={scopeKey + pickupOptionsKey}');expect(s).toContain('This is your preference, not a confirmed slot. The studio agrees the exact time with you by phone call.')});

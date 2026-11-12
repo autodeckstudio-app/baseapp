@@ -200,7 +200,7 @@ export default function BookServiceScreen() {
           <ServiceTimePicker key={selectedDate??'available'} slots={slots.filter(slot=>Date.parse(slot.startAt)>Date.now())} picked={pickedSlot} initialDate={selectedDate} onDayChange={date=>{setSelectedDate(date);setPickedSlot(null)}} onPick={slot=>{setPickedSlot(slot);setSizeError(null)}}/>
         )}
         {sizeError ? <T role="caption" tone="danger">{sizeError}</T> : null}
-        <Button label={pickedSlot ? `Continue with ${pickedSlot.startTime}` : "Pick a time to continue"} disabled={!pickedSlot || !selectedVehicle || vehiclesError || sizeSaving} busy={sizeSaving} onPress={() => { if (pickedSlot) void handleSelectSlot(pickedSlot); }} />
+        <Button style={{alignSelf:"stretch",width:"100%",marginTop:16,marginBottom:16}} label={pickedSlot ? `Continue with ${pickedSlot.startTime}` : "Pick a time to continue"} disabled={!pickedSlot || !selectedVehicle || vehiclesError || sizeSaving} busy={sizeSaving} onPress={() => { if (pickedSlot) void handleSelectSlot(pickedSlot); }} />
       </View>
     </Screen>
   );

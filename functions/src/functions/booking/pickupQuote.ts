@@ -4,8 +4,8 @@ import { z } from "zod";
 import {
   STUDIO_COORDS,
   PICKUP_FREE_ROAD_METERS,
-  pickupLegFeePaiseForRoadMeters,
-  pickupLegsFeePaise,
+  CURRENT_PICKUP_TARIFF,
+  pickupTariffLegFeePaise,
   pickupRoadKmForDisplay,
 } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -50,7 +50,8 @@ export const getPickupQuote = onCall({ region: "asia-south1", enforceAppCheck: s
   if (data.kind === "drop" || data.kind === "both") {
     legs.push({ leg: "drop", roadMeters: await roadMetersBetween(STUDIO_COORDS, pin) });
   }
-  const feePaise = pickupLegsFeePaise(legs.map((l) => l.roadMeters));
+  const pricedLegs=legs.map(l=>({...l,feePaise:pickupTariffLegFeePaise(l.roadMeters,CURRENT_PICKUP_TARIFF)}));
+  const feePaise = pricedLegs.reduce((sum,l)=>sum+l.feePaise,0);
   const roadMeters = legs.reduce((sum, l) => sum + l.roadMeters, 0);
   const now = Date.now();
   const db = getFirestore();
@@ -68,7 +69,8 @@ export const getPickupQuote = onCall({ region: "asia-south1", enforceAppCheck: s
     kind: data.kind,
     lat: data.lat,
     lng: data.lng,
-    legs,
+    legs:pricedLegs,
+    tariffVersion:CURRENT_PICKUP_TARIFF,
     roadMeters,
     feePaise,
     createdAt: new Date(now).toISOString(),
@@ -78,7 +80,8 @@ export const getPickupQuote = onCall({ region: "asia-south1", enforceAppCheck: s
   return {
     quoteId: ref.id,
     kind: data.kind,
-    legs: legs.map((l) => ({ leg: l.leg, km: pickupRoadKmForDisplay(l.roadMeters), feePaise: pickupLegFeePaiseForRoadMeters(l.roadMeters) })),
+    tariffVersion:CURRENT_PICKUP_TARIFF,
+    legs: pricedLegs.map((l) => ({ leg: l.leg, km: pickupRoadKmForDisplay(l.roadMeters), feePaise: l.feePaise })),
     feePaise,
     freeMeters: PICKUP_FREE_ROAD_METERS,
     expiresAt: new Date(now + PICKUP_QUOTE_TTL_MS).toISOString(),

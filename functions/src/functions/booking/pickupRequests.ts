@@ -1,3 +1,4 @@
+import {pickupTariffVersion} from '@autodeck/core';
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { pickupBlockedForRequest } from "../../lib/pickup-booking-guard";
 import { getFirestore } from "firebase-admin/firestore";
@@ -106,7 +107,8 @@ export const requestPickupDrop = onCall({ region: "asia-south1" , enforceAppChec
     quoteRef = db.collection(COLLECTIONS.pickupQuotes()).doc(data.quoteId);
     const qSnap = await quoteRef.get();
     if (!qSnap.exists) throw new HttpsError("not-found", "That pickup quote is gone - check the distance again.");
-    const q = qSnap.data() as { tenantId: string; customerId: string; kind: string; lat: number; lng: number; roadMeters: number; feePaise: number; expiresAt: string; consumedAt: string | null };
+    const q = qSnap.data() as { tariffVersion?:string; tenantId: string; customerId: string; kind: string; lat: number; lng: number; roadMeters: number; feePaise: number; expiresAt: string; consumedAt: string | null };
+    try{pickupTariffVersion(q.tariffVersion)}catch{throw new HttpsError('failed-precondition','Unknown transport pricing policy. Check the distance again.')}
     assertTenant(user, q.tenantId);
     if (q.customerId !== customerDocId && q.customerId !== user.uid) throw new HttpsError("permission-denied", "That is not your pickup quote.");
     if (q.kind !== data.kind) throw new HttpsError("invalid-argument", "That quote is for a different pickup selection - check the distance again.");

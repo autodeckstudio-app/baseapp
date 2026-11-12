@@ -50,7 +50,7 @@ it('a quoted pickup fee rides inside the shown Total while Pay online now exclud
   let r: any;
   await act(async () => { r = create(<Page />); });
   await act(async () => { button(r, 'Pickup').props.onPress(); });
-  await act(async () => { button(r, 'Use my location to check distance').props.onPress(); await Promise.resolve(); await Promise.resolve(); });
+  await act(async () => { button(r, 'Check distance using my current location').props.onPress(); await Promise.resolve(); await Promise.resolve(); });
   expect(h.quote).toHaveBeenCalledWith({ kind: 'pickup', lat: 23.03, lng: 72.58 });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const total = r.root.findAllByType('SheetTotal').find((x: any) => x.props.label === 'Total');

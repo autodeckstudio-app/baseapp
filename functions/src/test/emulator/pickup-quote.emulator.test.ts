@@ -69,21 +69,21 @@ beforeEach(() => {
 });
 
 describe("getPickupQuote", () => {
-  it("stores per-leg road quotes and returns the owner-accepted example fee (8 km both = Rs 250)", async () => {
+  it("stores per-leg road quotes and returns the owner-accepted example fee (8 km both = Rs 112)", async () => {
     stubRoutes(8000);
     const customer = uid("cust");
     const q = await makeQuote(customer, "both");
-    expect(q.feePaise).toBe(25_000);
+    expect(q.feePaise).toBe(11_200);
     expect(q.legs).toEqual([
-      { leg: "pickup", km: 8, feePaise: 12_500 },
-      { leg: "drop", km: 8, feePaise: 12_500 },
+      { leg: "pickup", km: 8, feePaise: 5_600 },
+      { leg: "drop", km: 8, feePaise: 5_600 },
     ]);
     const doc = (await db.collection(COLLECTIONS.pickupQuotes()).doc(q.quoteId).get()).data() as {
       legs: { leg: string; roadMeters: number }[]; roadMeters: number; consumedAt: string | null;
     };
     expect(doc.legs).toEqual([
-      { leg: "pickup", roadMeters: 8000 },
-      { leg: "drop", roadMeters: 8000 },
+      { leg: "pickup", roadMeters: 8000, feePaise:5600 },
+      { leg: "drop", roadMeters: 8000, feePaise:5600 },
     ]);
     expect(doc.roadMeters).toBe(16_000);
     expect(doc.consumedAt).toBeNull();
@@ -95,18 +95,18 @@ describe("getPickupQuote", () => {
     stubRoutes({ pinToStudio: 8000, studioToPin: 2900 });
     const q = await makeQuote(uid("cust"), "both");
     expect(q.legs).toEqual([
-      { leg: "pickup", km: 8, feePaise: 12_500 },
+      { leg: "pickup", km: 8, feePaise: 5_600 },
       { leg: "drop", km: 2.9, feePaise: 0 },
     ]);
-    expect(q.feePaise).toBe(12_500);
+    expect(q.feePaise).toBe(5_600);
     expect(vi.mocked(fetch).mock.calls.length).toBe(2);
   });
 
   it("asks for exactly one route per selected single leg, in that leg's driving direction", async () => {
     stubRoutes({ pinToStudio: 8000, studioToPin: 2900 });
     const p = await makeQuote(uid("cust"), "pickup");
-    expect(p.legs).toEqual([{ leg: "pickup", km: 8, feePaise: 12_500 }]);
-    expect(p.feePaise).toBe(12_500);
+    expect(p.legs).toEqual([{ leg: "pickup", km: 8, feePaise: 5_600 }]);
+    expect(p.feePaise).toBe(5_600);
     const d = await makeQuote(uid("cust"), "drop");
     expect(d.legs).toEqual([{ leg: "drop", km: 2.9, feePaise: 0 }]);
     expect(d.feePaise).toBe(0);
@@ -144,7 +144,7 @@ describe("getPickupQuote", () => {
     const old = new Date(Date.now() - 40 * 86_400_000);
     await db.collection(COLLECTIONS.routingUsage()).doc(ROUTING_USAGE_DOC).set({ days: { [utcDayKey(old)]: ROUTING_CALL_LIMIT } });
     const q = await makeQuote(uid("cust"), "pickup");
-    expect(q.feePaise).toBe(12_500);
+    expect(q.feePaise).toBe(5_600);
     const days = await usageDays();
     expect(days[utcDayKey(old)]).toBeUndefined();
     expect(days[utcDayKey()]).toBe(1);
@@ -163,7 +163,7 @@ describe("requestPickupDrop with a quote", () => {
       auth: customerAuth(customer),
     } as never);
     const doc = (await db.collection(COLLECTIONS.pickupRequests()).doc(bookingId).get()).data() as { feePaise: number; roadMeters: number; quoteId: string };
-    expect(doc.feePaise).toBe(25_000);
+    expect(doc.feePaise).toBe(11_200);
     expect(doc.roadMeters).toBe(16_000);
     expect(doc.quoteId).toBe(q.quoteId);
     const qAfter = (await db.collection(COLLECTIONS.pickupQuotes()).doc(q.quoteId).get()).data() as { consumedAt: string | null };
