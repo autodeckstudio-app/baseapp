@@ -31,6 +31,7 @@ functions/src/lib/combined-booking.ts
 functions/src/lib/razorpay-verified-checkout.ts
 functions/src/lib/razorpay-webhook.ts
 functions/src/test/emulator/advance-callable.emulator.test.ts
+functions/src/test/emulator/late-membership-atomic.emulator.test.ts
 functions/src/test/emulator/release-legacy-off.emulator.test.ts
 functions/src/test/unit/combined-booking.test.ts
 functions/src/test/unit/razorpay-webhook.test.ts
