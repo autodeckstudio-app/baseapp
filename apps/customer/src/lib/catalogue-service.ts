@@ -20,13 +20,17 @@ const devMock = (): Service[] | null => {
 const previewEligible=(row:{id:string;brand?:string|null})=>customerOfferingVisible(row) && customerCatalogueEligible(row,__DEV__ && /identityPreview=1/.test((globalThis as {location?:{search?:string}}).location?.search ?? ""));
 const KEY = "autodeck.catalogue.v1";
 const TTL_MS = 5 * 60 * 1000;
-let memo: { at: number; p: Promise<Service[]> } | null = null;
+let catalogueRevision=0;
+let memo: { at: number; scope:string; p: Promise<Service[]> } | null = null;
+/** Explicit refresh only invalidates display reads, never booked/quoted snapshots. */
+export function invalidateCatalogueDisplayReads(){catalogueRevision++;memo=null;totalsMemo.clear();priceCache.clear();}
+
 // Display totals are per session AND car size, so they never enter the shared catalogue memo
 // or the device copy: they live only in the scoped price cache below. The memo key carries the
 // price-cache scope token (uid|tenant), so a sign-out or account switch makes old entries
 // unreachable; the scope listener also clears them immediately.
 const totalsMemo = new Map<string, { at: number; p: Promise<Record<string, number>> }>();
-onPriceCacheScopeChange(() => { totalsMemo.clear(); });
+onPriceCacheScopeChange(() => { catalogueRevision++;memo=null;totalsMemo.clear(); });
 
 const store = (): { getItem(k: string): string | null; setItem(k: string, v: string): void } | null => {
   try { return (globalThis as unknown as { localStorage?: { getItem(k: string): string | null; setItem(k: string, v: string): void } }).localStorage ?? null; } catch { return null; }
@@ -41,13 +45,14 @@ export function peekCatalogue(): Service[] | null {
 }
 
 async function fetchCatalogue(category?: ServiceCategory): Promise<Service[]> {
+  const revision=catalogueRevision,scope=priceCache.scopeKey();
   const fn = httpsCallable<{ category?: ServiceCategory }, { services: Service[] }>(
     functions,
     "getServiceCatalogue",
   );
   const result = await fn(category !== undefined ? { category } : {});
   const list = result.data.services.filter(previewEligible).map(customerRatingPrivacy).map(applyBrandWarranty);
-  if (category === undefined) {
+  if (category === undefined && revision===catalogueRevision && scope===priceCache.scopeKey()) {
     primeVisuals(list);
     try { store()?.setItem(KEY, JSON.stringify(list)); } catch { /* storage full or blocked */ }
   }
@@ -55,13 +60,15 @@ async function fetchCatalogue(category?: ServiceCategory): Promise<Service[]> {
 }
 
 /** One shared request for the whole catalogue: every screen reuses it for 5 minutes instead of calling the function again. */
-export async function getServiceCatalogue(category?: ServiceCategory): Promise<Service[]> {
+export async function getServiceCatalogue(category?: ServiceCategory, options?:{fresh?:boolean}): Promise<Service[]> {
+  if(options?.fresh)invalidateCatalogueDisplayReads();
   const mock = devMock();
   if (mock) return mock;
   if (category !== undefined) return fetchCatalogue(category);
-  if (memo && Date.now() - memo.at < TTL_MS) return memo.p;
+  const scope=priceCache.scopeKey();
+  if (memo && memo.scope===scope && Date.now() - memo.at < TTL_MS) return memo.p;
   const p = fetchCatalogue();
-  memo = { at: Date.now(), p };
+  memo = { at: Date.now(), scope, p };
   p.catch(() => { if (memo?.p === p) memo = null; });
   return p;
 }
@@ -90,7 +97,7 @@ export function getCatalogueDisplayTotals(vehicleCategory: VehicleCategory): Pro
     for (const [serviceId, total] of Object.entries(totals)) priceCache.set(mockUid, serviceId, vehicleCategory, total);
     return Promise.resolve(totals);
   }
-  const scope = priceCache.scopeKey();
+  const scope = priceCache.scopeKey(),revision=catalogueRevision;
   const key = `${scope}:${vehicleCategory}`;
   const hit = totalsMemo.get(key);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.p;
@@ -102,7 +109,7 @@ export function getCatalogueDisplayTotals(vehicleCategory: VehicleCategory): Pro
     .then((result) => {
       // Session changed mid-flight (sign-out / account switch): never write stale totals
       // into the new session's cache.
-      if (priceCache.scopeKey() !== scope) return {};
+      if (priceCache.scopeKey() !== scope || catalogueRevision!==revision) return {};
       const totals = result.data.displayTotals ?? {};
       const uid = auth.currentUser?.uid ?? null;
       for (const [serviceId, total] of Object.entries(totals)) priceCache.set(uid, serviceId, vehicleCategory, total);
