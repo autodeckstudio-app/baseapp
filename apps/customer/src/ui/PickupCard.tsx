@@ -32,9 +32,13 @@ function formatAgreed(iso: string): string {
 // approval, approved, declined, agreed times, fee and studio note, exactly as
 // before. There is no request form or entry point here any more; for a
 // booking with no request, nothing renders.
-export function PickupCard({ bookingId }: { bookingId: string }) {
+export function PickupCard({ bookingId, combinedPayment = false }: { bookingId: string; combinedPayment?: boolean }) {
   const [req, setReq] = useState<PickupRequest | null>(null);
-  useEffect(() => listenToPickupRequest(bookingId, setReq, () => setReq(null)), [bookingId]);
+  useEffect(() => {
+    let alive=true;setReq(null);
+    const stop=listenToPickupRequest(bookingId, value=>{if(alive)setReq(value)}, ()=>{if(alive)setReq(null)});
+    return()=>{alive=false;stop()};
+  }, [bookingId]);
 
   if (!req) return null;
 
@@ -64,7 +68,7 @@ export function PickupCard({ bookingId }: { bookingId: string }) {
           <Row title="Distance" detail={PICKUP_POLICY} />
           {typeof req.feePaise === "number" ? <FactHighlights facts={[{value:req.feePaise===0?"Free":rupees(req.feePaise),label:req.memberMembershipId?"Pickup and drop · membership":"Confirmed pickup and drop fee"}]}/> : null}
           {req.staffNote ? <Row title="Studio note" detail={req.staffNote} /> : null}
-          <Row title="Payment" detail="Pay at the studio along with your service. Nothing is charged online." last />
+          <Row title="Payment" detail={combinedPayment ? "Included in your booking total. Follow the booking payment status above." : "Pay at the studio along with your service. Nothing is charged online."} last />
         </Pane>
       ) : (
         <Pane pad="gap">

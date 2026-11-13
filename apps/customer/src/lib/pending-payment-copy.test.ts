@@ -15,10 +15,11 @@ describe("pending online payment copy", () => {
     const r = getRescheduleEligibility({ status: "PENDING", payMode: "studio", holdExpiresAt: "2026-11-03T11:30:00Z", rescheduleCount: 0 } as never);
     expect(r.reason).toMatch(/waiting for payment/);
   });
-  it("labels the payment row and hides the Live chip while payment is pending", () => {
+  it("labels payment separately from verified physical visit state", () => {
     expect(detail).toContain("customerPaymentLabel(payment");
     expect(readFileSync("src/lib/existing-job-payment.ts", "utf8")).toContain("Online payment pending");
-    expect(detail).toContain('!(booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt)))');
+    expect(detail).toContain('job && !bookingClosed && jobStage(job.status) && job.status !== "DELIVERED" && job.status !== "PENDING_VEHICLE"');
+    expect(detail).toContain('const showLiveVisit=!bookingClosed;');
     expect(detail).toContain('title="Slot held until"');
     expect(detail).toContain('detail="After verified payment."');
     expect(detail).not.toContain("until the payment goes through");

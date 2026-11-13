@@ -12,7 +12,7 @@ import {bookingConfirmCopy}from"../../../lib/booking-confirm-copy";
 import { listOwnerKey } from "../../../lib/owner-key";
 import { formatServiceTime } from "../../../lib/duration";
 import { useState, useEffect, useRef } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, View , Platform } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
@@ -299,6 +299,14 @@ export default function BookingConfirmScreen() {
         if(!current())return;
         if (adv.status === "manual_review" || !adv.paymentUrl) {
           setBookError("We're confirming your advance payment link. Please try again in a few minutes.");
+          return;
+        }
+        if (Platform.OS === "web") {
+          // Keep Back/reload on the existing booking before leaving AutoDeck.
+          // The detail opens this exact hosted link in the same tab, not an
+          // asynchronous popup or a second booking/payment initiation.
+          transportUpdate({kind:null,address:'',where:null,quote:null});
+          router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: h.bookingId, placed: "1", pay: "ready", ...(h.pickupSent ? {} : { pickup: "failed" }) } });
           return;
         }
         const out = await payWithPaymentLink(adv.paymentId, adv.paymentUrl);

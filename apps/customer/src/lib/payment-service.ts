@@ -1,5 +1,5 @@
 import { httpsCallable } from "firebase/functions";
-import { collection, query, where, orderBy, limit, onSnapshot, type Unsubscribe } from "firebase/firestore";
+import { collection, doc, query, where, orderBy, limit, onSnapshot, type Unsubscribe } from "firebase/firestore";
 import { db, functions } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { Payment, PaymentMethod } from "@autodeck/core";
@@ -45,7 +45,13 @@ export function listenToPaymentForJob(
   customerId: string,
   onData: (payment: Payment | null) => void,
   onError: (err: Error) => void,
+  advance?: { paymentId: string; bookingId: string; amount: number; studioId: string },
 ): Unsubscribe {
+  if (advance) return onSnapshot(doc(db, COLLECTIONS.payments(), advance.paymentId), snap => {
+    const p = snap.exists() ? snap.data() as Payment : null;
+    if (!p || p.id !== advance.paymentId || p.targetType !== "booking" || p.jobId !== null || p.bookingId !== advance.bookingId || p.tenantId !== tenantId || p.customerId !== customerId || p.studioId !== advance.studioId || p.amount !== advance.amount || p.currency !== "INR") { onError(new Error("Advance payment binding unavailable.")); return; }
+    onData(p);
+  }, onError);
   const q = query(
     collection(db, COLLECTIONS.payments()),
     where("jobId", "==", jobId),

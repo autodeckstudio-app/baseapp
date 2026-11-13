@@ -8,11 +8,12 @@ import { Chip, T } from "./kit";
 
 const MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 
-export function NextVisitHero({ date, today, time, title, car, status, onPress, children }: { date: string; today: string; time: string; title: string; car: string; status: string; onPress: () => void; children?: ReactNode }) {
+export function NextVisitHero({ date, today, time, title, car, status, onPress, children, trailingAction }: { date: string; today: string; time: string; title: string; car: string; status: string; onPress: () => void; children?: ReactNode; trailingAction?: ReactNode }) {
   const day = Number(date.slice(8, 10));
   const mon = MON[Number(date.slice(5, 7)) - 1] ?? "";
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`Next visit, ${title}, ${daysUntilLabel(date, today)}`} onPress={onPress} style={({ pressed }) => ({ borderRadius: 24, ...glassSurface, padding: metrics.cardPad, gap: 12, opacity: pressed ? 0.9 : 1 })}>
+    <View style={{ borderRadius: 24, ...glassSurface, padding: metrics.cardPad, gap: 12 }}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`Next visit, ${title}, ${daysUntilLabel(date, today)}`} onPress={onPress}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
         <View style={{ width: 72, borderRadius: 16, backgroundColor: glassInner.backgroundColor, alignItems: "center", paddingVertical: 10 }}>
           <T role="label" tone="accent">{mon}</T>
@@ -24,8 +25,9 @@ export function NextVisitHero({ date, today, time, title, car, status, onPress, 
           <T role="caption" tone="secondary" numberOfLines={1}>{[car, time].filter(Boolean).join(" · ")}</T>
         </View>
       </View>
-      <View style={{ flexDirection: "row" }}><Chip label={status} tone="premium" /></View>
-      {children}
     </Pressable>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}><Chip label={status} tone="premium" />{trailingAction}</View>
+      {children}
+    </View>
   );
 }

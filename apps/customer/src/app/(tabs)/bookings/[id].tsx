@@ -8,7 +8,7 @@ import { membershipCoveredLabel, visitTiming, customerTimingLine } from "@autode
 import { manualRefundNotice } from "../../../lib/manual-refund-notice";
 import { formatServiceTime } from "../../../lib/duration";
 import { invoiceHref } from "../../../lib/invoice-display";
-import {canResumeJobPayment,customerPaymentLabel}from "../../../lib/existing-job-payment";
+import {canResumeBookingAdvance,canResumeJobPayment,customerPaymentLabel}from "../../../lib/existing-job-payment";
 import { useState, useEffect, useRef } from "react";
 import { CarThumb } from "../../../ui/CarThumb";
 import { listenToMyVehicles } from "../../../lib/vehicle-service";
@@ -211,13 +211,14 @@ export default function BookingDetailScreen() {
   const bookOwnerKey=authB.status==='ready'?listOwnerKey(authB):null;const ownerKey=authB.status==='ready'&&job&&booking&&job.customerId===booking.customerId&&bookOwnerKey!==null&&bookOwnerKey.key===job.customerId&&job.tenantId===booking.tenantId&&job.tenantId===authB.claims.tenantId&&resolvedRoute===id?[authB.user.uid,authB.claims.tenantId,job.customerId,job.id,id].join('|'):'';
   useEffect(()=>{let alive=true;setVerifiedOwner('');if(ownerKey&&job)void verifyMyCustomerDocId(job.customerId).then(ok=>{if(alive&&ok)setVerifiedOwner(ownerKey)}).catch(()=>{});return()=>{alive=false};},[ownerKey]);
   const ownerVerified=Boolean(ownerKey)&&verifiedOwner===ownerKey;
+  const advanceBinding = booking?.combinedPayment?.choice === "advance20" && booking.paymentStatus === "unpaid" && booking.advancePaymentId ? { paymentId: booking.advancePaymentId, bookingId: booking.id, amount: booking.combinedPayment.payNowPaise, studioId: booking.studioId } : undefined;
   useEffect(() => {
     if(isMock)return;const generation=++paymentGeneration.current;resumeLock.current=false;setPayingNow(false);setPayment(null);setPaymentRead('loading');setPaymentScope('');
     if(!job||authB.status!=="ready"||job.tenantId!==authB.claims.tenantId||!ownerVerified||resolvedRoute!==id)return;
-    const scope=[job.id,job.tenantId,job.customerId].join('|');
-    const stop=listenToPaymentForJob(job.id,job.tenantId,job.customerId,p=>{if(paymentGeneration.current!==generation)return;if(p&&(p.jobId!==job.id||p.tenantId!==job.tenantId||p.customerId!==job.customerId)){setPayment(null);setPaymentRead('error');setPaymentScope(scope);return}setPayment(p);setPaymentRead('ready');setPaymentScope(scope)},()=>{if(paymentGeneration.current!==generation)return;setPayment(null);setPaymentRead('error');setPaymentScope(scope)});
+    const scope=[job.id,job.tenantId,job.customerId,advanceBinding?.paymentId??'job'].join('|');
+    const stop=listenToPaymentForJob(job.id,job.tenantId,job.customerId,p=>{if(paymentGeneration.current!==generation)return;if(p&&((!advanceBinding&&p.jobId!==job.id)||(advanceBinding&&(p.id!==advanceBinding.paymentId||p.bookingId!==booking?.id||p.jobId!==null))||p.tenantId!==job.tenantId||p.customerId!==job.customerId)){setPayment(null);setPaymentRead('error');setPaymentScope(scope);return}setPayment(p);setPaymentRead('ready');setPaymentScope(scope)},()=>{if(paymentGeneration.current!==generation)return;setPayment(null);setPaymentRead('error');setPaymentScope(scope)},advanceBinding);
     return()=>{paymentGeneration.current++;stop()};
-  }, [job?.id,job?.tenantId,job?.customerId,authB.status,authB.status==='ready'?authB.user.uid:null,authB.status==='ready'?authB.claims.tenantId:null,resolvedRoute,id,ownerVerified]);
+  }, [job?.id,job?.tenantId,job?.customerId,authB.status,authB.status==='ready'?authB.user.uid:null,authB.status==='ready'?authB.claims.tenantId:null,resolvedRoute,id,ownerVerified,advanceBinding?.paymentId,advanceBinding?.amount,advanceBinding?.bookingId,advanceBinding?.studioId]);
 
   useEffect(() => {
     setApprovals([]);if (!job) return;let alive=true;
@@ -231,12 +232,13 @@ export default function BookingDetailScreen() {
   const [pushAsked, setPushAsked] = useState<boolean>(() => { try { return store?.getItem(PUSH_ASKED_KEY) === "1"; } catch { return false; } });
   const [pushBusy, setPushBusy] = useState(false);
   const [pushResult, setPushResult] = useState<"on" | "denied" | null>(null);
-  const currentPaymentScope=job?[job.id,job.tenantId,job.customerId].join('|'):'';
+  const currentPaymentScope=job?[job.id,job.tenantId,job.customerId,advanceBinding?.paymentId??'job'].join('|'):'';
   const paymentOwnerCurrent=ownerVerified&&authB.status==='ready'&&job?.tenantId===authB.claims.tenantId&&resolvedRoute===id;
   const paymentIsCurrent=paymentOwnerCurrent&&paymentScope===currentPaymentScope&&paymentRead==='ready';
   const awaitingLinkConfirmation=Boolean(paymentIsCurrent&&payment?.id===awaitingLinkId&&payment.status==='pending');
-  const resumeAllowed=!awaitingLinkConfirmation&&canResumeJobPayment({auth:authB.status==='ready'?{uid:job?.customerId??'',tenantId:authB.claims.tenantId}:null,job,payment,ready:paymentIsCurrent&&booking?.status!=="CANCELLED"&&booking?.status!=="EXPIRED"&&!booking?.cancelIntent});
-  async function resumePayment(){if(mockWriteBlocked()||resumeLock.current||payingNow||!resumeAllowed||!payment)return;resumeLock.current=true;const generation=paymentGeneration.current;setPayingNow(true);setActionError(null);try{const outcome=await payWithPaymentLink(payment.id,payment.paymentUrl??null);if(generation===paymentGeneration.current){if(outcome==='pending')setAwaitingLinkId(payment.id);setActionError(outcome==='paid'?null:EXISTING_PAYMENT_PENDING);}}catch{if(generation===paymentGeneration.current)setActionError(EXISTING_PAYMENT_OPEN_FAILED);}finally{if(generation===paymentGeneration.current){resumeLock.current=false;setPayingNow(false)}}}
+  const resumeReady=paymentIsCurrent&&!booking?.cancelIntent;
+  const resumeAllowed=!awaitingLinkConfirmation&&(advanceBinding?canResumeBookingAdvance({booking,payment,ready:resumeReady}):canResumeJobPayment({auth:authB.status==='ready'?{uid:job?.customerId??'',tenantId:authB.claims.tenantId}:null,job,payment,ready:resumeReady&&booking?.status!=="CANCELLED"&&booking?.status!=="EXPIRED"}));
+  async function resumePayment(){if(mockWriteBlocked()||resumeLock.current||payingNow||!resumeAllowed||!payment)return;resumeLock.current=true;const generation=paymentGeneration.current;setPayingNow(true);setActionError(null);try{const outcome=await payWithPaymentLink(payment.id,payment.paymentUrl??null,{webSameTab:true});if(generation===paymentGeneration.current){if(outcome==='pending')setAwaitingLinkId(payment.id);setActionError(outcome==='paid'?null:EXISTING_PAYMENT_PENDING);}}catch{if(generation===paymentGeneration.current)setActionError(EXISTING_PAYMENT_OPEN_FAILED);}finally{if(generation===paymentGeneration.current){resumeLock.current=false;setPayingNow(false)}}}
   const [car, setCar] = useState<Vehicle | null>(null);
   useEffect(() => {
     setCar(null);if (authB.status !== "ready" || !booking||!ownerVerified) return;let alive=true;
@@ -284,17 +286,17 @@ export default function BookingDetailScreen() {
 
   async function handlePayNow() {
     if (mockWriteBlocked()) return;
-    if (payingNow || authB.status !== "ready" || !booking||!ownerVerified||actionLock.current) return;
+    if (awaitingLinkId || payingNow || authB.status !== "ready" || !booking||!ownerVerified||actionLock.current) return;
     const scope=routeScope,gen=actionEpoch.current;const current=()=>routeRef.current===scope&&actionEpoch.current===gen;actionLock.current=true;
     setPayingNow(true);
     setActionError(null);
     try {
       if (booking.payMode === "studio" && booking.status === "PENDING" && Boolean(booking.holdExpiresAt)) {
-        const adv = await requestAdvancePayment(booking.id);
+        const adv = await requestAdvancePayment(booking.id, booking.combinedPayment?.payNowPaise);
         if(!current())return;
         if (!adv.paymentUrl || adv.status === "manual_review") { setActionError("Your advance payment is being checked. Please try again later."); return; }
-        const out = await payWithPaymentLink(adv.paymentId, adv.paymentUrl);
-        if(current())setActionError(bookingPayOutcomeMessage(out));
+        const out = await payWithPaymentLink(adv.paymentId, adv.paymentUrl, {webSameTab:true});
+        if(current()){if(out === "pending")setAwaitingLinkId(adv.paymentId);setActionError(out === "pending" ? EXISTING_PAYMENT_PENDING : bookingPayOutcomeMessage(out));}
         return;
       }
       const jobId = await getJobIdForBooking(booking.id, authB.claims.tenantId, booking.customerId);
@@ -336,7 +338,7 @@ export default function BookingDetailScreen() {
 
   const missed = isBookingMissed(booking);
   const bookingClosed=["CANCELLED","EXPIRED","COMPLETED"].includes(booking.status);
-  const showLiveVisit=!bookingClosed&&!(booking.status==="PENDING"&&(booking.payMode==="online"||Boolean(booking.holdExpiresAt)));
+  const showLiveVisit=!bookingClosed;
   const combinedReturn=(booking as Booking&{combinedReturn?:{status:string;feePaise:number;refundPaise:number;entries:{method:string;returnPaise:number;returnedPaise:number}[]}}).combinedReturn;
   const owedNotice = combinedReturn?null:manualRefundNotice(booking);
   const autoCancelled = booking.status === "CANCELLED" && booking.cancellationReason?.startsWith("Auto-cancelled:");
@@ -384,7 +386,7 @@ export default function BookingDetailScreen() {
           <CarThumb car={car ?? (booking.vehicleSnapshot ? { ...booking.vehicleSnapshot, photoUrl: null, category: booking.vehicleCategory } : undefined)} height={metrics.heroCompact + 60} radius={0} />
           <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0.25) 0%, rgba(8,8,10,0) 35%, rgba(8,8,10,0.92) 100%)" } as object) }} />
           <View style={{ position: "absolute", left: metrics.cardPad, right: metrics.cardPad, bottom: metrics.cardPad, gap: 6 }}>
-            <View style={{ alignSelf: "flex-start", flexDirection: "row", gap: 6 }}>{job && !bookingClosed && jobStage(job.status) && job.status !== "DELIVERED" && !(booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt))) ? <Chip label="Live" tone="accent" onDark /> : null}<Chip label={missed ? "Missed" : booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt)) ? "Pending payment" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} onDark /></View>
+            <View style={{ alignSelf: "flex-start", flexDirection: "row", gap: 6 }}>{job && !bookingClosed && jobStage(job.status) && job.status !== "DELIVERED" && job.status !== "PENDING_VEHICLE" ? <Chip label="Live" tone="accent" onDark /> : null}<Chip label={missed ? "Missed" : booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt)) ? "Pending payment" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} onDark /></View>
             <T role="heading" numberOfLines={1} style={{ color: "#FFFFFF" }}>{svc?.name ?? "Your visit"}</T>
             <T role="caption" style={{ color: "#E4E2DF" }}>{displayDate} · {displayTime}</T>
             <T role="caption" style={{ color: "#E4E2DF" }}>Booking ID {bookingCode(booking.id)}</T>
@@ -579,8 +581,8 @@ export default function BookingDetailScreen() {
       {waitingCancel ? <Pane><Kicker>Cancellation requested</Kicker><Row title="Booking" detail="Not cancelled yet."/><Row title="Slot" detail="Held while payment is checked."/><Row title="Help" detail="Contact the studio." last/></Pane> : null}
       {owedNotice ? <Notice title={owedNotice.title} body={owedNotice.body} /> : null}
 
-      {!noPaymentDue&&!waitingCancel && paymentIsCurrent && (!payment || payment.status === "failed" || payment.status === "cancelled") && booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt)) && !walkIn ? (
-        <Pane><Kicker>Payment pending</Kicker>
+      {!noPaymentDue&&!waitingCancel && !awaitingLinkId && paymentIsCurrent && (!payment || payment.status === "failed" || payment.status === "cancelled") && booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt)) && !walkIn ? (
+        <Pane><Kicker>Confirm your booking</Kicker>
           {booking.holdExpiresAt?<Row title="Slot held until" detail={new Date(booking.holdExpiresAt).toLocaleTimeString("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hour12:false})}/>:null}
           <Row title="Booking confirmation" detail="After verified payment." last/>
           <Button label="Pay now" busy={payingNow} disabled={payingNow} onPress={() => void handlePayNow()}/>
@@ -650,7 +652,7 @@ export default function BookingDetailScreen() {
         })()
       ) : null}
 
-      {!isMock && !walkIn && booking.status !== "CANCELLED" && booking.status !== "EXPIRED" ? <PickupCard bookingId={booking.id} /> : null}
+      {!isMock && !walkIn && booking.status !== "CANCELLED" && booking.status !== "EXPIRED" ? <PickupCard bookingId={booking.id} combinedPayment={Boolean(booking.combinedPayment)} /> : null}
 
       {isBookingLateToday(booking) ? <Notice title="Your booking is still valid today" body="Your slot has passed, but you can still come today during studio hours. If not checked in by close (7 pm Sunday, 9 pm other days), the booking auto-cancels." /> : null}
       {autoCancelled ? (
