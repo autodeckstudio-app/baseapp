@@ -1,3 +1,4 @@
+import {ReviewNotice} from "./ReviewNotice";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { colors, spacing, typography, Button } from "@autodeck/ui";
@@ -65,7 +66,6 @@ export function DeliveryConfirmPane({ job, onDelivered, onCancel }: { job: Servi
   const [loadError, setLoadError] = useState(false);
   const [integrityError, setIntegrityError] = useState(false);
   const [work,setWork]=useState<JobWorkCoverage|null>(null);
-  const [useRecorded,setUseRecorded]=useState(false);
   const [payload, setPayload] = useState<ProtectionWorkEvent[] | null>(null);
   const [pending, setPending] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -120,7 +120,7 @@ export function DeliveryConfirmPane({ job, onDelivered, onCancel }: { job: Servi
     const gen = ++generation.current;
     const startSig = liveSigRef.current;
     const startGen = invalidGen.current; // synchronous invalidation must also void this load
-    setLoading(true); setLoadError(false); setIntegrityError(false);setWork(null);setUseRecorded(false);
+    setLoading(true); setLoadError(false); setIntegrityError(false);setWork(null);
     const superseded = () => gen !== generation.current || liveSigRef.current !== startSig || invalidGen.current !== startGen;
     try {
       const [records,recorded] = await Promise.all([getCurrentProtections(ctx.vehicleId, ctx.tenantId),getStaffJobWorkCoverage(ctx.jobId)]);
@@ -164,7 +164,7 @@ export function DeliveryConfirmPane({ job, onDelivered, onCancel }: { job: Servi
       // initial-load lifecycle, and reload() re-arms it explicitly.
       generation.current += 1;
       if (invalid !== "verifying") setLoading(false);
-      setLoadError(false); setIntegrityError(false); setProtections([]); setPayload(null);setWork(null);setUseRecorded(false);
+      setLoadError(false); setIntegrityError(false); setProtections([]); setPayload(null);setWork(null);
       setPending(false); setSubmitError(null);
     }
   }, [invalid]);
@@ -180,7 +180,7 @@ export function DeliveryConfirmPane({ job, onDelivered, onCancel }: { job: Servi
     void load(frozen.current);
   }
 
-  const recordedRevision=work?.jobId===f?.jobId&&work?.status==='recorded'&&work.workLock==='locked'&&work.handoverReady===true&&useRecorded?work.revision:null;
+  const recordedRevision=work?.jobId===f?.jobId&&work?.status==='recorded'&&work.workLock==='locked'&&work.handoverReady===true&&Number.isInteger(work.revision)&&(work.revision??0)>0?work.revision:null;
   const declarationReady=recordedRevision!==null||work?.status==='not_recorded'&&payload!==null;
   async function confirm() {
     if (inFlight.current) return; // same-tick double press: the second press is ignored
@@ -223,7 +223,7 @@ export function DeliveryConfirmPane({ job, onDelivered, onCancel }: { job: Servi
         </View>
       ) : invalid === "account" ? (
         <View style={{ gap: spacing.sm }}>
-          <Text style={{ ...typography.caption, color: colors.error }}>The signed-in account or its permissions changed since this declaration was opened (or no delivery-permitted account is signed in for this studio) - the earlier affirmation belongs to another operator context. Reload the declaration under the current account.</Text>
+          <ReviewNotice warning title="Review under the current account" lines={["The account or its permissions changed, or it cannot deliver for this studio.","The earlier declaration cannot be used. Reload and review it again."]}/>
           <Button label="Reload declaration" variant="secondary" fullWidth={false} disabled={pending} onPress={reload} />
         </View>
       ) : invalid === "stage" ? (
@@ -239,7 +239,7 @@ export function DeliveryConfirmPane({ job, onDelivered, onCancel }: { job: Servi
         <Text accessibilityRole="alert" style={{ ...typography.caption, color: colors.error }}>The car's protection records failed an integrity check (a record does not belong to this car). Go back and reopen the job before delivering.</Text>
       ) : (
         <View style={{ gap: spacing.sm }}>
-          {work?.status==='recorded'||work?.status==='needs_review'?<View style={{gap:spacing.sm}}><Text style={{...typography.bodyMedium,color:colors.textPrimary}}>Recorded work</Text><Text style={{...typography.caption,color:colors.textMuted}}>{work.handoverReady&&work.workLock==='locked'?'Use the checked work record for this visit. No re-entry or new warranty confirmation.':'Finish recording, QC and locking this visit before handover. Missing details are not a no-work declaration.'}</Text>{work.handoverReady&&work.workLock==='locked'?<Button label={useRecorded?'Recorded work selected':'Use recorded work'} variant="secondary" fullWidth={false} disabled={pending||useRecorded} onPress={()=>setUseRecorded(true)}/>:null}</View>:<DeliveryDeclarationPanel key={`${f?.jobId ?? "job"}-${panelReset}`} protections={protections} disabled={pending} onValidChange={setPayload} />}
+          {work?.status==='recorded'||work?.status==='needs_review'?<View style={{gap:spacing.sm}}><Text style={{...typography.bodyMedium,color:colors.textPrimary}}>Recorded work</Text><ReviewNotice title={recordedRevision!==null?'Work record loaded':'Work record incomplete'} lines={recordedRevision!==null?["This visit's checked work record is used automatically.",'No re-entry or new warranty confirmation.']:['Finish recording, QC and locking this visit before handover.','Missing details are not a no-work declaration.']}/></View>:<DeliveryDeclarationPanel key={`${f?.jobId ?? "job"}-${panelReset}`} protections={protections} disabled={pending} onValidChange={setPayload} />}
           <Button label="Reload records" variant="ghost" fullWidth={false} disabled={pending} onPress={reload} />
         </View>
       )}

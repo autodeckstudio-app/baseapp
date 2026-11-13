@@ -123,7 +123,7 @@ export default function AccountScreen() {
 
       <Section title="My details">
         <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: "600", padding: spacing.md, paddingBottom: 0 }}>{me?.name ?? email}</Text>
-        <Text style={{ ...typography.caption, color: colors.textMuted, padding: spacing.md, paddingTop: spacing.xxs }}>{me ? `${me.email}${me.phone ? ` · ${me.phone}` : ""} · ${me.role === "admin" ? "Office" : "Studio"}. These details are shared with your admin.` : "Your admin has not linked your profile yet."}</Text>
+        <View style={{gap:6,padding:spacing.md,paddingTop:spacing.xxs}}>{me?<><Text style={{...typography.caption,color:colors.textMuted}}>{me.email}</Text>{me.phone?<Text style={{...typography.caption,color:colors.textMuted}}>{me.phone}</Text>:null}<Text style={{...typography.caption,color:colors.textMuted}}>{me.role === "admin" ? "Office" : "Studio"} · Shared with your admin</Text></>:<Text style={{...typography.caption,color:colors.textMuted}}>Your admin has not linked your profile yet.</Text>}</View>
       </Section>
 
       {me?<Section title="Document"><StaffDocument employeeId={me.id} revisionKey={me.documentReview?`${me.documentReview.revision}:${me.documentReview.status}`:undefined}/></Section>:null}

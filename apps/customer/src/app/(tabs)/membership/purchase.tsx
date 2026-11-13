@@ -1,3 +1,4 @@
+import {MembershipActivationTerms,MembershipUpgradeTerms} from "../../../ui/MembershipTerms";
 import { useReduceMotion } from "../../../lib/reduce-motion";
 import { useState, useEffect, useRef } from "react";
 import { View, Modal } from "react-native";
@@ -141,7 +142,7 @@ export default function PurchaseMembershipScreen() {
           {plan.prioritySlot ? <Row title="Priority slot" detail="Included" /> : null}
           <Row title="You pay now" detail={rupees(upgradeQuote)} last />
         </Pane>
-        <T role="caption" tone="tertiary">Your {active.tier} plan ends when the upgrade is paid. Unused washes and pickups do not carry over. {upgradePaysFullPrice(active) ? "You have used part of this plan, so the full new price applies." : "Nothing used yet, so you pay only the difference."} The new plan runs 30 days from the day it starts.</T>
+        <MembershipUpgradeTerms tier={active.tier} paysFullPrice={upgradePaysFullPrice(active)}/>
         {error ? <Notice title="Upgrade failed" body={error} /> : null}
         <Button label="Upgrade" busy={purchasing} onPress={() => setAskUpgrade(true)} />
         <Modal visible={askUpgrade} transparent animationType={reduce ? "none" : "fade"} onRequestClose={() => setAskUpgrade(false)}>
@@ -216,9 +217,7 @@ export default function PurchaseMembershipScreen() {
         {[carryOverLine(), plan.discountPercent > 0 ? "Non-wash services receive the discount automatically at booking." : ""].filter(Boolean).join(" ")}
       </T>
 
-      <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>
-        Benefits unlock only after your payment is confirmed. Online payments activate automatically once verified; pay-at-studio requests are confirmed at the front desk.
-      </T>
+      <MembershipActivationTerms/>
 
       {error ? <Notice title="Purchase failed" body={error} /> : null}
 

@@ -201,7 +201,8 @@ describe("DeliveryConfirmPane mounted", () => {
     await flush();
     press(el, "No protection work");
     act(() => { authListener?.({ uid: "u2", role: "studio", tenantId: "t", studioId: "s1" }); }); // signed-in account changes mid-pane
-    expect(textOf(el)).toContain("signed-in account or its permissions changed");
+    expect(textOf(el)).toContain("The account or its permissions changed, or it cannot deliver for this studio.");
+    expect(textOf(el)).toContain("The earlier declaration cannot be used. Reload and review it again.");
     pressRaw(el, "Confirm mark delivered");
     expect(advanceJobStatus).not.toHaveBeenCalled();
     // Explicit reload under the new account re-aims and can then deliver.
@@ -222,14 +223,16 @@ describe("DeliveryConfirmPane mounted", () => {
     press(el, "No protection work");
     // Token refresh: same uid, new role claim - a different operator context.
     act(() => { authListener?.({ uid: "u1", role: "admin", tenantId: "t", studioId: "s1" }); });
-    expect(textOf(el)).toContain("signed-in account or its permissions changed");
+    expect(textOf(el)).toContain("The account or its permissions changed, or it cannot deliver for this studio.");
+    expect(textOf(el)).toContain("The earlier declaration cannot be used. Reload and review it again.");
     pressRaw(el, "Confirm mark delivered");
     expect(advanceJobStatus).not.toHaveBeenCalled();
     // Same for a studio re-scope under the same uid.
     act(() => { el.update(createElement(DeliveryConfirmPane, { job: job(), onDelivered: () => {}, onCancel: () => {} })); });
     await flush();
     act(() => { authListener?.({ uid: "u1", role: "studio", tenantId: "t", studioId: "s2" }); });
-    expect(textOf(el)).toContain("signed-in account or its permissions changed");
+    expect(textOf(el)).toContain("The account or its permissions changed, or it cannot deliver for this studio.");
+    expect(textOf(el)).toContain("The earlier declaration cannot be used. Reload and review it again.");
   });
 
   it("signed-out is INVALID, never a valid anonymous context; auth unverified shows a verifying state", async () => {
@@ -238,7 +241,8 @@ describe("DeliveryConfirmPane mounted", () => {
     act(() => { el = create(createElement(DeliveryConfirmPane, { job: job(), onDelivered: () => {}, onCancel: () => {} })); });
     await flush();
     act(() => { authListener?.(null); }); // sign-out mid-pane
-    expect(textOf(el)).toContain("signed-in account or its permissions changed");
+    expect(textOf(el)).toContain("The account or its permissions changed, or it cannot deliver for this studio.");
+    expect(textOf(el)).toContain("The earlier declaration cannot be used. Reload and review it again.");
     pressRaw(el, "Confirm mark delivered");
     expect(advanceJobStatus).not.toHaveBeenCalled();
     // Fresh mount with auth slow to verify: nothing affirmable until the
@@ -260,7 +264,8 @@ describe("DeliveryConfirmPane mounted", () => {
     let el!: any; // eslint-disable-line @typescript-eslint/no-explicit-any
     act(() => { el = create(createElement(DeliveryConfirmPane, { job: job(), onDelivered: () => {}, onCancel: () => {} })); });
     await flush();
-    expect(textOf(el)).toContain("signed-in account or its permissions changed");
+    expect(textOf(el)).toContain("The account or its permissions changed, or it cannot deliver for this studio.");
+    expect(textOf(el)).toContain("The earlier declaration cannot be used. Reload and review it again.");
     pressRaw(el, "Confirm mark delivered");
     expect(advanceJobStatus).not.toHaveBeenCalled();
     pressRaw(el, "Reload declaration");
@@ -286,7 +291,8 @@ describe("DeliveryConfirmPane mounted", () => {
     // affirmation: every token epoch requires an explicit reaffirm.
     act(() => { authListener?.(STAFF); });
     await flush();
-    expect(textOf(el)).toContain("signed-in account or its permissions changed");
+    expect(textOf(el)).toContain("The account or its permissions changed, or it cannot deliver for this studio.");
+    expect(textOf(el)).toContain("The earlier declaration cannot be used. Reload and review it again.");
     pressRaw(el, "Confirm mark delivered");
     expect(advanceJobStatus).not.toHaveBeenCalled();
     // Explicit reload re-aims under the new token epoch; the dropped draft
@@ -317,7 +323,8 @@ describe("DeliveryConfirmPane mounted", () => {
     await flush();
     expect(onDelivered).not.toHaveBeenCalled(); // dropped completion publishes nothing
     // No stuck pending: the explicit reaffirm path is available and enabled.
-    expect(textOf(el)).toContain("signed-in account or its permissions changed");
+    expect(textOf(el)).toContain("The account or its permissions changed, or it cannot deliver for this studio.");
+    expect(textOf(el)).toContain("The earlier declaration cannot be used. Reload and review it again.");
     advanceJobStatus.mockResolvedValue({ jobId: "jA" });
     press(el, "Reload declaration"); // throws if still disabled by a stuck pending
     await flush();
@@ -373,11 +380,14 @@ describe("DeliveryConfirmPane mounted", () => {
   });
 });
 
-  it("recorded sealed QC work replaces re-entry with explicit same-revision handover, never a manual none",async()=>{
+  it("recorded sealed QC work replaces re-entry with automatic exact-revision handover, never a manual none",async()=>{
     workState.value={status:'recorded',jobId:'jA',revision:5,workLock:'locked',handoverReady:true,items:[]};getCurrentProtections.mockResolvedValue([]);let el:any;await act(async()=>{el=create(createElement(DeliveryConfirmPane,{job:job(),onDelivered:vi.fn(),onCancel:vi.fn()}))});
-    expect(textOf(el)).toContain('Use the checked work record');expect(textOf(el)).not.toContain('No protection work');
-    const b=(label:string)=>el.root.findAll((n:any)=>n.props.label===label&&n.props.onPress)[0];expect(b('Confirm mark delivered').props.disabled).toBe(true);await act(async()=>b('Use recorded work').props.onPress());expect(b('Confirm mark delivered').props.disabled).toBe(false);advanceJobStatus.mockResolvedValue({});await act(async()=>b('Confirm mark delivered').props.onPress());expect(advanceJobStatus).toHaveBeenCalledWith('jA',undefined,undefined,undefined,5);await act(async()=>el.unmount());
+    expect(textOf(el)).toContain("checked work record is used automatically");expect(textOf(el)).not.toContain('No protection work');
+    const b=(label:string)=>el.root.findAll((n:any)=>n.props.label===label&&n.props.onPress)[0];expect(el.root.findAll((n:any)=>n.props.label==='Use recorded work')).toHaveLength(0);expect(b('Confirm mark delivered').props.disabled).toBe(false);advanceJobStatus.mockResolvedValue({});await act(async()=>b('Confirm mark delivered').props.onPress());expect(advanceJobStatus).toHaveBeenCalledWith('jA',undefined,undefined,undefined,5);await act(async()=>el.unmount());
   });
   it("partial or unsealed recorded work cannot fall back to manual none or guessed handover",async()=>{
     for(const state of[{status:'recorded',workLock:'open',handoverReady:false},{status:'needs_review',workLock:'unknown',handoverReady:false}]){workState.value={...state,jobId:'jA',revision:3,items:[]};getCurrentProtections.mockResolvedValue([]);let el:any;await act(async()=>{el=create(createElement(DeliveryConfirmPane,{job:job(),onDelivered:vi.fn(),onCancel:vi.fn()}))});expect(textOf(el)).not.toContain('No protection work');expect(textOf(el)).toContain('Finish recording, QC');expect(el.root.findAll((n:any)=>n.props.label==='Confirm mark delivered'&&n.props.onPress)[0].props.disabled).toBe(true);await act(async()=>el.unmount())}
+  });
+  it('automatic record reuse fails closed for a different visit or invalid revision',async()=>{
+    for(const record of[{jobId:'other',revision:5},{jobId:'jA',revision:null},{jobId:'jA',revision:0}]){workState.value={status:'recorded',workLock:'locked',handoverReady:true,items:[],...record};getCurrentProtections.mockResolvedValue([]);let el:any;await act(async()=>{el=create(createElement(DeliveryConfirmPane,{job:job(),onDelivered:vi.fn(),onCancel:vi.fn()}))});expect(el.root.findAll((n:any)=>n.props.label==='Confirm mark delivered'&&n.props.onPress)[0].props.disabled).toBe(true);expect(textOf(el)).not.toContain('No protection work');await act(async()=>el.unmount())}
   });

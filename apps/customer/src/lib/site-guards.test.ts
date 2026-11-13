@@ -42,7 +42,7 @@ describe("public site guards", () => {
     expect(pr).toContain("Card and UPI details are handled by Razorpay. We do not store them.");
     expect(pr).toContain("your name and phone, which only the studio sees");
     expect(faq).toContain("any car in your garage");
-    expect(faq).toContain("Club plans last 30 days");
+    expect(faq).toContain('<dt>Validity</dt><dd>30 days</dd>');
     expect(faq).not.toMatch(/car on the plan/i);
   });
   it("the app links Terms and Privacy to the published pages", () => {
