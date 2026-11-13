@@ -1,3 +1,5 @@
+import {useAuth} from '../../../hooks/useAuth';
+import {useForegroundRefresh} from '../../../hooks/useForegroundRefresh';
 import {homeCatalogueBack,catalogueReturnParams} from "../../../lib/home-service-navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TextInput, View, useWindowDimensions } from "react-native";
@@ -33,24 +35,31 @@ export default function CatalogueScreen() {
   const router = useRouter(),
     params = useLocalSearchParams<{home?:string;family?:string;brand?:string;work?:string;cat?:string;need?:string;p?:string;mock?:string;theme?:string;returnTo?:string;homeEntry?:string}>();
   const { colors } = useExperienceTheme();
+  const auth=useAuth();
+  const ownerScope=auth.status==='ready'?`${auth.user.uid}:${auth.claims.tenantId}`:__DEV__&&params.mock==='1'?'preview':null;
+  const ownerRef=useRef(ownerScope);ownerRef.current=ownerScope;
+  const loadedScope=useRef(ownerScope);
   const [services, setServices] = useState<Service[] | null>(() =>
       peekCatalogue(),
     ),
     [error, setError] = useState(false),
     [q, setQ] = useState("");
   const { height: winH } = useWindowDimensions();
+  const loadGeneration=useRef(0);
   const load = useCallback(async () => {
+    const scope=ownerRef.current;if(!scope)return;
+    const generation=++loadGeneration.current;
     setError(false);
     try {
-      setServices(await getServiceCatalogue());
+      const rows=await getServiceCatalogue(undefined,{fresh:true});
+      if(generation===loadGeneration.current&&scope===ownerRef.current){loadedScope.current=scope;setServices(rows);}
     } catch {
-      setError(true);
+      if(generation===loadGeneration.current&&scope===ownerRef.current)setError(true);
     }
   }, []);
-  useEffect(() => {
-    void load();
-  }, [load]);
-  const all = useMemo(() => currentServices(services ?? []), [services]);
+  useForegroundRefresh(()=>{void load()},ownerScope);
+  useEffect(()=>()=>{loadGeneration.current++},[]);
+  const all = useMemo(() => currentServices(loadedScope.current===ownerScope?services ?? []:[]), [services,ownerScope]);
   const path = routePath(params, all);
   const pricingVehicle = usePricingVehicle(),
     prices = useVehiclePrices(all, pricingVehicle.category);

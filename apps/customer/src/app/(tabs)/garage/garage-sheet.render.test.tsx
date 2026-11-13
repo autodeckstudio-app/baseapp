@@ -54,7 +54,7 @@ it('car browser keeps every car available, a tap opens the preview pop-up, an ou
   // Tap a car: the pop-up opens with details, documents and service history.
   await act(async () => { byLabel(r, 'Open BMW M340i')!.props.onPress(); });
   await act(async () => {});
-  expect(h.setActive).toHaveBeenCalledWith('a');
+  expect(h.setActive).toHaveBeenCalledWith('a',expect.any(String),expect.any(String));
   expect(text(r)).toContain('Registration Certificate');
   expect(text(r)).toContain('RC-SAMPLE-1');
   expect(text(r)).toContain('Detail SPA');

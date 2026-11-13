@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 // The 5 app-screen mockups ship under immutable 1-year cache headers (vercel.json
 // /assets/*). Every reference must carry the current content hash (?v=sha1-10) so a
 // replaced asset busts device caches automatically, and the canvas must include the
-// 59px status strip + 30px home-indicator safe area (390x933) behind the iOS overlay.
+// 59px status strip + 34px home-indicator safe area (390x844 logical, 780x1688 at 2x) behind the iOS overlay.
 const screens=['home','bookings','garage-stories','buysell','profile'];
 const hash=n=>createHash('sha1').update(fs.readFileSync(`public/assets/redesign/${n}.webp`)).digest('hex').slice(0,10);
 const ref=n=>`/assets/redesign/${n}.webp?v=${hash(n)}`;
@@ -14,7 +14,7 @@ function webpSize(n){const b=fs.readFileSync(`public/assets/redesign/${n}.webp`)
   if(fourcc==='VP8L'){const b1=b[21],b2=b[22],b3=b[23],b4=b[24];return [1+(((b2&0x3f)<<8)|b1),1+(((b4&0xf)<<10)|(b3<<2)|((b2&0xc0)>>6))]}
   if(fourcc==='VP8X'){return [1+b.readUIntLE(24,3),1+b.readUIntLE(27,3)]}
   throw new Error('unknown webp encoding '+fourcc)}
-for(const n of screens){const [w,h]=webpSize(n);assert(w===390&&h===933,`${n}.webp must be 390x933 (status/safe-area extended), got ${w}x${h}`)}
+for(const n of screens){const [w,h]=webpSize(n);assert(w===780&&h===1688,`${n}.webp must be 780x1688 (390x844 at 2x, including status/safe areas), got ${w}x${h}`)}
 const home=fs.readFileSync('src/data/redesign/home.html','utf8');
 const app=fs.readFileSync('src/data/redesign/app.html','utf8');
 const ts=fs.readFileSync('src/scripts/redesign.ts','utf8');
@@ -26,7 +26,9 @@ const distApp=fs.readFileSync('dist/app/index.html','utf8');
 assert(distHome.includes(ref('home')),'dist home must reference versioned home.webp');
 assert(distApp.includes(ref('home')),'dist app walkthrough must reference versioned home.webp');
 const css=fs.readFileSync('public/assets/redesign/site.css','utf8');
-for(const marker of ['aspect-ratio:390/933','.phone-island','.phone-home','.phone-statusbar']) assert(css.includes(marker),`site.css lost ${marker}`);
+for(const marker of ['aspect-ratio:390/844','.phone-island','.phone-home','.phone-statusbar']) assert(css.includes(marker),`site.css lost ${marker}`);
+assert(!css.includes('top:6.3237%'),'captures already include safe areas: no second top inset');
+assert(css.includes('max-height:none!important;aspect-ratio:390/844'),'phone must not be distorted by old viewport-height caps');
 for(const marker of ['phone-island','phone-home','phone-statusbar']) {assert(home.includes(marker),`home.html lost ${marker}`);assert(app.includes(marker),`app.html lost ${marker}`)}
 // tagline punctuation: no trailing period on "All under one roof"
 assert(!home.includes('one roof.</span>'),'home hero tagline lost its punctuation fix');

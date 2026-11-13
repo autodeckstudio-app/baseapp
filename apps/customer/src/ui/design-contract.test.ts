@@ -132,7 +132,7 @@ describe("sizes come from one rulebook",()=>{
   });
   it("uses the same section gap on Home and in Screen",()=>{
     expect(read("src/ui/HomeScene.tsx")).toContain("paddingBottom: 26");
-    expect(read("src/ui/kit.tsx")).toContain("calc(96px + env(safe-area-inset-bottom))");
+    expect(read("src/ui/kit.tsx")).toContain("calc(${bottomClearance}px + env(safe-area-inset-bottom))");
   });
   it("does not leave a tall empty car panel when there is no photo",()=>{
     const home=read("src/ui/CarChips.tsx");expect(home).toContain("const framed = !!car.vehicle?.photoUrl");expect(home).toContain("{framed ? <View");expect(home).toContain("Add a photo from the car page");expect(home).not.toContain("NO PHOTO YET");
@@ -173,7 +173,7 @@ it("audit batch: no spinner price labels, no icon placeholders over titles, labe
   expect(read("src/app/(tabs)/profile.tsx")).toContain('<Screen appBar="You">'); // the common header is the only title (no second "Your account")
   expect(read("src/app/(tabs)/notifications/index.tsx")).toContain("NOTIFICATION_ACTION");
   const home=read("src/ui/HomeView.tsx");expect(home).toContain("isCompactCarRow");expect(home).not.toContain("{car ? car.title : p.greeting}");
-  expect(read("src/ui/kit.tsx")).toContain("calc(96px + env(safe-area-inset-bottom))");
+  expect(read("src/ui/kit.tsx")).toContain("calc(${bottomClearance}px + env(safe-area-inset-bottom))");
 });
 
 describe("booking flow guardrails", () => {
@@ -751,7 +751,7 @@ describe("visit history rows: compact date block, subtle status badge and a smal
 });
 
 describe("Home scene hierarchy",()=>{
- it("one personal stage precedes visual services, exact Club heading and compact showroom",()=>{const h=read("src/ui/HomeScene.tsx");expect(h.indexOf('<HomeOriginalTop')).toBeLessThan(h.indexOf('home-personal-stage'));expect(h.indexOf('home-state-dock')).toBeLessThan(h.indexOf('home-service-triad'));expect(read('src/ui/HomeOriginalTop.tsx')).toContain('All under one roof.');expect(h).toContain('>Make care a habit</Text>');expect(h).not.toContain('<KenBurns');});
+ it("one personal stage precedes visual services, exact Club heading and compact showroom",()=>{const h=read("src/ui/HomeScene.tsx");expect(h.indexOf('<HomeOriginalTop')).toBeLessThan(h.indexOf('home-personal-stage'));expect(h.indexOf('home-state-dock')).toBeLessThan(h.indexOf('home-service-triad'));expect(read('src/ui/HomeOriginalTop.tsx')).toContain('All under one roof.');expect(read('src/ui/HomeClub.tsx')).toContain('>Make care a habit</Text>');expect(h).not.toContain('<KenBurns');});
 });
 
 describe("Home ambient light is brand orange at low opacity",()=>{

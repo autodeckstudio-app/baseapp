@@ -1,8 +1,8 @@
 import {ServiceTimePicker} from '../../../ui/ServiceTimePicker';
 import { customerOfferingVisible } from '../../../lib/customer-offering-visibility';
 import { CarThumb } from "../../../ui/CarThumb";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useState, useEffect } from "react";
+import {useVehiclePreference} from "../../../lib/active-vehicle";
+import { useState, useEffect, useRef } from "react";
 import { View } from "react-native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { collapseStaleBookEntries } from "../../../lib/back-nav";
@@ -73,7 +73,9 @@ export default function BookServiceScreen() {
   useEffect(()=>{let alive=true;setService(null);setSlots([]);setPickedSlot(null);setLoadError(false);setLoading(true);if(!serviceId||!customerOfferingVisible({id:serviceId})||auth.status!=='ready'){setLoading(false);return;}
     void getServiceCatalogue().then(list=>{if(alive)setService(list.find(s=>s.id===serviceId && s.active === true && customerOfferingVisible(s))??null)}).catch(()=>{if(alive)setLoadError(true)}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false};
   },[serviceId,owner,retryTick]);
-  useEffect(()=>{setVehicles([]);setSelectedVehicle(null);setVehiclesError(false);if(auth.status!=='ready'||!ownerKey)return;let alive=true,revision=0;const stop=listenToMyVehicles(ownerKey.key,auth.claims.tenantId,list=>{if(!alive)return;const rev=++revision;setVehicles(list);void AsyncStorage.getItem('autodeck.activeVehicle').then(activeId=>{if(alive&&revision===rev)setSelectedVehicle(cur=>{const keep=cur&&list.find(v=>v.id===cur.id);return keep??list.find(v=>v.id===activeId)??list[0]??null})}).catch(()=>{if(alive&&revision===rev)setSelectedVehicle(list[0]??null)})},()=>{if(alive)setVehiclesError(true)});return()=>{alive=false;stop()};},[owner,retryTick]);
+  const preferredVehicle=useVehiclePreference(ownerKey?.key??null,auth.status==='ready'?auth.claims.tenantId:null);const preferredRef=useRef(preferredVehicle);preferredRef.current=preferredVehicle;
+  useEffect(()=>{setVehicles([]);setSelectedVehicle(null);setVehiclesError(false);if(auth.status!=='ready'||!ownerKey)return;let alive=true;const stop=listenToMyVehicles(ownerKey.key,auth.claims.tenantId,list=>{if(!alive)return;setVehicles(list);setSelectedVehicle(cur=>{const keep=cur&&list.find(v=>v.id===cur.id);return keep??list.find(v=>v.id===preferredRef.current)??list[0]??null})},()=>{if(alive)setVehiclesError(true)});return()=>{alive=false;stop()};},[owner,retryTick]);
+
 
   useEffect(()=>{setSelectedCategory(normalizeSegment(selectedVehicle?.category));setSizeError(null);},[selectedVehicle?.id,selectedVehicle?.category]);
 

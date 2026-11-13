@@ -3,7 +3,7 @@ import {Image,Platform,Pressable,Text,View,useWindowDimensions} from 'react-nati
 import {useExperienceTheme} from '@autodeck/ui/native';
 import {KenBurns,Rise} from './Drift';
 import {NavIcon} from './NavIcon';
-import {CarChips} from './CarChips';
+import {HomeOwnedCars} from './HomeOwnedCars';
 import {textStyle} from './kit';
 import {sceneImagery} from '../lib/imagery';
 import {metrics} from '../lib/metrics';
@@ -43,7 +43,6 @@ return <View testID='home-original-top' style={{gap:metrics.sectionGap}}>
       </View>
 
 {p.stories}
-<CarChips cars={p.cars.slice(0,1)} active={0} onActive={()=>p.onGarage()} onOpen={p.onCar} onAdd={p.onAddCar}/>
-{p.cars.length>1?<Pressable accessibilityRole='button' accessibilityLabel='Switch car' onPress={p.onGarage} style={{minHeight:44,alignSelf:'flex-end',justifyContent:'center'}}><Text style={{...textStyle('caption'),color:'#A96C38'}}>Switch car</Text></Pressable>:null}
+<HomeOwnedCars p={p}/>
 </View>;
 }

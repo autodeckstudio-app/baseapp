@@ -4,11 +4,12 @@ import { functions } from "./firebase";
 import type { Campaign } from "./campaign";
 
 /** Live offers from the studio. Never throws: a banner is a bonus, not a blocker for Home. */
-export async function getOffers(): Promise<OfferView[]> {
+export async function getOffers(options?:{throwOnError?:boolean}): Promise<OfferView[]> {
   try {
     const fn = httpsCallable<Record<string, never>, { offers: OfferView[] }>(functions, "listOffers");
     return (await fn({})).data.offers;
-  } catch {
+  } catch (error) {
+    if(options?.throwOnError)throw error;
     return [];
   }
 }

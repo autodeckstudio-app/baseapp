@@ -47,7 +47,7 @@ describe("service detail uses the saved car type only", () => {
     expect(vs).toMatch(/cachedServiceTotal\(sv\.id, category\)/);
     // Refills come from ONE batched getServiceCatalogue call, memoized per
     // uid|tenant|category scope, failures never cached.
-    expect(vs).toContain("getCatalogueDisplayTotals(category)");
+    expect(vs).toContain("getCatalogueDisplayTotals(category,{fresh:tick>0})");
     expect(cs).toContain("totalsMemo.get(key)");
     // A size-priced service with no row for the saved size must never show the flat
     // base as the size-adjusted price - it shows the entry price instead.

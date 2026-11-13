@@ -17,6 +17,7 @@ export type HomeViewProps = {
   initial: string;
   unread: number;
   cars: HomeCar[];
+  activeCarId?: string | undefined;
   services: HomeService[];
   reminders: HomeReminder[];
   live: HomeLive | null;
@@ -52,6 +53,8 @@ export type HomeViewProps = {
   onCar: (c: HomeCar) => void;
   onAddCar: () => void;
   onGarage: () => void;
+  /** Changes the canonical Home vehicle, never just the displayed image. */
+  onSelectCar?: (id: string) => void;
   onReminders: () => void;
   onBook: () => void;
   onStudio: () => void;

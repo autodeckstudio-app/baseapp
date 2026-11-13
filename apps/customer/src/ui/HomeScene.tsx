@@ -10,6 +10,9 @@ import { HomeShowroom } from './HomeShowroom';
 import { textStyle } from './kit';
 import{HomeOriginalTop}from './HomeOriginalTop';
 import { raised } from '../lib/raised';
+import { NavIcon } from './NavIcon';
+import { HomeClub } from './HomeClub';
+import { StudioFooterMockup } from './StudioFooterMockup';
 
 const gradient = (value: string): ViewStyle => Platform.OS === 'web' ? { backgroundImage: value } as ViewStyle : {};
 const display = (size: number, color: string): TextStyle => ({ ...textStyle(size >= 25 ? 'title' : 'heading'), fontSize: size, lineHeight: Math.round(size * 1.3), color });
@@ -35,7 +38,7 @@ export function HomeScene({ p }: { p: HomeViewProps }) {
   const [menu, setMenu] = useState(false);
   // The adapter's first vehicle is the canonical active vehicle. Do not switch
   // the photo locally while leaving its reminders/jobs scoped to another car.
-  const car = p.cars[0];
+  const car = p.cars.find(c=>c.id===p.activeCarId)??p.cars[0];
   const event = p.live && !p.live.idle ? p.live : null;
   const nudge = event ? null : pickIdleNudge({ reminder: p.reminders[0] ?? null, need: p.need, rebook: p.rebook, onReminder: p.onReminders });
   const kicker = event?.kicker ?? nudge?.kicker ?? 'Ready when you are';
@@ -70,15 +73,13 @@ export function HomeScene({ p }: { p: HomeViewProps }) {
         {coat ? <Pressable accessibilityRole="button" accessibilityLabel="Ceramic coating" onPress={() => servicePress(coat)} style={{ flex: 1, height: 214, borderRadius: 24, borderWidth: 1, borderColor: line, overflow: 'hidden', backgroundColor: dark, justifyContent: 'flex-end' }}><Image source={serviceImagery.ceramic} resizeMode="cover" style={{ position: 'absolute', width: '100%', height: '100%' }} /><View pointerEvents="none" style={{ position: 'absolute', inset: 0, backgroundColor: '#111b2466', ...gradient('linear-gradient(180deg,#111b2430,#111b2440 33%,#111b24e0 68%,#111b24fa)') }} /><View style={{ paddingHorizontal: 14, paddingBottom: 17, gap: 8 }}><Text style={label('#FFFFFF')}>Protect</Text><Text style={display(width < 340 ? 18 : 20, '#FFFFFF')}>{'Ceramic\ncoating'}</Text><Text style={{ ...textStyle('body'),  fontSize: 12, color: '#FFFFFF' }}>Explore options</Text></View></Pressable> : null}
         {entrances.length ? <View style={{ flex: 1, gap: 11, minHeight: 214 }}>{entrances.map(s => <Pressable key={s.key} accessibilityRole="button" accessibilityLabel={s.title} onPress={() => servicePress(s)} style={({ pressed }) => ({ flex: 1, ...surfaces.card, padding: 14, borderRadius: 24, opacity: pressed ? .65 : 1 })}><Text style={label(accent)}>{s.key === 'garage' ? 'Maintain' : 'Understand'}</Text><Text style={{ ...textStyle('body'),  ...display(13, ink), lineHeight: 19, marginTop: 11 }}>{s.title}</Text></Pressable>)}</View> : null}
       </View> : null}
-      <View testID="home-club" style={{ ...bleed, paddingHorizontal: gutter, paddingVertical: 28, minHeight: 209, overflow: 'hidden', ...surfaces.card, borderRadius:0, borderWidth:0 }}>
-        <View pointerEvents="none" style={{ position: 'absolute', width: 177, height: 164, right: width < 340 ? -50 : -22, top: 95, transform: [{ rotate: '-21deg' }] }}>{[0,1,2].map(i => <View key={i} style={{ position: 'absolute', width: 83, height: 151, left: 27*i, top: 7*i, borderRadius: 9999, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.accentHaze }} />)}</View>
-        <Text style={label(accent)}>Autodeck Club</Text><Text accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={.75} style={{ ...display(width < 340 ? 22 : 26, ink), marginTop: 10, marginBottom: 10 }}>Make care a habit</Text><Text style={{ ...textStyle('body'),  color: muted, fontSize: 12, lineHeight: 18, maxWidth: '70%' }}>{p.membership ? `${p.membership.title} ${p.membership.detail}` : 'Find your regular wash plan.'}</Text><View style={{ marginTop: 6 }}><Link title={p.membership ? 'View membership' : 'Explore the Club'} onPress={p.onMembership} color={ink} /></View>
-      </View>
+      <HomeClub membership={p.membership} onPress={p.onMembership}/>
       <CampaignSlot campaign={p.campaign} />
       {p.carsList?.length && p.onOpenCar && p.onBuyCar && p.onSellCar ? <HomeShowroom cars={p.carsList} onOpen={p.onOpenCar} onBuy={p.onBuyCar} onSell={p.onSellCar} /> : null}
-      <View style={{ borderTopWidth: 1, borderColor: line, paddingTop: 18, marginTop: 26, paddingBottom: 20 }}>
+      <View style={{ borderTopWidth: 1, borderColor: line, paddingTop: 18, marginTop: 26, paddingBottom: 0 }}>
         <Pressable accessibilityRole="button" accessibilityLabel={`The studio, ${p.studio.hours}${p.studio.openText ? `, ${p.studio.openText}` : ''}. Open the studio page`} onPress={p.onStudio} style={{ minHeight: 64, gap: 8 }}><View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}><Text style={display(18, ink)}>The studio</Text>{p.studio.openText ? <Text style={{ ...textStyle('body'),  color: muted, fontSize: 12, flexShrink: 1 }}>{p.studio.openText}</Text> : null}</View><Text style={{ ...textStyle('body'),  color: muted, fontSize: 12 }}>{p.studio.hours}</Text></Pressable>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', columnGap: 12 }}>{p.quick?.map(q => <Link key={q.key} title={q.label} onPress={q.onPress} color={muted} underline={false} />)}{p.social?.map(s => <Link key={s.key} title={s.icon === 'channel' ? 'Channel' : s.title} onPress={s.onPress} color={muted} underline={false} />)}</View>
+        <View testID="home-studio-contacts" style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, paddingTop: 12 }}>{p.quick?.map(q => <Pressable key={q.key} accessibilityRole="button" accessibilityLabel={q.label} onPress={q.onPress} style={({ pressed }) => ({ width: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center', opacity: pressed ? .65 : 1 })}><NavIcon name={q.icon} color={ink} size={24} cut={colors.surface} /></Pressable>)}{p.social?.map(s => <Pressable key={s.key} accessibilityRole="button" accessibilityLabel={s.icon === 'channel' ? 'Channel' : s.title} onPress={s.onPress} style={({ pressed }) => ({ width: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center', opacity: pressed ? .65 : 1 })}><NavIcon name={s.icon} color={ink} size={24} cut={colors.surface} /></Pressable>)}</View>
+        <StudioFooterMockup />
       </View>
     </View>
   </View>;

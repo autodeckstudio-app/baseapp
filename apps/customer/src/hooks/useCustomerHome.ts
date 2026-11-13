@@ -1,7 +1,8 @@
+import {useForegroundRefresh,useForegroundNow} from './useForegroundRefresh';
 // Live inputs for the customer Home, ranked by the pure projectCustomerHome.
 // Every listener is scoped to the signed-in customer; the rules enforce it.
 import { useEffect, useMemo, useRef, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import {useVehiclePreference,setVehiclePreference,vehiclePreferenceOwner} from "../lib/active-vehicle";
 import {
   projectCustomerHome,
   type ApprovalRequest,
@@ -24,19 +25,24 @@ import {
   listenToMyPendingApprovals,
 } from "../lib/home-service";
 
-const ACTIVE_KEY = "autodeck.activeVehicle";
-
-export async function setActiveVehicle(id: string): Promise<void> {
-  await AsyncStorage.setItem(ACTIVE_KEY, id);
-}
+export async function setActiveVehicle(id:string,customerId?:string|null,tenantId?:string|null):Promise<void>{const owner=vehiclePreferenceOwner(customerId??null,tenantId??null);if(owner)await setVehiclePreference(owner,id);}
 
 export interface CustomerHomeState {
   model: CustomerHomeModel | null;
+  bookings: Booking[];
   error: string | null;
   refresh: () => void;
+  selectVehicle: (id: string) => void;
 }
 
 export function useCustomerHome(uid: string | null, tenantId: string | null, firstName?: string | null): CustomerHomeState {
+  const owner=uid&&tenantId?`${tenantId}:${uid}`:tenantId?`${tenantId}:pending`:null;
+  const [stateOwner,setStateOwner]=useState(owner);
+  const lastReset=useRef({owner,tick:0});
+  const [foregroundTick,setForegroundTick]=useState(0);
+  const now=useForegroundNow(owner);
+  const foregroundOwner=useRef<string|null>(null);
+  useForegroundRefresh(()=>{if(foregroundOwner.current!==owner){foregroundOwner.current=owner;return;}setForegroundTick(t=>t+1)},owner);
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
@@ -44,15 +50,11 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [protections, setProtections] = useState<Protection[]>([]);
-  const [preferred, setPreferred] = useState<string | null>(null);
+  const preferred=useVehiclePreference(uid,tenantId);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   const delivered = useRef(false);
   const [coreReady, setCoreReady] = useState(false);
-
-  useEffect(() => {
-    let active=true;setPreferred(null);void AsyncStorage.getItem(ACTIVE_KEY).then(v=>{if(active)setPreferred(v)}).catch(()=>undefined);return()=>{active=false};
-  }, [uid,tenantId,tick]);
 
   // Watchdog: if no listener has delivered within 8s (e.g. the watch stream
   // never establishes on a flaky network), stop waiting and render with the
@@ -82,20 +84,22 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
   }, [uid, tenantId]);
 
   useEffect(() => {
-    setVehicles(null);setBookings([]);setJobs([]);setApprovals([]);setInvoices([]);setMemberships([]);setProtections([]);setError(null);if (!uid || !tenantId){if(tenantId){setVehicles([]);setCoreReady(true)}return;}
+    if(lastReset.current.owner!==owner||lastReset.current.tick!==tick){setVehicles(null);setBookings([]);setJobs([]);setApprovals([]);setInvoices([]);setMemberships([]);setProtections([]);setError(null);setStateOwner(owner);lastReset.current={owner,tick};}if (!uid || !tenantId){if(tenantId){setVehicles([]);setCoreReady(true)}return;}
     const settled = new Set<string>();
+    const failedSources=new Set<string>();
     let active = true;
-    const settle = (source: string) => {
+    const settle = (source: string, success = true) => {
       if (!active) return;
+      if (success) failedSources.delete(source);
       settled.add(source);
-      if (settled.size === 6) { delivered.current = true; setCoreReady(true); setError(clearWatchdogErrorOnDelivery); }
+      if (settled.size === 6) { delivered.current = true; setCoreReady(true); setError(e=>failedSources.size?clearWatchdogErrorOnDelivery(e):null); }
     };
     const failFor = (src: string) => (e?: unknown) => {
     if(!active)return;
     // eslint-disable-next-line no-console
     console.warn("[home] listener failed:", src, e);
-    settle(src);
-    const code = (e as { code?: string } | undefined)?.code;
+    failedSources.add(src);
+    settle(src, false);
     setError("Some of your home details could not load. Try refreshing.");
     // Never leave vehicles null on a listener error: a null model keeps the
     // Home on the loading spinner forever. Empty data + the error caption is
@@ -111,11 +115,11 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
     ];
     getMyBookings(uid, tenantId).then((v) => { if (active) { setBookings(v); settle("bookings"); } }).catch(failFor("bookings"));
     return () => { active = false; subs.forEach((u) => u()); };
-  }, [uid, tenantId, tick]);
+  }, [uid, tenantId, tick, foregroundTick]);
 
   const model = useMemo(
     () =>
-      vehicles === null || !coreReady
+      stateOwner!==owner || vehicles === null || !coreReady
         ? null
         : projectCustomerHome({
             firstName: firstName ?? null,
@@ -127,9 +131,9 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
             invoices,
             protections,
             memberships,
-            now: new Date(),
+            now: new Date(now),
           }),
-    [vehicles, coreReady, preferred, bookings, jobs, approvals, invoices, protections, memberships, firstName],
+    [stateOwner,owner,now,vehicles, coreReady, preferred, bookings, jobs, approvals, invoices, protections, memberships, firstName],
   );
 
   const activeId = model?.activeVehicle?.id ?? null;
@@ -138,5 +142,9 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
     const stop=listenToVehicleProtections(activeId, tenantId, uid, v=>{if(alive)setProtections(v)}, () => {if(alive)setProtections([])});return()=>{alive=false;stop()};
   }, [uid, tenantId, activeId]);
 
-  return { model, error, refresh: () => setTick((t) => t + 1) };
+  const selectVehicle = (id: string) => {
+    if (!uid || !tenantId || !vehicles?.some(v => v.id === id && v.deletedAt === null)) return;
+    void setActiveVehicle(id,uid,tenantId).catch(() => setError("Car selected for this screen, but the choice could not be saved on this device."));
+  };
+  return { model, bookings:stateOwner===owner?bookings:[], error, refresh: () => setTick((t) => t + 1), selectVehicle };
 }

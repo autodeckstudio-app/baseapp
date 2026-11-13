@@ -16,7 +16,7 @@ describe("home watchdog caption", () => {
   });
   it("the hook clears the watchdog caption on full delivery and uses the shared message", () => {
     const hook = readFileSync(join(__dirname, "../hooks/useCustomerHome.ts"), "utf8");
-    expect(hook).toContain("setError(clearWatchdogErrorOnDelivery)");
+    expect(hook).toContain("setError(e=>failedSources.size?clearWatchdogErrorOnDelivery(e):null)");
     expect(hook).toContain("setError((e) => e ?? HOME_WATCHDOG_MSG)");
   });
 });

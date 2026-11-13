@@ -440,8 +440,8 @@ html{scroll-behavior:smooth}html,body,#root{margin:0;min-height:100%}body{backgr
 /* Reviewed full-frame listing photographs only. Never crop away a review boundary. */
 .inventory-photo{display:block;width:100%;aspect-ratio:16/10;object-fit:contain;background:#111214;border-radius:12px;margin:0 0 18px}
 
-/* Coherent iPhone frame (edge-to-edge 390/933 day screen, OS chrome overlaid). The day screen fills the device edge-to-edge; the bezel is an outer ring and the iOS status bar, Dynamic Island and home indicator overlay the screen instead of separate hardware bands. */
-.autodeck .phone{position:relative;overflow:visible;border:0;background:#080809;padding:0;box-shadow:0 0 0 3px #17181a,0 0 0 4.5px #5a5c60,0 22px 46px #0009;aspect-ratio:390/933}
+/* Coherent iPhone frame (edge-to-edge 390/844 day screen, OS chrome overlaid). The day screen fills the device edge-to-edge; the bezel is an outer ring and the iOS status bar, Dynamic Island and home indicator overlay the screen instead of separate hardware bands. */
+.autodeck .phone{position:relative;overflow:visible;border:0;background:#080809;padding:0;box-shadow:0 0 0 3px #17181a,0 0 0 4.5px #5a5c60,0 22px 46px #0009;aspect-ratio:390/844}
 .autodeck .phone img{border-radius:inherit!important;object-fit:cover;width:100%;height:100%;background:transparent}
 .autodeck .phone-os{position:absolute;inset:0;pointer-events:none;border-radius:inherit}
 .autodeck .phone-statusbar{position:absolute;top:0;left:0;width:100%;max-width:none;max-height:none;display:block}
@@ -501,33 +501,11 @@ html{scroll-behavior:smooth}html,body,#root{margin:0;min-height:100%}body{backgr
 .visual-options details:hover summary::after{transform:translateX(120%)}
 .scope-art i{box-shadow:7px 8px 0 #c99b7112,0 6px 14px rgba(0,0,0,.35)}
 
-/* App-capture safe area: the five real app captures are full-bleed 390x933 with
-   no reserved iOS strips, so a full-cover render hides each screen's top header
-   row behind the status/island overlay and the home indicator. Reserve the 59px
-   status strip and 30px home strip inside the frame and fit the entire capture
-   between them, aspect preserved, over the app's own Day background gradient so
-   the inset blends with the capture edges. Geometry is pinned with !important so
-   no breakpoint override can reintroduce the collision. */
-.autodeck .phone{background:linear-gradient(180deg,#f3f4fd 0%,#fdfdfb 50%,#f9f2f2 100%)}
-.phone img{position:absolute!important;left:0!important;top:6.3237%!important;width:100%!important;height:90.4609%!important;object-fit:contain!important;background:transparent}
+/* Captures already include the 59px iOS status strip and 34px home safe area.
+   Render the whole 390x844 canvas edge-to-edge exactly once. No extra inset. */
+.autodeck .phone{background:linear-gradient(180deg,#f3f4fd 0%,#fdfdfb 50%,#f9f2f2 100%);padding:0!important}
+.autodeck .phone img{position:absolute!important;left:0!important;top:0!important;width:100%!important;height:100%!important;object-fit:contain!important;background:transparent}
 
-/* The app-five section head sits directly above the bordered panel; the generic
-   36px cinema-reveal entrance offset visibly crosses the panel border. Keep the
-   fade, drop the translate for this head only. */
-.autodeck.cinema-ready .app-five-stage .source-head.cinema-reveal:not(.is-seen){transform:none}
-
-/* /app walkthrough: .autodeck p{margin:0} out-specifies .walk-counter's own
-   margin, leaving the step counter flush under the phone where the frame's
-   outer bezel shadow clips it. Restore the designed caption spacing. */
-.autodeck .walk-phone-sticky .walk-counter{margin:18px 0 8px}
-
-/* picture wrapper for responsive hero film: no box of its own */
-.hero-film>picture{display:contents}
-
-/* Service discovery: native horizontal scrolling, no wheel interception. */
-.service-orbit-heading{display:flex;justify-content:space-between;align-items:baseline;gap:24px;margin:0 0 28px}.service-orbit-heading>p:first-child{font-size:20px;color:#f4f2ed}.service-orbit{display:flex;gap:26px;overflow-x:auto;scroll-snap-type:x mandatory;perspective:1300px;padding:28px 5% 40px;scroll-padding-inline:5%;overscroll-behavior-x:contain}.service-orbit-card{position:relative;flex:0 0 44%;min-height:510px;border-radius:32px;overflow:hidden;scroll-snap-align:center;transform:rotateY(-8deg) scale(.96);transform-origin:center;transition:transform .45s ease,box-shadow .45s ease;border:1px solid #ffffff28;background:#18191b;box-shadow:0 25px 45px #0005;text-decoration:none}.service-orbit-card:hover,.service-orbit-card:focus-visible,.service-orbit-card.is-current{transform:rotateY(0) scale(1);box-shadow:0 28px 65px #0009}.service-orbit-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.service-orbit-card::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#080a0c00 15%,#080a0c80 45%,#080a0cf5 100%)}.service-orbit-card>div{position:absolute;z-index:1;bottom:0;padding:34px;color:#fff}.service-orbit-card h3{font-size:38px;line-height:1.08;margin:14px 0}.service-orbit-card p{font-size:15px;line-height:1.55;color:#ddd;max-width:34ch;margin-bottom:24px}.service-orbit-card strong{font-size:13px;letter-spacing:.03em;color:#e4c39c}.service-orbit:focus-visible{outline:2px solid #d5ba92;outline-offset:5px}@media(max-width:700px){.service-orbit-heading{display:block}.service-orbit-heading>p:first-child{font-size:17px;margin-bottom:10px}.service-orbit{gap:14px;padding:15px 4% 28px}.service-orbit-card{flex-basis:88%;min-height:440px;transform:rotateY(-4deg) scale(.97);border-radius:26px}.service-orbit-card>div{padding:25px}.service-orbit-card h3{font-size:31px}.service-orbit-card p{font-size:14px}}@media (prefers-reduced-motion: reduce){.service-orbit{perspective:none;scroll-behavior:auto}.service-orbit-card{transform:none!important;transition:none!important}}
-
-/* Natural-flow showcase and studio visit: one alignment grid, no pinned-scroll runway. */
 .autodeck #app.app-showcase-revamp{height:auto;min-height:0;padding-block:var(--section-space)}
 .autodeck #app.app-showcase-revamp .app-five-stage{position:relative;top:auto;height:auto;min-height:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px 64px;max-width:1120px;margin:auto;background:none}
 .autodeck #app.app-showcase-revamp .source-head{grid-column:1/-1;margin:0 0 8px}
@@ -595,3 +573,9 @@ html{scroll-behavior:smooth}html,body,#root{margin:0;min-height:100%}body{backgr
 .autodeck .range-chip{border:1px solid #ffffff25;border-radius:50px;padding:9px 16px;font-size:13px;background:#ffffff08;transition:border-color .18s,color .18s}
 .autodeck .range-chip:hover{border-color:var(--ad-orange);color:var(--ad-orange-bright)}
 @media(max-width:767px){.autodeck .range-list{grid-template-columns:1fr 1fr;gap:10px}.autodeck .range-item{padding:14px}.autodeck .range-item-top{font-size:14px;line-height:1.35}.autodeck .range-chips{gap:8px}.autodeck .range-chip{font-size:12px;padding:8px 13px}}
+
+/* Keep width and height coupled at every breakpoint; old vh caps distorted the shell. */
+.autodeck #app.app-showcase-revamp .app-five-device .phone,
+.autodeck .page-app-story .walk-phone-sticky .phone{height:auto!important;min-height:0!important;max-height:none!important;aspect-ratio:390/844;padding:0!important}
+.autodeck .page-app-story .walk-counter{margin:20px 0 8px;position:relative}
+.autodeck .page-app-story .walk-screen-name{margin:0;position:relative}

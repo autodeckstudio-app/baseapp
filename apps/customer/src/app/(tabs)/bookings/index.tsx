@@ -6,7 +6,7 @@ import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import {useVehiclePreference} from "../../../lib/active-vehicle";
 import { DAYS, dueSoonFor, lastServiceFor } from "../../../lib/booking-ideas";
 import { isBookingMissed, type Booking } from "@autodeck/core";
 import { formatDateShort } from "@autodeck/ui";
@@ -72,8 +72,8 @@ export default function BookingsScreen() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [extraNames, setExtraNames] = useState<Record<string, string>>({});
   const [svcs, setSvcs] = useState<Record<string, Service>>({});
-  const [activeId, setActiveId] = useState<string | null>(null);
-  useEffect(() => {let alive=true;setActiveId(null);void AsyncStorage.getItem("autodeck.activeVehicle").then(v=>{if(alive)setActiveId(v)}).catch(()=>undefined);return()=>{alive=false};}, [cars,owner]);
+  const preferredId=useVehiclePreference(ownerKey?.key??null,auth.status==="ready"?auth.claims.tenantId:null);
+  const activeId=preferredId&&cars[preferredId]?preferredId:null;
   useEffect(() => {
     loadVersion.current++;cancelLock.current=false;setCancelBusy(false);setCars({});setJobs([]);setWalkIns([]);setInvoices([]);setSvcs({});setExtraNames({});setConfirmCancel(false);setCancelError(null);setSegPick(null);setBookings(null);if (auth.status !== "ready" || !ownerKey) return;let alive=true;
     const un = listenToMyVehicles(ownerKey.key, auth.claims.tenantId, (vs) => {if(alive)setCars(Object.fromEntries(vs.map((v) => [v.id, v])))}, () => {});

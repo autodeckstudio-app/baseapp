@@ -131,7 +131,7 @@ export default function GarageScreen() {
   const brandSwipe = useSegmentSwipe(["__all__", ...brandKeys], () => pick ?? "__all__", key => setPick(key === "__all__" ? null : key));
   if (!vehicles && !error && !ownerMissing) return <Loading label="Opening your garage" />;
   const open = (v: Vehicle) => {
-    void setActiveVehicle(v.id);
+    void setActiveVehicle(v.id,uid,tenantId);
     setSheet(v);
   };
   const openRoom = (v: Vehicle) => {
