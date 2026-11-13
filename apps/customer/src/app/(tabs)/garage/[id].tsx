@@ -42,6 +42,7 @@ import { PAPER_EDIT_ENABLED, VEHICLE_IMAGE_REMOVE_ENABLED } from "../../../lib/b
 import { paperName, numberClash, docSaveErrorMessage } from "../../../lib/documents";
 import { limitRegistrationInput, REG_RAW_MAX } from "../../../lib/registration-input";
 import { IconAction } from "../../../ui/IconAction";
+import { GarageDetailActions } from "../../../ui/GarageDetailActions";
 import { invoiceHref } from "../../../lib/invoice-display";
 import { listenToInvoicesForVehicle } from "../../../lib/invoice-service";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
@@ -61,7 +62,7 @@ function formatDate(iso: string): string {
 }
 
 export default function VehicleDetailScreen() {
-  const { id, mock: mockQ } = useLocalSearchParams<{ id: string; mock?: string }>();
+  const { id, mock: mockQ, returnTo } = useLocalSearchParams<{ id: string; mock?: string; returnTo?: string }>();
   // Dev preview only (?mock=1, __DEV__): renders the real screen from the sample
   // module - no Firebase session, no real data. Stripped from production bundles.
   const mockDetail = __DEV__ && devGarageDetail && mockQ === "1" && id ? devGarageDetail(id) : null;
@@ -74,6 +75,7 @@ export default function VehicleDetailScreen() {
     return true;
   };
   const router = useRouter();
+  const originBack = returnTo === "home" ? () => router.navigate("/(tabs)") : undefined;
   const auth = useAuth();
   const ownerKey = listOwnerKey(auth);
   const ownerId = auth.status === "ready" && ownerKey ? ownerKey.key : null;
@@ -451,9 +453,9 @@ export default function VehicleDetailScreen() {
     }finally{if(ctxRef.current===scope)mutationBusy.current=false}
   }
 
-  if (feedError) return <Screen><Notice title="Car records unavailable" body={feedError} action={<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
+  if (feedError) return <Screen onBack={originBack}><Notice title="Car records unavailable" body={feedError} action={<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
   if (loading) return <Loading label="Opening the room" />;
-  if (!vehicle) return <Screen><Notice title="Vehicle not found" body="It may have been removed from your garage. Its service history and invoices are still kept." action={<Button icon="history" label="View service history" onPress={() => router.push({ pathname: "/(tabs)/garage/history", params: { vehicleId: id } })} />} /></Screen>;
+  if (!vehicle) return <Screen onBack={originBack}><Notice title="Vehicle not found" body="It may have been removed from your garage. Its service history and invoices are still kept." action={<Button icon="history" label="View service history" onPress={() => router.push({ pathname: "/(tabs)/garage/history", params: { vehicleId: id } })} />} /></Screen>;
 
   // Current vs history: superseded/removed records are kept as history
   // (never deleted) but are excluded from every current-state display, the
@@ -556,7 +558,7 @@ export default function VehicleDetailScreen() {
 
 
   return (
-    <Screen
+    <Screen onBack={originBack}
       header={
         <View style={{ gap: space.breath }}>
           {!editing && (newPhoto || vehicle.photoUrl) ? (
@@ -688,11 +690,7 @@ export default function VehicleDetailScreen() {
       })() : null}
 
       {!editing ? <>
-        <View testID="garage-detail-actions" style={{flexDirection:"row",alignItems:"center",flexWrap:"wrap",gap:12}}>
-
-          <View style={{flexDirection:"row",alignItems:"center",gap:4}}><IconAction kind="edit" label="Edit vehicle" onPress={()=>setEditing(true)}/><T role="caption" tone="secondary">Edit vehicle</T></View>
-          <View style={{flexDirection:"row",alignItems:"center",gap:4}}><IconAction kind="delete" label="Remove from garage" onPress={()=>setConfirmingArchive(true)}/><T role="caption" tone="secondary">Remove from garage</T></View>
-        </View>
+        <GarageDetailActions onEdit={()=>setEditing(true)} onRemove={()=>setConfirmingArchive(true)}/>
         {confirmingArchive?<Notice title="Remove from your garage?" body="Service history stays on record." action={<View style={{flexDirection:"row",flexWrap:"wrap",gap:12}}><Button label="Yes, remove" kind="danger" onPress={()=>void handleArchiveConfirmed()}/><Button label="Keep it" kind="quiet" onPress={()=>setConfirmingArchive(false)}/></View>}/>:null}
       </>:null}
       </>

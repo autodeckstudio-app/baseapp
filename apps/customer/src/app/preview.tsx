@@ -31,7 +31,7 @@ export default function Preview() {
         reminders={[{ title: "Insurance", detail: "Expires 3 Nov", chip: "22 days", danger: false }]}
         live={{ kicker: "Live now", title: "Work under way", detail: "Since 10:00 am", onPress: noop }}
         carsList={saleCars} onOpenCar={noop} onBuyCar={noop} onSellCar={noop}
-        onSearch={noop} onBell={noop} onAllServices={noop} onCategory={noop} onService={noop} onCar={noop} onAddCar={noop} onReminders={noop}
+        onSearch={noop} onBell={noop} onAllServices={noop} onCategory={noop} onService={noop} onCar={noop} onAddCar={noop} onGarage={noop} onReminders={noop}
       />
     </Screen>
   );

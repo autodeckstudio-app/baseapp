@@ -1,0 +1,36 @@
+import React from 'react';
+import { it, expect, vi } from 'vitest';
+import { create, act } from 'react-test-renderer';
+import { Pressable, Text, View } from 'react-native';
+vi.mock('react-native',async()=>({...await vi.importActual<any>('react-native'),Image:'Image'}));
+vi.mock('../lib/imagery',()=>({serviceImagery:{washing:1,ceramic:2},vehicleImagery:{}}));
+vi.mock('./CarThumb',()=>({CarThumb:'CarThumb'}));
+vi.mock('./CategoryCarImage',()=>({CategoryCarImage:'CategoryCarImage'}));
+vi.mock('./SideDrawer',()=>({SideDrawer:'SideDrawer'}));
+vi.mock('./CampaignSlot',()=>({CampaignSlot:'CampaignSlot'}));
+import { HomeView, type HomeViewProps } from './HomeView';
+import { homeServiceTarget } from '../lib/home-service-navigation';
+const noop=()=>{};
+const base=():HomeViewProps=>({greeting:'Good afternoon',initial:'S',unread:2,cars:[{id:'car-a',title:'Sample car',plate:'SAMPLE',category:'sedan'}],services:[{id:'w',category:'washing',name:'Regular wash',price:'500'},{id:'c',category:'ceramic',name:'Ceramic coating',price:'Quote on request'},{id:'g',category:'garage',name:'Battery check',price:'500'},{id:'i',category:'inspection',name:'Inspection',price:'500'}],reminders:[],live:null,progress:null,membership:null,studio:{address:'HIDDEN',hours:'HOURS',openText:'OPEN'},onAvatar:noop,onSearch:noop,onBell:noop,onAllServices:noop,onCategory:noop,onService:noop,onCar:noop,onAddCar:noop,onGarage:noop,onReminders:noop,onBook:noop,onStudio:noop,onMembership:noop,onVisits:noop,onShare:noop});
+const button=(r:any,label:string)=>r.root.findAllByType(Pressable).find((x:any)=>x.props.accessibilityLabel===label);
+const tap=async(r:any,label:string)=>{const b=button(r,label);expect(b,label).toBeTruthy();await act(async()=>b.props.onPress())};
+it('all four service taps reach their category choices, never the cheapest product or a dead callback',async()=>{
+ const routes:any[]=[];let r:any;const p=base();p.onService=(s,k)=>routes.push(homeServiceTarget(s,k));await act(async()=>{r=create(<HomeView {...p}/>)});
+ for(const title of ['Wash & care','Ceramic coating','Garage check','Book an inspection'])await tap(r,title);
+ expect(routes.map(x=>x.params.homeEntry)).toEqual(['wash','coat','garage','inspect']);expect(routes.every(x=>x.pathname==='/(tabs)/catalogue'&&x.params.returnTo==='home')).toBe(true);await act(async()=>r.unmount());
+});
+it.each(['Needs your OK','Payment due','Live now','Next visit'])('one priority event owns the dock over reminders and rebook: %s',async(kicker)=>{
+ const go=vi.fn(),reminder=vi.fn(),need=vi.fn(),rebook=vi.fn();let r:any;const p=base();p.live={kicker,title:'EVENT TITLE',detail:'EVENT DETAIL',onPress:go,ready:kicker==='Live now'?'FUTURE READY':null};p.reminders=[{title:'Insurance',detail:'Expired paper',chip:'Expired',danger:true}];p.need={title:'Wash due',detail:'Due',onPress:need};p.rebook={serviceName:'Old wash',onPress:rebook};p.onReminders=reminder;
+ await act(async()=>{r=create(<HomeView {...p}/>)});const text=JSON.stringify(r.toJSON());expect(text).toContain('EVENT TITLE');expect(text).not.toContain('Expired paper');expect(text).not.toContain('Old wash');await tap(r,kicker==='Needs your OK'?'Review':kicker==='Live now'?'Track':'View');expect(go).toHaveBeenCalledOnce();expect(reminder).not.toHaveBeenCalled();expect(need).not.toHaveBeenCalled();expect(rebook).not.toHaveBeenCalled();expect(r.root.findAllByType(View).filter((x:any)=>x.props.testID==='home-state-dock')).toHaveLength(1);await act(async()=>r.unmount());
+});
+it('idle reminders precede care/rebook, empty car adds safely, and canonical vehicle cannot be changed locally',async()=>{
+ let r:any;const p=base(),reminder=vi.fn(),add=vi.fn(),garage=vi.fn();p.onReminders=reminder;p.onAddCar=add;p.onGarage=garage;p.reminders=[{title:'Insurance',detail:'Paper detail',chip:'Expired',danger:true}];p.need={title:'Wash due',detail:'Due',onPress:noop};await act(async()=>{r=create(<HomeView {...p}/>)});await tap(r,'Take a look');expect(reminder).toHaveBeenCalledOnce();await tap(r,'Switch car');expect(garage).toHaveBeenCalledOnce();await act(async()=>r.update(<HomeView {...p} cars={[]} reminders={[]} need={null}/>));await tap(r,'Add your car');expect(add).toHaveBeenCalledOnce();expect(button(r,'Switch car')).toBeUndefined();await act(async()=>r.unmount());
+});
+it('keeps all header, car, Club, studio and inventory actions; hides empty inventory/services honestly',async()=>{
+ let r:any;const p=base(),calls:string[]=[];p.onAvatar=()=>calls.push('menu');p.onBell=()=>calls.push('bell');p.onCar=c=>calls.push(c.id);p.onMembership=()=>calls.push('club');p.onStudio=()=>calls.push('studio');p.onAllServices=()=>calls.push('services');await act(async()=>{r=create(<HomeView {...p}/>)});
+ for(const title of ['Menu','Notifications, 2 unread','Open Sample car','Garage & papers','Open car','Explore the Club','All services'])await tap(r,title);expect(calls).toEqual(['menu','bell','car-a','car-a','car-a','club','services']);const studio=r.root.findAllByType(Pressable).find((x:any)=>x.props.accessibilityLabel?.startsWith('The studio,'));await act(async()=>studio.props.onPress());expect(calls.at(-1)).toBe('studio');const heading=r.root.findAllByType(Text).find((x:any)=>x.props.children==='Make care a habit');expect(heading.props.numberOfLines).toBe(1);await act(async()=>r.update(<HomeView {...p} services={[]} membership={{title:'4 washes',detail:'left until date'}}/>));expect(JSON.stringify(r.toJSON())).toContain('4 washes');expect(button(r,'Wash & care')).toBeUndefined();expect(button(r,'Ceramic coating')).toBeUndefined();expect(button(r,'View membership')).toBeTruthy();expect(JSON.stringify(r.toJSON())).not.toContain('Cars for sale');await act(async()=>r.unmount());
+});
+
+it('each actual listing opens its own record, and browse/sell stay separate',async()=>{let r:any;const p=base(),open=vi.fn(),buy=vi.fn(),sell=vi.fn();p.onOpenCar=open;p.onBuyCar=buy;p.onSellCar=sell;p.carsList=[{id:'listing-a',year:2023,make:'Sample',model:'Listing A',kmDriven:2000,askingPrice:0,priceHidden:true,photoUrls:['https://example.invalid/sample.jpg']} as any,{id:'listing-b',year:2024,make:'Sample',model:'Listing B',kmDriven:3000,askingPrice:100000,photoUrls:['https://example.invalid/sample-b.jpg']}as any];await act(async()=>{r=create(<HomeView {...p}/>)});await tap(r,'Open 2023 Sample Listing A');await tap(r,'Open 2024 Sample Listing B');expect(open.mock.calls.map(x=>x[0])).toEqual(['listing-a','listing-b']);await tap(r,'See all cars for sale');await tap(r,'Browse cars');await tap(r,'Sell your car');expect(buy).toHaveBeenCalledTimes(2);expect(sell).toHaveBeenCalledOnce();expect(JSON.stringify(r.toJSON())).toContain('Price on request');await act(async()=>r.unmount())});
+
+it('listing photos have the same fully rounded24px outline as the ceramic image',async()=>{let r:any;const p=base();p.carsList=[{id:'rounded',year:2024,make:'Sample',model:'Listing',kmDriven:0,askingPrice:0,priceHidden:true,photoUrls:['https://example.invalid/rounded.jpg']}as any];p.onOpenCar=noop;p.onBuyCar=noop;p.onSellCar=noop;await act(async()=>{r=create(<HomeView {...p}/>)});const img=r.root.findAllByType('Image').find((x:any)=>x.props.source?.uri==='https://example.invalid/rounded.jpg');expect(img.props.style.borderRadius).toBe(24);expect(img.props.style.borderBottomLeftRadius).toBeUndefined();await act(async()=>r.unmount())});

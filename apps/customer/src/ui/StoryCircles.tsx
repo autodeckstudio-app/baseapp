@@ -7,7 +7,7 @@ import { seenKeyOf } from "../lib/story-groups";
 import { StoryCover } from "./StoryCover";
 import { T } from "./kit";
 
-export function StoryCircles({ groups, seen, onOpen }: { groups: StoryGroup[]; seen: Set<string>; onOpen: (g: StoryGroup) => void }) {
+export function StoryCircles({ groups, seen, onOpen, compact = false }: { compact?: boolean; groups: StoryGroup[]; seen: Set<string>; onOpen: (g: StoryGroup) => void }) {
   const { colors } = useExperienceTheme();
   const shown = groups;
   if (shown.length === 0) return null;
@@ -16,8 +16,8 @@ export function StoryCircles({ groups, seen, onOpen }: { groups: StoryGroup[]; s
       {shown.map((g) => {
         const ring = !g.live || seen.has(seenKeyOf(g)) ? colors.borderSubtle : colors.accent;
         return (
-          <Pressable key={g.key} accessibilityRole="button" accessibilityHint="Opens full-screen stories. Tap the sides to move, hold to pause, swipe down to close." accessibilityLabel={`${g.title}, ${g.items.length} ${g.items.length === 1 ? "story" : "stories"}`} onPress={() => onOpen(g)} style={{ width: 72, alignItems: "center", gap: 6 }}>
-            <View style={{ width: 68, height: 68, borderRadius: 9999, borderWidth: 2, borderColor: ring, padding: 3 }}>
+          <Pressable key={g.key} accessibilityRole="button" accessibilityHint="Opens full-screen stories. Tap the sides to move, hold to pause, swipe down to close." accessibilityLabel={`${g.title}, ${g.items.length} ${g.items.length === 1 ? "story" : "stories"}`} onPress={() => onOpen(g)} style={{ minWidth: compact ? 84 : 72, minHeight: 44, flexDirection: compact ? "row" : "column", alignItems: "center", gap: compact ? 8 : 6 }}>
+            <View style={{ width: compact ? 34 : 68, height: compact ? 34 : 68, borderRadius: 9999, borderWidth: 2, borderColor: ring, padding: compact ? 2 : 3 }}>
               <View style={{ flex: 1, borderRadius: 9999, overflow: "hidden", backgroundColor: colors.accentHaze, alignItems: "center", justifyContent: "center" }}>
                 <StoryCover key={`${g.key}:${g.cover??g.items[g.items.length-1]?.id}`} group={g}/>
               </View>

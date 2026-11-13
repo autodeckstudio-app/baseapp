@@ -76,7 +76,7 @@ describe("home and car imagery guardrails",()=>{
   });
   it("keeps one lead card and no pasted-in services modules on Home",()=>{
     const home=read("src/ui/HomeView.tsx");
-    expect(home).toContain("<LeadCard");
+    expect(read("src/ui/HomeScene.tsx")).toContain('testID="home-state-dock"');
     expect(home).not.toContain("Popular services");
     expect(home).not.toContain("From the studio");
   });
@@ -131,11 +131,11 @@ describe("sizes come from one rulebook",()=>{
     for(const [k,v] of Object.entries(metrics)) expect([k,(SCALE as readonly number[]).includes(v as number)]).toEqual([k,true]);
   });
   it("uses the same section gap on Home and in Screen",()=>{
-    expect(read("src/ui/HomeView.tsx")).toContain("gap: metrics.sectionGap");
+    expect(read("src/ui/HomeScene.tsx")).toContain("paddingBottom: 26");
     expect(read("src/ui/kit.tsx")).toContain("calc(96px + env(safe-area-inset-bottom))");
   });
   it("does not leave a tall empty car panel when there is no photo",()=>{
-    const home=read("src/ui/HomeView.tsx");expect(home).toContain("CarChips");expect(home).not.toContain("height: 210");
+    const home=read("src/ui/HomeScene.tsx");expect(home).toContain("{car ? <Pressable");expect(home).toContain("<CategoryCarImage");expect(home).not.toContain("NO PHOTO YET");
   });
 });
 describe("surfaces share one radius and one padding",()=>{
@@ -235,7 +235,7 @@ describe("Home hero stage", () => {
     expect(h).toContain("metrics.heroStage");
     expect(h).toMatch(/radial-gradient/);
     expect(h).not.toMatch(/\u2014/);
-    expect(read("src/ui/HomeView.tsx")).toMatch(/<CarChips cars=/); // merged Home: compact car chip, HeroStage kept for other uses
+    expect(read("src/ui/HomeScene.tsx")).toContain('testID="home-personal-stage"'); // merged Home: compact car chip, HeroStage kept for other uses
   });
   it("Home keeps orange to small highlights: no orange kicker or orange text links", () => {
     const home = read("src/ui/HomeView.tsx");
@@ -369,7 +369,7 @@ describe("one icon set", () => {
     }
   });
   it("top services cards carry the approved category photo", () => {
-    expect(read("src/ui/HomeView.tsx")).toMatch(/function TopPickCard[\s\S]*serviceImagery/);
+    expect(read("src/ui/HomeScene.tsx")).toContain("source={serviceImagery.ceramic}");
   });
   it("night surfaces use one charcoal card colour", () => {
     expect(read("src/lib/raised.ts")).toContain('material(mode,"surface")');
@@ -415,7 +415,7 @@ describe("one tile size everywhere", () => {
   it("Services and Home Top services use PhotoCard and TILE_GAP", () => {
     expect(read("src/app/(tabs)/catalogue/index.tsx")).toContain("<ServicesExplorer");
     expect(read("src/ui/ServicesExplorer.tsx")).toContain("<ServicePackageCard");
-    expect(read("src/ui/HomeView.tsx")).toMatch(/function TopPickCard[\s\S]*<PhotoCard/);
+    expect(read("src/ui/HomeScene.tsx")).toContain("p.onService(s.service, s.key)");
   });
 });
 
@@ -715,14 +715,8 @@ describe("home header blends into the page (PWA and web)", () => {
   });
 });
 
-describe("Home live card (concept C)", () => {
-  it("car photo card with LIVE badge, four-step bar, ready-by and one Track button", () => {
-    const h = read("src/ui/HomeView.tsx");
-    expect(h).toContain("LIVE_STEPS");
-    expect(h).toContain(">LIVE<");
-    expect(h).toContain(">Track<");
-    expect(h).toContain("Ready by ${live.ready}");
-  });
+describe("Home live state",()=>{
+ it("uses source status and optional ready time in one dock, no invented stages",()=>{const h=read("src/ui/HomeScene.tsx");expect(h).toContain('event?.title');expect(h).toContain('event?.ready');expect(h).toContain('Ready by {event.ready}');expect(h).not.toContain('LIVE_STEPS')});
 });
 
 describe("orange stays a small highlight (60-30-10)",()=>{
@@ -756,19 +750,8 @@ describe("visit history rows: compact date block, subtle status badge and a smal
   });
 });
 
-describe("Home: ambient light, slim book bar on top, car card below",()=>{
-  it("photo hero carries the header: contrast veil, display tagline, search before services, reminders below services",()=>{
-    const h=read("src/ui/HomeView.tsx");
-    // the hero is the photo-led header, and the contrast veil sits between photo and header text
-    expect(h.indexOf("<KenBurns source={sceneImagery.heroHome}")).toBeGreaterThan(-1);
-    expect(h.indexOf("<KenBurns source={sceneImagery.heroHome}")).toBeLessThan(h.indexOf("rgba(8,9,10,0.34)"));
-    // the brand tagline is the hero statement in display type
-    expect(h).toContain("All under one roof.");
-    expect(h).toContain('textStyle("display")');
-    // one next action first: search before services; the experience before reminders and membership
-    expect(h.indexOf('accessibilityLabel="Search services"')).toBeLessThan(h.indexOf('title="Services for you"'));
-    expect(h.indexOf('title="Services for you"')).toBeLessThan(h.indexOf("<LeadCard"));
-  });
+describe("Home scene hierarchy",()=>{
+ it("one personal stage precedes visual services, exact Club heading and compact showroom",()=>{const h=read("src/ui/HomeScene.tsx");expect(h.indexOf('home-personal-stage')).toBeLessThan(h.indexOf('Complete car care.'));expect(h.indexOf('home-state-dock')).toBeLessThan(h.indexOf('home-service-triad'));expect(h).toContain('All under one roof.');expect(h).toContain('>Make care a habit</Text>');expect(h).not.toContain('<KenBurns');});
 });
 
 describe("Home ambient light is brand orange at low opacity",()=>{

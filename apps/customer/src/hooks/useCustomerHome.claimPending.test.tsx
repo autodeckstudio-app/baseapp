@@ -85,3 +85,11 @@ it('clears prior account model and ignores late listeners and errors after same-
  await act(async()=>renderer.update(createElement(Probe,{uid:'cust-next',tenantId:'t'})));expect(last.model).toBeNull();await act(async()=>{old.cars.ok([{id:'PRIVATE-OLD'}]);old.jobs.ok([{id:'PRIVATE-JOB'}]);old.cars.error(new Error('PRIVATE-ERROR'))});expect(last.model).toBeNull();expect(last.error).toBeNull();
  await act(async()=>{next.cars.ok([]);next.jobs.ok([]);next.approvals.ok([]);next.invoices.ok([]);next.memberships.ok([])});expect(last.model).not.toBeNull();expect(h.project.mock.lastCall?.[0].vehicles).toEqual([]);
 });
+
+it('passes live issued invoices into the model and reprojects when only invoices change',async()=>{
+ const callbacks:Record<string,any>={};const bind=(kind:string)=>(...args:any[])=>{callbacks[kind]=args[2];return()=>{}};
+ h.listenToMyVehicles.mockImplementation(bind('cars'));h.listenToMyJobs.mockImplementation(bind('jobs'));h.listenToMyPendingApprovals.mockImplementation(bind('approvals'));h.listenToMyIssuedInvoices.mockImplementation(bind('invoices'));h.listenToMyMemberships.mockImplementation(bind('memberships'));
+ await mount('invoice-owner','invoice-tenant');await act(async()=>{callbacks.cars([{id:'car-a'}]);callbacks.jobs([]);callbacks.approvals([]);callbacks.invoices([]);callbacks.memberships([])});
+ const issued={id:'invoice-a',vehicleId:'car-a',status:'issued'};await act(async()=>callbacks.invoices([issued]));expect(h.project.mock.lastCall?.[0]).toMatchObject({invoices:[issued]});
+ await act(async()=>callbacks.invoices([]));expect(h.project.mock.lastCall?.[0]).toMatchObject({invoices:[]});
+});

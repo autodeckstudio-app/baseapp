@@ -329,7 +329,7 @@ export default function BookingDetailScreen() {
     }
   }
 
-  const originBack = returnTo === "notifications" ? () => router.replace("/(tabs)/notifications") : undefined;
+  const originBack = returnTo === "home" ? () => router.navigate("/(tabs)") : returnTo === "notifications" ? () => router.replace("/(tabs)/notifications") : undefined;
   if (loading||(!isMock&&resolvedRoute!==id&&!feedError)) return <Loading label="Opening your booking" />;
   if(feedError) return <Screen onBack={originBack}><Notice title="Can't load your booking" body={feedError} action={<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
   if (!booking) return <Screen onBack={originBack}><Notice title="Booking not found" body="It may have been removed, or the link is stale." /></Screen>;

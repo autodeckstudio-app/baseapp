@@ -32,14 +32,16 @@ function formatDate(iso: string): string {
 export default function InvoiceScreen() {
   // Canonical entry: ?invoiceId=<exact invoice>. jobId/tenantId/customerId is
   // the legacy form, still honoured for old links.
-  const { invoiceId, number, jobId, tenantId, customerId } = useLocalSearchParams<{
+  const { invoiceId, number, jobId, tenantId, customerId, returnTo } = useLocalSearchParams<{
     invoiceId?: string;
+    returnTo?: string;
     number?: string;
     jobId: string;
     tenantId: string;
     customerId: string;
   }>();
   const router = useRouter();
+  const originBack = returnTo === "home" ? () => router.navigate("/(tabs)") : undefined;
   const auth = useAuth();
   const compact=useWindowDimensions().width<600;
   const [retryTick,setRetryTick] = useState(0);
@@ -70,7 +72,7 @@ export default function InvoiceScreen() {
   useEffect(() => {
     if (Platform.OS !== "web" || !invoice?.invoiceNumber || number) return;
     const w = globalThis as unknown as { history?: { replaceState: (a: unknown, b: string, c: string) => void } };
-    try { w.history?.replaceState(null, "", `/invoice/${encodeURIComponent(invoice.invoiceNumber)}`); } catch { /* address bar only */ }
+    try { w.history?.replaceState(null, "", `/invoice/${encodeURIComponent(invoice.invoiceNumber)}${returnTo === "home" ? "?returnTo=home" : ""}`); } catch { /* address bar only */ }
   }, [invoice?.invoiceNumber, number]);
 
   // Customer-facing service names come from the catalogue (id -> name).
@@ -97,11 +99,11 @@ export default function InvoiceScreen() {
 
   if (error || !invoice) {
     return (
-      <Screen>
+      <Screen onBack={originBack}>
         <Notice
           title={error ? "Couldn't load the invoice" : "No invoice yet"}
           body={error ?? "It's issued once payment is confirmed."}
-          action={error?<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>:<Button label="Go back" onPress={() => router.back()} />}
+          action={error?<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>:<Button label="Go back" onPress={originBack ?? (() => router.canGoBack() ? router.back() : router.navigate("/(tabs)/bookings"))} />}
         />
       </Screen>
     );
@@ -112,7 +114,7 @@ export default function InvoiceScreen() {
 
   const docInput = { invoice, catalogue, studio: { name: STUDIO_INFO.name, address: STUDIO_INFO.address, phone: STUDIO_INFO.phone }, customer, vehicle };
   if (Platform.OS === "web") return (
-    <Screen>
+    <Screen onBack={originBack}>
       <Pane pad="inset">
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
           <View style={{ gap: 2 }}>
@@ -135,7 +137,7 @@ export default function InvoiceScreen() {
   );
 
   return (
-    <Screen>
+    <Screen onBack={originBack}>
       <View style={{ backgroundColor: IVORY, borderRadius: 16, padding: compact?16:28, gap: 20, width: "100%", maxWidth: 720, alignSelf: "center" }}>
         {/* Header: brand left, invoice identity right */}
         <View style={{ flexDirection: "column", alignItems: "flex-start", gap: 16 }}>
@@ -239,7 +241,7 @@ export default function InvoiceScreen() {
       </View>
 
       {auth.status === "ready" && listOwnerKey(auth)?.key === invoice.customerId && auth.claims.tenantId === invoice.tenantId ? <InvoiceExportAction key={`${auth.status === "ready" ? auth.user.uid : ""}:${invoice.id}`} html={buildInvoiceHtml(docInput)} /> : null}
-      <Button label="Go back" kind="quiet" onPress={() => router.back()} />
+      <Button label="Go back" kind="quiet" onPress={originBack ?? (() => router.canGoBack() ? router.back() : router.navigate("/(tabs)/bookings"))} />
     </Screen>
   );
 }

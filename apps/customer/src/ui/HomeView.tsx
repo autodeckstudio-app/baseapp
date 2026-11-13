@@ -1,32 +1,12 @@
-import {useReduceMotion} from "../lib/reduce-motion";
-// Customer Home in the reference layout: round menu + car and status + bell and
-// avatar, a car hero, visit and health tiles, four round actions, studio and
-// membership row, stories and follow links. One entry point per thing: services live in the Services tab, papers in Car.
-import { CarThumb } from "./CarThumb";
-import { liveStep } from "../lib/live-step";
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Image, Platform, Pressable, ScrollView, Text, View, useWindowDimensions, type ImageSourcePropType, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
-import { pickTopServices, type TopPick } from "../lib/top-services";
-import { Icon, useExperienceTheme } from "@autodeck/ui/native";
-import type { IconName } from "@autodeck/ui/theme";
-import type { NavIconName } from "./NavIcon";
-import { sceneImagery, serviceImagery } from "../lib/imagery";
-import { STUDIO_INFO } from "../lib/studio-info";
-import { raised } from "../lib/raised";
-import { metrics } from "../lib/metrics";
-import { glassPane } from "../lib/glass-pane";
-import { Plate, textStyle } from "./kit";
-import { KenBurns, Rise } from "./Drift";
-import { NavIcon, navIconFor } from "./NavIcon";
-import { HomeBackdrop } from "./HomeBackdrop";
-import { SideDrawer, type DrawerItem } from "./SideDrawer";
-import type { Vehicle } from "@autodeck/core";
-import { CampaignSlot } from "./CampaignSlot";
-import { CarsCard } from "./CarsCard";
-import { CarChips } from "./CarChips";
-import type { CarListingView } from "@autodeck/core";
-import type { Campaign } from "../lib/campaign";
-
+import { useState, type ReactNode } from 'react';
+import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { useExperienceTheme } from '@autodeck/ui/native';
+import { MENU_CHIPS, MENU_GROUPS, type Vehicle, type CarListingView } from '@autodeck/core';
+import type { NavIconName } from './NavIcon';
+import type { DrawerItem } from './SideDrawer';
+import type { Campaign } from '../lib/campaign';
+import { glassSurface } from '../lib/glass';
+import { HomeScene } from './HomeScene';
 export type HomeCar = { id: string; title: string; plate: string; /** The vehicle record. Photo comes from the same source as Garage (CarThumb), for every car. */ vehicle?: Pick<Vehicle, "photoUrl" | "category"> & { updatedAt?: string }; category?: string | null; hasPhoto?: boolean; /** One real history line, e.g. the last delivered visit. Omitted when the car has none. */ story?: string | null };
 export type HomeService = { id: string; category: string; name: string; price: string; brand?: string | null };
 export type HomeReminder = { title: string; detail: string; chip: string; danger: boolean };
@@ -71,6 +51,7 @@ export type HomeViewProps = {
   onService: (s: HomeService, cardKey?: string) => void;
   onCar: (c: HomeCar) => void;
   onAddCar: () => void;
+  onGarage: () => void;
   onReminders: () => void;
   onBook: () => void;
   onStudio: () => void;
@@ -79,8 +60,6 @@ export type HomeViewProps = {
   onShare: () => void;
 };
 
-import { glassSurface, glassInner } from "../lib/glass";
-import { MENU_CHIPS, MENU_GROUPS } from "@autodeck/core";
 const ACCENT = "#EC8638";
 void ACCENT;
 // Popular-services groups. Ceramic lives under Coatings; tint is the one
@@ -90,30 +69,6 @@ const GROUPS: Array<{ key: string | null; label: string; cats: string[] }> = [
   ...MENU_CHIPS.map((k) => { const g = MENU_GROUPS.find((x) => x.key === k)!; return { key: k as string, label: g.key === "mods" ? "Modifications" : g.label, cats: g.categories as string[] }; }),
 ];
 const TITLES: Record<string, string> = { washing: "Wash and care", ceramic: "Ceramic coating", coating: "Coating", ppf: "Paint protection film", tinting: "Window tint", inspection: "Inspection", other: "Care", garage: "Garage", modifications: "Modifications", pickup: "Pickup and drop" };
-
-function Heading({ title, action, onAction }: { title: string; action?: string | undefined; onAction?: (() => void) | undefined }) {
-  const { colors } = useExperienceTheme();
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-      <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "700" }}>{title}</Text>
-      {action ? <Pressable accessibilityRole="button" onPress={onAction} hitSlop={10}><Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "600" }}>{action}</Text></Pressable> : null}
-    </View>
-  );
-}
-
-function Round({ icon, label, onPress, on, badge }: { icon: IconName; label: string; onPress: () => void; on?: boolean; badge?: boolean }) {
-  const { name, colors } = useExperienceTheme();
-  const r = raised(name);
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => ({ alignItems: "center", gap: 8, opacity: pressed ? 0.75 : 1, flex: 1 })}>
-      <View style={{ width: 64, height: 64, alignItems: "center", justifyContent: "center", ...(on ? r.roundOn : r.round) }}>
-        <NavIcon name={navIconFor(icon)} color={on ? "#1A1410" : colors.textPrimary} size={24} cut="#18181C" />
-        {badge ? <View style={{ position: "absolute", top: 14, right: 16, width: 9, height: 9, borderRadius: 5, backgroundColor: "#EC8638" }} /> : null}
-      </View>
-      <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "600" }}>{label}</Text>
-    </Pressable>
-  );
-}
 
 /** The one tile size used on Services, Garage, Home Top services and Bookings Explore. */
 export const TILE_ASPECT = 1.4;
@@ -138,11 +93,6 @@ export function PhotoCard({ media, title, pill, onPress, hearted = true, mediaTr
   );
 }
 
-function ServiceCard({ s, onPress }: { s: HomeService; onPress: () => void }) {
-  const img = (serviceImagery as Record<string, ImageSourcePropType>)[s.category] ?? serviceImagery.other;
-  return <PhotoCard title={s.name} pill={s.price === "Quote on request" ? "Quote" : s.price || undefined} onPress={onPress} media={<Image source={img} resizeMode="cover" style={{ width: "100%", height: "100%" }} />} />;
-}
-
 export function GroupChips({ value, onChange }: { value: string | null; onChange: (k: string | null) => void }) {
   const { colors } = useExperienceTheme();
   return (
@@ -161,9 +111,6 @@ export function GroupChips({ value, onChange }: { value: string | null; onChange
 }
 export const groupCategories = (key: string | null): string[] => GROUPS.find((g) => g.key === key)?.cats ?? [];
 
-const glassBg = (night: boolean) => (Platform.OS === "web" ? ({ backgroundImage: night ? "linear-gradient(135deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,.015) 45%, rgba(236,134,56,.07) 100%)" : "none" } as object) : {});
-
-/** One lead card that changes with the car's state: live job, something needing action, a document due, or a prompt to book. */
 type IdleNudge = { kicker: string; title: string; detail: string; cta: string; onPress: () => void };
 /** The one thing Home nudges about when nothing is live: an expiring paper first, then what the car needs, then a rebook. */
 export function pickIdleNudge(p: { reminder: HomeReminder | null; need?: { title: string; detail: string; onPress: () => void } | null | undefined; rebook?: { serviceName: string; onPress: () => void } | null | undefined; onReminder: () => void }): IdleNudge | null {
@@ -172,68 +119,6 @@ export function pickIdleNudge(p: { reminder: HomeReminder | null; need?: { title
   if (p.rebook) return { kicker: "Last time", title: p.rebook.serviceName, detail: "", cta: "Book again", onPress: p.rebook.onPress };
   return null;
 }
-function LeadCard({ live, pct, nudge, car, onBook }: { live: HomeLive | null; pct: number | null; nudge: IdleNudge | null; car: HomeCar | undefined; onBook: () => void }) {
-  const { name, colors } = useExperienceTheme();
-  const idle = !live || live.idle === true;
-  const n = idle ? nudge : null;
-  const kicker = n ? n.kicker : idle ? "Ready when you are" : live!.kicker;
-  const title = n ? n.title : idle ? (car ? `Care for ${car.title}` : "Add your car to begin") : live!.title;
-  const detail = n ? n.detail : idle ? (live?.detail ?? "") : live!.detail;
-  const press = n ? n.onPress : idle ? (live?.onPress ?? onBook) : live!.onPress;
-  const cta = n ? n.cta : idle ? (car ? "Book a service" : "Add your car") : live!.kicker === "Needs your OK" ? "Review" : "Track";
-  const showDetail = !!detail && (n !== null || !idle);
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={press} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingLeft: 16, paddingRight: 10, opacity: pressed ? 0.9 : 1, ...glassPane(name === "light") })}>
-      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-        <Text numberOfLines={1} style={{ color: n ? (name === "night" ? "#F5A25A" : colors.accentStrong) : colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>{kicker}</Text>
-        <Text numberOfLines={2} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "800" }}>{title}</Text>
-        {showDetail ? <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{detail}</Text> : null}
-      </View>
-      <View style={{ borderRadius: 9999, paddingHorizontal: 16, paddingVertical: 9, backgroundColor: "#EC8638", ...(Platform.OS === "web" ? ({ boxShadow: "0 6px 14px rgba(16,17,19,0.25), inset 0 1px 0 rgba(255,255,255,0.24)" } as object) : {}) }}>
-        <Text style={{ color: "#1A1410", fontSize: 13, fontWeight: "800" }}>{cta}</Text>
-      </View>
-    </Pressable>
-  );
-}
-
-/** Slot 1 while a car is in the studio: the live job with the car inside it. Replaces the car chip, so "in studio" is said once. */
-const LIVE_STEPS = ["Received", "In progress", "Final checks", "Ready"];
-
-/** Live visit: the car photo fills the card, with the step, the four-step bar, ready-by and one Track button. */
-function LiveCard({ live, pct, car }: { live: HomeLive; pct: number | null; car: HomeCar | undefined }) {
-  const step = liveStep(pct);
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={live.title} onPress={live.onPress} style={({ pressed }) => ({ borderRadius: 24, overflow: "hidden", minHeight: 236, backgroundColor: "#0B0B0D", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", opacity: pressed ? 0.92 : 1 })}>
-      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
-        <CarThumb car={car?.vehicle} height={300} radius={0} />
-      </View>
-      <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,.2) 35%, rgba(0,0,0,.88) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.4)" }) }} />
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 14 }}>
-        <View style={{ backgroundColor: "#EC8638", borderRadius: 12, paddingHorizontal: 9, paddingVertical: 3 }}><Text style={{ color: "#1A1410", fontSize: 11, fontWeight: "800", letterSpacing: 1.2 }}>LIVE</Text></View>
-        {car?.plate ? <Plate value={car.plate} /> : null}
-      </View>
-      <View style={{ flex: 1 }} />
-      <View style={{ padding: 16, gap: 10 }}>
-        <Text numberOfLines={1} style={{ color: "#E4E2DF", fontSize: 13 }}>{[car?.title, live.detail].filter(Boolean).join(" \u00b7 ")}</Text>
-        <Text style={{ color: "#FFFFFF", fontSize: 24, fontWeight: "800", lineHeight: 30 }}>{live.title}</Text>
-        <View accessibilityRole="progressbar" accessibilityLabel={`Step ${step + 1} of 4`} style={{ flexDirection: "row", gap: 6 }}>
-          {LIVE_STEPS.map((n, i) => (
-            <View key={n} style={{ flex: 1, gap: 6 }}>
-              <View style={{ height: 5, borderRadius: 9999, backgroundColor: i <= step ? "#FFFFFF" : "rgba(255,255,255,0.28)" }} />
-              <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 10.5, opacity: i <= step ? 1 : 0.6, fontWeight: i === step ? "700" : "500" }}>{n}</Text>
-            </View>
-          ))}
-        </View>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-          <Text numberOfLines={1} style={{ color: "#E4E2DF", fontSize: 13, flex: 1 }}>{live.ready ? `Ready by ${live.ready}` : ""}</Text>
-          <View style={{ backgroundColor: "#FFFFFF", borderRadius: 9999, paddingHorizontal: 16, paddingVertical: 8 }}><Text style={{ color: "#111111", fontSize: 13, fontWeight: "700" }}>Track</Text></View>
-        </View>
-      </View>
-    </Pressable>
-  );
-}
-
-/** Up to three services, one per category, from the live catalogue only. */
 export function pickSuggested(all: HomeService[]): HomeService[] {
   const seen = new Set<string>();
   const out: HomeService[] = [];
@@ -241,146 +126,6 @@ export function pickSuggested(all: HomeService[]): HomeService[] {
   return out;
 }
 
-export type { TopPick } from "../lib/top-services";
-function TopPickCard({ pick, onPress }: { pick: TopPick; onPress: () => void }) {
-  const price = pick.service.price === "Quote on request" ? "Quote" : pick.service.price ? `From ${pick.service.price.replace(/^From\s+/i, "")}` : undefined;
-  return (
-    <PhotoCard hearted={false} title={pick.title} pill={price} onPress={onPress} media={<Image source={(serviceImagery as Record<string, ImageSourcePropType>)[pick.service.category] ?? serviceImagery.other} resizeMode="cover" style={{ width: "100%", height: "100%" }} />} />
-  );
-}
-
-function SuggestRow({ s, first, onPress }: { s: HomeService; first: boolean; onPress: () => void }) {
-  const { colors } = useExperienceTheme();
-  const img = (serviceImagery as Record<string, ImageSourcePropType>)[s.category] ?? serviceImagery.other;
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={s.name} onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: metrics.rowPadV, paddingHorizontal: metrics.rowPadH, opacity: pressed ? 0.8 : 1, borderTopWidth: first ? 0 : 1, borderTopColor: colors.borderSubtle })}>
-      <Image source={img} resizeMode="cover" style={{ width: metrics.thumb, height: metrics.thumb, borderRadius: 12 }} />
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{s.name}</Text>
-        <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 13 }}>{s.price === "Quote on request" ? "Quote on request" : s.price}</Text>
-      </View>
-    </Pressable>
-  );
-}
-
-function ClubRow({ icon, title, sub, onPress, first }: { icon: IconName; title: string; sub: string; onPress: () => void; first?: boolean }) {
-  const { colors } = useExperienceTheme();
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: metrics.rowPadV, paddingHorizontal: metrics.rowPadH, opacity: pressed ? 0.8 : 1, borderTopWidth: first ? 0 : 1, borderTopColor: colors.borderSubtle })}>
-      <NavIcon name={navIconFor(icon)} color={colors.textSecondary} size={20} cut="#18181C" />
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{title}</Text>
-        <Text numberOfLines={2} style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 18 }}>{sub}</Text>
-      </View>
-    </Pressable>
-  );
-}
-
-/** One car gets the hero stage, with or without a photo. */
+export type { TopPick } from '../lib/top-services';
 export function isCompactCarRow(cars: HomeCar[]): boolean { return cars.length === 1; }
-
-export function HomeView(p: HomeViewProps) {
-  const { name, colors } = useExperienceTheme();
-  const reduceContactMotion = useReduceMotion();
-  const { width } = useWindowDimensions();
-  const heroHeight = width < 380 ? 192 : width < 600 ? 200 : 208;
-  const r = raised(name);
-  const top = pickTopServices(p.services);
-  const [active, setActive] = useState(0);
-  const [menu, setMenu] = useState(false);
-  const car = p.cars[active] ?? p.cars[0];
-  const pct = p.progress;
-  const liveOn = !!p.live && p.live.idle !== true;
-  return (
-    <View style={{ gap: metrics.sectionGap }}>
-      <HomeBackdrop />
-      {p.drawer?.length ? <SideDrawer open={menu} onClose={() => setMenu(false)} name={p.displayName ?? "AutoDeck"} initial={p.initial} items={p.drawer} /> : null}
-      <View style={{ marginHorizontal: -20, marginTop: -16 }}>
-        <View style={{ height: heroHeight, overflow: "hidden", borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
-          <KenBurns source={sceneImagery.heroHome} />
-          {Platform.OS === "web" ? (
-            <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: `linear-gradient(180deg, rgba(8,9,10,0.34) 0%, rgba(8,9,10,0.08) 34%, rgba(8,9,10,0.52) 58%, rgba(8,9,10,0.58) 92%, ${name === "night" ? "rgba(36,38,42,1)" : "rgba(255,255,255,1)"} 100%)` } as object) }} />
-          ) : (
-            <>
-              <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(8,9,10,0.2)" }} />
-              <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "55%", backgroundColor: "rgba(8,9,10,0.42)" }} />
-            </>
-          )}
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, paddingHorizontal: 20, paddingTop: 16 }}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Menu" onPress={() => (p.drawer?.length ? setMenu(true) : p.onAvatar())} style={({ pressed }) => ({ width: 46, height: 46, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(10,11,13,0.38)", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", opacity: pressed ? 0.85 : 1, ...(Platform.OS === "web" ? ({ backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)" } as object) : {}) })}>
-              <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "800" }}>{p.initial}</Text>
-            </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel={p.unread > 0 ? `Notifications, ${p.unread} unread` : "Notifications"} onPress={p.onBell} style={({ pressed }) => ({ width: 46, height: 46, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(10,11,13,0.38)", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", opacity: pressed ? 0.85 : 1, ...(Platform.OS === "web" ? ({ backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)" } as object) : {}) })}>
-              <NavIcon name="bell" color="#FFFFFF" size={22} cut="#18181C" />
-              {p.unread > 0 ? <View style={{ position: "absolute", top: 11, right: 12, width: 9, height: 9, borderRadius: 5, backgroundColor: "#EC8638" }} /> : null}
-            </Pressable>
-          </View>
-          <Rise delay={60} style={{ position: "absolute", left: 20, right: 20, bottom: 20, gap: 6 }}>
-            <Text testID="home-greeting" numberOfLines={1} style={{ color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "800", letterSpacing: 1.4, textTransform: "uppercase" }}>{p.greeting}</Text>
-            <Text style={[textStyle("display"), { fontSize: width < 380 ? 26 : 30, lineHeight: width < 380 ? 30 : 34, color: "#FFFFFF", letterSpacing: -0.8 }]}>{"Complete car care.\nAll under one roof."}</Text>
-          </Rise>
-        </View>
-      </View>
-
-      {p.stories}
-
-      {liveOn ? <LiveCard live={p.live!} pct={pct} car={car} /> : p.cars.length>0 ? <CarChips cars={p.cars} active={active} onActive={setActive} onOpen={(c) => p.onCar(c)} onAdd={p.onAddCar} /> : null}
-
-      {top.length ? (
-        <View style={{ gap: 12 }}>
-          <Heading title="Services for you" action="All" onAction={p.onAllServices} />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: TILE_GAP }}>
-            {top.map((t, i) => <Rise key={t.key} delay={200 + i * 90}><View style={{ width: 232, height: 160 }}><TopPickCard pick={t} onPress={() => p.onService(t.service, t.key)} /></View></Rise>)}
-          </ScrollView>
-        </View>
-      ) : null}
-
-      <LeadCard live={liveOn ? null : p.live} pct={pct} nudge={pickIdleNudge({ reminder: p.reminders[0] ?? null, need: p.need, rebook: p.rebook, onReminder: p.onReminders })} car={car} onBook={p.onBook} />
-
-      {p.banner}
-
-      <View style={{ gap: 12 }}>
-        <Heading title="Club" />
-        <View style={{ overflow: "hidden", ...glassPane(name === "light") }}>
-          <ClubRow first icon="membership" title={p.membership ? `Membership, ${p.membership.title}` : "Join the club"} sub={p.membership ? p.membership.detail : "Regular washes at a better rate."} onPress={p.onMembership} />
-        </View>
-      </View>
-
-      <CampaignSlot campaign={p.campaign} />
-      {p.carsList && p.carsList.length > 0 && p.onOpenCar && p.onBuyCar && p.onSellCar ? <CarsCard cars={p.carsList} onOpen={p.onOpenCar} onBuy={p.onBuyCar} onSell={p.onSellCar} /> : null}
-      <View style={{ overflow: "hidden", ...glassPane(name === "light") }}>
-        <Pressable accessibilityRole="button" accessibilityLabel={`${STUDIO_INFO.name}, ${p.studio.hours}${p.studio.openText ? `, ${p.studio.openText}` : ""}. Open the studio page`} onPress={p.onStudio} style={{ height: 132 }}>
-          <Image source={sceneImagery.studio} resizeMode="cover" style={{ position: "absolute", width: "100%", height: "100%" }} />
-          <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.78) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.3)" }) }}>
-            {p.studio.openText ? (
-              <View style={{ position: "absolute", left: 12, top: 10, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 9999, backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 10, paddingVertical: 4 }}>
-                <View style={{ width: 6, height: 6, borderRadius: 9999, backgroundColor: "#EC8638" }} />
-                <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "700" }}>{p.studio.openText}</Text>
-              </View>
-            ) : null}
-            <View style={{ position: "absolute", left: 12, right: 12, bottom: 10, gap: 1 }}>
-              <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "800" }}>{STUDIO_INFO.name}</Text>
-              <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.68)", fontSize: 11 }}>{p.studio.hours}</Text>
-            </View>
-          </View>
-        </Pressable>
-        <View style={{ flexDirection: "row", justifyContent: "space-evenly", alignItems: "center", paddingVertical: 8 }}>
-          {p.quick?.length ? p.quick.map((q) => {
-            const tone = q.icon === "whatsapp" ? (name === "light" ? "#17643D" : "#8DE0AE") : q.icon === "directions" ? (name === "light" ? "#245A89" : "#9CCEF9") : (name === "light" ? "#88420E" : "#F8B982");
-            const wash = q.icon === "whatsapp" ? (name === "light" ? "#E1F2E7" : "#223D30") : q.icon === "directions" ? (name === "light" ? "#E5EFFA" : "#253746") : (name === "light" ? "#FAEADB" : "#443226");
-            return <Pressable key={q.key} accessibilityRole="button" accessibilityLabel={q.label} onPress={q.onPress} style={({ pressed }) => ({ width: 48, minHeight: 48, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: "transparent", opacity: pressed ? 0.7 : 1, transform: pressed && !reduceContactMotion ? [{scale:0.96}] : [], ...(Platform.OS === "web" ? ({cursor:"pointer"} as object) : {}) })}>
-              <View style={{width:34,height:34,borderRadius:9999,alignItems:"center",justifyContent:"center",backgroundColor:wash}}><NavIcon name={navIconFor(q.icon)} color={tone} size={19} cut={wash}/></View>
-            </Pressable>;
-          }) : null}
-          {(p.social ?? []).length ? (p.social ?? []).map((x) => {
-            const tone = x.icon === "instagram" ? (name === "light" ? "#913B68" : "#F0A5CC") : (name === "light" ? "#17643D" : "#8DE0AE");
-            const wash = x.icon === "instagram" ? (name === "light" ? "#F8E8F0" : "#422D3B") : (name === "light" ? "#E1F2E7" : "#223D30");
-            return <Pressable key={x.key} accessibilityRole="button" accessibilityLabel={`${x.title}, ${x.sub}`} onPress={x.onPress} style={({ pressed }) => ({ width: 48, minHeight: 48, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: "transparent", opacity: pressed ? 0.7 : 1, transform: pressed && !reduceContactMotion ? [{scale:0.97}] : [], ...(Platform.OS === "web" ? ({cursor:"pointer"} as object) : {}) })}>
-              <View style={{width:34,height:34,borderRadius:9999,alignItems:"center",justifyContent:"center",backgroundColor:wash}}><NavIcon name={x.icon} color={tone} size={19} cut={wash}/></View>
-            </Pressable>;
-          }) : null}
-        </View>
-      </View>
-    </View>
-  );
-}
+export function HomeView(p: HomeViewProps) { return <HomeScene p={p} />; }
