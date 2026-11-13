@@ -25,8 +25,8 @@ export function studioOpenStatus(hours:readonly OperatingHours[]|null|undefined,
  }
  for(let i=1;i<=7;i++){
   const date=shiftDate(local.date,i),day=(local.day+i)%7;
-  const hours=byDay.get(day as OperatingHours['dayOfWeek']);
-  if(hours&&!hours.closed&&!holidays.includes(date))return{open:false,text:`Closed, opens ${i===1?'tomorrow':['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][day]} ${clock(hours.open)}`};
+  const nextHours=byDay.get(day as OperatingHours['dayOfWeek']);
+  if(nextHours&&!nextHours.closed&&!holidays.includes(date))return{open:false,text:`Closed, opens ${i===1?'tomorrow':['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][day]} ${clock(nextHours.open)}`};
  }
  return{open:false,text:'Closed'};
 }

@@ -14,7 +14,7 @@ export function HomeOwnedCars({p}:{p:HomeViewProps}) {
  const live=useRef({p,active,measure});live.current={p,active,measure};
  const offset=useRef(active*measure),dragging=useRef(false),timer=useRef<ReturnType<typeof setTimeout>|null>(null);
  const clear=()=>{if(timer.current!==null){clearTimeout(timer.current);timer.current=null}};
- const choose=(index:number)=>{const {p,active}=live.current;const next=Math.max(0,Math.min(p.cars.length-1,index));if(next===active||!p.cars[next])return;gestureIndex.current=next;p.onSelectCar?.(p.cars[next]!.id)};
+ const choose=(index:number)=>{const {p:currentProps,active:currentIndex}=live.current;const next=Math.max(0,Math.min(currentProps.cars.length-1,index));const car=currentProps.cars[next];if(next===currentIndex||!car)return;gestureIndex.current=next;currentProps.onSelectCar?.(car.id)};
  const settle=()=>{clear();timer.current=setTimeout(()=>{timer.current=null;if(!dragging.current)choose(Math.round(offset.current/live.current.measure))},140)};
  const begin=()=>{dragging.current=true;clear()};
  const end=()=>{dragging.current=false;settle()};
