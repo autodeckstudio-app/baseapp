@@ -1,3 +1,4 @@
+import {MediaFrame} from "../../../ui/MediaFrame";
 import{reviewedStartingPrice,reviewedQuoteRequired}from '../../../lib/reviewed-starting-prices';
 import {detailHomeBack} from "../../../lib/home-service-navigation";
 import { SERVICE_HOMES } from "@autodeck/core";
@@ -167,9 +168,9 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
           </View>
         }
       >
-        <Pane pad="none">
-          <ServicePhoto service={service} aspect={16 / 9} radius={26} />
-        </Pane>
+        <MediaFrame>
+          <ServicePhoto service={service} aspect={16 / 9} />
+        </MediaFrame>
 
         <>
         {!reviewedStartingPrice(service)||service.description?.trim()||(service.brand&&["ceramic","coating","ppf"].includes(service.category))?<ServiceScope placement="description" showContactAndTip={false} service={service} onAsk={()=>router.push({pathname:"/(tabs)/help",params:{service:service.name}})}/>:null}
@@ -196,9 +197,9 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
 
         {SHOW_BEFORE_AFTER ? <View style={{ gap: space.breath }}>
           {H("Before and after", <Chip label="Placeholder photos" tone="danger" />)}
-          <Pane pad="none">
+          <MediaFrame>
             <View style={{ position: "relative" }}>
-              <ServicePhoto service={service} aspect={4 / 3} radius={26} />
+              <ServicePhoto service={service} aspect={4 / 3} />
               {!after ? <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(10,10,12,0.55)" }} /> : null}
             </View>
             <View style={{ flexDirection: "row", gap: space.breath, padding: space.line }}>
@@ -208,7 +209,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
                 </Pressable>
               ))}
             </View>
-          </Pane>
+          </MediaFrame>
           <T role="caption" tone="tertiary">Illustrative photo, not studio work.</T>
         </View> : null}
 

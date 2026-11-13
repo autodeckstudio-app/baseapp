@@ -272,3 +272,12 @@ fieldset {
   select,
   textarea { font-size: 16px !important; }
 }
+
+/* Review candidate: readable scope, kept visible above bounded feeds. */
+.ax-feed-scope{display:grid;gap:8px;padding:14px 16px;border:1px solid var(--ax-border,rgba(120,110,100,.18));border-radius:18px;background:rgba(255,255,255,.48);margin-bottom:20px;font-size:12px;color:var(--ax-text-secondary,#645e57)}
+.ax-feed-scope>div{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;justify-content:space-between}
+.ax-feed-scope strong{font-weight:650;color:var(--ax-text,#28231e)}
+.ax-feed-scope p{margin:0;line-height:1.5;max-width:75ch}
+.ax-scope-facts{display:grid;gap:8px;margin:12px 0 0}.ax-scope-facts>div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}.ax-scope-facts dt{font-size:12px;color:var(--ax-text-secondary,#645e57)}.ax-scope-facts dd{font-size:13px;margin:0;line-height:1.5}@media(max-width:380px){.ax-scope-facts>div{grid-template-columns:1fr;gap:3px}}
+/* A full day label must not push the next-day control out of a phone viewport. */
+@media(max-width:600px){html:root:root .ax-shell .ax-daynav{display:flex;width:100%;max-width:100%;gap:8px;min-width:0;flex-wrap:wrap}html:root:root .ax-shell .ax-daynav-date{flex:1;min-width:0;max-width:100%;font-size:16px;overflow-wrap:anywhere}html:root:root .ax-shell .ax-daynav button{flex:0 0 auto}}

@@ -1,6 +1,8 @@
-/** Explicit scope for live but bounded office feeds. This is not an exhaustive lookup. */
+/** Scope stays visible: loaded records are not the full history or ledger. */
 export function BoundedListNotice({kind,limit}:{kind:'bookings'|'payments';limit:number}){
- return <p role="note" className="ax-note">{kind==='bookings'
- ?`This view loads up to ${limit} bookings, newest scheduled slot first. Counts, date filters and search cover only those loaded bookings, not the full history.`
- :`This view loads up to ${limit} payments, newest created first. Filters and figures cover only those loaded payments, not a complete ledger or historical balance.`}</p>;
+ const booking=kind==='bookings';
+ return <aside role="note" className="ax-feed-scope" aria-label="Loaded view limits">
+  <div><strong>Up to {limit} {kind}</strong><span>{booking?'Newest scheduled slot first':'Newest created first'}</span></div>
+  <dl className="ax-scope-facts"><div><dt>{booking?'Counts, filters & search':'Filters & figures'}</dt><dd>Loaded {kind} only</dd></div><div><dt>{booking?'Full history':'Full ledger & historical balance'}</dt><dd>Not included in this view</dd></div></dl>
+ </aside>;
 }
