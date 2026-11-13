@@ -19,7 +19,7 @@ export function NextVisitHero({ date, today, time, title, car, status, onPress, 
           <T role="label" tone="accent">{mon}</T>
           <T role="display">{day}</T>
         </View>
-        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <View style={{ flex: 1, minWidth: 0, gap: metrics.identityGap }}>
           <T role="label" tone="secondary">{daysUntilLabel(date, today).toUpperCase()}</T>
           <T role="heading" numberOfLines={2}>{title}</T>
           <T role="caption" tone="secondary" numberOfLines={1}>{[car, time].filter(Boolean).join(" · ")}</T>

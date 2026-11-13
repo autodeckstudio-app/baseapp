@@ -12,7 +12,7 @@ export function ProfileHero({ name, email, photoUrl, onEdit }: { name: string; p
   useEffect(()=>setFailed(false),[photoUrl]);
   const light = themeName === "light";
   const stacked=name.length>20||(email?.length??0)>26;
-  const identity=<View style={{flex:1,minWidth:0,gap:2}}><Text style={{color:colors.textPrimary,fontSize:19,fontWeight:"800"}}>{name}</Text>{email?<Text style={{color:colors.textSecondary,fontSize:13}}>{email}</Text>:null}</View>;
+  const identity=<View style={{flex:1,minWidth:0,gap:metrics.identityGap}}><Text style={{color:colors.textPrimary,fontSize:19,fontWeight:"800"}}>{name}</Text>{email?<Text style={{color:colors.textSecondary,fontSize:13}}>{email}</Text>:null}</View>;
   return (
     <View style={{gap:14,padding:metrics.cardPad,...glassPane(light)}}>
     <View style={{flexDirection:"row",alignItems:"center",gap:14}}>

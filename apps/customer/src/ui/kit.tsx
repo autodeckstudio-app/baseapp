@@ -1,3 +1,4 @@
+import {metrics} from "../lib/metrics";
 import { NavIcon, type NavIconName } from "./NavIcon";
 import { SceneMotion } from "./SceneMotion";
 import { useReduceMotion } from "../lib/reduce-motion";
@@ -114,7 +115,7 @@ export function CanvasTitle({ eyebrow, title }: { eyebrow?: string; title: strin
   const web = Platform.OS === "web";
   const shadow = web ? { textShadow: "0 1px 12px rgba(0,0,0,.5)" } : {};
   return (
-    <View style={{ minHeight: 150, justifyContent: "flex-end" }}>
+    <View style={{ minHeight: 150, justifyContent: "flex-end",gap:metrics.identityGap }}>
       {eyebrow ? <T role="label" style={{ color: "rgba(255,255,255,.92)", ...shadow } as never}>{eyebrow}</T> : null}
       <T role="display" numberOfLines={2} style={{ fontSize: 32, lineHeight: 38, fontWeight: "500", letterSpacing: -1, color: "rgba(255,255,255,.95)", ...(web ? { textShadow: "0 6px 40px rgba(0,0,0,.4)" } : {}) } as never}>{title}</T>
     </View>
@@ -124,7 +125,7 @@ export function CanvasTitle({ eyebrow, title }: { eyebrow?: string; title: strin
 /** Every page opens the same way: a small orange kicker, one specific statement, and one line of real detail. */
 export function PageHeader({ kicker, title, sub }: { kicker?: string; title: string; sub?: string | null }) {
   return (
-    <View style={{ gap: 4 }}>
+    <View style={{ gap: metrics.identityGap }}>
       {kicker ? <Kicker tone="accent">{kicker}</Kicker> : null}
       <T role="title" style={{ fontSize: 22, lineHeight: 28, fontWeight: "700" } as never}>{title}</T>
       {sub ? <T role="body" tone="secondary">{sub}</T> : null}

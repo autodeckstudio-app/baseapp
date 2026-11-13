@@ -27,7 +27,7 @@ export function CarPhotoCard({ car: v, height, badge, onOpen, chip }: { car: Veh
           </View>
         ) : null}
         <View style={{ position: "absolute", left: 18, right: 18, bottom: 16, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
-          <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+          <View style={{ flex: 1, minWidth: 0, gap: metrics.identityGap }}>
             <Text numberOfLines={2} style={{ color: "#FFFFFF", fontSize: 20, letterSpacing:-0.4, fontWeight: "700" }}>{name}</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Plate value={v.registrationNumber} />{segmentLabel(v.category) ? <Text style={{ color: "#E4E2DF", fontSize: 12 }}>{segmentLabel(v.category)}</Text> : null}</View>
           </View>
@@ -53,7 +53,7 @@ export function FloorCar({ car: v, width, height, focused, onOpen, chip }: { car
         <View style={{ width, opacity: focused ? 1 : 0.72, transform: [{ scale: focused ? 1 : 0.94 }] }}>
           <View style={{ borderRadius: 24, borderWidth:1, borderColor:"rgba(180,180,190,0.20)", backgroundColor: "rgba(20,20,26,0.92)", paddingHorizontal: 14, paddingVertical: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
             <CarThumb car={v} height={56} width={56} radius={16} />
-            <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
+            <View style={{ flex: 1, minWidth: 0, gap: metrics.identityGap }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <Text numberOfLines={2} style={{ flex: 1, minWidth: 0, color: "#FFFFFF", fontSize: 16, letterSpacing:-0.2, fontWeight: "700" }}>{name}</Text>
                 {chip ? <View style={{ flexShrink: 0 }}>{chip}</View> : null}
@@ -72,7 +72,7 @@ export function FloorCar({ car: v, width, height, focused, onOpen, chip }: { car
           <CarThumb car={v} height={height} radius={0} />
           <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: Math.round(height * 0.62), ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.78) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.45)" }) }} />
           <View style={{ position: "absolute", left: 16, right: 16, bottom: 14, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
-            <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+            <View style={{ flex: 1, minWidth: 0, gap: metrics.identityGap }}>
               <Text numberOfLines={2} style={{ color: "#FFFFFF", fontSize: 20, letterSpacing:-0.4, fontWeight: "700" }}>{name}</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}><Plate value={v.registrationNumber} />{segmentLabel(v.category) ? <Text style={{ color: "#E4E2DF", fontSize: 12 }}>{segmentLabel(v.category)}</Text> : null}</View>
             </View>

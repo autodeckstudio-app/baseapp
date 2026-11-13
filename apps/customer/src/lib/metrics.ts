@@ -3,6 +3,7 @@
 export const metrics = {
   sectionGap: 20,
   innerGap: 12,
+  identityGap: 8,
   cardPad: 16,
   cardRadius: 24,
   innerRadius: 16,

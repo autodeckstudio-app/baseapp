@@ -383,12 +383,12 @@ export default function BookingDetailScreen() {
     <Screen
       onBack={originBack}
       header={
-        <View style={{ borderRadius: 24, overflow: "hidden", backgroundColor: "#0B0B0D", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
-          <CarThumb car={car ?? (booking.vehicleSnapshot ? { ...booking.vehicleSnapshot, photoUrl: null, category: booking.vehicleCategory } : undefined)} height={metrics.heroCompact + 60} radius={0} />
+        <View testID="booking-identity-header" style={{ minHeight:metrics.heroCompact+60,borderRadius: 24, overflow: "hidden", backgroundColor: "#0B0B0D", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)",justifyContent:"flex-end" }}>
+          <View style={{position:"absolute",inset:0}}><CarThumb car={car ?? (booking.vehicleSnapshot ? { ...booking.vehicleSnapshot, photoUrl: null, category: booking.vehicleCategory } : undefined)} height={metrics.heroCompact + 60} radius={0} /></View>
           <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0.25) 0%, rgba(8,8,10,0) 35%, rgba(8,8,10,0.92) 100%)" } as object) }} />
-          <View style={{ position: "absolute", left: metrics.cardPad, right: metrics.cardPad, bottom: metrics.cardPad, gap: 6 }}>
-            <View style={{ alignSelf: "flex-start", flexDirection: "row", gap: 6 }}>{job && !bookingClosed && jobStage(job.status) && job.status !== "DELIVERED" && job.status !== "PENDING_VEHICLE" ? <Chip label="Live" tone="accent" onDark /> : null}<Chip label={missed ? "Missed" : booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt)) ? "Pending payment" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} onDark /></View>
-            <T role="heading" numberOfLines={1} style={{ color: "#FFFFFF" }}>{svc?.name ?? "Your visit"}</T>
+          <View testID="booking-identity-stack" style={{padding:metrics.cardPad,gap:metrics.identityGap}}>
+            <View style={{ alignSelf: "flex-start", flexDirection: "row", flexWrap:"wrap",gap: 8 }}>{job && !bookingClosed && jobStage(job.status) && job.status !== "DELIVERED" && job.status !== "PENDING_VEHICLE" ? <Chip label="Live" tone="accent" onDark /> : null}<Chip label={missed ? "Missed" : booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt)) ? "Pending payment" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} onDark /></View>
+            <T role="heading" style={{ color: "#FFFFFF" }}>{svc?.name ?? "Your visit"}</T>
             <T role="caption" style={{ color: "#E4E2DF" }}>{displayDate} · {displayTime}</T>
             <T role="caption" style={{ color: "#E4E2DF" }}>Booking ID {bookingCode(booking.id)}</T>
           </View>
