@@ -2,7 +2,7 @@ import {ServiceTimePicker} from '../../../ui/ServiceTimePicker';
 import { customerOfferingVisible } from '../../../lib/customer-offering-visibility';
 import { CarThumb } from "../../../ui/CarThumb";
 import {useVehiclePreference} from "../../../lib/active-vehicle";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { View } from "react-native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { collapseStaleBookEntries } from "../../../lib/back-nav";
