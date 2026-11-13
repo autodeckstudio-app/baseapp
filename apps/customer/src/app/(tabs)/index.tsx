@@ -7,7 +7,7 @@ import { liveTrackTarget, sinceLabel } from "../../lib/bookings-view";
 import { LIVE_PROGRESS } from "../../lib/garage-live";
 import { buildDrawerItems } from "../../lib/drawer-items";
 import { referralCodeFor, referralShareMessage, referralSubtitle } from "../../lib/referral";
-import { usePricingVehicle, useVehiclePrices, servicePriceText } from "../../lib/vehicle-size";
+import { useVehiclePrices, servicePriceText } from "../../lib/vehicle-size";
 // Home: vehicle-first, one lead state (spec §6.2). What leads is decided by
 // projectCustomerHome from the customer's own records - never invented here.
 import { useEffect, useState } from "react";
@@ -19,7 +19,7 @@ import { getOffers, offerToCampaign } from "../../lib/offer-service";
 import type { OfferView } from "@autodeck/core";
 import { getStudioInfo } from "../../lib/booking-service";
 import { listenToJobsForVehicle } from "../../lib/job-service";
-import { FIRST_STUDIO_ID } from "@autodeck/core";
+import { normalizeSegment, FIRST_STUDIO_ID } from "@autodeck/core";
 import { useRouter } from "expo-router";
 import { greetingFor, type CustomerHomeModel } from "@autodeck/core";
 import { FadeUp, Icon, Logo, useExperienceTheme } from "@autodeck/ui/native";
@@ -111,7 +111,7 @@ export default function HomeScreen() {
   const [past, setPast] = useState<Booking[]>([]);
   const [carListings, setCarListings] = useState<CarListingView[] | null>(null);
   useEffect(() => {let alive=true;setCarListings(null);if(ready)void getCarListings(false).then(v=>{if(alive)setCarListings(v)}).catch(()=>undefined);return()=>{alive=false}}, [owner]);
-  const pricingVehicle = usePricingVehicle();
+  const pricingVehicle = {category:normalizeSegment(home.model?.activeVehicle?.category)};
   const vehiclePrices = useVehiclePrices(catalogue, pricingVehicle.category);
   useEffect(() => {
     setGroups([]);setOpen(null);setSeen(new Set());setCatalogue([]);setCatalogueFailed(false);if (!ready) return;
@@ -152,7 +152,9 @@ export default function HomeScreen() {
     return () => { alive = false; };
   }, [owner]);
   const [liveInfo, setLiveInfo] = useState<{ operatingHours: Array<{ dayOfWeek: number; open: string; close: string; closed: boolean }>; holidays: string[] } | null>(null);
-  const [carJobs, setCarJobs] = useState<Array<{ serviceId: string; serviceName?: string; status: string; createdAt: string; sealedAt?: string | null }>>([]);
+  const [carJobsSource, setCarJobsSource] = useState<{scope:string;rows:Array<{ serviceId: string; serviceName?: string; status: string; createdAt: string; sealedAt?: string | null }>}>({scope:"",rows:[]});
+  const carScope=`${owner}:${carId}`;
+  const carJobs=carJobsSource.scope===carScope?carJobsSource.rows:[];
   useEffect(() => {
     setLiveInfo(null);if (!ready) return;
     let alive = true;
@@ -160,21 +162,23 @@ export default function HomeScreen() {
     return () => { alive = false; };
   }, [owner]);
   useEffect(() => {
-    setCarJobs([]);
+    setCarJobsSource({scope:carScope,rows:[]});
     if (!ready || !auth.customerDocId || !carId) return;
-    let alive=true;const stop=listenToJobsForVehicle(carId, auth.claims.tenantId, auth.customerDocId, (v)=>{if(alive)setCarJobs(v as never)}, () => undefined);return()=>{alive=false;stop()};
+    let alive=true;const stop=listenToJobsForVehicle(carId, auth.claims.tenantId, auth.customerDocId, (v)=>{if(alive)setCarJobsSource({scope:carScope,rows:v as never})}, () => undefined);return()=>{alive=false;stop()};
   }, [owner, carId]);
-  const [papers, setPapers] = useState<MyPaper[]>([]);
-  const [warranties, setWarranties] = useState<Array<{ warrantyLabel: string; endDate: string | null; revokedAt: string | null }>>([]);
+  const [paperSource,setPaperSource]=useState<{scope:string;rows:MyPaper[]}>({scope:"",rows:[]});
+  const papers=paperSource.scope===carScope?paperSource.rows:[];
+  const [warrantySource,setWarrantySource]=useState<{scope:string;rows:Array<{warrantyLabel:string;endDate:string|null;revokedAt:string|null}>}>({scope:"",rows:[]});
+  const warranties=warrantySource.scope===carScope?warrantySource.rows:[];
   useEffect(() => {
-    setPapers([]);
+    setPaperSource({scope:carScope,rows:[]});
     if (!ready || !auth.customerDocId || !carId) return;
-    let alive=true;const stop=listenToVehiclePapers(carId, auth.claims.tenantId, auth.customerDocId, (v)=>{if(alive)setPapers(v as never)}, () => undefined);return()=>{alive=false;stop()};
+    let alive=true;const stop=listenToVehiclePapers(carId, auth.claims.tenantId, auth.customerDocId, (v)=>{if(alive)setPaperSource({scope:carScope,rows:v as never})}, () => undefined);return()=>{alive=false;stop()};
   }, [owner, carId]);
   useEffect(() => {
-    setWarranties([]);
+    setWarrantySource({scope:carScope,rows:[]});
     if (!ready || !auth.customerDocId || !carId) return;
-    let alive=true;const stop=listenToVehicleWarranties(carId, auth.claims.tenantId, auth.customerDocId, (v)=>{if(alive)setWarranties(v as never)}, () => undefined);return()=>{alive=false;stop()};
+    let alive=true;const stop=listenToVehicleWarranties(carId, auth.claims.tenantId, auth.customerDocId, (v)=>{if(alive)setWarrantySource({scope:carScope,rows:v as never})}, () => undefined);return()=>{alive=false;stop()};
   }, [owner, carId]);
 
   if (!ready || !home.model) {
@@ -235,8 +239,9 @@ export default function HomeScreen() {
       : m.upcomingBooking
         ? { kicker: "Next visit", title: `${formatDateShort(m.upcomingBooking.scheduledDate)} \u00b7 ${m.upcomingBooking.scheduledTime}`, detail: m.upcomingBooking.status === "PENDING" ? "Waiting for the studio to confirm" : "Confirmed", onPress: () => router.push(nextId ? { pathname: "/(tabs)/bookings/[id]", params: { id: nextId, returnTo: "home" } } : "/(tabs)/bookings") }
         : { kicker: copy.kicker, title: m.primaryAction.label, detail: copy.line, onPress: act, idle: true };
-  const rateB = rateCandidate(past);
-  const vehicles = [m.activeVehicle, ...m.otherVehicles].filter(Boolean) as NonNullable<typeof m.activeVehicle>[];
+  const selectedPast=past.filter(b=>b.vehicleId===carId);
+  const rateB = rateCandidate(selectedPast);
+  const vehicles = ([m.activeVehicle, ...m.otherVehicles].filter(Boolean) as NonNullable<typeof m.activeVehicle>[]).sort((a,b)=>a.id.localeCompare(b.id));
 
   return (
     <Screen bottomClearance={80}>
@@ -274,7 +279,7 @@ export default function HomeScreen() {
         services={catalogue.map((s) => ({ id: s.id, category: s.category, name: s.name, price: servicePriceText(s, pricingVehicle.category, vehiclePrices) ?? "", brand: s.brand ?? null }))}
         reminders={reminders}
         live={live}
-        rebook={(() => { const b = lastCompletedService(past); const sv = b ? catalogue.find((x) => x.id === b.serviceId) : undefined; return b && sv && !sv.priceOnRequest ? { serviceName: sv.name, onPress: () => router.push(`/(tabs)/book/${sv.id}`) } : null; })()}
+        rebook={(() => { const b = lastCompletedService(selectedPast); const sv = b ? catalogue.find((x) => x.id === b.serviceId) : undefined; return b && sv && !sv.priceOnRequest ? { serviceName: sv.name, onPress: () => router.push(`/(tabs)/book/${sv.id}`) } : null; })()}
         stories={groups.length > 0 ? <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, seenKeyOf(g)])); }} /> : null}
         banner={<>{home.error ? <Notice title="Some details are unavailable" body={home.error} action={<Button kind="quiet" icon="refresh" label="Retry" onPress={home.refresh} />} /> : null}{rateB ? <RateCard key={rateB.id} bookingId={rateB.id} serviceName={catalogue.find((x) => x.id === rateB.serviceId)?.name ?? "visit"} /> : null}</>}
         onSearch={() => router.navigate("/(tabs)/catalogue")}
@@ -284,6 +289,8 @@ export default function HomeScreen() {
         onService={(sv, key) => router.push(homeServiceTarget(sv, key) as never)}
         onCar={(c) => router.push({ pathname: "/(tabs)/garage/[id]", params: { id: c.id, returnTo: "home" } })}
         onAddCar={() => router.push("/(tabs)/garage/add")}
+        activeCarId={car?.id}
+        onSelectCar={home.selectVehicle}
         onGarage={() => router.navigate("/(tabs)/garage")}
         onReminders={() => (car ? router.push({ pathname: "/(tabs)/garage/[id]", params: { id: car.id, returnTo: "home" } }) : undefined)}
       />

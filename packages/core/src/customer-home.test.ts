@@ -77,3 +77,10 @@ describe("membership", () => {
     expect(projectCustomerHome(input({ memberships: ms })).membership?.id).toBe("m2");
   });
 });
+
+it('switching cars changes the exact bill/job/approval targets without rebinding other-car records',()=>{
+ const source=input({vehicles:[car('v1'),car('v2')],invoices:[invoice('issued')],jobs:[job('IN_PROGRESS','v2')],approvals:[],bookings:[booking('CONFIRMED','2026-09-26T05:00:00Z','v2')]});
+ const first=projectCustomerHome({...source,preferredVehicleId:'v1'});expect(first.dueInvoice?.id).toBe('i-issued');expect(first.liveJob).toBeUndefined();
+ const second=projectCustomerHome({...source,preferredVehicleId:'v2'});expect(second.dueInvoice).toBeUndefined();expect(second.liveJob?.vehicleId).toBe('v2');expect(second.upcomingBooking?.vehicleId).toBe('v2');expect(source.invoices[0]?.vehicleId).toBe('v1');
+ const restored=projectCustomerHome({...source,preferredVehicleId:'v1'});expect(restored.dueInvoice?.id).toBe('i-issued');
+});

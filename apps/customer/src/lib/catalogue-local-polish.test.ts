@@ -13,7 +13,7 @@ describe('Services local polish',()=>{
 
 describe('unified local navigation spacing',()=>{
  const read=(p:string)=>fs.readFileSync(new URL(p,import.meta.url),'utf8');
- it('one shared safe-area bottom reserve replaces nested100px fillers',()=>{expect(read('../ui/kit.tsx')).toContain('calc(96px + env(safe-area-inset-bottom))');expect(read('../ui/HomeView.tsx')).not.toContain('paddingBottom: 100');expect(read('../app/(tabs)/garage/index.tsx')).not.toContain('paddingBottom: 100');});
+ it('one shared safe-area bottom reserve replaces nested100px fillers',()=>{expect(read('../ui/kit.tsx')).toContain('calc(${bottomClearance}px + env(safe-area-inset-bottom))');expect(read('../ui/HomeView.tsx')).not.toContain('paddingBottom: 100');expect(read('../app/(tabs)/garage/index.tsx')).not.toContain('paddingBottom: 100');});
  it('Garage swipe changes brand tabs while car cards stack vertically',()=>{const g=read('../app/(tabs)/garage/index.tsx');expect(g).toContain('useSegmentSwipe(');expect(g).not.toContain('...swipe.handlers');expect(g).toContain('garage-car-stack');expect(g).toContain('<GarageCarSheet');});
  it('drawer opens a single page and that page preserves referral and native gift gates',()=>{const d=read('./drawer-items.ts');expect(d).toContain('key: "friends-gifts"');expect(d).not.toContain('key: "friend"');expect(d).not.toContain('key: "gifts"');const gifts=read('../app/(tabs)/gifts.tsx');expect(gifts).toContain('referralShareMessage(referralCode)');expect(gifts).toContain('NATIVE_GIFT_PAYMENT_ENABLED');expect(gifts).toContain('if (!GIFT_LIVE)');});
 });

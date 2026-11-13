@@ -93,3 +93,11 @@ it('passes live issued invoices into the model and reprojects when only invoices
  const issued={id:'invoice-a',vehicleId:'car-a',status:'issued'};await act(async()=>callbacks.invoices([issued]));expect(h.project.mock.lastCall?.[0]).toMatchObject({invoices:[issued]});
  await act(async()=>callbacks.invoices([]));expect(h.project.mock.lastCall?.[0]).toMatchObject({invoices:[]});
 });
+
+it('changes the canonical preferred vehicle immediately, rejects non-owned IDs and ignores deleted cars',async()=>{
+ const callbacks:Record<string,any>={};const bind=(kind:string)=>(...args:any[])=>{callbacks[kind]=args[2];return()=>{}};
+ h.listenToMyVehicles.mockImplementation(bind('cars'));h.listenToMyJobs.mockImplementation(bind('jobs'));h.listenToMyPendingApprovals.mockImplementation(bind('approvals'));h.listenToMyIssuedInvoices.mockImplementation(bind('invoices'));h.listenToMyMemberships.mockImplementation(bind('memberships'));
+ await mount('owner','tenant');await act(async()=>{callbacks.cars([{id:'a',deletedAt:null},{id:'b',deletedAt:null},{id:'deleted',deletedAt:'date'}]);callbacks.jobs([]);callbacks.approvals([]);callbacks.invoices([{id:'invoice-a',vehicleId:'a'}]);callbacks.memberships([])});
+ await act(async()=>{(last as any).selectVehicle('b')});expect(h.project.mock.lastCall?.[0]).toMatchObject({preferredVehicleId:'b',invoices:[{id:'invoice-a',vehicleId:'a'}]});
+ for(const id of ['not-owned','deleted']){await act(async()=>{(last as any).selectVehicle(id)});expect(h.project.mock.lastCall?.[0]).toMatchObject({preferredVehicleId:'b'})}
+});

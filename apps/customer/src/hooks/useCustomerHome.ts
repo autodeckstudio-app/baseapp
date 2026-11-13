@@ -1,7 +1,7 @@
 // Live inputs for the customer Home, ranked by the pure projectCustomerHome.
 // Every listener is scoped to the signed-in customer; the rules enforce it.
 import { useEffect, useMemo, useRef, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import {useVehiclePreference,setVehiclePreference,vehiclePreferenceOwner} from "../lib/active-vehicle";
 import {
   projectCustomerHome,
   type ApprovalRequest,
@@ -24,16 +24,13 @@ import {
   listenToMyPendingApprovals,
 } from "../lib/home-service";
 
-const ACTIVE_KEY = "autodeck.activeVehicle";
-
-export async function setActiveVehicle(id: string): Promise<void> {
-  await AsyncStorage.setItem(ACTIVE_KEY, id);
-}
+export async function setActiveVehicle(id:string,customerId?:string|null,tenantId?:string|null):Promise<void>{const owner=vehiclePreferenceOwner(customerId??null,tenantId??null);if(owner)await setVehiclePreference(owner,id);}
 
 export interface CustomerHomeState {
   model: CustomerHomeModel | null;
   error: string | null;
   refresh: () => void;
+  selectVehicle: (id: string) => void;
 }
 
 export function useCustomerHome(uid: string | null, tenantId: string | null, firstName?: string | null): CustomerHomeState {
@@ -44,15 +41,11 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [protections, setProtections] = useState<Protection[]>([]);
-  const [preferred, setPreferred] = useState<string | null>(null);
+  const preferred=useVehiclePreference(uid,tenantId);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   const delivered = useRef(false);
   const [coreReady, setCoreReady] = useState(false);
-
-  useEffect(() => {
-    let active=true;setPreferred(null);void AsyncStorage.getItem(ACTIVE_KEY).then(v=>{if(active)setPreferred(v)}).catch(()=>undefined);return()=>{active=false};
-  }, [uid,tenantId,tick]);
 
   // Watchdog: if no listener has delivered within 8s (e.g. the watch stream
   // never establishes on a flaky network), stop waiting and render with the
@@ -138,5 +131,9 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
     const stop=listenToVehicleProtections(activeId, tenantId, uid, v=>{if(alive)setProtections(v)}, () => {if(alive)setProtections([])});return()=>{alive=false;stop()};
   }, [uid, tenantId, activeId]);
 
-  return { model, error, refresh: () => setTick((t) => t + 1) };
+  const selectVehicle = (id: string) => {
+    if (!uid || !tenantId || !vehicles?.some(v => v.id === id && v.deletedAt === null)) return;
+    void setActiveVehicle(id,uid,tenantId).catch(() => setError("Car selected for this screen, but the choice could not be saved on this device."));
+  };
+  return { model, error, refresh: () => setTick((t) => t + 1), selectVehicle };
 }
