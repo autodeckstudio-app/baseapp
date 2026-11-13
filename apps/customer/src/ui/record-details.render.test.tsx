@@ -1,0 +1,2 @@
+import React from'react';import{create,act}from'react-test-renderer';import{it,expect}from'vitest';import{RecordDetails}from'./RecordDetails';
+it('keeps every original record qualifier on separate readable lines',async()=>{let r:any;const text='XPEL · Reported warranty: 5 years, not verified · since 27 Apr 2026';await act(async()=>{r=create(<RecordDetails text={text}/>)});const json=JSON.stringify(r.toJSON());for(const fact of text.split(' · '))expect(json).toContain(fact);expect(json).not.toContain('5-year coverage');await act(async()=>r.unmount())});

@@ -9,7 +9,7 @@ import type { ServiceJob, Vehicle } from "@autodeck/core";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Plate } from "./kit";
 import { CarThumb } from "./CarThumb";
-import { HistoryVisitRow } from "./HistoryVisitRow";
+import { GaragePreviewVisitRow } from "./GaragePreviewVisitRow";
 import { daysUntil, type MyPaper } from "../lib/paper-service";
 import { paperName } from "../lib/documents";
 import { visitServices, visitTitle } from "../lib/visit-services";
@@ -105,11 +105,10 @@ export function GarageCarSheet({ car, onClose, onOpenRoom, jobs, svcNames, paper
                   <Text style={{ color: ink.textSecondary, fontSize: 13, paddingVertical: 6 }}>No visits yet.</Text>
                 ) : (
                   visits.map((job, i) => (
-                    <HistoryVisitRow
+                    <GaragePreviewVisitRow
                       key={job.id}
                       at={job.sealedAt ?? job.createdAt}
                       title={visitTitle(visitServices(job, null, svcNames))}
-                      caption={fmtDay(job.sealedAt ?? job.createdAt)}
                       status={job.status}
                       first={i === 0}
                     />
