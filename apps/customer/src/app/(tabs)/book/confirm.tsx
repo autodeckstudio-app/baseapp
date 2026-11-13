@@ -1,3 +1,4 @@
+import {PaymentChoiceSummary} from "../../../ui/PaymentChoiceSummary";
 import{BookingTerms}from'../../../ui/BookingTerms';
 import { CombinedPaymentSheet } from "../../../ui/CombinedPaymentSheet";
 import{COMBINED_CHECKOUT_ENABLED,COMBINED_GIFT_CHECKOUT_ENABLED,COMBINED_WASH_CHECKOUT_ENABLED,COMBINED_PICKUP_BENEFIT_ENABLED,washCombinedServicePreview,giftCombinedServicePreview,combinedCheckoutReview}from'../../../lib/combined-checkout';
@@ -517,7 +518,7 @@ export default function BookingConfirmScreen() {
       ) : null}
 
       {freePickupMembership?<Pane pad="gap"><Row title="Plan transport benefit" detail="One free pickup/drop request will be reserved with this booking." last/></Pane>:null}
-      {combinedMode?combinedReviewError?<Pane pad="gap"><T role="caption" tone="secondary">{combinedReviewError}</T><CombinedPaymentOptions choice={combinedChoice} onChange={setCombinedChoice} disabled total={null}/></Pane>:combinedAdvance?<Pane pad="gap"><CombinedPaymentOptions transportIncluded={freePickupMembership!==null} coveredService={giftCode?"gift":washOn?"membership":undefined} choice={combinedChoice} total={combinedAdvance.payment} disabled={booking||held!==null} onChange={setCombinedChoice}/>{combinedReview&&combinedChoice?<View><SheetLine small label="Pay now" value={rupees(combinedReview.payment.payNowPaise)}/><SheetLine small label="Booking balance at studio" value={rupees(combinedReview.payment.balancePaise)} last/></View>:null}</Pane>:null:null}
+      {combinedMode?combinedReviewError?<Pane pad="gap"><T role="caption" tone="secondary">{combinedReviewError}</T><CombinedPaymentOptions choice={combinedChoice} onChange={setCombinedChoice} disabled total={null}/></Pane>:combinedAdvance?<Pane pad="gap"><CombinedPaymentOptions transportIncluded={freePickupMembership!==null} coveredService={giftCode?"gift":washOn?"membership":undefined} choice={combinedChoice} total={combinedAdvance.payment} disabled={booking||held!==null} onChange={setCombinedChoice}/>{combinedReview&&combinedChoice?<PaymentChoiceSummary payNow={rupees(combinedReview.payment.payNowPaise)} balance={rupees(combinedReview.payment.balancePaise)}/>:null}</Pane>:null:null}
 
       {saving !== null ? (
         <Pane pad="gap">
