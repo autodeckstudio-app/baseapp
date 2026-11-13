@@ -45,6 +45,7 @@ vi.mock("../../../lib/auth-service", () => ({
   signOut: async () => {},
 }));
 import { writeFileSync } from "node:fs";
+import {StyleSheet} from "react-native";
 import React from "react";
 import { it, vi, expect } from "vitest";
 import { act, create } from "react-test-renderer";
@@ -166,7 +167,7 @@ vi.mock("../../../lib/review-service", () => ({
   getReview: async () => null,
   submitReview: (...a:any[])=>h.review(...a),
 }));
-vi.mock("../../../ui/CarThumb", () => ({ CarThumb: () => null }));
+vi.mock("../../../ui/CarThumb", async load => process.env.AUTODECK_PAYMENT_VISUAL ? await load<any>() : ({ CarThumb: () => null }));
 vi.mock("../../../ui/PickupCard", () => ({ PickupCard: () => null }));
 vi.mock("../../../ui/ServicePhoto", () => ({ ServicePhoto: () => null }));
 
@@ -380,4 +381,15 @@ it("exact booking advance remains visible after expiry and read failures never e
  await act(async()=>h.paymentError(Error("offline")));expect(text(r)).toContain("Payment status unavailable - do not pay again");expect(text(r)).not.toContain('"Pay now"');
  await act(async()=>h.paymentCb({...payment,id:"advance-matrix",targetType:"booking",jobId:null,bookingId:b.id,studioId:"s",amount:50000}));expect(text(r)).toContain("Online payment pending");expect(text(r)).not.toContain("Not yet initiated");expect(text(r)).toContain("Continue online payment");
  await act(async()=>h.bookingCb({...b,status:"EXPIRED"}));expect(h.advanceBinding.paymentId).toBe("advance-matrix");expect(text(r)).not.toContain("Continue online payment");expect(text(r)).not.toContain('"Pay now"');await act(async()=>r.unmount());
+});
+
+it('captures actual detail review states without integration effects',async()=>{
+ const save=(r:any,state:string)=>{if(process.env.AUTODECK_PAYMENT_VISUAL){writeFileSync('/tmp/payment-detail-'+state+'.json',JSON.stringify(r.toJSON()));writeFileSync('/tmp/payment-detail.css',(StyleSheet as any).getSheet().textContent)}};
+ __params.current={id:'matrix-b'};let r:any;await act(async()=>{r=create(<Detail/>)});
+ const b={...lifecycleBooking,combinedPayment:{version:2,choice:'advance20',totalPaise:250000,payNowPaise:50000,balancePaise:200000},advancePaymentId:'advance-matrix',holdExpiresAt:new Date(Date.now()+600000).toISOString()};
+ await act(async()=>h.bookingCb(b));await act(async()=>h.jobCb({...job,id:'matrix-job',bookingId:b.id,studioId:'s',status:'PENDING_VEHICLE'}));save(r,'unknown');
+ await act(async()=>h.paymentError(Error('offline')));expect(text(r)).not.toContain("Pay to confirm it");save(r,'error');
+ await act(async()=>h.paymentCb({...payment,id:'advance-matrix',targetType:'booking',jobId:null,bookingId:b.id,studioId:'s',amount:50000}));save(r,'continue');
+ const go=r.root.findAllByType(Button).find((x:any)=>x.props.label==='Continue online payment');await act(async()=>go.props.onPress());save(r,'returned');
+ await act(async()=>h.bookingCb({...b,status:'EXPIRED'}));expect(text(r)).not.toContain('Payment was not completed');expect(text(r)).toContain('before booking or paying again');save(r,'expired');await act(async()=>r.unmount());
 });

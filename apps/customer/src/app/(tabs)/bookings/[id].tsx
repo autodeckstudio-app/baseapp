@@ -588,7 +588,7 @@ export default function BookingDetailScreen() {
           <Button label="Pay now" busy={payingNow} disabled={payingNow} onPress={() => void handlePayNow()}/>
         </Pane>
       ) : null}
-      {booking.status === "EXPIRED" ? <Pane><Kicker>Slot released</Kicker><Row title="Booking" detail="Expired. Payment was not completed."/><Row title="Next step" detail="You can book again." last/></Pane> : null}
+      {booking.status === "EXPIRED" ? <Pane><Kicker>Slot released</Kicker><Row title="Booking" detail="Expired. This slot is no longer held."/><Row title="Next step" detail={paymentRead!=="ready"||payment?.status==="pending"||awaitingLinkId?"Check payment status with the studio before booking or paying again.":"You can book again."} last/></Pane> : null}
       {combinedReturn?<Pane pad="gap"><Kicker>Original-method returns</Kicker><Row title="Return amount" detail={rupees(combinedReturn.refundPaise)}/>{combinedReturn.feePaise>0?<Row title="Fee retained" detail={rupees(combinedReturn.feePaise)}/>:null}<Row title="Status" detail={combinedReturn.status==="awaiting_admin"?"Awaiting Admin approval":combinedReturn.status==="returned"?"Returns recorded":"Returns still pending"}/>{combinedReturn.entries.some(e=>e.method==="cash"&&e.returnedPaise<e.returnPaise)?<Row title="Cash return" detail="Still owed. Not an automatic refund."/>:null}</Pane>:null}
       {!combinedReturn&&(booking.refundStatus === "reserved" || booking.refundStatus === "requested") ? <Notice title="Refund requested" body="Your refund request is recorded. This page shows its status as it changes." /> : null}
       {!combinedReturn&&booking.refundStatus === "initiated" ? <Notice title="Refund recorded" body="The studio has recorded your refund. Paid online? When it reaches you depends on your bank or payment provider." /> : null}
@@ -647,7 +647,7 @@ export default function BookingDetailScreen() {
             />
           </View>
         ) : (
-          <T role="caption" tone="secondary">{rescheduleEligibility.reason}</T>
+          <T role="caption" tone="secondary">{booking.status==="PENDING"&&(Boolean(booking.holdExpiresAt)||booking.payMode==="online")?"Rescheduling is available after booking confirmation.":rescheduleEligibility.reason}</T>
         );
         })()
       ) : null}
