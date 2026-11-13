@@ -41,3 +41,20 @@ TypeScript and customer unit/render suites are run separately. Local production-
 The interactive preview is a local synthetic component harness. Its controls exercise real component callbacks but deliberately do not send account/booking/quote/payment/contact effects. Route helpers and return-origin wiring are tested separately; authenticated live end-to-end navigation, provider acceptance, device gestures and real-record lifecycle transitions remain unverified. No claim that every possible application state is defect-free is made.
 
 Preview: scripts/visual/customer-home-scene. Build with `node scripts/visual/customer-home-scene/build.mjs`; generated preview.js/index.html are excluded from source control. The delivered review ZIP includes a ready index.html, fonts, real component bundle and labelled sample inventory illustration for local review.
+
+
+## Accepted brand correction and authenticated verification
+
+The16:46:53 owner clarification keeps AutoDeck colors/fonts/theme;16:46:18 screenshot feedback requests fully rounded listing images. Corrected Day/Night previews were accepted16:53:09. HomeScene/HomeShowroom now consume existing experience colors, typography roles/weights and shared raised surfaces. Listing radius24 matches Ceramic on all corners. Global theme/font files are unchanged.
+
+Authenticated verification used actual Expo Router/screens, Firebase SDKs, local Auth/Firestore/Functions/Storage, explicit demo-autodeck-home and synthetic fixtures. Endpoints were verified local; no copied real sessions/secrets. External browser requests, including the font stylesheet, were blocked. Functions sequential mode solved local parallel-worker memory pressure without changing app behavior. The suite/server have been stopped.
+
+Passed: login and live Home reads; booking detail/Back; car/papers detail/Back; Club empty-plan/Back; Notifications/Back; four Home service entries/Back; shared Bookings/Services/Garage/You tabs; Switch car to Garage; Wash and Ceramic brand/product detail including refresh and return through choices; pending approval detail/Back; exact issued invoice and readable-number refresh/Back. No transaction, approval/decline, booking, payment, quote, upload or contact submission was exercised. Zero page exceptions in completed runs. Actual-router screenshots were inspected for invoice, approval and service detail.
+
+The state test found one additional data gap: useCustomerHome listened for invoices but passed invoices:[] into the model. It now passes scoped live invoices and reprojects when only invoices change. A hook regression covers arrival/removal. Pending approvals still rank first.
+
+Final checks: TypeScript;185 unit files/1087 tests;102 render files/362 tests; fresh Web, iOS and Android exports. Native bundle exports were run separately after a parallel export exceeded local memory. These are not device/store builds. Component visual checks at320/390 and bounded1280 passed without horizontal overflow or page exceptions.
+
+Latest17:09:58 IST screenshot feedback also cleans up Garage Edit vehicle / Remove from garage: page-width shared glass group, aligned20px icons,56px full-row targets and clear destructive text. Existing edit callback and remove confirmation are unchanged. Day390/Night320 component crops were inspected; no real vehicle removal was tested.
+
+Local verification is complete, with limits: production-account/backend/provider compatibility, installed-device acceptance and explicit push/deploy permission remain release gates. No push/PR/deploy/store build occurred. Source main dffcb479/payment PR26 and other contributors' files are preserved.
