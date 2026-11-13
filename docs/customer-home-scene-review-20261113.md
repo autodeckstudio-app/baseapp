@@ -58,3 +58,14 @@ Final checks: TypeScript;185 unit files/1087 tests;102 render files/362 tests; f
 Latest17:09:58 IST screenshot feedback also cleans up Garage Edit vehicle / Remove from garage: page-width shared glass group, aligned20px icons,56px full-row targets and clear destructive text. Existing edit callback and remove confirmation are unchanged. Day390/Night320 component crops were inspected; no real vehicle removal was tested.
 
 Local verification is complete, with limits: production-account/backend/provider compatibility, installed-device acceptance and explicit push/deploy permission remain release gates. No push/PR/deploy/store build occurred. Source main dffcb479/payment PR26 and other contributors' files are preserved.
+
+
+##17:13 page and payment-sheet spacing feedback
+
+Review payment is CombinedPaymentSheet, distinct from the confirm-page CTA. Moved scroll geometry to PaymentSheetFrame: responsive page20px/compact16px outer gutters, bounded reading width, explicit inner16px wrapper,24px top breathing room and safe-area-aware bottom spacing. Heading, money rows/dividers and full-width Pay share the same inner line. AdvancePaymentSheet consumes the same geometry; only row spacing/wrapping and button alignment changed. Existing text, supplied amounts, callbacks and busy/disabled gating remain intact. No payment rules or checkout code changed.
+
+Inspected real sheet component pixels at320/390 in both themes, including a long title and short568px viewport scrolling. Text/Pay bounds match:33px from either viewport edge at320;37px at390 (outer gutter +1px border +16px inner). No page exceptions or horizontal overflow. These are browser-component proofs, not installed-iOS acceptance. No payment was submitted.
+
+Customer-page source audit:29 of34 route files directly use shared Screen; studio and invoice re-export existing Screen routes, two membership routes redirect, and cars composes CarsHub which uses Screen. Shared Screen keeps existing20px/compact16px gutters. Previously inspected actual-router Booking, Garage, Services, Membership, Notifications, Profile, Approval and Invoice pixels use that shared inset. No blanket global theme/gutter change was needed; deliberate Home image bleeds stay distinct from text. Not every document/content-length/device combination was visually audited.
+
+Final after sheet addition: TypeScript passed; full render102 files/363 tests passed; existing unit185 files/1,087 tests passed before this presentation-only addition; final Web/Android/iOS bundle exports passed. Scope remains local implementation and review only, no remote changes or release.

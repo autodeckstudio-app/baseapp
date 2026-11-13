@@ -1,7 +1,8 @@
 import { useEffect } from "react";
-import { Modal, Pressable, ScrollView, View } from "react-native";
+import { Modal, Pressable, View } from "react-native";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { Button, T, rupees } from "./kit";
+import { PaymentSheetFrame } from "./PaymentSheetFrame";
 import { advanceDisclosureLines } from "../lib/advance-booking";
 
 /** Pay-at-studio advance offer, shown BEFORE the booking is created.
@@ -35,15 +36,15 @@ export type AdvancePaymentSheetProps = {
 function SheetMoneyRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
   const { colors } = useExperienceTheme();
   return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.borderSubtle }}>
-      <T tone="secondary">{label}</T>
+    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap:16, paddingVertical: 14, borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.borderSubtle }}>
+      <View style={{flex:1}}><T tone="secondary">{label}</T></View>
       <T role="bodyStrong">{value}</T>
     </View>
   );
 }
 
 export function AdvancePaymentSheet(p: AdvancePaymentSheetProps) {
-  const { colors, name } = useExperienceTheme();
+  const { colors } = useExperienceTheme();
   const d = advanceDisclosureLines();
   useEffect(() => {
     const doc = (globalThis as { document?: { addEventListener: (t: string, l: (e: { key?: string }) => void) => void; removeEventListener: (t: string, l: (e: { key?: string }) => void) => void } }).document;
@@ -56,7 +57,7 @@ export function AdvancePaymentSheet(p: AdvancePaymentSheetProps) {
     <Modal visible={p.visible} transparent animationType="fade" onRequestClose={p.onGoBack}>
       <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: colors.scrim }}>
         <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={p.onGoBack} style={{ flex: 1 }} />
-        <ScrollView accessibilityViewIsModal style={{maxHeight: "90%", flexGrow: 0}} contentContainerStyle={{ alignSelf: "center", width: "100%", maxWidth: 640, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: name === "light" ? "#FAF9F6" : colors.surfaceElevated, padding: 24, paddingBottom: 36, gap: 18 }}>
+        <PaymentSheetFrame>
           <T role="title">Reserve your preferred slot</T>
           {p.serviceName || p.visitLabel ? <View style={{ gap: 4 }}><T role="bodyStrong">{p.serviceName}</T>{p.visitLabel ? <T role="caption" tone="secondary">{p.visitLabel}</T> : null}</View> : null}
           <View>
@@ -69,10 +70,10 @@ export function AdvancePaymentSheet(p: AdvancePaymentSheetProps) {
             <T role="caption" tone="secondary">{d.noShow}</T>
             {p.pickupFees ? <T role="caption" tone="secondary">Pickup and drop charges are added to what you pay at the studio.</T> : null}
           </View>
-          <Button label={`Pay ${rupees(p.advancePaise)} advance`} busy={p.busy} disabled={p.busy} onPress={p.onPayAdvance} />
-          <Button kind="quiet" label="Go back" onPress={p.onGoBack} />
+          <Button style={{alignSelf:"stretch",marginBottom:0}} label={`Pay ${rupees(p.advancePaise)} advance`} busy={p.busy} disabled={p.busy} onPress={p.onPayAdvance} />
+          <Button style={{alignSelf:"stretch",marginBottom:0}} kind="quiet" label="Go back" onPress={p.onGoBack} />
           <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>Secure payment via Razorpay</T>
-        </ScrollView>
+        </PaymentSheetFrame>
       </View>
     </Modal>
   );
