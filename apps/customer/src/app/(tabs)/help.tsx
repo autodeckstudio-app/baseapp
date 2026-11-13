@@ -1,5 +1,6 @@
+import {useForegroundRefresh,useForegroundNow} from '../../hooks/useForegroundRefresh';
 // Help: call, WhatsApp, location, hours and a short FAQ.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { Linking, View } from "react-native";
 import { space } from "@autodeck/ui/theme";
@@ -21,15 +22,19 @@ export default function HelpScreen() {
   const { q: initialQuery, service: serviceName } = useLocalSearchParams<{ q?: string; service?: string }>();
   const [query, setQuery] = useState(typeof initialQuery === "string" ? initialQuery.slice(0,160) : "");
   const shown = searchFaq(FAQ, query);
+  const now=useForegroundNow("studio-help");
+  const [refreshTick,setRefreshTick]=useState(0);
+  const firstFocus=useRef(true);
+  useForegroundRefresh(()=>{if(firstFocus.current){firstFocus.current=false;return;}setRefreshTick(value=>value+1)},"studio-help");
   const [liveHours, setLiveHours] = useState<string | null>(null);
   const [liveOperatingHours, setLiveOperatingHours] = useState<LiveStudioInfo["operatingHours"] | null>(null);
   useEffect(() => {
     let alive = true;
-    void getStudioInfo(FIRST_STUDIO_ID).then((i) => { if (alive && i.operatingHours?.length) { setLiveHours(formatHours(i.operatingHours)); setLiveOperatingHours(i.operatingHours); } }).catch(() => undefined);
+    void getStudioInfo(FIRST_STUDIO_ID).then((i) => { if (alive) { setLiveHours(i.operatingHours?.length ? formatHours(i.operatingHours) : null); setLiveOperatingHours(i.operatingHours?.length ? i.operatingHours : null); } }).catch(() => {if(alive){setLiveHours(null);setLiveOperatingHours(null)}});
     return () => { alive = false; };
-  }, []);
+  }, [refreshTick]);
   const s = { ...STUDIO_INFO, hours: liveHours ?? STUDIO_INFO.hours };
-  const openNow = isOpenNow(liveOperatingHours, new Date());
+  const openNow = isOpenNow(liveOperatingHours, new Date(now));
   const hasContact = Boolean(s.phone || s.whatsapp);
   return (
     <Screen appBar="Help & contact">

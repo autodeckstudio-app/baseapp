@@ -18,3 +18,9 @@ export function nextContentBoundary(values:readonly(string|null|undefined)[],now
   const future=values.map(v=>v?Date.parse(v):NaN).filter(t=>Number.isFinite(t)&&t>now);
   return future.length?Math.min(...future):null;
 }
+
+/** Bound the wait for read-only discovery; late source completion cannot win the race. */
+export function withReadDeadline<T>(read:()=>Promise<T>,timeoutMs=15_000):Promise<T>{
+ let timer:ReturnType<typeof setTimeout>;
+ return Promise.race([Promise.resolve().then(read),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new Error('Details could not refresh in time.')),timeoutMs)})]).finally(()=>clearTimeout(timer));
+}

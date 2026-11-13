@@ -33,6 +33,7 @@ vi.mock("@autodeck/core", () => ({
   projectCustomerHome: (input: unknown) => h.project(input as { vehicles: unknown[] }),
 }));
 
+vi.mock("./useForegroundRefresh",()=>({useForegroundRefresh:()=>{},useForegroundNow:()=>Date.now()}));
 import { useCustomerHome } from "./useCustomerHome";
 
 let last: { model: unknown; error: string | null };
@@ -100,4 +101,11 @@ it('changes the canonical preferred vehicle immediately, rejects non-owned IDs a
  await mount('owner','tenant');await act(async()=>{callbacks.cars([{id:'a',deletedAt:null},{id:'b',deletedAt:null},{id:'deleted',deletedAt:'date'}]);callbacks.jobs([]);callbacks.approvals([]);callbacks.invoices([{id:'invoice-a',vehicleId:'a'}]);callbacks.memberships([])});
  await act(async()=>{(last as any).selectVehicle('b')});expect(h.project.mock.lastCall?.[0]).toMatchObject({preferredVehicleId:'b',invoices:[{id:'invoice-a',vehicleId:'a'}]});
  for(const id of ['not-owned','deleted']){await act(async()=>{(last as any).selectVehicle(id)});expect(h.project.mock.lastCall?.[0]).toMatchObject({preferredVehicleId:'b'})}
+});
+
+it('clears a failed listener notice only when all failed sources recover',async()=>{
+ const callbacks:Record<string,any>={};const bind=(kind:string)=>(...args:any[])=>{callbacks[kind]={ok:args[2],error:args[3]};return()=>{}};
+ h.listenToMyVehicles.mockImplementation(bind('cars'));h.listenToMyJobs.mockImplementation(bind('jobs'));h.listenToMyPendingApprovals.mockImplementation(bind('approvals'));h.listenToMyIssuedInvoices.mockImplementation(bind('invoices'));h.listenToMyMemberships.mockImplementation(bind('memberships'));
+ await mount('recovery-owner','t');await act(async()=>{callbacks.cars.ok([]);callbacks.jobs.error(new Error('offline'));callbacks.approvals.ok([]);callbacks.invoices.error(new Error('offline'));callbacks.memberships.ok([])});expect(last.error).toContain('could not load');
+ await act(async()=>callbacks.jobs.ok([]));expect(last.error).toContain('could not load');await act(async()=>callbacks.invoices.ok([]));expect(last.error).toBeNull();
 });

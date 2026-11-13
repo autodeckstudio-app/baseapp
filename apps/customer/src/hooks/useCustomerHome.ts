@@ -1,3 +1,4 @@
+import {useForegroundRefresh,useForegroundNow} from './useForegroundRefresh';
 // Live inputs for the customer Home, ranked by the pure projectCustomerHome.
 // Every listener is scoped to the signed-in customer; the rules enforce it.
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -28,12 +29,20 @@ export async function setActiveVehicle(id:string,customerId?:string|null,tenantI
 
 export interface CustomerHomeState {
   model: CustomerHomeModel | null;
+  bookings: Booking[];
   error: string | null;
   refresh: () => void;
   selectVehicle: (id: string) => void;
 }
 
 export function useCustomerHome(uid: string | null, tenantId: string | null, firstName?: string | null): CustomerHomeState {
+  const owner=uid&&tenantId?`${tenantId}:${uid}`:tenantId?`${tenantId}:pending`:null;
+  const [stateOwner,setStateOwner]=useState(owner);
+  const lastReset=useRef({owner,tick:0});
+  const [foregroundTick,setForegroundTick]=useState(0);
+  const now=useForegroundNow(owner);
+  const foregroundOwner=useRef<string|null>(null);
+  useForegroundRefresh(()=>{if(foregroundOwner.current!==owner){foregroundOwner.current=owner;return;}setForegroundTick(t=>t+1)},owner);
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
@@ -75,20 +84,22 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
   }, [uid, tenantId]);
 
   useEffect(() => {
-    setVehicles(null);setBookings([]);setJobs([]);setApprovals([]);setInvoices([]);setMemberships([]);setProtections([]);setError(null);if (!uid || !tenantId){if(tenantId){setVehicles([]);setCoreReady(true)}return;}
+    if(lastReset.current.owner!==owner||lastReset.current.tick!==tick){setVehicles(null);setBookings([]);setJobs([]);setApprovals([]);setInvoices([]);setMemberships([]);setProtections([]);setError(null);setStateOwner(owner);lastReset.current={owner,tick};}if (!uid || !tenantId){if(tenantId){setVehicles([]);setCoreReady(true)}return;}
     const settled = new Set<string>();
+    const failedSources=new Set<string>();
     let active = true;
-    const settle = (source: string) => {
+    const settle = (source: string, success = true) => {
       if (!active) return;
+      if (success) failedSources.delete(source);
       settled.add(source);
-      if (settled.size === 6) { delivered.current = true; setCoreReady(true); setError(clearWatchdogErrorOnDelivery); }
+      if (settled.size === 6) { delivered.current = true; setCoreReady(true); setError(e=>failedSources.size?clearWatchdogErrorOnDelivery(e):null); }
     };
     const failFor = (src: string) => (e?: unknown) => {
     if(!active)return;
     // eslint-disable-next-line no-console
     console.warn("[home] listener failed:", src, e);
-    settle(src);
-    const code = (e as { code?: string } | undefined)?.code;
+    failedSources.add(src);
+    settle(src, false);
     setError("Some of your home details could not load. Try refreshing.");
     // Never leave vehicles null on a listener error: a null model keeps the
     // Home on the loading spinner forever. Empty data + the error caption is
@@ -104,11 +115,11 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
     ];
     getMyBookings(uid, tenantId).then((v) => { if (active) { setBookings(v); settle("bookings"); } }).catch(failFor("bookings"));
     return () => { active = false; subs.forEach((u) => u()); };
-  }, [uid, tenantId, tick]);
+  }, [uid, tenantId, tick, foregroundTick]);
 
   const model = useMemo(
     () =>
-      vehicles === null || !coreReady
+      stateOwner!==owner || vehicles === null || !coreReady
         ? null
         : projectCustomerHome({
             firstName: firstName ?? null,
@@ -120,9 +131,9 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
             invoices,
             protections,
             memberships,
-            now: new Date(),
+            now: new Date(now),
           }),
-    [vehicles, coreReady, preferred, bookings, jobs, approvals, invoices, protections, memberships, firstName],
+    [stateOwner,owner,now,vehicles, coreReady, preferred, bookings, jobs, approvals, invoices, protections, memberships, firstName],
   );
 
   const activeId = model?.activeVehicle?.id ?? null;
@@ -135,5 +146,5 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
     if (!uid || !tenantId || !vehicles?.some(v => v.id === id && v.deletedAt === null)) return;
     void setActiveVehicle(id,uid,tenantId).catch(() => setError("Car selected for this screen, but the choice could not be saved on this device."));
   };
-  return { model, error, refresh: () => setTick((t) => t + 1), selectVehicle };
+  return { model, bookings:stateOwner===owner?bookings:[], error, refresh: () => setTick((t) => t + 1), selectVehicle };
 }

@@ -1,3 +1,5 @@
+import {useForegroundRefresh,useForegroundNow} from '../hooks/useForegroundRefresh';
+import {priceCache,onPriceCacheScopeChange,PRICE_CACHE_MS} from './price-cache';
 import { getCatalogueDisplayTotals, cachedServiceTotal, priceLabel } from "./catalogue-service";
 import { rupees } from "../ui/kit";
 import { useEffect, useState } from "react";
@@ -17,17 +19,21 @@ export function usePricingVehicle() {
 }
 
 export function useVehiclePrices(services: Service[], category: VehicleCategory | null) {
- const seed=()=>{const o:Record<string,number>={}; if(category)for(const s of services){const t=cachedServiceTotal(s.id,category); if(t!==undefined)o[s.id]=t;} return o;};
- const [priceState,setPriceState]=useState<{category:VehicleCategory|null;prices:Record<string,number>}>(()=>({category,prices:seed()}));
+ const [tick,setTick]=useState(0);
+ const scope=priceCache.scopeKey();
+ useEffect(()=>onPriceCacheScopeChange(()=>setTick(t=>t+1)),[]);
+ const now=useForegroundNow(scope||'display');
+ useForegroundRefresh(()=>setTick(t=>t+1),scope||'display');
+ const seed=()=>{const o:Record<string,number>={};if(category)for(const s of services){const total=cachedServiceTotal(s.id,category);if(total!==undefined)o[s.id]=total;}return o;};
+ const [priceState,setPriceState]=useState<{scope:string;category:VehicleCategory|null;services:Service[];at:number;prices:Record<string,number>}>(()=>({scope,category,services,at:Date.now(),prices:seed()}));
  useEffect(()=>{
-  setPriceState({category,prices:seed()}); if(!category || !services.length)return;
-  let alive=true;
-  // One batched server call fills the price cache for every visible service; seed() then
-  // picks the fresh totals up. Replaces the old per-service pricing fan-out.
-  void getCatalogueDisplayTotals(category).then(()=>{if(alive)setPriceState({category,prices:seed()});});
-  return ()=>{alive=false;};
- },[services,category]);
- return priceState.category===category?priceState.prices:seed();
+   setPriceState({scope,category,services,at:Date.now(),prices:seed()});
+   if(!category||!services.length)return;
+   let active=true;
+   void getCatalogueDisplayTotals(category,{fresh:tick>0}).then(()=>{if(active&&scope===priceCache.scopeKey())setPriceState({scope,category,services,at:Date.now(),prices:seed()});});
+   return()=>{active=false};
+ },[services,category,scope,tick]);
+ return priceState.scope===scope&&priceState.category===category&&priceState.services===services&&now-priceState.at<PRICE_CACHE_MS?priceState.prices:seed();
 }
 
 /**
