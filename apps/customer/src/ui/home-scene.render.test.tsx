@@ -40,3 +40,5 @@ it('restores original upper composition, hides generic idle and duplicate add ac
 
 
 it('leaves shared Screen ambient visible and uses the common raised material for Club',async()=>{let r:any;await act(async()=>{r=create(<HomeView {...base()}/>)});const root=r.root.findAllByType(View).find((x:any)=>x.props.testID==='home-scene');expect(root.props.style.backgroundColor).toBeUndefined();const club=r.root.findAllByType(View).find((x:any)=>x.props.testID==='home-club');expect(club.props.style.borderRadius).toBe(0);expect(club.props.style.backgroundColor).toBeDefined();await act(async()=>r.unmount())});
+
+it('uses the official wordmark image without a monogram in the restored header',async()=>{let r:any;await act(async()=>{r=create(<HomeView {...base()}/>)});const img=r.root.findAllByProps({testID:'home-official-wordmark'})[0];expect(img.props.accessibilityLabel).toBe('AutoDeck');expect(img.props.resizeMode).toBe('contain');expect(img.props.style.width).toBe(164);await act(async()=>r.unmount())});

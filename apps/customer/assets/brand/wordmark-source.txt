@@ -1,0 +1,5 @@
+Official AutoDeck wordmark outlines, supplied in the AutoDeck Drive AD Logo's / 1_Primary_Logo / SVG kit.
+Dark-background master: https://drive.google.com/file/d/1hFmFv0eOCgjLXMXLzye-DOosnxfrk6FP/view
+Light-background master: https://drive.google.com/file/d/1Pt5rJLEK5DV-h8ijQLYs9xVaLXOtEpij/view
+Retrieved from autodeckstudio@gmail.com on 13 November 2026 at owner's request.
+Derived assets preserve the two original wordmark path geometries and colors. Only background rectangle, separate monogram group and empty margin removed. No font recreation. PNGs rasterized from these exact outline paths for native/web image compatibility.

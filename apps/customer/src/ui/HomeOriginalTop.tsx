@@ -1,4 +1,5 @@
-import {Platform,Pressable,Text,View,useWindowDimensions} from 'react-native';
+import wordmark from '../../assets/brand/wordmark-dark.png';
+import {Image,Platform,Pressable,Text,View,useWindowDimensions} from 'react-native';
 import {useExperienceTheme} from '@autodeck/ui/native';
 import {KenBurns,Rise} from './Drift';
 import {NavIcon} from './NavIcon';
@@ -28,6 +29,7 @@ return <View testID='home-original-top' style={{gap:metrics.sectionGap}}>
             <Pressable accessibilityRole="button" accessibilityLabel="Menu" onPress={() => (p.drawer?.length ? setMenu(true) : p.onAvatar())} style={({ pressed }) => ({ width: 46, height: 46, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(10,11,13,0.38)", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", opacity: pressed ? 0.85 : 1, ...(Platform.OS === "web" ? ({ backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)" } as object) : {}) })}>
               <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "800" }}>{p.initial}</Text>
             </Pressable>
+            <Image testID="home-official-wordmark" accessibilityLabel="AutoDeck" source={wordmark} resizeMode="contain" style={{width:164,maxWidth:'52%',height:22}} />
             <Pressable accessibilityRole="button" accessibilityLabel={p.unread > 0 ? `Notifications, ${p.unread} unread` : "Notifications"} onPress={p.onBell} style={({ pressed }) => ({ width: 46, height: 46, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(10,11,13,0.38)", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", opacity: pressed ? 0.85 : 1, ...(Platform.OS === "web" ? ({ backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)" } as object) : {}) })}>
               <NavIcon name="bell" color="#FFFFFF" size={22} cut="#18181C" />
               {p.unread > 0 ? <View style={{ position: "absolute", top: 11, right: 12, width: 9, height: 9, borderRadius: 5, backgroundColor: "#EC8638" }} /> : null}
