@@ -7,6 +7,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import type { Payment } from "@autodeck/core";
 
 const LIST_LIMIT = 300;
+export const PAYMENTS_LIST_LIMIT=LIST_LIMIT;
 
 /** Live, tenant-wide payment feed - newest first. Customer/vehicle/job/booking/
  * status/method filters are applied client-side. */

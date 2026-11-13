@@ -90,6 +90,7 @@ export function servicePlacement(
               ? "Repairs"
               : "Inspection",
     };
+  if (s.category === "tinting") return {home:"modifications",family:"Window tint"};
   if (
     /colou?r.*ppf|colou?r.*film/.test(n) ||
     ["modifications", "tinting"].includes(s.category)

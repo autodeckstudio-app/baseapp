@@ -1,3 +1,4 @@
+import {studioOpenStatus} from '@autodeck/core';
 import { cancellationPolicySummary, CANCEL_SHORT, CANCEL_BIGGER } from "@autodeck/core";
 // Public contact details shown on the Help screen. Fill these in once with the
 // studio's real details; any empty value hides its button. No private data here.
@@ -32,7 +33,7 @@ export const FAQ:FaqItem[]=[
 ];
 
 // Live studio info from the same record the booking engine uses (read-only public subset).
-export type LiveStudioInfo = { operatingHours: Array<{ dayOfWeek: number; open: string; close: string; closed: boolean }>; holidays: string[] };
+export type LiveStudioInfo = { name?:string; timezone?:string; operatingHours: Array<{ dayOfWeek: number; open: string; close: string; closed: boolean }>; holidays: string[] };
 
 function clock(t: string): string {
   const [hh = "0", mm = "0"] = t.split(":");
@@ -80,13 +81,6 @@ export const INSTAGRAM_HANDLE = "autodeck.studio";
 export const INSTAGRAM_URL = INSTAGRAM_HANDLE ? `https://www.instagram.com/${INSTAGRAM_HANDLE}/` : "";
 
 /** "Open now" only when live hours are known. Returns null when unknown so the screen shows nothing rather than guess. */
-export function isOpenNow(hours: LiveStudioInfo["operatingHours"] | null | undefined, now: Date): boolean | null {
-  if (!hours?.length) return null;
-  const today = hours.find((h) => h.dayOfWeek === now.getDay());
-  if (!today) return null;
-  if (today.closed) return false;
-  const mins = now.getHours() * 60 + now.getMinutes();
-  const [oh = "0", om = "0"] = today.open.split(":");
-  const [ch = "0", cm = "0"] = today.close.split(":");
-  return mins >= Number(oh) * 60 + Number(om) && mins < Number(ch) * 60 + Number(cm);
+export function isOpenNow(hours:LiveStudioInfo["operatingHours"]|null|undefined,now:Date,timezone?:string|null,holidays:string[]=[]):boolean|null{
+ return studioOpenStatus(hours as Parameters<typeof studioOpenStatus>[0],holidays,timezone,now)?.open??null;
 }

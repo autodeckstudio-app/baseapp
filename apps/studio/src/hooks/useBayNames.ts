@@ -1,17 +1,36 @@
-import { useEffect, useState } from "react";
-import { getStudioConfig } from "../lib/studio-service";
+import { useEffect, useRef, useState } from "react";
+import { AppState } from "react-native";
+import { doc, onSnapshot } from "firebase/firestore";
+import { COLLECTIONS } from "@autodeck/database";
+import { db } from "../lib/firebase";
 import { getActiveServices } from "../lib/approval-service";
 
-/** Bay and service display names for job lists, so staff never see raw ids. */
-export function useJobLabels(studioId: string | null): { bays: Record<string, string>; services: Record<string, string> } {
-  const [bays, setBays] = useState<Record<string, string>>({});
-  const [services, setServices] = useState<Record<string, string>>({});
-  useEffect(() => {
-    if (!studioId) return;
-    let alive = true;
-    void getStudioConfig(studioId).then((c) => { if (alive && c) setBays(Object.fromEntries(c.bays.map((b) => [b.id, b.name]))); }).catch(() => undefined);
-    void getActiveServices().then((l) => { if (alive) setServices(Object.fromEntries(l.map((s) => [s.id, s.name]))); }).catch(() => undefined);
-    return () => { alive = false; };
-  }, [studioId]);
-  return { bays, services };
+/** Bays stream from their source. Catalogue keeps the callable's visibility boundary,
+ * refreshing at most once per foreground minute and immediately on resume. */
+export function useJobLabels(studioId:string|null,owner:string|null,tenantId:string|null):{bays:Record<string,string>;services:Record<string,string>} {
+  const scope=`${owner}:${studioId}`;
+  const current=useRef(scope);current.current=scope;
+  const [source,setSource]=useState<{scope:string;bays:Record<string,string>;services:Record<string,string>}|null>(null);
+  useEffect(()=>{
+    setSource(null);
+    if(!studioId||!owner||!tenantId)return;
+    let active=true,bays:Record<string,string>={},services:Record<string,string>={},generation=0;
+    const publish=()=>{if(active&&current.current===scope)setSource({scope,bays:{...bays},services:{...services}})};
+    const stop=onSnapshot(doc(db,COLLECTIONS.studioConfig(),studioId),snap=>{
+      if(!active||current.current!==scope)return;
+      const config=snap.exists()?snap.data():null;
+      bays=config?.tenantId===tenantId?Object.fromEntries((config.bays??[]).map((b:{id:string;name:string})=>[b.id,b.name])):{};
+      publish();
+    },()=>{bays={};publish()});
+    const refresh=()=>{
+      if(AppState.currentState!==null&&AppState.currentState!=='active')return;
+      const request=++generation;
+      void getActiveServices().then(list=>{if(active&&current.current===scope&&request===generation){services=Object.fromEntries(list.filter(s=>s.tenantId===tenantId).map(s=>[s.id,s.name]));publish()}}).catch(()=>{if(active&&current.current===scope&&request===generation){services={};publish()}});
+    };
+    refresh();
+    const timer=setInterval(refresh,60_000);
+    const resume=AppState.addEventListener('change',state=>{if(state==='active')refresh()});
+    return()=>{active=false;generation++;stop();clearInterval(timer);resume.remove()};
+  },[scope,studioId,owner,tenantId]);
+  return source?.scope===scope?source:{bays:{},services:{}};
 }

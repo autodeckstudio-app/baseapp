@@ -14,7 +14,7 @@ import { useVehiclePrices, servicePriceText } from "../../lib/vehicle-size";
 // projectCustomerHome from the customer's own records - never invented here.
 import { useEffect, useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, Share, View } from "react-native";
-import { STUDIO_INFO, WHATSAPP_CHANNEL_URL, INSTAGRAM_URL, INSTAGRAM_HANDLE } from "../../lib/studio-info";
+import { STUDIO_INFO,formatHours, WHATSAPP_CHANNEL_URL, INSTAGRAM_URL, INSTAGRAM_HANDLE } from "../../lib/studio-info";
 import { openStatus } from "../../lib/open-status";
 import { carNeed } from "../../lib/home-needs";
 import { getOffers, offerToCampaign } from "../../lib/offer-service";
@@ -38,7 +38,7 @@ import type { Service, Booking } from "@autodeck/core";
 import { lastCompletedService } from "../../lib/booking-sections";
 import { getServiceCatalogue} from "../../lib/catalogue-service";
 import { getStories, groupStories, type StoryGroup } from "../../lib/story-service";
-import { seenKeyOf } from "../../lib/story-groups";
+import { homeStoryGroups, seenKeyOf } from "../../lib/story-groups";
 import { StoryCircles } from "../../ui/StoryCircles";
 import { HomeView } from "../../ui/HomeView";
 import { getCarListings } from "../../lib/carsale-service";
@@ -116,7 +116,8 @@ export default function HomeScreen() {
   const liveInfo=usable?publicSource.info:null;
   const catalogueFailed=usable&&publicSource.failed.includes('catalogue');
   const now=useContentClock(owner,[...offers.flatMap(o=>[o.startsAt,o.endsAt]),...stories.map(s=>s.expiresAt)]);
-  const groups=groupStories(stories,now);
+  const groups=homeStoryGroups(stories,now);
+  const playableGroups=groups.filter(g=>g.items.length>0);
   const past=home.bookings??[];
   const pricingVehicle = {category:normalizeSegment(home.model?.activeVehicle?.category)};
   const vehiclePrices = useVehiclePrices(catalogue, pricingVehicle.category);
@@ -242,7 +243,7 @@ export default function HomeScreen() {
         initial={(m.customer.firstName ?? auth.user.displayName ?? "A").trim().charAt(0).toUpperCase() || "A"}
         progress={m.liveJob ? LIVE_PROGRESS[m.liveJob.status] ?? 10 : null}
         membership={m.membership && m.membership.status === "active" ? { title: `${Math.max(0, m.membership.washesTotal - m.membership.washesUsed)} washes`, detail: `left${m.membership.endDate ? `, until ${formatDateShort(m.membership.endDate)}` : ""}` } : null}
-        studio={{ address: STUDIO_INFO.address.replace(", Gujarat", ""), hours: STUDIO_INFO.hours, openText: openStatus(liveInfo?.operatingHours, liveInfo?.holidays,new Date(now))?.text ?? null }}
+        studio={{ address: STUDIO_INFO.address.replace(", Gujarat", ""), hours: liveInfo?.operatingHours?.length?formatHours(liveInfo.operatingHours):"Opening hours unavailable", openText: openStatus(liveInfo?.operatingHours, liveInfo?.holidays,new Date(now),liveInfo?.timezone)?.text ?? null }}
         campaign={offerToCampaign(offers, (h) => router.push(h as never),now)}
         need={(() => { const n = carNeed(carJobs, Object.fromEntries(catalogue.map((x) => [x.id, { id: x.id, name: x.name, category: x.category }]))); return n ? { title: n.title, detail: n.detail, onPress: () => router.push(`/(tabs)/book/${n.serviceId}`) } : null; })()}
         social={[
@@ -290,8 +291,8 @@ export default function HomeScreen() {
         identityKey={ready ? `${auth.user.uid}:${auth.claims.tenantId}` : null}
         group={open}
         onClose={() => setOpen(null)}
-        onNextGroup={() => { const n = open ? groups[groups.findIndex((x) => x.key === open.key) + 1] : undefined; if (n) { setOpen(n); setSeen(new Set([...seen, seenKeyOf(n)])); } else setOpen(null); }}
-        onPrevGroup={() => { const n = open ? groups[groups.findIndex((x) => x.key === open.key) - 1] : undefined; if (n) setOpen(n); }}
+        onNextGroup={() => { const n = open ? playableGroups[playableGroups.findIndex((x) => x.key === open.key) + 1] : undefined; if (n) { setOpen(n); setSeen(new Set([...seen, seenKeyOf(n)])); } else setOpen(null); }}
+        onPrevGroup={() => { const n = open ? playableGroups[playableGroups.findIndex((x) => x.key === open.key) - 1] : undefined; if (n) setOpen(n); }}
       />
     </Screen>
   );

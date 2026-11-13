@@ -1,0 +1,118 @@
+{
+  "svc_39328bdbf0d7309bcd1348c26ee13a1a": {
+    "basePrice": 2999900,
+    "category": "ceramic"
+  },
+  "svc_3cb92db2a8f130f0bc3a114bf5cd801f": {
+    "basePrice": 3499900,
+    "category": "ceramic"
+  },
+  "svc_4bc5f0044af09d09d75b68f7f9359b0b": {
+    "basePrice": 1299900,
+    "category": "ceramic"
+  },
+  "svc_5ee55b18b30dc42f74320d26b5869b31": {
+    "basePrice": 1199900,
+    "category": "ceramic"
+  },
+  "svc_756528e7af66f6d68f1686847869aa0b": {
+    "basePrice": 1399900,
+    "category": "ceramic"
+  },
+  "svc_81d1a5eef928b0408b41cce3d4d4b2ad": {
+    "basePrice": 1799900,
+    "category": "ceramic"
+  },
+  "svc_9bb6e3363a1fc8747fd235fa6214dd62": {
+    "basePrice": 1599900,
+    "category": "ceramic"
+  },
+  "svc_b25d851d8e5d7dd89e73f357459bd05d": {
+    "basePrice": 2499900,
+    "category": "ceramic"
+  },
+  "svc_b9af5e32252e73b32ccfbd240e629bdb": {
+    "basePrice": 1499900,
+    "category": "ceramic"
+  },
+  "svc_bb4445b597ce369d1b175058d57999b8": {
+    "basePrice": 1999900,
+    "category": "ceramic"
+  },
+  "svc_bbf57c519b93c33dd538b8e62c72f7ec": {
+    "basePrice": 1299900,
+    "category": "ceramic"
+  },
+  "svc_c2ad7236d8a3a5cacfd1027321fe03a3": {
+    "basePrice": 1499900,
+    "category": "ceramic"
+  },
+  "svc_f8fea2cba9e0397a45cb644656bd67e8": {
+    "basePrice": 2199900,
+    "category": "ceramic"
+  },
+  "svc-brand-kovalent-graphene-matrix": {
+    "basePrice": 2499900,
+    "category": "ceramic"
+  },
+  "svc-brand-kovalent-prolong-light": {
+    "basePrice": 1199900,
+    "category": "ceramic"
+  },
+  "svc-brand-kovalent-matte": {
+    "basePrice": 1999900,
+    "category": "ceramic"
+  },
+  "svc-brand-fireball-dok-do": {
+    "basePrice": 3999900,
+    "category": "ceramic"
+  },
+  "svc-brand-fireball-butterfly-graphene": {
+    "basePrice": 2999900,
+    "category": "ceramic"
+  },
+  "svc-brand-fireball-butterfly": {
+    "basePrice": 2499900,
+    "category": "ceramic"
+  },
+  "svc-brand-fireball-devil-s-blood": {
+    "basePrice": 2499900,
+    "category": "ceramic"
+  },
+  "svc-brand-fireball-silla": {
+    "basePrice": 1999900,
+    "category": "ceramic"
+  },
+  "svc-brand-fireball-aegis": {
+    "basePrice": 1999900,
+    "category": "ceramic"
+  },
+  "menu-coat-kovalent-prolong": {
+    "basePrice": 2200000,
+    "category": "ceramic"
+  },
+  "menu-coat-kovalent-graphene": {
+    "basePrice": 3499900,
+    "category": "ceramic"
+  },
+  "menu-coat-kovalent-borophene": {
+    "basePrice": 5000000,
+    "category": "ceramic"
+  },
+  "svc_27492a910747236a1fbfeeffa84f4017": {
+    "basePrice": 999900,
+    "category": "tinting"
+  },
+  "svc_2f341c450be046784da9d4e9e0174a4f": {
+    "basePrice": 1999900,
+    "category": "tinting"
+  },
+  "svc_b020022e661acabd1a65ca79886fae98": {
+    "basePrice": 1299900,
+    "category": "tinting"
+  },
+  "svc_c92af73f10c3107a395e31fb65b1ce5c": {
+    "basePrice": 699900,
+    "category": "tinting"
+  }
+}

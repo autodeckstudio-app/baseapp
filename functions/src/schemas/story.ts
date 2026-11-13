@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { STORY_HIGHLIGHTS } from "@autodeck/core";
+import { STORY_HIGHLIGHT_INPUTS } from "@autodeck/core";
 
-const highlight = z.enum(STORY_HIGHLIGHTS);
+const highlight = z.enum(STORY_HIGHLIGHT_INPUTS);
 
 const contentType = z.enum(["image/jpeg", "image/png", "image/webp", "video/mp4"]);
 

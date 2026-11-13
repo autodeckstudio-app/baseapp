@@ -432,7 +432,7 @@ export async function processProviderEvent(
       let combinedBasis:CombinedPaymentBasis|null=null,combinedAnomaly:string|null=null;
       if(job?.combinedPayment){try{combinedBasis=await readCombinedPaymentBasis(db,tx,job);assertCombinedSettlementPayment(job,payment,combinedBasis);}catch{combinedAnomaly="combined_balance_needs_review";}}
       let consultMismatch=false;if(job){try{const binding=await readConsultPaymentBinding(db,tx,job,booking as unknown as Record<string,unknown>|undefined);assertPaymentConsultBinding(payment,binding);}catch{consultMismatch=true;}}
-      const anomaly = consultMismatch ? 'consult_approval_mismatch' : !job ? "job_missing" : job.status === "CANCELLED" ? "job_cancelled" : job.paymentStatus === "paid" ? "job_already_paid" : combinedAnomaly;
+      const anomaly = consultMismatch ? 'consult_approval_mismatch' : !job ? "job_missing" : job.status === "CANCELLED" ? "job_cancelled" : job.paymentStatus === "paid" ? "job_already_paid" : (job as ServiceJob & {cashReconciliationId?:string}).cashReconciliationId || job.offlineSettlement ? "cash_receipt_reconciliation" : combinedAnomaly;
       const prepared = job && !anomaly ? await prepareJobInvoice(db, tx, job, payment.id) : null;
       record("completed");
       if (!job || anomaly || !prepared || prepared.existing) {

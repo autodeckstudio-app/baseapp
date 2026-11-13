@@ -1,3 +1,4 @@
+import {formatGarageDate as formatDate} from "../../../lib/garage-date";
 import{GarageBookingRow}from"../../../ui/GarageBookingRow";
 import { warrantyDisplay } from "@autodeck/core";
 import{useSegmentSwipe}from"../../../lib/segment-swipe";
@@ -58,9 +59,7 @@ import { buildUpcoming, buildHistory, countLabel } from "../../../lib/car-timeli
 const SHOW_CUSTOMER_WARRANTY_SECTION = false;
 
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
-}
+
 
 export default function VehicleDetailScreen() {
   const { id, mock: mockQ, returnTo } = useLocalSearchParams<{ id: string; mock?: string; returnTo?: string }>();

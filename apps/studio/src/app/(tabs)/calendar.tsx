@@ -42,8 +42,10 @@ export default function CalendarScreen() {
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [show, setShow] = useState<"active" | "done" | "cancelled">("active");
-  const labels = useJobLabels(auth.status === "ready" ? auth.claims.studioId : null);
-  const people = useJobPeople(jobs);
+  const tenantId=auth.status==="ready"?auth.claims.tenantId:null;
+  const owner=auth.status==="ready"?`${tenantId}:${auth.user.uid}`:null;
+  const labels = useJobLabels(auth.status === "ready" ? auth.claims.studioId : null,owner,tenantId);
+  const people = useJobPeople(jobs,owner,tenantId);
 
   const isCancelled = (j: ServiceJob) => j.status === "CANCELLED";
   const isDone = (j: ServiceJob) => j.status === "DELIVERED";

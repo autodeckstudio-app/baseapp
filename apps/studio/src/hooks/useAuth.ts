@@ -25,23 +25,32 @@ export function useAuth(): AuthState {
   const [state, setState] = useState<AuthState>({ status: "loading" });
 
   useEffect(() => {
+    let generation=0;
     const unsubscribe = onIdTokenChanged(auth, async (user) => {
+      const current=++generation;
+      setState({status:"loading"});
       if (!user) {
+        if(current!==generation)return;
         setState({ status: "unauthenticated" });
         return;
       }
 
-      let tokenResult = await user.getIdTokenResult();
+      let tokenResult;
+      try{tokenResult=await user.getIdTokenResult();}catch{if(current===generation)setState({status:"unauthenticated"});return;}
+      if(current!==generation)return;
       if (typeof (tokenResult.claims as Record<string, unknown>)["role"] !== "string") {
         // First Google sign-in: the server resolves the role from the staff
         // roster and sets claims; then refresh the token to receive them.
         try {
+          if(current!==generation)return;
           await httpsCallable(functions, "setupCustomerProfile")({});
+          if(current!==generation)return;
           tokenResult = await user.getIdTokenResult(true);
         } catch {
           // Falls through to "unauthorized" below.
         }
       }
+      if(current!==generation)return;
       const rawClaims = tokenResult.claims as Record<string, unknown>;
       const role = typeof rawClaims["role"] === "string" ? rawClaims["role"] : null;
       const tenantId = typeof rawClaims["tenantId"] === "string" ? rawClaims["tenantId"] : null;
@@ -57,6 +66,7 @@ export function useAuth(): AuthState {
             studioId = null;
           }
         }
+        if(current!==generation)return;
         setState({
           status: "ready",
           user,
@@ -73,7 +83,7 @@ export function useAuth(): AuthState {
       }
     });
 
-    return unsubscribe;
+    return ()=>{generation++;unsubscribe()};
   }, []);
 
   return state;

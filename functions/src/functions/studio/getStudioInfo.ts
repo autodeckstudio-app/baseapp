@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
+import {studioClock} from "@autodeck/core";
 import type { StudioConfig } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { z } from "zod";
@@ -21,12 +22,13 @@ export const getStudioInfo = onCall({ region: "asia-south1" , enforceAppCheck: s
   if (!snap.exists) throw new HttpsError("not-found", "Studio not found.");
   const c = snap.data() as StudioConfig;
   if (c.tenantId !== user.claims.tenantId) throw new HttpsError("permission-denied", "Cross-tenant access denied.");
-  const today = new Date().toISOString().slice(0, 10);
+  const local=studioClock(new Date(),c.timezone);
+  if(!local)throw new HttpsError("failed-precondition","Studio timezone needs to be confirmed.");
   return {
     name: c.name,
     timezone: c.timezone,
     operatingHours: c.operatingHours,
-    holidays: c.holidays.filter((d) => d >= today).slice(0, 10),
+    holidays: [...new Set(c.holidays)].filter(date=>date>=local.date).sort(),
     slotIntervalMinutes: c.slotIntervalMinutes,
     maxAdvanceBookingDays: c.maxAdvanceBookingDays,
     cancellationWindowHours: c.cancellationWindowHours,

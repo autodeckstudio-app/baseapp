@@ -1,3 +1,4 @@
+import{reviewedStartingPrice,reviewedQuoteRequired}from '../../../lib/reviewed-starting-prices';
 import {detailHomeBack} from "../../../lib/home-service-navigation";
 import { SERVICE_HOMES } from "@autodeck/core";
 import { servicePlacement } from "../../../lib/services-navigation";
@@ -84,7 +85,7 @@ export default function ServiceDetailScreen() {
 
   // Warm the studio calendar so Book opens with times already there.
   useEffect(() => {
-    if (!service || service.priceOnRequest === true) return;
+    if (!service || (service.priceOnRequest === true || reviewedQuoteRequired(service))) return;
     void getAvailability(service.id, FIRST_STUDIO_ID, todayIST(), 7).catch(() => undefined);
   }, [service]);
 
@@ -142,7 +143,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
   useEffect(()=>setBenefitsOpen(false),[id]);
   // Book now is offered only when there is a confirmed price to book against, or the service is a quote. With no car, no car type or no price the
   // price block above carries the one action (Garage / Try again), so there is no second, enabled-looking Book button.
-  const showBar = !!service && sheetBarVisible({ priceOnRequest: service.priceOnRequest === true, loading: priceLoading, hasTotal: priceBreakdown !== null, needsCarType, error: priceError !== null });
+  const showBar = !!service && sheetBarVisible({ priceOnRequest: (service.priceOnRequest === true || reviewedQuoteRequired(service)), loading: priceLoading, hasTotal: priceBreakdown !== null, needsCarType, error: priceError !== null });
   if (loading) return <Loading label="Opening the menu" />;
   if (loadError) return <Screen onBack={homeBack?()=>router.replace(homeBack as never):undefined}><Notice title="Can't load this service" body="Check your connection and try again." action={<Button icon="refresh" label="Try again" onPress={onRetry}/>} /></Screen>;
   if (!service) return <Screen onBack={homeBack?()=>router.replace(homeBack as never):undefined}><Notice title="Service not found" body="It may have been taken off the menu." action={<Button kind="quiet" label="Browse services" onPress={()=>router.navigate("/(tabs)/catalogue")}/>} /></Screen>;
@@ -171,7 +172,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         </Pane>
 
         <>
-        <ServiceScope placement="description" showContactAndTip={false} service={service} onAsk={()=>router.push({pathname:"/(tabs)/help",params:{service:service.name}})}/>
+        {!reviewedStartingPrice(service)||service.description?.trim()||(service.brand&&["ceramic","coating","ppf"].includes(service.category))?<ServiceScope placement="description" showContactAndTip={false} service={service} onAsk={()=>router.push({pathname:"/(tabs)/help",params:{service:service.name}})}/>:null}
 
         {service.priceEstimate ? <T role="caption" tone="tertiary">Estimated price. The studio confirms the final amount before work starts.</T> : null}
 
@@ -211,11 +212,11 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
           <T role="caption" tone="tertiary">Illustrative photo, not studio work.</T>
         </View> : null}
 
-        {!service.priceOnRequest?<Kicker>{service.category==='garage'?'Price':'Price for your car'}</Kicker>:null}
+        {!(service.priceOnRequest || reviewedQuoteRequired(service))?<Kicker>{service.category==='garage'?'Price':'Price for your car'}</Kicker>:null}
         {!service.brand||!['ceramic','ppf','coating'].includes(service.category)?(()=>{const facts=[service.brand&&service.brand!=="Add-ons"?`Product brand: ${service.brand}`:null,service.warrantyLabel?`Listed warranty: ${service.warrantyLabel}`:null].filter(Boolean).join(" · ");return facts?<T role="caption" tone="secondary">{facts}</T>:null})():null}
-        <ServicePrice inlineBreakdown compactQuote {...{category:service.category,priceOnRequest:service.priceOnRequest===true,needsCarType,hasCar:!!pricingVehicle.vehicle,carSizeKnown:!!selectedCategory,loading:priceLoading,error:priceError,breakdown:priceBreakdown,onRetry,onHelp:()=>router.navigate("/(tabs)/help"),onGarage:()=>router.push(pricingVehicle.vehicle?`/(tabs)/garage/${pricingVehicle.vehicle.id}`:"/(tabs)/garage/add")}}/>
+        {reviewedStartingPrice(service)?<Pane pad="gap"><View style={{gap:14}}><View style={{gap:5}}><Kicker>Starting price</Kicker><T role="title" tone="accent">{reviewedStartingPrice(service)!.label}</T></View>{service.category!=="tinting"?<View style={{borderTopWidth:1,borderColor:colors.borderSubtle,paddingTop:12}}><T role="caption" tone="secondary">{reviewedStartingPrice(service)!.condition}</T></View>:null}</View></Pane>:<ServicePrice inlineBreakdown compactQuote {...{category:service.category,priceOnRequest:(service.priceOnRequest===true || reviewedQuoteRequired(service)),needsCarType,hasCar:!!pricingVehicle.vehicle,carSizeKnown:!!selectedCategory,loading:priceLoading,error:priceError,breakdown:priceBreakdown,onRetry,onHelp:()=>router.navigate("/(tabs)/help"),onGarage:()=>router.push(pricingVehicle.vehicle?`/(tabs)/garage/${pricingVehicle.vehicle.id}`:"/(tabs)/garage/add")}}/>}
 
-        {focused&&showBar?<Button style={service.priceOnRequest?undefined:{alignSelf:"stretch",width:"100%",marginTop:16,marginBottom:16}} kind={service.priceOnRequest===true?"quiet":"primary"} label={service.priceOnRequest===true?(service.category==="garage"||service.category==="modifications"?"Inspection":"Get quote"):"Book now"} disabled={!service.priceOnRequest&&priceBreakdown===null} onPress={()=>service.priceOnRequest===true&&SERVICE_QUOTE_JOURNEY_READY?router.push({pathname:"/(tabs)/quote-request",params:{serviceId:String(id)}}):router.push(`/(tabs)/book/${id}`)}/>:null}
+        {focused&&showBar?<Button style={(service.priceOnRequest || reviewedQuoteRequired(service))?undefined:{alignSelf:"stretch",width:"100%",marginTop:16,marginBottom:16}} kind={(service.priceOnRequest===true || reviewedQuoteRequired(service))?"quiet":"primary"} label={(service.priceOnRequest===true || reviewedQuoteRequired(service))?(service.category==="garage"||service.category==="modifications"?"Inspection":"Get quote"):"Book now"} disabled={!(service.priceOnRequest || reviewedQuoteRequired(service))&&priceBreakdown===null} onPress={()=>(service.priceOnRequest===true || reviewedQuoteRequired(service))&&SERVICE_QUOTE_JOURNEY_READY?router.push({pathname:"/(tabs)/quote-request",params:{serviceId:String(id)}}):router.push(`/(tabs)/book/${id}`)}/>:null}
 
         </>
 

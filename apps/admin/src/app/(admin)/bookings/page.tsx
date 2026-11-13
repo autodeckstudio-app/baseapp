@@ -1,4 +1,5 @@
 "use client";
+import {BoundedListNotice} from "../../../components/BoundedListNotice";
 import { membershipCoveredLabel } from "@autodeck/core";
 
 import { useEffect, useMemo, useState } from "react";
@@ -8,7 +9,7 @@ import { useAdminAuth } from "../../../lib/auth-context";
 import { StaffAlertsNotice } from "../../../components/StaffAlertsNotice";
 import { getStudioConfig } from "../../../lib/studio-service";
 import { bayLabel } from "../../../lib/bay-label";
-import { listenToBookings } from "../../../lib/bookings-service";
+import { listenToBookings, BOOKINGS_LIST_LIMIT } from "../../../lib/bookings-service";
 import { StatusBadge } from "../../../components/StatusBadge";
 import { formatPaise, formatDateTime, formatTime, formatDayLong, shiftDay, studioToday } from "../../../lib/format";
 import { statusLabel } from "../../../lib/status-label";
@@ -166,6 +167,7 @@ export default function BookingsPage() {
         </div>
       </header>
       <StaffAlertsNotice />
+      <BoundedListNotice kind="bookings" limit={BOOKINGS_LIST_LIMIT}/>
 
       <div className="ax-toolbar">
         {dayMode ? (
@@ -196,7 +198,7 @@ export default function BookingsPage() {
         </select>
         </div>
         <input className="ax-search" type="search" aria-label="Search" placeholder="Search plate, customer or booking" value={search} onChange={(e) => setSearch(e.target.value)} />
-        {codeSearch ? <span className="ax-note" role="status">{codeSearch.matches.length === 0 ? "No booking has this ID." : codeSearch.ambiguous ? `${codeSearch.matches.length} bookings share this ID. Check the customer and plate before acting.` : "1 booking has this ID."}</span> : null}
+        {codeSearch ? <span className="ax-note" role="status">{codeSearch.matches.length === 0 ? "No match in the loaded bookings." : codeSearch.ambiguous ? `${codeSearch.matches.length} loaded bookings share this ID. Check the customer and plate before acting.` : "1 loaded booking has this ID."}</span> : null}
         <span className="ax-count">{filtered.length} of {bookings.length}</span>
       </div>
 
@@ -205,7 +207,7 @@ export default function BookingsPage() {
       ) : loading ? (
         <DayAgenda items={[]} loading onOpen={open} />
       ) : sorted.length === 0 ? (
-        <div className="ax-empty"><p className="ax-title">No matches</p><p>Try another status, service or search.</p></div>
+        <div className="ax-empty"><p className="ax-title">No matches</p><p>No matches in the loaded bookings. Try another status, service or search.</p></div>
       ) : (
         bookingTable(sorted)
       )}

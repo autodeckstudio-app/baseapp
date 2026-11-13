@@ -1,3 +1,4 @@
+import {useStudioDay} from '../../hooks/useStudioDay';
 import{MyDayActions,type MyDayAction}from'../../components/MyDayActions';
 import { useMinuteNow } from "@autodeck/ui/clock";
 import { bayOccupancy } from "../../lib/bay-holders";
@@ -16,14 +17,11 @@ import { useJobLabels } from "../../hooks/useBayNames";
 import { useJobPeople } from "../../hooks/useJobPeople";
 import { useMyDay } from "../../hooks/useMyDay";
 
-function todayIST(): string {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-}
-
 export default function TodaysJobsScreen() {
   const router = useRouter();
   const authState = useAuth();
   const minuteNow = useMinuteNow();
+  const dayKey=useStudioDay();
   const [standby, setStandby] = useState<ServiceJob[]>([]);
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,32 +31,39 @@ export default function TodaysJobsScreen() {
   const studioId = authState.status === "ready" ? authState.claims.studioId : null;
   const tenantId = authState.status === "ready" ? authState.claims.tenantId : null;
 
+  const owner=authState.status==="ready"?`${tenantId}:${studioId}:${authState.user.uid}`:null;
+  const feedScope=`${owner}:${dayKey}`;
+  const [sourceScope,setSourceScope]=useState<string|null>(null);
   const { width } = useWindowDimensions();
   const day = useMyDay();
-  const labels = useJobLabels(studioId);
-  const people = useJobPeople([...jobs, ...standby]);
+  const labels = useJobLabels(studioId,owner,tenantId);
+  const people = useJobPeople([...jobs, ...standby],owner,tenantId);
   useEffect(() => {
-    if (!studioId || !tenantId) return undefined;
+    setJobs([]);setStandby([]);setSourceScope(null);setError(null);setLoading(true);setQueueReady(false);
+    if (!studioId || !tenantId || !owner) return undefined;
+    let active=true;
     setLoading(true); setQueueReady(false); setError(null);
     const unsub = listenToJobsByDate(
       tenantId,
       studioId,
-      todayIST(),
+      dayKey,
       (data) => {
-        setJobs(data);
+        if(!active)return;
+        setSourceScope(feedScope);setJobs(data);
         setLoading(false);
       },
       (err) => {
-        setError(err.message); setLoading(false);
+        if(active){setSourceScope(feedScope);setError(err.message); setLoading(false);}
       },
     );
-    const queueUnsub = listenToStandby(tenantId, studioId, data => { setStandby(data); setQueueReady(true); }, err => { setError(err.message); setQueueReady(true); });
-    return () => { unsub(); queueUnsub(); };
-  }, [studioId, tenantId, attempt]);
+    const queueUnsub = listenToStandby(tenantId, studioId, data => { if(active){setStandby(data); setQueueReady(true);} }, err => { if(active){setSourceScope(feedScope);setError(err.message); setQueueReady(true);} });
+    return () => { active=false;unsub(); queueUnsub(); };
+  }, [studioId, tenantId, owner, dayKey, attempt]);
 
   if (authState.status === "ready" && !studioId) return <ErrorState title="No studio assigned" message="This account is not linked to a studio yet. Ask an admin to assign one." onRetry={() => setAttempt(n => n + 1)} />;
+  if (sourceScope!==feedScope) return <LoadingState label="Loading studio floor" />;
   if (error) return <ErrorState title="Floor unavailable" message={error} onRetry={() => setAttempt(n => n + 1)} />;
-  if (loading) return <LoadingState label="Loading studio floor" />;
+  if (loading || !queueReady) return <LoadingState label="Loading studio floor" />;
 
   const activeJobs = jobs.filter((j) => j.status !== "STANDBY" && j.status !== "DELIVERED" && j.status !== "CANCELLED");
 
@@ -89,7 +94,7 @@ export default function TodaysJobsScreen() {
         </View>
       ) : activeJobs.map((item, index) => (
         <FadeUp key={item.id} delay={Math.min(index, 5) * 50}>
-          <JobCard job={item} carName={people.car(item)} customerName={people.customer(item)} viewDate={todayIST()} bayName={labels.bays[item.bayId]} serviceName={labels.services[item.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />
+          <JobCard job={item} carName={people.car(item)} customerName={people.customer(item)} viewDate={dayKey} bayName={labels.bays[item.bayId]} serviceName={labels.services[item.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />
         </FadeUp>
       ))}
     </View>
@@ -131,7 +136,8 @@ export default function TodaysJobsScreen() {
       </View>
       <View accessibilityLabel="My day" style={{ ...glass, borderRadius: 20, padding: spacing.lg, gap: spacing.sm }}>
         <Text style={{ ...typography.caption, color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.2, fontWeight: "600" } as never}>My day</Text>
-        <Text style={{ ...typography.title, color: colors.textPrimary }}>{day.ready ? day.state : day.noProfile ? "No staff profile is linked to this account yet. Ask your admin." : "Checking your day..."}</Text>
+        <Text style={{ ...typography.title, color: colors.textPrimary }}>{day.ready ? day.state : day.readError ? "Your day is unavailable" : day.noProfile ? "No staff profile is linked to this account yet. Ask your admin." : "Checking your day..."}</Text>
+        {day.readError?<Button label="Retry your day" variant="secondary" onPress={day.retry}/>:null}
         {day.note ? <Text style={{ ...typography.caption, color: colors.textMuted }}>{day.note}</Text> : null}
         <MyDayActions actions={[
           ...(day.ready?[

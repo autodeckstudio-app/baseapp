@@ -241,3 +241,6 @@ export {issueStaffDocumentUpload,submitStaffDocument,getStaffDocument,reviewStaf
 export {cleanExpiredStaffDocumentUploadsScheduled}from'./functions/employee/cleanExpiredStaffDocumentUploads.js';
 
 export {getCombinedReturnReview,approveCombinedReturn,settleCombinedManualReturn}from'./functions/payment/combinedReturnReview.js';
+
+// Approved-batch financial activation only; actual receipt/cancellation still needs authority.
+export { getCashReconciliationReview, recordCashAlreadyReceived, reconcileCashAlreadyReceived } from './functions/payment/cashReconciliation.js';

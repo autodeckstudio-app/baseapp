@@ -1,4 +1,4 @@
-import { STORY_HIGHLIGHTS, type StoryView } from "@autodeck/core";
+import { STORY_HIGHLIGHTS, storyHighlightCategory, type StoryView } from "@autodeck/core";
 
 export type StoryGroup = { key: string; title: string; live: boolean; cover: string | null; items: StoryView[] };
 
@@ -11,7 +11,7 @@ export function groupStories(list: StoryView[], now = Date.now()): StoryGroup[] 
   const live = asc.filter((s) => Date.parse(s.expiresAt) > now);
   if (live.length) groups.push({ key: "live", title: "Today", live: true, cover: photo(live), items: live });
   for (const title of STORY_HIGHLIGHTS) {
-    const items = asc.filter((s) => s.pinned && s.highlightTitle === title);
+    const items = asc.filter((s) => s.pinned && storyHighlightCategory(s.highlightTitle) === title);
     if (items.length) groups.push({ key: `highlight:${title}`, title, live: false, cover: photo(items), items });
   }
   return groups;
@@ -29,4 +29,17 @@ export function storyAge(iso: string, now = Date.now()): string {
   if (m < 60) return `${m}m`;
   if (m < 1440) return `${Math.floor(m / 60)}h`;
   return `${Math.floor(m / 1440)}d`;
+}
+
+/** Home's five persistent categories. Stored PPF/Ceramic pins remain compatible:
+ * Protection presents both without changing the publishing schema or old records. */
+export const HOME_STORY_CATEGORIES=STORY_HIGHLIGHTS;
+export function homeStoryGroups(list:StoryView[],now=Date.now()):StoryGroup[]{
+ const visible=[...list].filter(s=>!s.hidden).sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
+ const categories=HOME_STORY_CATEGORIES.map(title=>{
+  const items=visible.filter(s=>s.pinned&&storyHighlightCategory(s.highlightTitle)===title);
+  return{key:`highlight:${title}`,title,live:false,cover:[...items].reverse().find(s=>s.mediaType==='image')?.url??null,items};
+ });
+ const today=groupStories(list,now).find(g=>g.live);
+ return today?[today,...categories]:categories;
 }

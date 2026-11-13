@@ -1,4 +1,6 @@
 "use client";
+import{CashReconciliationPanel}from "../../../../components/CashReconciliationPanel";
+import{CASH_RECONCILIATION_ENABLED}from "../../../../lib/backend-features";
 import { JobWorkCoverage } from "../../../../components/JobWorkCoverage";
 import {OfflineReceiptPanel} from "../../../../components/OfflineReceiptPanel";
 import {OFFLINE_RECEIPT_REGISTER_ENABLED} from "../../../../lib/backend-features";
@@ -280,6 +282,7 @@ export default function JobDetailPage() {
 
 
           {(OFFLINE_RECEIPT_REGISTER_ENABLED||Boolean(job.combinedPayment)) && currentScope && currentPayment !== undefined ? <OfflineReceiptPanel key={[job.id,user?.uid,claims?.tenantId].join("|")} jobId={job.id}/> : null}
+          {CASH_RECONCILIATION_ENABLED&&currentScope&&currentPayment&&['admin','superadmin'].includes(claims?.role??'')&&(Boolean((job as ServiceJob&{cashReconciliationId?:string}).cashReconciliationId)||(currentPayment.method==='razorpay_payment_link'&&['pending','processing'].includes(currentPayment.status)))?<CashReconciliationPanel key={[job.id,user?.uid,claims?.tenantId].join('|')} jobId={job.id} paymentId={currentPayment.id}/>:null}
           <JobPaymentPanel compact onRefreshPayment={()=>{setPayment(undefined);setStatus("Refreshing AutoDeck payment record. This does not charge or record money.");setAttempt(n=>n+1)}}
             job={job}
             booking={booking}

@@ -1,6 +1,6 @@
 // The car on Home: one card with the active car (photo, name, plate, size). With several cars a row of small names switches the active one.
 // Tap the car to open it in Garage.
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { segmentLabel } from "@autodeck/core";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { glassPane } from "../lib/glass-pane";
@@ -9,7 +9,7 @@ import { Plate } from "./kit";
 import { CarThumb } from "./CarThumb";
 import type { HomeCar } from "./HomeView";
 
-export function CarChips({ cars, active, onActive, onOpen, onAdd }: { cars: HomeCar[]; active: number; onActive: (i: number) => void; onOpen: (c: HomeCar) => void; onAdd: () => void }) {
+export function CarChips({ cars, active, onActive, onOpen, onAdd, contained = false }: { contained?: boolean; cars: HomeCar[]; active: number; onActive: (i: number) => void; onOpen: (c: HomeCar) => void; onAdd: () => void }) {
   const { name, colors } = useExperienceTheme();
   const light = name === "light";
   if (cars.length === 0) {
@@ -25,7 +25,7 @@ export function CarChips({ cars, active, onActive, onOpen, onAdd }: { cars: Home
   // The 160px frame returns the moment a photo exists (loading states stay inside CarThumb).
   const framed = !!car.vehicle?.photoUrl;
   return (
-    <View style={{ padding: metrics.cardPad, gap: 12, ...glassPane(light) }}>
+    <View style={{ padding: metrics.cardPad, gap: 12, ...glassPane(light), ...(contained ? {overflow:"hidden", ...(Platform.OS === "web" ? {boxShadow:"inset 0 1px 0 rgba(255,255,255,0.12)",backdropFilter:"none",WebkitBackdropFilter:"none"} : {shadowOpacity:0,elevation:0})} as object : {}) }}>
       <Pressable accessibilityRole="button" accessibilityLabel={`Open ${car.title}`} onPress={() => onOpen(car)} style={({ pressed }) => ({ gap: 12, opacity: pressed ? 0.88 : 1 })}>
         {framed ? <View style={{ borderRadius: 16, overflow: "hidden" }}><CarThumb car={car.vehicle} height={160} radius={16} /></View> : null}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>

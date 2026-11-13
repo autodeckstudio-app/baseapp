@@ -1,3 +1,4 @@
+import {homeStoryGroups} from "../lib/story-groups";
 import { useReduceMotion } from "../lib/reduce-motion";
 // One full-screen viewer for Today and highlights. Never nests the catalogue player.
 import {useCallback,useEffect,useRef,useState} from "react";
@@ -27,7 +28,7 @@ export function StoryViewer({group,identityKey,onClose,onNextGroup,onPrevGroup}:
     setRefreshing(true); setRefreshFailed(false); setFreshGroup(null);
     void getStories().then((items) => {
       if (!request.current()) return;
-      const nextGroup = groupStories(items).find((g) => g.key === group.key) ?? null;
+      const nextGroup = homeStoryGroups(items).find((g) => g.key === group.key) ?? null;
       setLoadedScope(scope); setFreshGroup(nextGroup); setI(0); setProgress(0);
       setRefreshFailed(!nextGroup); setRefreshing(false);
     }).catch(() => {
@@ -43,7 +44,7 @@ export function StoryViewer({group,identityKey,onClose,onNextGroup,onPrevGroup}:
       setRefreshing(true);
       void getStories().then((items) => {
         if (!request.current()) return;
-        const nextGroup = groupStories(items).find((g) => g.key === group.key) ?? null;
+        const nextGroup = homeStoryGroups(items).find((g) => g.key === group.key) ?? null;
         setLoadedScope(scope); setFreshGroup(nextGroup); setRefreshFailed(!nextGroup); setRefreshing(false);
       }).catch(() => { if (request.current()) { setLoadedScope(scope); setRefreshFailed(true); setRefreshing(false); } });
     }
