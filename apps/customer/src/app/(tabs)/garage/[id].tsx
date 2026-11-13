@@ -7,6 +7,7 @@ import { listOwnerKey } from "../../../lib/owner-key";
 import { VISIT_FALLBACK, visitAlso, visitServices, visitTitle } from "../../../lib/visit-services";
 import { lastFinishedJob } from "../../../lib/care-due";
 import { buildCarStory } from "../../../lib/car-story";
+import { RecordDetails } from "../../../ui/RecordDetails";
 import { CarStoryAchievements } from "../../../ui/CarStoryAchievements";
 import { shareStoryHtml, shareStoryReady } from "../../../lib/share-story";
 import { buildCarePlan } from "../../../lib/care-plan";
@@ -36,7 +37,7 @@ import { listenToJobsForVehicle } from "../../../lib/job-service";
 import { isCalendarDate, listenToVehicleProtections, updateMyProtection } from "../../../lib/protection-service";
 import { reconcileProtectionReadback, upsertProtection } from "../../../lib/protection-readback";
 import { ProtectionSaveFlow } from "../../../lib/protection-save-flow";
-import { PROTECTION_KIND_LABELS, protectionChip, protectionChipFor,
+import { PROTECTION_KIND_LABELS, hasVerificationEvidence, protectionChip, protectionChipFor,
   protectionRecordTitle, protectionDetail, isCustomerEditable, isCurrentProtection, protectionLifecycleLabel, sortProtectionHistory } from "../../../lib/protection-display";
 import { listenToVehicleWarranties } from "../../../lib/warranty-service";
 import { listenToVehiclePapers, listenToCustomerPapers, submitMyPaper, updateMyPaper, deleteMyPaper, daysUntil, resolvePaperEvidenceUrl, type MyPaper, type PaperPhotoPayload } from "../../../lib/paper-service";
@@ -462,7 +463,7 @@ export default function VehicleDetailScreen() {
   // add-another gate, and editing - a removed kind can be reported again.
   const currentProtections = protections.filter(isCurrentProtection);
   const historyProtections = sortProtectionHistory(protections.filter((p) => !isCurrentProtection(p)));
-  const verifiedProtections = currentProtections.filter((p) => p.status === "verified");
+  const verifiedProtections = currentProtections.filter(hasVerificationEvidence);
   // Self-declared cosmetic protection: offer Add only for a kind with no
   // CURRENT record yet. Mock preview hides these (no backend behind the buttons).
   const reportedProtections = currentProtections.filter((p) => p.source === "customer");
@@ -553,7 +554,7 @@ export default function VehicleDetailScreen() {
     { label: "Colour", value: vehicle.color ? vehicle.color.charAt(0).toUpperCase() + vehicle.color.slice(1) : "-" },
     ...(vehicle.category ? [{ label: "Type", value: segmentLabel(vehicle.category) ?? "" }] : []),
     ...(vehicle.odometer !== null && vehicle.odometer !== undefined ? [{ label: "Odometer", value: `${vehicle.odometer.toLocaleString("en-IN")} km` }] : []),
-    ...(verifiedProtections.length > 0 ? [{ label: "Protection", value: `${verifiedProtections.length} ${verifiedProtections.length === 1 ? "protection" : "protections"} on file` }] : []),
+    ...(verifiedProtections.length > 0 ? [{ label: "Protection", value: `${verifiedProtections.length} ${verifiedProtections.length === 1 ? "protection" : "protections"} verified on file` }] : []),
   ];
 
 
@@ -814,7 +815,7 @@ export default function VehicleDetailScreen() {
                 <Row
                   key={p.id}
                   title={protectionRecordTitle(p)}
-                  detail={protectionDetail(p, formatDate) || undefined}
+                  detail={<RecordDetails text={protectionDetail(p, formatDate)} />}
                   trailing={<Chip label={protectionChip(p)} tone={p.status === "verified" ? "premium" : "neutral"} />}
                   last={i === documentProtections.length - 1}
                 />
@@ -833,7 +834,7 @@ export default function VehicleDetailScreen() {
                     <Row
                       key={p.id}
                       title={PROTECTION_KIND_LABELS[p.kind] ?? p.kind}
-                      detail={protectionDetail(p, formatDate) || undefined}
+                      detail={<RecordDetails text={protectionDetail(p, formatDate)} />}
                       trailing={
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                           <Chip label={protectionChipFor(p, effUid ?? (auth.status === "ready" ? auth.user.uid : null))} tone="neutral" />

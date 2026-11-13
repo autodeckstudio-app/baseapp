@@ -279,3 +279,14 @@ describe("mounted protection editor orchestration", () => {
 });
 
 it("native AppliedOn bad partial or future draft is rejected by Save without blur",async()=>{h.native=true;const el=await mount();act(()=>switchTab(el,"Documents"));await act(async()=>press(el,"Edit Paint Protection Film"));for(const date of ["2026-1","2027-02-29","2099-01-01"]){const input=el.root.findAllByType(TextInput).find(n=>n.props.accessibilityLabel==="Applied on (optional)")!;await act(async()=>input.props.onChangeText(date));await act(async()=>press(el,"Save"));expect(h.updateMyProtection).not.toHaveBeenCalled();expect(textOf(el)).toContain("no later than today");}});
+
+it("approved header counts only current records with paired verification evidence",async()=>{
+ const el=await mount();
+ await act(async()=>h.protectionsCb?.([{...existingProt,status:"verified",source:"studio"}]));
+ expect(textOf(el)).not.toContain("verified on file");
+ await act(async()=>h.protectionsCb?.([{...existingProt,status:"verified",source:"studio",verifiedBy:"staff-1",verifiedAt:"2026-11-13T10:00:00Z"}]));
+ expect(textOf(el)).toContain("1 protection verified on file");
+ await act(async()=>h.protectionsCb?.([{...existingProt,status:"verified",source:"studio",verifiedBy:"staff-1",verifiedAt:"2026-11-13T10:00:00Z",lifecycle:"removed"}]));
+ expect(textOf(el)).not.toContain("verified on file");
+ await act(async()=>el.unmount());
+});
