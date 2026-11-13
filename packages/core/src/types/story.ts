@@ -4,9 +4,14 @@
  * in Storage and is read through short-lived signed URLs from the listStories
  * callable, so no storage rule change is involved.
  */
-/** The only highlight collections (owner, 20 Oct 12:05 AM). A story sits in one of them, or none. Order here is the order of the circles. */
-export const STORY_HIGHLIGHTS = ["PPF", "Ceramic", "Detailing", "Washing", "Modifications"] as const;
+/** Current publisher choices. Legacy PPF/Ceramic pins remain accepted and readable. */
+export const STORY_HIGHLIGHTS = ["Washing", "Detailing", "Protection", "Garage", "Modifications"] as const;
 export type StoryHighlight = (typeof STORY_HIGHLIGHTS)[number];
+export const STORY_HIGHLIGHT_INPUTS = [...STORY_HIGHLIGHTS, "PPF", "Ceramic"] as const;
+export function storyHighlightCategory(value:string|null):StoryHighlight|null {
+ if(value==="PPF"||value==="Ceramic")return "Protection";
+ return (STORY_HIGHLIGHTS as readonly string[]).includes(value??"")?value as StoryHighlight:null;
+}
 
 export interface Story {
   id: string;

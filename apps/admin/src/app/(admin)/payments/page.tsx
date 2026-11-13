@@ -1,11 +1,12 @@
 "use client";
+import {BoundedListNotice} from "../../../components/BoundedListNotice";
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Payment, PaymentStatus, Customer, Invoice } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { useAdminAuth } from "../../../lib/auth-context";
-import { listenToPayments, refundPayment, confirmReceivedPayment } from "../../../lib/payments-service";
+import { listenToPayments, PAYMENTS_LIST_LIMIT, refundPayment, confirmReceivedPayment } from "../../../lib/payments-service";
 import { useLabels } from "../../../lib/use-labels";
 import { studioToday } from "../../../lib/format";
 import { PaymentsView, RefundWorkPanel } from "../../../experience/OfficeViews";
@@ -140,6 +141,7 @@ function PaymentsPageContent() {
       onRun={() => void handleRunOutbox()}
       onOpenInvoice={(id) => router.push(`/invoices/${id}`)}
     />
+    <BoundedListNotice kind="payments" limit={PAYMENTS_LIST_LIMIT}/>
     <PaymentsView
       confirmingId={confirmingId}
       onConfirmReceived={(id) => void handleConfirmReceived(id)}

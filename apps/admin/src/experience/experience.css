@@ -151,3 +151,26 @@ html[data-theme="night"] .ax-lg-l { display: none !important; }
 html[data-theme="night"] .ax-lg-d { display: block; }
 
 /* Logo follows the tone: dark logo on light, light logo on dark (rules above). */
+
+/* Cash fact confirmation must not inherit full-width form input geometry. */
+.ax-shell .ax-cash-confirm{display:flex;align-items:flex-start;gap:8px;line-height:1.5;margin:12px 0}
+.ax-shell .ax-cash-confirm input[type="checkbox"]{width:18px;height:18px;min-width:18px;flex:0 0 18px;margin:2px 0 0;padding:0}
+.ax-shell .ax-cash-reconciliation .ax-button{white-space:normal;max-width:100%;height:auto;min-height:44px}
+
+.ax-shell .ax-cash-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
+.ax-shell .ax-cash-heading h3{font-size:21px;margin:6px 0 0;letter-spacing:-.5px}
+.ax-shell .ax-cash-refresh{border:0;background:transparent;color:inherit;font:inherit;font-size:12px;min-height:44px;padding:0 4px;text-decoration:underline;text-underline-offset:3px}
+.ax-shell .ax-cash-amount{font-size:34px;font-weight:600;letter-spacing:-1px;margin:10px 0}
+.ax-shell .ax-cash-status{display:inline-block;font-size:12px;padding:7px 11px;border-radius:99px;background:rgba(177,115,34,.1);color:#80550e;margin:0 0 16px}
+.ax-shell .ax-cash-status.is-settled{background:rgba(40,110,70,.1);color:#276344}
+.ax-shell .ax-cash-warning{font-size:13px;font-weight:500;border-left:2px solid #d99b55;padding:5px 0 5px 10px;margin:14px 0}
+.ax-shell .ax-cash-details{border-top:1px solid rgba(128,128,128,.14);margin:14px 0 0;padding:12px 0 0;font-size:12px;line-height:1.6}
+.ax-shell .ax-cash-details summary{cursor:pointer;color:inherit}
+.ax-shell .ax-cash-details dl{display:grid;grid-template-columns:70px minmax(0,1fr);gap:8px;margin:14px 0 0}
+.ax-shell .ax-cash-details dt{opacity:.6}.ax-shell .ax-cash-details dd{margin:0;overflow-wrap:anywhere}
+.ax-shell .ax-cash-details ul{padding-left:18px;margin-bottom:0}
+.ax-shell .ax-cash-reconciliation>.ax-button,.ax-shell .ax-cash-reconciliation .ax-form-section>.ax-button{width:100%}
+
+.ax-shell .ax-cash-details summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:24px}
+.ax-shell .ax-cash-details summary::after{content:'+';font-size:18px;opacity:.6}
+.ax-shell .ax-cash-details[open] summary::after{content:'−'}

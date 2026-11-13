@@ -62,3 +62,4 @@ export * from './vehicle-year.js';
 export * from './combined-checkout.js';
 
 export * from "./pickup-tariff.js";
+export * from './studio-clock.js';

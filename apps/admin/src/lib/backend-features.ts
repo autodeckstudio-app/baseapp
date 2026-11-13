@@ -15,3 +15,6 @@ export const OFFLINE_RECEIPT_REGISTER_ENABLED = false;
 
 export const INVOICE_ISSUER_ENABLED = false;
 export const INVOICE_PDF_ENABLED = false;
+// Cash intake/review + provider reconciliation require an approved financial
+// activation batch with all three callables. Preparation only, never flipped here.
+export const CASH_RECONCILIATION_ENABLED = true;

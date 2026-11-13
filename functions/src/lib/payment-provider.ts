@@ -114,6 +114,12 @@ export interface ProviderWebhookEvent {
   currency: string;
 }
 
+export interface PaymentLinkEvidence {
+  referenceId: unknown;
+  amountPaid: unknown;
+  payments: unknown;
+}
+
 export interface PaymentProvider {
   readonly name: string;
   createPaymentLink(params: CreatePaymentLinkParams): Promise<PaymentLinkResult>;
@@ -122,7 +128,7 @@ export interface PaymentProvider {
    *  is never re-created while its predecessor's state is unknown; the
    *  caller compares amount/currency before reusing it (advance-link.ts).
    *  Returns null when the provider has no such link. */
-  fetchPaymentLink(providerPaymentLinkId: string): Promise<PaymentLinkResult & { status: string; amount: number; currency: string } | null>;
+  fetchPaymentLink(providerPaymentLinkId: string): Promise<PaymentLinkResult & { status: string; amount: number; currency: string; evidence?: PaymentLinkEvidence } | null>;
   verifyWebhookSignature(params: VerifyWebhookParams): boolean;
   parseWebhookEvent(rawBody: string): ProviderWebhookEvent;
   initiateRefund(params: InitiateRefundParams): Promise<RefundResult>;

@@ -175,6 +175,7 @@ const ENFORCED = [
   "payment/processRefundOutbox.ts",
   "payment/reconcileRefundClaims.ts",
   "payment/recordOfflineReceipt.ts",
+  "payment/cashReconciliation.ts",
   "payment/combinedReturnReview.ts",
   "payment/offlineReceiptReview.ts",
   "payment/recordManualPayment.ts",

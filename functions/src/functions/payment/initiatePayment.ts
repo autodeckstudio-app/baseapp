@@ -33,6 +33,7 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
     try{checkedCombinedPayment(job.combinedPayment,job.totalAmount)}catch{throw new HttpsError("failed-precondition","Combined price changed. Review the booking before paying.")}
 
   }
+  if((job as ServiceJob & {cashReconciliationId?:string}).cashReconciliationId)throw new HttpsError('failed-precondition','Cash reconciliation is held. Do not collect again.');
   if(job.offlineSettlement)throw new HttpsError("failed-precondition","Actual offline receipts exist. Use the receipt balance, not an online payment link.");
 
   // Ownership: customer pays own job; studio/admin can initiate payment for
@@ -94,7 +95,7 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
   // existing payment instead of creating a duplicate.
   const claim = await db.runTransaction(async (tx) => {
     const freshJob=(await tx.get(db.collection(COLLECTIONS.jobs()).doc(data.jobId))).data() as ServiceJob | undefined;
-    if(!freshJob||freshJob.id!==job.id||freshJob.customerId!==job.customerId||freshJob.studioId!==job.studioId||freshJob.tenantId!==job.tenantId||freshJob.totalAmount!==job.totalAmount||freshJob.status==="CANCELLED"||freshJob.offlineSettlement)throw new HttpsError("failed-precondition","Job or receipt balance changed. Refresh before payment.");
+    if(!freshJob||freshJob.id!==job.id||freshJob.customerId!==job.customerId||freshJob.studioId!==job.studioId||freshJob.tenantId!==job.tenantId||freshJob.totalAmount!==job.totalAmount||freshJob.status==="CANCELLED"||freshJob.offlineSettlement||(freshJob as ServiceJob & {cashReconciliationId?:string}).cashReconciliationId)throw new HttpsError("failed-precondition","Job or receipt balance changed. Refresh before payment.");
     const basis=await readCombinedPaymentBasis(db,tx,freshJob);
     const dueAmount=basis?.balanceDuePaise??freshJob.totalAmount;
     if(!Number.isSafeInteger(dueAmount)||dueAmount<0||(basis?dueAmount===0:false))throw new HttpsError("failed-precondition","No verified payable balance remains.");

@@ -31,6 +31,8 @@ export type AuditAction =
   | "job.status_advanced"
   | "job.membership_covered"
   | "job.sealed"
+  | "payment.cash_received_held"
+  | "payment.cash_reconciled"
   | "payment.offline_receipt"
   | "payment.offline_returned"
   | "payment.recorded"

@@ -6,7 +6,7 @@ import { createStorySchema, updateStorySchema, deleteStorySchema } from "../../s
 const base = { studioId: "s", path: "t/stories/x.png", contentType: "image/png" };
 
 describe("story highlights are exactly the five", () => {
-  it("the list", () => { expect([...STORY_HIGHLIGHTS]).toEqual(["PPF", "Ceramic", "Detailing", "Washing", "Modifications"]); });
+  it("the list", () => { expect([...STORY_HIGHLIGHTS]).toEqual(["Washing", "Detailing", "Protection", "Garage", "Modifications"]); });
   it("create accepts only those titles", () => {
     for (const h of STORY_HIGHLIGHTS) expect(createStorySchema.safeParse({ ...base, highlightTitle: h }).success).toBe(true);
     expect(createStorySchema.safeParse({ ...base, highlightTitle: "Coatings" }).success).toBe(false);
@@ -28,3 +28,5 @@ describe("story highlights are exactly the five", () => {
     expect(s.indexOf("tx.delete(ref)")).toBeLessThan(s.indexOf(".delete({ ignoreNotFound"));
   });
 });
+
+it("legacy pins remain accepted without a backfill",()=>{for(const highlightTitle of ["PPF","Ceramic"]){expect(createStorySchema.safeParse({...base,highlightTitle}).success).toBe(true);expect(updateStorySchema.safeParse({storyId:"old",highlightTitle}).success).toBe(true)}});

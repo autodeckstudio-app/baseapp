@@ -1,35 +1,40 @@
-import { useEffect, useState } from "react";
-import { doc, getDoc } from "firebase/firestore";
+import { useEffect, useRef, useState } from "react";
+import { doc, onSnapshot } from "firebase/firestore";
 import { COLLECTIONS } from "@autodeck/database";
 import type { ServiceJob } from "@autodeck/core";
 import { db } from "../lib/firebase";
 import { jobCar, type VehicleLite } from "../lib/job-people";
 
-const vehicleCache = new Map<string, VehicleLite | null>();
-const customerCache = new Map<string, string | null>();
-
-/** Car and customer names for a list of jobs, so job cards say who and what. */
-export function useJobPeople(jobs: ServiceJob[]): { car: (j: ServiceJob) => string | undefined; customer: (j: ServiceJob) => string | undefined } {
-  const [, bump] = useState(0);
-  const key = jobs.map((j) => `${j.vehicleId}|${j.customerId}`).join(",");
-  useEffect(() => {
-    let alive = true;
-    const work: Promise<unknown>[] = [];
-    for (const j of jobs) {
-      if (j.vehicleId && !vehicleCache.has(j.vehicleId)) {
-        vehicleCache.set(j.vehicleId, null);
-        work.push(getDoc(doc(db, COLLECTIONS.vehicles(), j.vehicleId)).then((s) => { vehicleCache.set(j.vehicleId, s.exists() ? (s.data() as VehicleLite) : null); }).catch(() => { vehicleCache.delete(j.vehicleId); }));
-      }
-      if (j.customerId && !customerCache.has(j.customerId)) {
-        customerCache.set(j.customerId, null);
-        work.push(getDoc(doc(db, COLLECTIONS.customers(), j.customerId)).then((s) => { customerCache.set(j.customerId, s.exists() ? ((s.data() as { name?: string }).name ?? null) : null); }).catch(() => { customerCache.delete(j.customerId); }));
-      }
-    }
-    if (work.length) void Promise.all(work).then(() => { if (alive) bump((n) => n + 1); });
-    return () => { alive = false; };
-  }, [key]);
+/** Only the mounted feed's records are watched. No process-wide cache crosses accounts. */
+export function useJobPeople(jobs: ServiceJob[], owner: string | null, tenantId: string | null) {
+  const [source, setSource] = useState<{scope:string;vehicles:Record<string,VehicleLite>;customers:Record<string,string>} | null>(null);
+  const ids = JSON.stringify([...new Set(jobs.filter(j=>j.tenantId===tenantId).map(j=>`${j.vehicleId}|${j.customerId}`))].sort());
+  const scope = `${owner}:${ids}`;
+  const current = useRef(scope); current.current=scope;
+  useEffect(()=>{
+    setSource(null);
+    if(!owner||!tenantId)return;
+    let active=true;
+    const vehicles:Record<string,VehicleLite>={},customers:Record<string,string>={};
+    const publish=()=>{if(active&&current.current===scope)setSource({scope,vehicles:{...vehicles},customers:{...customers}})};
+    const pairs=JSON.parse(ids) as string[];
+    const vehicleIds=new Set(pairs.map(p=>p.split('|')[0]).filter(Boolean));
+    const customerIds=new Set(pairs.map(p=>p.split('|')[1]).filter(Boolean));
+    const stops=[...Array.from(vehicleIds,id=>onSnapshot(doc(db,COLLECTIONS.vehicles(),id!),snap=>{
+      if(!active||current.current!==scope)return;
+      const value=snap.exists()?snap.data():null;
+      if(value?.tenantId===tenantId)vehicles[id!]=value as VehicleLite;else delete vehicles[id!];publish();
+    },()=>{delete vehicles[id!];publish()})),...Array.from(customerIds,id=>onSnapshot(doc(db,COLLECTIONS.customers(),id!),snap=>{
+      if(!active||current.current!==scope)return;
+      const value=snap.exists()?snap.data():null;
+      if(value?.tenantId===tenantId&&typeof value.name==='string')customers[id!]=value.name;else delete customers[id!];publish();
+    },()=>{delete customers[id!];publish()}))];
+    publish();
+    return()=>{active=false;stops.forEach(stop=>stop())};
+  },[owner,tenantId,ids,scope]);
+  const known=source?.scope===scope?source:null;
   return {
-    car: (j) => jobCar(j, Object.fromEntries([...vehicleCache].map(([k, v]) => [k, v ?? undefined]))),
-    customer: (j) => customerCache.get(j.customerId) ?? undefined,
+    car:(job:ServiceJob)=>owner&&job.tenantId===tenantId?jobCar(job,known?.vehicles??{}):undefined,
+    customer:(job:ServiceJob)=>owner&&job.tenantId===tenantId?known?.customers[job.customerId]:undefined,
   };
 }

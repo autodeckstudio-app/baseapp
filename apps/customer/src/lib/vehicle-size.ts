@@ -1,3 +1,4 @@
+import {reviewedStartingPrice} from './reviewed-starting-prices';
 import {useForegroundRefresh,useForegroundNow} from '../hooks/useForegroundRefresh';
 import {priceCache,onPriceCacheScopeChange,PRICE_CACHE_MS} from './price-cache';
 import { getCatalogueDisplayTotals, cachedServiceTotal, priceLabel } from "./catalogue-service";
@@ -41,6 +42,7 @@ export function useVehiclePrices(services: Service[], category: VehicleCategory 
  * never the unadjusted base price. Without a car it is the entry price.
  */
 export function servicePriceText(sv: Service, category: VehicleCategory | null, prices: Record<string, number>): string | null {
+  const reviewed=reviewedStartingPrice(sv);if(reviewed)return reviewed.label;
   if (sv.priceOnRequest) return "Quote on request";
   const from = sv.priceFrom === true ? "From " : "";
   if (!category) return from + priceLabel(sv);

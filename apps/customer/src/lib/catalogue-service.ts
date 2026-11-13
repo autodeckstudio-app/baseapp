@@ -1,3 +1,4 @@
+import {reviewedStartingPrice} from './reviewed-starting-prices';
 import { customerOfferingVisible } from './customer-offering-visibility';
 import { httpsCallable } from "firebase/functions";
 import { auth, functions } from "./firebase";
@@ -152,6 +153,7 @@ export function cachedServiceTotal(serviceId: string, vehicleCategory: VehicleCa
   return priceCache.get(auth.currentUser?.uid ?? null, serviceId, vehicleCategory);
 }
 
-export function priceLabel(s: { priceOnRequest?: boolean; basePrice: number }): string {
+export function priceLabel(s: {id?:string;category?:string;active?:boolean;currency?:string; priceOnRequest?: boolean; basePrice: number }): string {
+  const reviewed=reviewedStartingPrice(s);if(reviewed)return reviewed.label;
   return s.priceOnRequest === true ? "Quote on request" : rupees(s.basePrice);
 }

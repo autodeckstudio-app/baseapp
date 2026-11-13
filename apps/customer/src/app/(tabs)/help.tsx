@@ -1,3 +1,4 @@
+import {useAuth} from '../../hooks/useAuth';
 import {useForegroundRefresh,useForegroundNow} from '../../hooks/useForegroundRefresh';
 // Help: call, WhatsApp, location, hours and a short FAQ.
 import { useEffect, useRef, useState } from "react";
@@ -22,19 +23,22 @@ export default function HelpScreen() {
   const { q: initialQuery, service: serviceName } = useLocalSearchParams<{ q?: string; service?: string }>();
   const [query, setQuery] = useState(typeof initialQuery === "string" ? initialQuery.slice(0,160) : "");
   const shown = searchFaq(FAQ, query);
-  const now=useForegroundNow("studio-help");
+  const auth=useAuth();
+  const owner=auth.status==="ready"?`${auth.claims.tenantId}:${auth.user.uid}`:null;
+  const now=useForegroundNow(owner);
   const [refreshTick,setRefreshTick]=useState(0);
-  const firstFocus=useRef(true);
-  useForegroundRefresh(()=>{if(firstFocus.current){firstFocus.current=false;return;}setRefreshTick(value=>value+1)},"studio-help");
-  const [liveHours, setLiveHours] = useState<string | null>(null);
-  const [liveOperatingHours, setLiveOperatingHours] = useState<LiveStudioInfo["operatingHours"] | null>(null);
-  useEffect(() => {
-    let alive = true;
-    void getStudioInfo(FIRST_STUDIO_ID).then((i) => { if (alive) { setLiveHours(i.operatingHours?.length ? formatHours(i.operatingHours) : null); setLiveOperatingHours(i.operatingHours?.length ? i.operatingHours : null); } }).catch(() => {if(alive){setLiveHours(null);setLiveOperatingHours(null)}});
-    return () => { alive = false; };
-  }, [refreshTick]);
-  const s = { ...STUDIO_INFO, hours: liveHours ?? STUDIO_INFO.hours };
-  const openNow = isOpenNow(liveOperatingHours, new Date(now));
+  const firstFocus=useRef<string|null>(null);
+  useForegroundRefresh(()=>{if(firstFocus.current!==owner){firstFocus.current=owner;return;}setRefreshTick(value=>value+1)},owner);
+  const [liveSource,setLiveSource]=useState<{owner:string|null;info:LiveStudioInfo|null}>({owner:null,info:null});
+  const liveInfo=liveSource.owner===owner?liveSource.info:null;
+  useEffect(()=>{
+    if(!owner)return;
+    let active=true;
+    void getStudioInfo(FIRST_STUDIO_ID).then(info=>{if(active)setLiveSource({owner,info})}).catch(()=>{if(active)setLiveSource({owner,info:null})});
+    return()=>{active=false};
+  },[owner,refreshTick]);
+  const s={...STUDIO_INFO,hours:liveInfo?.operatingHours?.length?formatHours(liveInfo.operatingHours):"Opening hours unavailable"};
+  const openNow=isOpenNow(liveInfo?.operatingHours,new Date(now),liveInfo?.timezone,liveInfo?.holidays??[]);
   const hasContact = Boolean(s.phone || s.whatsapp);
   return (
     <Screen appBar="Help & contact">

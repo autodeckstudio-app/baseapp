@@ -185,3 +185,16 @@ describe("processProviderEvent", () => {
     expect(again.outcome).toBe("already_final");
   });
 });
+
+// Cash reconciliation is a money-received hold, not permission to drop online captures.
+it.each(['held','settled'])('late online capture during cash %s goes to review with no second invoice',async state=>{
+ const fixture:any=seed();fixture.jobs.job1.cashReconciliationId='cashreceipt_123456';
+ if(state==='settled'){fixture.jobs.job1.offlineSettlement={appliedPaise:100000,officeReturnDuePaise:0,receiptCount:1};fixture.jobs.job1.paymentStatus='partial';fixture.payments.pay1.status='cancelled';}
+ const {db,data}=fakeFirestore(fixture);
+ const r=await processProviderEvent(db,ev(linkPaid('cash-'+state),'evt_cash_'+state));
+ expect(r.outcome).toBe('completed');
+ expect(data.payments!.pay1).toMatchObject({status:'completed',invoiceReviewNeeded:true,razorpayPaymentId:'pay_abc'});
+ expect(Object.keys(data.invoices??{})).toHaveLength(0);
+ expect(data.jobs!.job1!.paymentStatus).toBe(state==='held'?'unpaid':'partial');
+ expect(Object.keys(data.refundOutbox??{})).toHaveLength(0);
+});

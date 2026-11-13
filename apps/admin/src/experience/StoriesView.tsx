@@ -5,7 +5,7 @@
 // move a post to a highlight, hide it, or delete it (after a confirm). New posts come from the full-screen New story sheet.
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { STORY_HIGHLIGHTS, type StoryHighlight, type StoryView } from "@autodeck/core";
+import { STORY_HIGHLIGHTS, storyHighlightCategory, type StoryHighlight, type StoryView } from "@autodeck/core";
 import { PageHead } from "./Office";
 
 const MAX_MB = 50;
@@ -20,7 +20,7 @@ function timeLeft(s: StoryView): string {
   const m = Math.floor((left % 3600e3) / 60e3);
   return h > 0 ? `${h}h ${m}m left` : `${Math.max(1, m)}m left`;
 }
-const asHighlight = (t: string | null): StoryHighlight | null => (STORY_HIGHLIGHTS as readonly string[]).includes(t ?? "") ? (t as StoryHighlight) : null;
+const asHighlight = storyHighlightCategory;
 
 function Media({ s, fit }: { s: StoryView; fit: "cover" | "contain" }) {
   const style = { width: "100%", height: "100%", objectFit: fit } as const;
@@ -34,7 +34,7 @@ function Tap({ label, onClick, children }: { label: string; onClick: () => void;
   return <div role="button" tabIndex={0} aria-label={label} onClick={onClick} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }} style={{ display: "grid", justifyItems: "center", gap: 6, width: 76, cursor: "pointer", flex: "0 0 auto" }}>{children}</div>;
 }
 
-const overlay = { position: "fixed", inset: 0, zIndex: 1000, background: "#fff", display: "flex", flexDirection: "column" } as const;
+const overlay = { position: "fixed", inset: 0, zIndex: 1000, background: "var(--gl-bg, #F7F5F0)", display: "flex", flexDirection: "column" } as const;
 
 export function StoriesView(p: {
   stories: StoryView[];
@@ -98,12 +98,12 @@ export function StoriesView(p: {
       </section>
 
       {adding && typeof document !== "undefined" ? createPortal(
-        <div style={overlay} role="dialog" aria-modal="true" aria-label="New story">
+        <div className="ax-shell ax-story-dialog" style={overlay} role="dialog" aria-modal="true" aria-label="New story">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px" }}>
             <strong style={{ fontSize: 18 }}>New story</strong>
             <button type="button" className="ax-button" onClick={() => { setAdding(false); setFile(null); setCaption(""); setCollection(""); }}>Close</button>
           </div>
-          <div className="ax-form-section" style={{ padding: "0 20px 24px", maxWidth: 520, width: "100%", margin: "0 auto", overflowY: "auto" }}>
+          <div className="ax-form-section" style={{ padding: "20px 20px 24px", maxWidth: 520, width: "100%", alignSelf:"center", overflowY: "auto", boxSizing:"border-box" }}>
             <input type="file" accept="image/jpeg,image/png,image/webp,video/mp4" aria-label="Photo or video" disabled={p.busy} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
             {bad && <p className="ax-note" role="alert">Use a JPG, PNG, WebP or MP4 under {MAX_MB} MB.</p>}
             <input value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Caption (optional)" aria-label="Caption" maxLength={200} disabled={p.busy} />
@@ -117,7 +117,7 @@ export function StoriesView(p: {
         </div>, document.body) : null}
 
       {open && typeof document !== "undefined" ? createPortal(
-        <div style={overlay} role="dialog" aria-modal="true" aria-label={`${open} stories`}>
+        <div className="ax-shell ax-story-dialog" style={overlay} role="dialog" aria-modal="true" aria-label={`${open} stories`}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px" }}>
             <strong style={{ fontSize: 18 }}>{open}{posts.length ? ` (${Math.min(index, posts.length - 1) + 1} of ${posts.length})` : ""}</strong>
             <button type="button" className="ax-button" onClick={() => setOpen(null)}>Close</button>

@@ -207,9 +207,9 @@ export function PaymentsView(p: {
         eyebrow="Money"
         title="Payments"
         kpis={[
-          { value: formatPaise(takenToday), label: "Taken today", tone: "premium" },
-          { value: waiting, label: "Awaiting confirmation", tone: waiting ? "accent" : undefined },
-          { value: failed, label: "Failed", tone: failed ? "danger" : undefined },
+          { value: formatPaise(takenToday), label: "Taken today (loaded)", tone: "premium" },
+          { value: waiting, label: "Awaiting confirmation (loaded)", tone: waiting ? "accent" : undefined },
+          { value: failed, label: "Failed (loaded)", tone: failed ? "danger" : undefined },
         ]}
       />
       <Toolbar count={{ shown: rows.length, total: p.payments.length }}>
@@ -223,7 +223,7 @@ export function PaymentsView(p: {
         columns={cols}
         loading={p.loading}
         error={p.error}
-        empty={p.payments.length ? { title: "Nothing matches these filters", body: "Clear the search or pick a different status." } : { title: "No payments yet", body: "Payments show up here as soon as they are taken at the counter or online." }}
+        empty={p.payments.length ? { title: "Nothing matches these filters", body: "Clear the search or pick a different status." } : { title: "No payments in this loaded view", body: "This is a bounded live feed, not a complete payment history." }}
       />
     </div>
   );
