@@ -377,10 +377,10 @@ GAURI_UI_PATHS
 fi
 
 # Pinned confirm-CTA and pickup-note correction: exact parent + complete path list, Customer only.
-if [ "${VERCEL_GIT_COMMIT_REF:-}" = fix/confirm-cta-pickup-note-20261113 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$(git rev-parse --verify HEAD^ 2>/dev/null || true)" = b18d05a13deb1f2910b226398753f2b703782c70 ]; }; then
+fix_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = fix/confirm-cta-pickup-note-20261113 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$fix_parent" = b18d05a13deb1f2910b226398753f2b703782c70 ]; }; then
   root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0
   cd "$root" || exit 0
-  fix_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
   [ "$fix_parent" = b18d05a13deb1f2910b226398753f2b703782c70 ] || { printf 'Confirm CTA/note fix wrong parent: SKIP (%s)\n' "$app"; exit 0; }
   actual="$(git diff --name-only "$fix_parent" HEAD 2>/dev/null)" || exit 0
   expected=$(cat <<'CONFIRM_FIX_PATHS'
