@@ -239,7 +239,7 @@ export default function HomeScreen() {
   const vehicles = [m.activeVehicle, ...m.otherVehicles].filter(Boolean) as NonNullable<typeof m.activeVehicle>[];
 
   return (
-    <Screen>
+    <Screen bottomClearance={80}>
       <HomeView
         greeting={greetingFor(new Date(), m.customer.firstName)}
         initial={(m.customer.firstName ?? auth.user.displayName ?? "A").trim().charAt(0).toUpperCase() || "A"}

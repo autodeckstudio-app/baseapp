@@ -147,6 +147,7 @@ export function Screen({
   appBar,
   onBack,
   scrollIdentity = "screen",
+  bottomClearance = 96,
 }: {
   /** Shared tab header: avatar, screen name, bell. Pass the screen name. */
   appBar?: string;
@@ -154,6 +155,8 @@ export function Screen({
   onBack?: (() => void) | undefined;
   /** In-screen route identity, e.g. a catalogue category, each retains its own offset. */
   scrollIdentity?: string;
+  /** Clearance above the floating navigation, including its raised Home button. */
+  bottomClearance?: number;
   /** Show the photo backdrop behind the header (use with CanvasTitle). */
   canvas?: boolean;
   children: ReactNode;
@@ -188,7 +191,7 @@ export function Screen({
   const myTab = segs[0] === "(tabs)" ? (segs[1] ?? "index") : "";
   useEffect(() => onTabPressed((t) => { if (t === myTab) {restorePending.current=false;offsets.current.set(activeScrollIdentity.current,0);scrollRef.current?.scrollTo({ y: 0, animated: true });} }), [myTab]);
   const body = (
-    <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: top ? space.gap : space.inset, paddingBottom: (Platform.OS === "web" ? "calc(96px + env(safe-area-inset-bottom))" : 96) as unknown as number, gap: 20 }}>
+    <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: top ? space.gap : space.inset, paddingBottom: (Platform.OS === "web" ? `calc(${bottomClearance}px + env(safe-area-inset-bottom))` : bottomClearance) as unknown as number, gap: 20 }}>
       {bar && !top ? <AppBar title={bar.title} onBack={bar.back} /> : null}
       {header}
       {children}

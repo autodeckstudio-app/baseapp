@@ -10,6 +10,8 @@ import { HomeShowroom } from './HomeShowroom';
 import { textStyle } from './kit';
 import{HomeOriginalTop}from './HomeOriginalTop';
 import { raised } from '../lib/raised';
+import { NavIcon } from './NavIcon';
+import { StudioFooterMockup } from './StudioFooterMockup';
 
 const gradient = (value: string): ViewStyle => Platform.OS === 'web' ? { backgroundImage: value } as ViewStyle : {};
 const display = (size: number, color: string): TextStyle => ({ ...textStyle(size >= 25 ? 'title' : 'heading'), fontSize: size, lineHeight: Math.round(size * 1.3), color });
@@ -76,9 +78,10 @@ export function HomeScene({ p }: { p: HomeViewProps }) {
       </View>
       <CampaignSlot campaign={p.campaign} />
       {p.carsList?.length && p.onOpenCar && p.onBuyCar && p.onSellCar ? <HomeShowroom cars={p.carsList} onOpen={p.onOpenCar} onBuy={p.onBuyCar} onSell={p.onSellCar} /> : null}
-      <View style={{ borderTopWidth: 1, borderColor: line, paddingTop: 18, marginTop: 26, paddingBottom: 20 }}>
+      <View style={{ borderTopWidth: 1, borderColor: line, paddingTop: 18, marginTop: 26, paddingBottom: 0 }}>
         <Pressable accessibilityRole="button" accessibilityLabel={`The studio, ${p.studio.hours}${p.studio.openText ? `, ${p.studio.openText}` : ''}. Open the studio page`} onPress={p.onStudio} style={{ minHeight: 64, gap: 8 }}><View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}><Text style={display(18, ink)}>The studio</Text>{p.studio.openText ? <Text style={{ ...textStyle('body'),  color: muted, fontSize: 12, flexShrink: 1 }}>{p.studio.openText}</Text> : null}</View><Text style={{ ...textStyle('body'),  color: muted, fontSize: 12 }}>{p.studio.hours}</Text></Pressable>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', columnGap: 12 }}>{p.quick?.map(q => <Link key={q.key} title={q.label} onPress={q.onPress} color={muted} underline={false} />)}{p.social?.map(s => <Link key={s.key} title={s.icon === 'channel' ? 'Channel' : s.title} onPress={s.onPress} color={muted} underline={false} />)}</View>
+        <View testID="home-studio-contacts" style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, paddingTop: 12 }}>{p.quick?.map(q => <Pressable key={q.key} accessibilityRole="button" accessibilityLabel={q.label} onPress={q.onPress} style={({ pressed }) => ({ width: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center', opacity: pressed ? .65 : 1 })}><NavIcon name={q.icon} color={ink} size={24} cut={colors.surface} /></Pressable>)}{p.social?.map(s => <Pressable key={s.key} accessibilityRole="button" accessibilityLabel={s.icon === 'channel' ? 'Channel' : s.title} onPress={s.onPress} style={({ pressed }) => ({ width: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center', opacity: pressed ? .65 : 1 })}><NavIcon name={s.icon} color={ink} size={24} cut={colors.surface} /></Pressable>)}</View>
+        <StudioFooterMockup />
       </View>
     </View>
   </View>;
