@@ -31,8 +31,9 @@ function formatWhen(iso: string): string {
 }
 
 export default function ApprovalDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, returnTo } = useLocalSearchParams<{ id: string; returnTo?: string }>();
   const router = useRouter();
+  const originBack = returnTo === "home" ? () => router.navigate("/(tabs)") : undefined;
   const [retryTick,setRetryTick] = useState(0);
   const [approval, setApproval] = useState<ApprovalRequest | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -90,14 +91,14 @@ export default function ApprovalDetailScreen() {
   if (loading) return <Loading label="Opening the request" />;
   if (error) {
     return (
-      <Screen>
+      <Screen onBack={originBack}>
         <Notice title="Can't load this request" body={error} action={<Button icon="refresh" label="Retry" onPress={() => setRetryTick(n=>n+1)} />} />
       </Screen>
     );
   }
   if (!approval) {
     return (
-      <Screen>
+      <Screen onBack={originBack}>
         <Notice title="Approval not found" body="It may have been withdrawn." action={<Button label="Go back" onPress={() => router.back()} />} />
       </Screen>
     );
@@ -106,7 +107,7 @@ export default function ApprovalDetailScreen() {
   const isPending = approval.status === "pending";
 
   return (
-    <Screen
+    <Screen onBack={originBack}
       header={
         <View style={{ gap: space.breath }}>
           <Chip label={approval.status} tone={STATUS_TONE[approval.status] ?? "neutral"} />

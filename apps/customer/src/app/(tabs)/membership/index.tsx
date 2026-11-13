@@ -1,7 +1,7 @@
 import { metrics } from "../../../lib/metrics";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Pressable, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import type { Membership, MembershipPlan } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Button, Chip, Kicker, Loading, Notice, PageHeader, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
@@ -16,6 +16,8 @@ import { useAuth } from "../../../hooks/useAuth";
 
 export default function MembershipScreen() {
   const router = useRouter();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
+  const originBack = returnTo === "home" ? () => router.navigate("/(tabs)") : undefined;
   const auth = useAuth();
   const [retryTick,setRetryTick]=useState(0);const planGeneration=useRef(0);
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
@@ -84,7 +86,7 @@ export default function MembershipScreen() {
   if (loading) return <Loading label="Opening membership" />;
   if (error) {
     return (
-      <Screen>
+      <Screen onBack={originBack}>
         <Notice
           title="Could not load membership"
           body={error}
@@ -100,7 +102,7 @@ export default function MembershipScreen() {
   const rupeesOf = (paise: number) => rupees(paise);
 
   return (
-    <Screen
+    <Screen onBack={originBack}
       header={
         <PageHeader kicker="Membership" title={current ? "Your membership" : "Regular washes at a better rate"} sub={current ? null : "Pick a plan and pay online."} />
       }

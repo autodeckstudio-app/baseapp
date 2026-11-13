@@ -1,3 +1,4 @@
+import { invoiceHref } from "../../lib/invoice-display";
 import {homeServiceTarget} from "../../lib/home-service-navigation";
 import { RateCard } from "../../ui/RateCard";
 import { listOwnerKey } from "../../lib/owner-key";
@@ -211,6 +212,8 @@ export default function HomeScreen() {
         return router.push("/(tabs)/garage/add");
       case "book":
         return router.navigate("/(tabs)/catalogue");
+      case "payInvoice":
+        return a.targetId ? router.push(invoiceHref(a.targetId)) : router.navigate("/(tabs)/bookings");
       case "viewBooking":
       case "followVisit":
         return router.push(`/(tabs)/bookings/${a.targetId}`);
@@ -224,11 +227,13 @@ export default function HomeScreen() {
   const liveId = liveTrackTarget(m.liveJob, null);
   const nextId = liveTrackTarget(null, m.upcomingBooking?.id);
   const live = m.pendingApproval
-    ? { kicker: "Needs your OK", title: m.pendingApproval.serviceName, detail: m.pendingApproval.reason, onPress: () => router.push(`/(tabs)/approvals/${m.pendingApproval!.id}`) }
+    ? { kicker: "Needs your OK", title: m.pendingApproval.serviceName, detail: m.pendingApproval.reason, onPress: () => router.push({ pathname: "/(tabs)/approvals/[id]", params: { id: m.pendingApproval!.id, returnTo: "home" } }) }
+    : m.dueInvoice
+      ? { kicker: "Payment due", title: "View your bill", detail: "Review the issued invoice", onPress: () => router.push({ ...invoiceHref(m.dueInvoice!.id), params: { invoiceId: m.dueInvoice!.id, returnTo: "home" } }) }
     : m.liveJob
-      ? { kicker: "Live now", title: JOB_STAGE[m.liveJob.status] ?? "In the studio", detail: sinceLabel(m.liveJob.scheduledAt), ready: m.liveJob.estimatedEndAt && new Date(m.liveJob.estimatedEndAt).getTime() > Date.now() ? new Date(m.liveJob.estimatedEndAt).toLocaleString("en-IN", { weekday: "short", hour: "numeric", minute: "2-digit" }) : null, onPress: () => router.push(liveId ? `/(tabs)/bookings/${liveId}` : "/(tabs)/bookings") }
+      ? { kicker: "Live now", title: JOB_STAGE[m.liveJob.status] ?? "In the studio", detail: sinceLabel(m.liveJob.scheduledAt), ready: m.liveJob.estimatedEndAt && new Date(m.liveJob.estimatedEndAt).getTime() > Date.now() ? new Date(m.liveJob.estimatedEndAt).toLocaleString("en-IN", { weekday: "short", hour: "numeric", minute: "2-digit" }) : null, onPress: () => router.push(liveId ? { pathname: "/(tabs)/bookings/[id]", params: { id: liveId, returnTo: "home" } } : "/(tabs)/bookings") }
       : m.upcomingBooking
-        ? { kicker: "Next visit", title: `${formatDateShort(m.upcomingBooking.scheduledDate)} \u00b7 ${m.upcomingBooking.scheduledTime}`, detail: m.upcomingBooking.status === "PENDING" ? "Waiting for the studio to confirm" : "Confirmed", onPress: () => router.push(nextId ? `/(tabs)/bookings/${nextId}` : "/(tabs)/bookings") }
+        ? { kicker: "Next visit", title: `${formatDateShort(m.upcomingBooking.scheduledDate)} \u00b7 ${m.upcomingBooking.scheduledTime}`, detail: m.upcomingBooking.status === "PENDING" ? "Waiting for the studio to confirm" : "Confirmed", onPress: () => router.push(nextId ? { pathname: "/(tabs)/bookings/[id]", params: { id: nextId, returnTo: "home" } } : "/(tabs)/bookings") }
         : { kicker: copy.kicker, title: m.primaryAction.label, detail: copy.line, onPress: act, idle: true };
   const rateB = rateCandidate(past);
   const vehicles = [m.activeVehicle, ...m.otherVehicles].filter(Boolean) as NonNullable<typeof m.activeVehicle>[];
@@ -261,7 +266,7 @@ export default function HomeScreen() {
         drawer={buildDrawerItems((path) => router.push(path as never), myCode)}
         onBook={() => router.navigate("/(tabs)/catalogue")}
         onStudio={() => router.navigate("/(tabs)/studio")}
-        onMembership={() => router.navigate("/(tabs)/membership")}
+        onMembership={() => router.push({ pathname: "/(tabs)/membership", params: { returnTo: "home" } })}
         onVisits={() => router.navigate("/(tabs)/bookings")}
         onShare={() => void Share.share({ message: referralShareMessage(myCode) }).catch(() => undefined)}
         unread={unread}
@@ -270,16 +275,17 @@ export default function HomeScreen() {
         reminders={reminders}
         live={live}
         rebook={(() => { const b = lastCompletedService(past); const sv = b ? catalogue.find((x) => x.id === b.serviceId) : undefined; return b && sv && !sv.priceOnRequest ? { serviceName: sv.name, onPress: () => router.push(`/(tabs)/book/${sv.id}`) } : null; })()}
-        stories={groups.length > 0 ? <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, seenKeyOf(g)])); }} /> : null}
+        stories={groups.length > 0 ? <StoryCircles compact groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, seenKeyOf(g)])); }} /> : null}
         banner={<>{home.error ? <Notice title="Some details are unavailable" body={home.error} action={<Button kind="quiet" icon="refresh" label="Retry" onPress={home.refresh} />} /> : null}{rateB ? <RateCard key={rateB.id} bookingId={rateB.id} serviceName={catalogue.find((x) => x.id === rateB.serviceId)?.name ?? "visit"} /> : null}</>}
         onSearch={() => router.navigate("/(tabs)/catalogue")}
         onBell={() => router.navigate("/(tabs)/notifications")}
         onAllServices={() => router.navigate("/(tabs)/catalogue")}
         onCategory={() => undefined}
         onService={(sv, key) => router.push(homeServiceTarget(sv, key) as never)}
-        onCar={(c) => router.push(`/(tabs)/garage/${c.id}`)}
+        onCar={(c) => router.push({ pathname: "/(tabs)/garage/[id]", params: { id: c.id, returnTo: "home" } })}
         onAddCar={() => router.push("/(tabs)/garage/add")}
-        onReminders={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : undefined)}
+        onGarage={() => router.navigate("/(tabs)/garage")}
+        onReminders={() => (car ? router.push({ pathname: "/(tabs)/garage/[id]", params: { id: car.id, returnTo: "home" } }) : undefined)}
       />
       <StoryViewer
         identityKey={ready ? `${auth.user.uid}:${auth.claims.tenantId}` : null}

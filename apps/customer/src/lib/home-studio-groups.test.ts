@@ -2,18 +2,14 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 const read = (p: string) => readFileSync(`${__dirname}/../${p}`, "utf8");
 describe("Home studio, club and follow groups", () => {
-  const v = read("ui/HomeView.tsx");
-  it("is one studio photo card: quick actions and social rows inside it, no separate sections", () => {
-    expect(v).toContain('title="Club"');
-    expect(v).not.toContain('title="The studio"');
-    expect(v).not.toContain('title="Follow us"');
-    expect(v).not.toContain('title="Studio and club"');
-    // The studio card keeps name/hours/action, with address hidden per current screenshot request.
-    expect(v).toContain('accessibilityLabel={`${STUDIO_INFO.name}, ${p.studio.hours}');
-    expect(v).toContain('Open the studio page`}');
-    expect(v).toContain("sceneImagery.studio");
-    expect(v.match(/p\.quick\?\.length/g)?.length).toBe(1);
-    expect(v.match(/\(p\.social \?\? \[\]\)\.length/g)?.length).toBe(1);
+  const v = read("ui/HomeScene.tsx");
+  it("keeps studio hours and contacts in a quiet unframed close", () => {
+    expect(v).toContain('The studio, ${p.studio.hours}');
+    expect(v).toContain('Open the studio page');
+    expect(v).toContain('p.quick?.map');
+    expect(v).toContain('p.social?.map');
+    expect(v).not.toContain('sceneImagery.studio');
+    expect(v).not.toContain('Follow us');
   });
   it("call, WhatsApp, Instagram, channel and directions each have their own icon", () => {
     const art = read("ui/NavIcon.tsx");
@@ -28,4 +24,4 @@ describe("Home studio, club and follow groups", () => {
   it("legacy phone name maps to call, not the chat bubble", () => expect(read("ui/NavIcon.tsx")).toContain('name === "phone") return "call"'));
 });
 
-it("home studio card omits address only, canonical help/directions source remains",()=>{const home=read("ui/HomeView.tsx");expect(home).not.toContain("{p.studio.address}");expect(home).toContain("p.studio.hours");expect(home).toContain("onPress={q.onPress}");});
+it("home studio card omits address only, canonical help/directions source remains",()=>{const home=read("ui/HomeScene.tsx");expect(home).not.toContain("{p.studio.address}");expect(home).toContain("p.studio.hours");expect(home).toContain("onPress={q.onPress}");});
