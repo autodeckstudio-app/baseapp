@@ -115,7 +115,7 @@ function switchTab(el: ReactTestRenderer, label: string) {
   node.props.onPress();
 }
 function press(el: ReactTestRenderer, label: string) {
-  const node = el.root.findAll((n) => n.props?.label === label && typeof n.props?.onPress === "function")[0];
+  const node = el.root.findAll((n) => (n.props?.label === label || n.props?.accessibilityLabel === label) && typeof n.props?.onPress === "function")[0];
   if (!node) throw new Error(`no pressable labelled ${label}`);
   node.props.onPress();
 }
