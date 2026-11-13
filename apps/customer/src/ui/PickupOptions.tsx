@@ -2,7 +2,6 @@ import { Platform, Pressable, View, type ViewStyle } from "react-native";
 import { useExperienceTheme, useReduceTransparency } from "@autodeck/ui/native";
 import { material } from "@autodeck/ui/theme";
 import { T } from "./kit";
-import { PICKUP_COMPACT_POLICY } from "../lib/pickup-policy";
 export type PickupOption = "pickup" | "drop" | "both";
 const OPTIONS: {value:PickupOption;label:string}[] = [
   {value:"pickup",label:"Pickup"},
@@ -20,6 +19,5 @@ export function PickupOptions({value,onChange}:{value:PickupOption|null;onChange
         return {flex:1,minWidth:0,minHeight:48,paddingHorizontal:6,paddingVertical:12,borderRadius:24,borderWidth:1,borderColor:value===o.value?"rgba(194,84,10,.5)":m.edge,backgroundColor:m.fallback,...(Platform.OS==="web"?m.web as ViewStyle:{}),alignItems:"center",justifyContent:"center",...(value===o.value?{borderColor:"rgba(194,84,10,.5)"}:{})};
       }}><T role="bodyStrong" numberOfLines={1} style={{fontSize:14,lineHeight:20,fontWeight:"600",letterSpacing:0,textAlign:"center",includeFontPadding:false,textAlignVertical:"center",flexShrink:1}}>{o.label}</T></Pressable>)}
     </View>
-    {value?<T role="caption" tone="secondary">{PICKUP_COMPACT_POLICY}</T>:null}
   </View>;
 }
