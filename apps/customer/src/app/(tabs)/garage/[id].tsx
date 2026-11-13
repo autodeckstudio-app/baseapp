@@ -1,3 +1,4 @@
+import{GarageBookingRow}from"../../../ui/GarageBookingRow";
 import { warrantyDisplay } from "@autodeck/core";
 import{useSegmentSwipe}from"../../../lib/segment-swipe";
 import { validAppliedDate, todayStudioDate } from "../../../lib/applied-date";
@@ -602,14 +603,14 @@ export default function VehicleDetailScreen() {
             <Kicker>Bookings</Kicker>
             <T role="caption" tone="tertiary">{countLabel(upcomingBookings.length, "booking", "bookings")}</T>
           </View>
-          <Pane pad="gap">
+          <Pane pad="none" style={{paddingHorizontal:16,paddingVertical:2}}>
             {upcomingBookings.map((b, i) => (
-              <Row
+              <GarageBookingRow
                 key={b.id}
                 title={`${formatDate(b.scheduledDate)} at ${b.scheduledTime}`}
                 detail={(b.lines ?? []).map((l) => l.name).filter(Boolean).join(" + ") || undefined}
                 onPress={() => router.push(`/(tabs)/bookings/${b.id}`)}
-                trailing={<Chip label={b.status.replace(/_/g, " ")} tone={b.status === "CONFIRMED" || b.status === "ACTIVE" ? "premium" : "neutral"} />}
+                status={b.status}
                 last={i === upcomingBookings.length - 1}
               />
             ))}
