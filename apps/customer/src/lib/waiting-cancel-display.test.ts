@@ -11,7 +11,7 @@ describe("waiting cancellation UI source and policy guards",()=>{
   const s=source("../app/(tabs)/bookings/[id].tsx");
   expect(s).toContain('if (!result.cancellationPending) setBooking');
   expect(s).toContain('const canPay = !noPaymentDue&&!membershipCoveredLabel(booking) && !waitingCancel');
-  expect(s).toContain('{!noPaymentDue&&!waitingCancel && paymentIsCurrent && (!payment || payment.status === "failed" || payment.status === "cancelled") && booking.status === "PENDING"');
+  expect(s).toContain('{!noPaymentDue&&!waitingCancel && !awaitingLinkId && paymentIsCurrent && (!payment || payment.status === "failed" || payment.status === "cancelled") && booking.status === "PENDING"');
   expect(s).toContain('const showRescheduleSection = placed !== "1" && (!job||job.status==="PENDING_VEHICLE") && !waitingCancel');
   expect(s).toContain('Held while payment is checked.');
   expect(s).toContain('Not cancelled yet.');

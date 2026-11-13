@@ -10,3 +10,9 @@ function resumeAmountMatches(job:ServiceJob,payment:Payment):boolean{
  const settled=job.combinedSettlement;return job.paymentStatus==='partial'&&Boolean(settled?.advancePaymentId)&&basis.advancePaymentId===settled?.advancePaymentId&&basis.advanceCapturedPaise===cp.payNowPaise&&settled?.advanceCapturedPaise===cp.payNowPaise&&settled?.balanceDuePaise===cp.balancePaise&&basis.balanceDuePaise===cp.balancePaise&&payment.amount===cp.balancePaise;
  }catch{return false}
 }
+
+/** Existing booking advances are not job payments. Only a live exact binding can resume. */
+export function canResumeBookingAdvance({booking,payment,ready,now=Date.now()}:{booking:{id:string;customerId:string;tenantId:string;studioId:string;status:string;paymentStatus:string;advancePaymentId?:string|null;holdExpiresAt?:string|null;combinedPayment?:{choice:string;payNowPaise:number}}|null;payment:Payment|null;ready:boolean;now?:number}) {
+ if(!ready||!booking||!payment||booking.status!=="PENDING"||booking.paymentStatus!=="unpaid"||booking.combinedPayment?.choice!=="advance20"||!booking.holdExpiresAt||Date.parse(booking.holdExpiresAt)<=now||!Number.isFinite(Date.parse(booking.holdExpiresAt))||payment.id!==booking.advancePaymentId||payment.targetType!=="booking"||payment.jobId!==null||payment.bookingId!==booking.id||payment.customerId!==booking.customerId||payment.tenantId!==booking.tenantId||payment.studioId!==booking.studioId||payment.amount!==booking.combinedPayment.payNowPaise||payment.status!=="pending"||payment.method!=="razorpay_payment_link"||payment.currency!=="INR"||!payment.paymentUrl)return false;
+ try{const u=new URL(payment.paymentUrl);return u.protocol==="https:"&&(!u.port||u.port==="443")&&!u.username&&!u.password&&["rzp.io","razorpay.com"].some(h=>u.hostname===h||u.hostname.endsWith("."+h));}catch{return false;}
+}

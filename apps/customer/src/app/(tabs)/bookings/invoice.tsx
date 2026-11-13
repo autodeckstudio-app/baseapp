@@ -125,6 +125,7 @@ export default function InvoiceScreen() {
         </View>
       </Pane>
       <HorizonInvoice html={buildInvoiceHtml({ ...docInput, appearance: "screen" })} />
+      <View testID="invoice-actions" style={{flexDirection:"row",alignItems:"center",gap:12,flexWrap:"wrap"}}>
       <Button icon="download" label="Download PDF" onPress={() => printInvoiceHtml(buildInvoiceHtml(docInput))} />
       <Button kind="quiet" icon="share" label="Share" onPress={() => {
         const text = invoiceShareText({ number: invoice.invoiceNumber, totalPaise: invoice.total, studioName: STUDIO_INFO.name, studioPhone: STUDIO_INFO.phone });
@@ -133,6 +134,7 @@ export default function InvoiceScreen() {
         if (nav?.share) void nav.share({ title: `Invoice ${invoice.invoiceNumber}`, text }).catch(() => undefined);
         else void Linking.openURL(whatsappShareUrl(text));
       }} />
+      </View>
     </Screen>
   );
 

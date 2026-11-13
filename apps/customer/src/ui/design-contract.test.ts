@@ -135,7 +135,7 @@ describe("sizes come from one rulebook",()=>{
     expect(read("src/ui/kit.tsx")).toContain("calc(96px + env(safe-area-inset-bottom))");
   });
   it("does not leave a tall empty car panel when there is no photo",()=>{
-    const home=read("src/ui/HomeScene.tsx");expect(home).toContain("{car ? <Pressable");expect(home).toContain("<CategoryCarImage");expect(home).not.toContain("NO PHOTO YET");
+    const home=read("src/ui/CarChips.tsx");expect(home).toContain("const framed = !!car.vehicle?.photoUrl");expect(home).toContain("{framed ? <View");expect(home).toContain("Add a photo from the car page");expect(home).not.toContain("NO PHOTO YET");
   });
 });
 describe("surfaces share one radius and one padding",()=>{
@@ -751,7 +751,7 @@ describe("visit history rows: compact date block, subtle status badge and a smal
 });
 
 describe("Home scene hierarchy",()=>{
- it("one personal stage precedes visual services, exact Club heading and compact showroom",()=>{const h=read("src/ui/HomeScene.tsx");expect(h.indexOf('home-personal-stage')).toBeLessThan(h.indexOf('Complete car care.'));expect(h.indexOf('home-state-dock')).toBeLessThan(h.indexOf('home-service-triad'));expect(h).toContain('All under one roof.');expect(h).toContain('>Make care a habit</Text>');expect(h).not.toContain('<KenBurns');});
+ it("one personal stage precedes visual services, exact Club heading and compact showroom",()=>{const h=read("src/ui/HomeScene.tsx");expect(h.indexOf('<HomeOriginalTop')).toBeLessThan(h.indexOf('home-personal-stage'));expect(h.indexOf('home-state-dock')).toBeLessThan(h.indexOf('home-service-triad'));expect(read('src/ui/HomeOriginalTop.tsx')).toContain('All under one roof.');expect(h).toContain('>Make care a habit</Text>');expect(h).not.toContain('<KenBurns');});
 });
 
 describe("Home ambient light is brand orange at low opacity",()=>{

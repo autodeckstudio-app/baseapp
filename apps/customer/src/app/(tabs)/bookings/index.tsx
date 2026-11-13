@@ -1,7 +1,7 @@
 import { cancellationErrorMessage } from "../../../lib/cancellation-error";
 import { metrics } from "../../../lib/metrics";
 import { bookingSections } from "../../../lib/booking-sections";
-import { useExperienceTheme } from "@autodeck/ui/native";
+import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 // Bookings: what's coming first, then history.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
@@ -209,10 +209,9 @@ export default function BookingsScreen() {
       {seg === "upcoming" && next ? (
         <View style={{ gap: space.line }}>
           <SectionTitle>Next visit</SectionTitle>
-          <NextVisitHero date={next.scheduledDate} today={todayIst} time={next.scheduledTime} title={visitTitle(nameOf(next))} car={nextCar ? `${nextCar.make} ${nextCar.model}` : "Car"} status={isBookingMissed(next) ? "Missed" : (next.status === "PENDING" && next.payMode === "online" ? "Pending payment" : STATUS[next.status].label)} onPress={() => router.push(`/(tabs)/bookings/${next.id}`)}>
+          <NextVisitHero date={next.scheduledDate} today={todayIst} time={next.scheduledTime} title={visitTitle(nameOf(next))} car={nextCar ? `${nextCar.make} ${nextCar.model}` : "Car"} status={isBookingMissed(next) ? "Missed" : (next.status === "PENDING" && next.payMode === "online" ? "Pending payment" : STATUS[next.status].label)} onPress={() => router.push(`/(tabs)/bookings/${next.id}`)} trailingAction={nextCancel?.canCancel && !confirmCancel ? <Pressable accessibilityRole="button" accessibilityLabel="Cancel booking" onPress={() => setConfirmCancel(true)} style={{ width:44,height:44,alignItems:"center",justifyContent:"center" }}><Icon name="close" size={22} color={ink.textPrimary}/></Pressable> : null}>
             <View style={{ flexDirection: "row", gap: 8 }}>
               {nextElig?.eligible ? <Button kind="quiet" icon="edit" label="Reschedule" onPress={() => router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: next.id } })} /> : null}
-              {nextCancel?.canCancel && !confirmCancel ? <Button kind="quiet" icon="close" label="Cancel" onPress={() => setConfirmCancel(true)} /> : null}
             </View>
           </NextVisitHero>
           {nextElig && !nextElig.eligible && nextElig.reason ? <T role="caption" tone="tertiary">{nextElig.reason}</T> : null}

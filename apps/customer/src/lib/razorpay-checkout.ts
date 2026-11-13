@@ -68,9 +68,20 @@ async function paymentUrlFor(paymentId: string): Promise<string | null> {
  * slow, the outcome is "pending" - the payment may still complete, and the UI must
  * say so rather than claim success or failure.
  */
-export async function payWithPaymentLink(paymentId: string, paymentUrl: string | null): Promise<OnlinePayOutcome> {
+export async function payWithPaymentLink(paymentId: string, paymentUrl: string | null, options?: { webSameTab?: boolean }): Promise<OnlinePayOutcome> {
   const url = paymentUrl ?? (await paymentUrlFor(paymentId).catch(() => null));
   if (!url) return "failed";
+  // Safari can block window.open after the callable await and Expo's web
+  // adapter still reports OPENED. Use a normal same-tab navigation instead.
+  // Returning to AutoDeck re-reads the server payment; navigation is never paid.
+  if (Platform.OS === "web" && options?.webSameTab) {
+    const target = new URL(url);
+    if (target.protocol !== "https:" || (target.port && target.port !== "443") || target.username || target.password || !["rzp.io", "razorpay.com"].some(host => target.hostname === host || target.hostname.endsWith("." + host))) throw new Error("Payment link is unavailable. Contact the studio before trying again.");
+    const location = (globalThis as unknown as { location?: { assign: (url: string) => void } }).location;
+    if (!location) throw new Error("Could not open the payment page.");
+    location.assign(target.href);
+    return "pending";
+  }
   return new Promise<OnlinePayOutcome>((resolve) => {
     let settled = false;
     let grace: ReturnType<typeof setTimeout> | null = null;

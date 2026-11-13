@@ -7,8 +7,9 @@ const require=createRequire(path.join(root,'functions/package.json'));
 const {build}=require('esbuild');
 const customerRequire=createRequire(path.join(root,'apps/customer/package.json'));
 const blurPath=path.join(path.dirname(customerRequire.resolve('expo-blur/package.json')),'build/BlurView.web.js');
-await build({entryPoints:[dir+'/entry.tsx'],bundle:true,jsx:'automatic',outfile:dir+'/preview.js',nodePaths:[root+'/apps/customer/node_modules'],platform:'browser',format:'iife',define:{global:'globalThis','process.env':'{}',__DEV__:'false','process.env.NODE_ENV':'"production"'},loader:{'.js':'jsx','.ttf':'dataurl','.png':'dataurl','.jpg':'dataurl','.webp':'dataurl'},plugins:[{name:'aliases',setup(b){
+await build({entryPoints:[dir+'/entry.tsx'],bundle:true,resolveExtensions:['.web.tsx','.tsx','.web.ts','.ts','.web.js','.js','.json'],jsx:'automatic',outfile:dir+'/preview.js',nodePaths:[root+'/apps/customer/node_modules'],platform:'browser',format:'iife',define:{global:'globalThis','process.env':'{}',__DEV__:'false','process.env.NODE_ENV':'"production"'},loader:{'.js':'jsx','.ttf':'dataurl','.png':'dataurl','.jpg':'dataurl','.webp':'dataurl'},plugins:[{name:'aliases',setup(b){
 b.onLoad({filter:/^blur-web$/,namespace:'preview'},()=>({contents:`export {default as BlurView} from ${JSON.stringify(blurPath)}`,resolveDir:root,loader:'js'}));
+b.onResolve({filter:/^@autodeck\/ui(?:\/native|\/theme)?$/},args=>({path:root+'/packages/ui/src/'+(args.path.endsWith('/native')?'native/index.ts':args.path.endsWith('/theme')?'theme/index.ts':'index.ts')}));
 b.onResolve({filter:/^react-native$/},()=>({path:customerRequire.resolve('react-native-web')}));
 b.onResolve({filter:/^expo-blur$/},()=>({path:'blur-web',namespace:'preview'}));
 b.onResolve({filter:/^expo-image-picker$/},()=>({path:'image-picker',namespace:'preview'}));

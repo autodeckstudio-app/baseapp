@@ -11,7 +11,7 @@ import { metrics } from "../lib/metrics";
 export function CarHero({ photo, title, subtitle, plate, facts, next, onBook, onNext, compact }: { compact?: boolean; photo: ReactNode; title: string; subtitle?: string; plate: string | null; facts: Array<{ label: string; value: string }>; next?: { title: string; detail: string } | null; onBook?: (() => void) | undefined; onNext?: (() => void) | undefined }) {
   const { colors: ink, name: themeName } = useExperienceTheme();
   const { width: stripWidth } = useWindowDimensions();
-  const narrowStrip = stripWidth < 380;
+  const narrowStrip = stripWidth < 480;
   const heroH = compact ? metrics.heroCompact + 60 : metrics.heroCover;
   // Cinematic entrance: the cover photo settles from a slight zoom while the name and the
   // booking strip rise into place. Skipped entirely when the customer asked for less motion.
@@ -44,14 +44,14 @@ export function CarHero({ photo, title, subtitle, plate, facts, next, onBook, on
         </Animated.View>
       </View>
       {onBook || next ? (
-      <Animated.View style={[{ marginTop: -34, marginHorizontal: 20, borderRadius: 24, ...glassSurface, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", paddingHorizontal: 18, paddingVertical: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }, stripIn]}>
-        <Pressable accessibilityRole="button" disabled={!next || !onNext} onPress={onNext} style={{ flex: 1, minWidth: 0, gap: 2 }}>
+      <Animated.View style={[{ marginTop: -34, marginHorizontal: 20, borderRadius: 24, ...glassSurface, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", paddingHorizontal: 18, paddingVertical: 16, flexDirection: narrowStrip ? "column" : "row", alignItems: narrowStrip ? "stretch" : "center", justifyContent: "space-between", gap: 12 }, stripIn]}>
+        <Pressable accessibilityRole="button" disabled={!next || !onNext} onPress={onNext} style={{ flex: 1, minWidth: 0, gap: metrics.identityGap }}>
           <Text style={{ color: ink.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>Next up</Text>
-          <T role="bodyStrong" style={{ color: ink.textPrimary, fontWeight: "800" }} numberOfLines={narrowStrip ? 2 : 1}>{next ? next.title : "Nothing booked"}</T>
-          <T role="caption" tone="secondary" numberOfLines={narrowStrip ? 2 : 1}>{next ? next.detail : "Pick a time that suits you"}</T>
+          <T role="bodyStrong" style={{ color: ink.textPrimary, fontWeight: "800" }} numberOfLines={narrowStrip ? 3 : 1}>{next ? next.title : "Nothing booked"}</T>
+          <T role="caption" tone="secondary" numberOfLines={narrowStrip ? 3 : 1}>{next ? next.detail : "Pick a time that suits you"}</T>
         </Pressable>
         {onBook ? (
-        <Pressable accessibilityRole="button" onPress={onBook} style={({ pressed }) => ({ height: 44, paddingHorizontal: narrowStrip ? 14 : 18, borderRadius: 9999, backgroundColor: ink.textPrimary, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.88 : 1, flexShrink: 0 })}>
+        <Pressable accessibilityRole="button" onPress={onBook} style={({ pressed }) => ({ height: 44,alignSelf:narrowStrip?"flex-start":"auto", paddingHorizontal: narrowStrip ? 14 : 18, borderRadius: 9999, backgroundColor: ink.textPrimary, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.88 : 1, flexShrink: 0 })}>
           <Text style={{ color: themeName === "night" ? "#14141A" : "#FFFFFF", fontWeight: "700", fontSize: narrowStrip ? 13 : 14 }}>Book a service</Text>
         </Pressable>
         ) : null}
