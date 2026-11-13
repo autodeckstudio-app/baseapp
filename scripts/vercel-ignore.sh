@@ -376,6 +376,29 @@ GAURI_UI_PATHS
   esac
 fi
 
+# Pinned confirm-CTA and pickup-note correction: exact parent + complete path list, Customer only.
+fix_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = fix/confirm-cta-pickup-note-20261113 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$fix_parent" = b18d05a13deb1f2910b226398753f2b703782c70 ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0
+  cd "$root" || exit 0
+  [ "$fix_parent" = b18d05a13deb1f2910b226398753f2b703782c70 ] || { printf 'Confirm CTA/note fix wrong parent: SKIP (%s)\n' "$app"; exit 0; }
+  actual="$(git diff --name-only "$fix_parent" HEAD 2>/dev/null)" || exit 0
+  expected=$(cat <<'CONFIRM_FIX_PATHS'
+apps/customer/src/app/(tabs)/book/confirm.tsx
+apps/customer/src/lib/vercel-confirm-fix-guard.test.ts
+apps/customer/src/ui/PickupOptions.render.test.tsx
+apps/customer/src/ui/PickupOptions.tsx
+docs/customer-confirm-cta-note-fix-20261113.md
+scripts/vercel-ignore.sh
+CONFIRM_FIX_PATHS
+)
+  [ "$actual" = "$expected" ] || { printf 'Confirm CTA/note fix unexpected paths: SKIP (%s)\n' "$app"; exit 0; }
+  case "$app" in
+    customer) printf 'Pinned Customer confirm CTA/note fix: BUILD\n'; exit 1 ;;
+    *) printf 'Pinned Customer confirm CTA/note fix: SKIP (%s)\n'; exit 0 ;;
+  esac
+fi
+
 # This isolated emulator-fixture branch never builds or promotes a website/app.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = qa/quote-fixtures-20261106 ]; then
   printf 'isolated fixture QA branch: SKIP (%s)\n' "$app"
