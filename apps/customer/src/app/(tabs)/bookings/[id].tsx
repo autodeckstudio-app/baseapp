@@ -339,6 +339,7 @@ export default function BookingDetailScreen() {
   const missed = isBookingMissed(booking);
   const bookingClosed=["CANCELLED","EXPIRED","COMPLETED"].includes(booking.status);
   const showLiveVisit=!bookingClosed;
+  const unconfirmedPreArrival=booking.status==="PENDING"&&job?.status==="PENDING_VEHICLE";
   const combinedReturn=(booking as Booking&{combinedReturn?:{status:string;feePaise:number;refundPaise:number;entries:{method:string;returnPaise:number;returnedPaise:number}[]}}).combinedReturn;
   const owedNotice = combinedReturn?null:manualRefundNotice(booking);
   const autoCancelled = booking.status === "CANCELLED" && booking.cancellationReason?.startsWith("Auto-cancelled:");
@@ -416,7 +417,7 @@ export default function BookingDetailScreen() {
       ) : null}
       {pushResult === "on" ? <Notice title="Updates are on" body="You will get a message when the studio confirms and when your car is ready." /> : null}
 
-      {!walkIn && (booking.status === "PENDING" || booking.status === "CONFIRMED") ? (
+      {!walkIn && booking.status === "CONFIRMED" ? (
         <Button
           kind="quiet"
           label={calAdded ? "Added to calendar" : "Add to calendar"}
@@ -472,16 +473,16 @@ export default function BookingDetailScreen() {
       <Pane pad="gap">
         <Row detailTone="secondary" title="Time" detail={job?.status === "STANDBY" ? "Waiting - no slot reserved" : `${displayTime}`} />
         <Row detailTone="secondary" title="Duration" detail={formatServiceTime(booking.durationMinutes)} />
-        {job?.status === "STANDBY" || ready ? <Row detailTone="secondary" title={readyRowTitle(vt?.phase)} detail={job?.status === "STANDBY" ? "Set when a bay becomes available" : `${displayEndDate}, ${ready!.time}`} last={!(booking.notes !== null && booking.notes.trim() !== "")} /> : null}
+        {!bookingClosed&&!unconfirmedPreArrival&&(job?.status === "STANDBY" || ready) ? <Row detailTone="secondary" title={readyRowTitle(vt?.phase)} detail={job?.status === "STANDBY" ? "Set when a bay becomes available" : `${displayEndDate}, ${ready!.time}`} last={!(booking.notes !== null && booking.notes.trim() !== "")} /> : null}
         {booking.notes !== null && booking.notes.trim() !== "" ? <Row detailTone="secondary" title="Notes" detail={booking.notes} last /> : null}
       </Pane>
 
-      {isMultiDay ? (
+      {isMultiDay&&!bookingClosed&&!unconfirmedPreArrival ? (
         <Notice title="Multi-day service" body={`Your car stays at the studio from ${displayDate} through ${displayEndDate}.`} />
       ) : null}
 
-      {job && showLiveVisit && jobStage(job.status) ? (
-        <LiveJobCard status={job.status} slotStarted={vt?.phase === "due" || vt?.phase === "not_arrived"} readyText={job.status === "DELIVERED" || !readyIsAhead(booking.estimatedEndDate, booking.estimatedEndTime) ? null : `${displayEndDate}, ${booking.estimatedEndTime}`} approvals={approvals.filter((a) => a.status === "pending")} busyId={decidingId} error={decideError} onDecide={(approvalId, d) => void handleDecide(approvalId, d)} />
+      {unconfirmedPreArrival ? <Pane pad="inset"><View style={{gap:metrics.innerGap}}><Kicker tone="accent">Studio status</Kicker><T role="heading">Car not checked in</T><T role="body" tone="secondary">Booking confirmation is pending. Check its status before travelling to the studio.</T></View></Pane> : job && showLiveVisit && jobStage(job.status) ? (
+        <LiveJobCard status={job.status} slotStarted={vt?.phase === "due" || vt?.phase === "not_arrived"} readyText={null} approvals={approvals.filter((a) => a.status === "pending")} busyId={decidingId} error={decideError} onDecide={(approvalId, d) => void handleDecide(approvalId, d)} />
       ) : job && showLiveVisit && ["STANDBY","CANCELLED"].includes(job.status) ? (
         <Pane pad="inset">
           <View style={{ gap: space.breath }}>
@@ -588,15 +589,14 @@ export default function BookingDetailScreen() {
           <Button label="Pay now" busy={payingNow} disabled={payingNow} onPress={() => void handlePayNow()}/>
         </Pane>
       ) : null}
-      {booking.status === "EXPIRED" ? <Pane><Kicker>Slot released</Kicker><Row title="Booking" detail="Expired. This slot is no longer held."/><Row title="Next step" detail={paymentRead!=="ready"||payment?.status==="pending"||awaitingLinkId?"Check payment status with the studio before booking or paying again.":"You can book again."} last/></Pane> : null}
+      {booking.status === "EXPIRED" ? <Pane><Kicker>Slot released</Kicker><Row title="Booking" detail="Expired. This slot is no longer held."/><Row title="Next step" detail={paymentRead!=="ready"||payment?.status==="pending"||awaitingLinkId?"Payment is not confirmed yet. Check payment status with the studio before booking or paying again.":"You can book again."} last/></Pane> : null}
       {combinedReturn?<Pane pad="gap"><Kicker>Original-method returns</Kicker><Row title="Return amount" detail={rupees(combinedReturn.refundPaise)}/>{combinedReturn.feePaise>0?<Row title="Fee retained" detail={rupees(combinedReturn.feePaise)}/>:null}<Row title="Status" detail={combinedReturn.status==="awaiting_admin"?"Awaiting Admin approval":combinedReturn.status==="returned"?"Returns recorded":"Returns still pending"}/>{combinedReturn.entries.some(e=>e.method==="cash"&&e.returnedPaise<e.returnPaise)?<Row title="Cash return" detail="Still owed. Not an automatic refund."/>:null}</Pane>:null}
       {!combinedReturn&&(booking.refundStatus === "reserved" || booking.refundStatus === "requested") ? <Notice title="Refund requested" body="Your refund request is recorded. This page shows its status as it changes." /> : null}
       {!combinedReturn&&booking.refundStatus === "initiated" ? <Notice title="Refund recorded" body="The studio has recorded your refund. Paid online? When it reaches you depends on your bank or payment provider." /> : null}
       {!combinedReturn&&booking.refundStatus === "processed" ? <Notice title="Refund processed by Razorpay" body="Razorpay reports your refund as processed. When it reaches you depends on your bank or payment provider." /> : null}
-      {actionError === EXISTING_PAYMENT_PENDING && (!paymentIsCurrent||!payment||payment.status==='pending'||payment.status==='processing') ? <Pane>
+      {actionError === EXISTING_PAYMENT_PENDING && booking.status!=="EXPIRED" && (!paymentIsCurrent||!payment||payment.status==='pending'||payment.status==='processing') ? <Pane>
         <Kicker>Payment check</Kicker>
         <Row title="Status" detail="Payment is not confirmed yet." />
-        <Row title="Confirmation" detail="After server verification." />
         <Row title="Do not pay again" detail="Check this booking first." />
       </Pane> : actionError === EXISTING_PAYMENT_OPEN_FAILED ? <Pane>
         <Kicker>Payment link</Kicker>

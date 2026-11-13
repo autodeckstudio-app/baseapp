@@ -368,7 +368,7 @@ it.each(lifecycleCases)("actual detail separates booking=%s payment=%s physical 
  await act(async()=>h.jobCb({...job,id:"matrix-job",bookingId:"matrix-b",studioId:"s",status:jobStatus,paymentStatus}));
  const closed=["CANCELLED","EXPIRED","COMPLETED"].includes(bookingStatus);
  const expected:Record<string,string>={PENDING_VEHICLE:"Waiting for your car",STANDBY:"Arrived - standby",VEHICLE_RECEIVED:"Car received",IN_PROGRESS:"Work in progress",QUALITY_CHECK:"Final checks",READY_FOR_DELIVERY:"Ready for pickup",DELIVERED:"Delivered"};
- if(!closed)expect(text(r)).toContain(expected[jobStatus]);
+ if(!closed)expect(text(r)).toContain(bookingStatus==="PENDING"&&jobStatus==="PENDING_VEHICLE"?"Car not checked in":expected[jobStatus]);
  if(jobStatus==="PENDING_VEHICLE") {expect(text(r)).not.toContain('"Car received"'); expect(text(r)).not.toContain('"Arrived - standby"');}
  if(closed)expect(text(r)).not.toContain('"Studio status"');
  await act(async()=>r.unmount());
@@ -389,7 +389,7 @@ it('captures actual detail review states without integration effects',async()=>{
  const b={...lifecycleBooking,combinedPayment:{version:2,choice:'advance20',totalPaise:250000,payNowPaise:50000,balancePaise:200000},advancePaymentId:'advance-matrix',holdExpiresAt:new Date(Date.now()+600000).toISOString()};
  await act(async()=>h.bookingCb(b));await act(async()=>h.jobCb({...job,id:'matrix-job',bookingId:b.id,studioId:'s',status:'PENDING_VEHICLE'}));save(r,'unknown');
  await act(async()=>h.paymentError(Error('offline')));expect(text(r)).not.toContain("Pay to confirm it");save(r,'error');
- await act(async()=>h.paymentCb({...payment,id:'advance-matrix',targetType:'booking',jobId:null,bookingId:b.id,studioId:'s',amount:50000}));save(r,'continue');
+ await act(async()=>h.paymentCb({...payment,id:'advance-matrix',targetType:'booking',jobId:null,bookingId:b.id,studioId:'s',amount:50000}));expect(text(r)).not.toContain('Bring it in at your booked time.');expect(text(r)).not.toContain('Expected ready');save(r,'continue');
  const go=r.root.findAllByType(Button).find((x:any)=>x.props.label==='Continue online payment');await act(async()=>go.props.onPress());save(r,'returned');
- await act(async()=>h.bookingCb({...b,status:'EXPIRED'}));expect(text(r)).not.toContain('Payment was not completed');expect(text(r)).toContain('before booking or paying again');save(r,'expired');await act(async()=>r.unmount());
+ await act(async()=>h.bookingCb({...b,status:'EXPIRED'}));expect(text(r)).not.toContain('Expected ready');expect(text(r)).not.toContain('Payment was not completed');expect(text(r)).toContain('before booking or paying again');save(r,'expired');await act(async()=>h.bookingCb({...b,status:'CONFIRMED',paymentStatus:'partial'}));expect((text(r).match(/Expected ready/g)||[]).length).toBe(1);expect(text(r)).toContain('Bring it in at your booked time.');save(r,'confirmed');await act(async()=>r.unmount());
 });
