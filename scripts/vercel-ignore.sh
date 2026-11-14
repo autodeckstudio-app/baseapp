@@ -5,6 +5,23 @@
 # Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
 # Unknown base commit or git error => build (safe default).
 app="$1"
+# Approved Home studio-front crop: exact parent/path contract, Customer only.
+front_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/home-studio-frontage-20261114 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$front_parent" = 5164c55d654cd295d44b903a9b1662a045b22e9a ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0
+  cd "$root" || exit 0
+  [ "$front_parent" = 5164c55d654cd295d44b903a9b1662a045b22e9a ] || exit 0
+  actual="$(git diff --name-only 5164c55d654cd295d44b903a9b1662a045b22e9a HEAD 2>/dev/null)" || exit 0
+  expected=$(cat <<'FRONT_PATHS'
+apps/customer/assets/studio/studio-front-night.png
+apps/customer/src/ui/StudioFooterMockup.tsx
+apps/customer/src/ui/home-studio-card.render.test.tsx
+scripts/vercel-ignore.sh
+FRONT_PATHS
+)
+  [ "$actual" = "$expected" ] || exit 0
+  case "$app" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
 # Scoped Bookings cleanup: exact parent and paths, Customer only.
 bookings_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/bookings-suggestions-car-20261114 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$bookings_parent" = 11348205950bc80817542bfae23b3f54a29b6715 ]; }; then
