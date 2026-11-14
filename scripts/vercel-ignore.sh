@@ -5,6 +5,22 @@
 # Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
 # Unknown base commit or git error => build (safe default).
 app="$1"
+# Restore existing website service carousel styles only: exact parent/path contract.
+service_restore_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/site-services-style-restore-20261114 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$service_restore_parent" = 8fd4ebb48cb45bb4130c5b69a678dd8fb5127c78 ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0
+  cd "$root" || exit 0
+  [ "$service_restore_parent" = 8fd4ebb48cb45bb4130c5b69a678dd8fb5127c78 ] || exit 0
+  actual="$(git diff --name-only 8fd4ebb48cb45bb4130c5b69a678dd8fb5127c78 HEAD 2>/dev/null)" || exit 0
+  expected=$(cat <<'SERVICE_RESTORE_PATHS'
+apps/site/public/assets/redesign/site.css
+apps/site/tests/service-carousel-style.test.mjs
+scripts/vercel-ignore.sh
+SERVICE_RESTORE_PATHS
+)
+  [ "$actual" = "$expected" ] || exit 0
+  case "$app" in site) exit 1 ;; *) exit 0 ;; esac
+fi
 # Approved website Visit studio crop: exact parent/path contract, site only.
 site_front_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/site-studio-frontage-20261114 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$site_front_parent" = d2e36580b8cd647943587d48eb18e8bb968f4f54 ]; }; then
