@@ -32,7 +32,7 @@ export async function giftPricePaise(db: FirebaseFirestore.Firestore, tenantId: 
   const svc = await db.collection(COLLECTIONS.services()).doc(GIFT_SERVICE_ID).get();
   if (!svc.exists) throw new HttpsError("failed-precondition", "Gifts are not available right now.");
   const service = svc.data() as Service;
-  if (service.tenantId !== tenantId || !service.active) throw new HttpsError("failed-precondition", "Gifts are not available right now.");
+  if (service.tenantId !== tenantId || !service.active || service.catalogueEntryKind==='enquiry') throw new HttpsError("failed-precondition", "Gifts are not available right now.");
   const cfg = await db.collection(COLLECTIONS.studioConfig()).where("tenantId", "==", tenantId).limit(1).get();
   const config = cfg.empty ? null : (cfg.docs[0]!.data() as StudioConfig);
   return calculatePrice({

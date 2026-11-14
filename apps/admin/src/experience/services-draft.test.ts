@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EMPTY_SERVICE, toServicePayload } from "./services-draft";
+import { EMPTY_SERVICE, toServicePayload, draftFromService } from "./services-draft";
 
 const base = { ...EMPTY_SERVICE, name: "Ceramic coat", description: "Long-lasting gloss.", priceRupees: "18450", minutes: "240" };
 
@@ -45,3 +45,4 @@ it('only an explicit staff rating edit sends a value or deliberate clear',()=>{c
 
 it('allows a quote-only service without an invented price, still rejects negative/invalid money',()=>{for(const priceRupees of ['', '0']){const r=toServicePayload({...base,priceMode:'consult',priceRupees});expect(r.ok&&r.payload.basePrice).toBe(0);expect(r.ok&&r.payload.priceOnRequest).toBe(true);}for(const priceRupees of ['-1','bad'])expect(toServicePayload({...base,priceMode:'consult',priceRupees}).ok).toBe(false);});
 it('clears a photo only after an explicit removal and preserves omission on unrelated saves',()=>{const r=toServicePayload({...base,imageUrl:'',imageChanged:true});expect(r.ok&&r.payload.imageUrl).toBe(null);const untouched=toServicePayload({...base,imageUrl:''});expect(untouched.ok&&Object.hasOwn(untouched.payload,'imageUrl')).toBe(false);});
+it('enquiry edits preserve identity and cannot add booking money or duration',()=>{const source={id:'enquiry-test',tenantId:'automodz',name:'Reference',brand:null,description:'Reference enquiry only',category:'coating',currency:'INR',vehicleCategoryPricing:[],requiredBayType:'general',membershipWashEligible:false,displayOrder:1,active:true,createdAt:'old',updatedAt:'old',catalogueEntryKind:'enquiry',referenceKey:'checked-reference',referenceGroup:'coatings',estimatedDurationMinutes:0,basePrice:0,priceOnRequest:true}as any;const draft=draftFromService(source);const result=toServicePayload(draft);expect(result.ok).toBe(true);if(result.ok)expect(result.payload).toMatchObject({catalogueEntryKind:'enquiry',referenceKey:'checked-reference',referenceGroup:'coatings',basePrice:0,estimatedDurationMinutes:0});expect(toServicePayload({...draft,minutes:'60'}).ok).toBe(false);expect(toServicePayload({...draft,priceMode:'fixed',priceRupees:'100'}).ok).toBe(false)});

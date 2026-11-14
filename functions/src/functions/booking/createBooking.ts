@@ -99,7 +99,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
   if (vehicle.ownerId !== customerDocId) {
     throw new HttpsError("permission-denied", "Vehicle does not belong to this customer.");
   }
-  if (!service.active) {
+  if (!service.active || service.catalogueEntryKind==='enquiry') {
     throw new HttpsError("failed-precondition", "Service is not currently available.");
   }
 

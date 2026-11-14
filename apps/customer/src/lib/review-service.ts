@@ -1,17 +1,14 @@
-import { doc, getDoc } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
-import { COLLECTIONS } from "@autodeck/database";
-import { db, functions } from "./firebase";
+import { functions } from "./firebase";
 
 export type Review = { rating: number; comment: string };
 
-export async function getReview(bookingId: string): Promise<Review | null> {
-  const snap = await getDoc(doc(db, COLLECTIONS.reviews(), bookingId));
-  return snap.exists() ? (snap.data() as Review) : null;
+export async function getReview(bookingId: string, jobId?:string): Promise<Review | null> {
+  const {data}=await httpsCallable<{bookingId?:string;jobId?:string},{review:Review|null}>(functions,'getMyVisitReview')(jobId?{jobId}:{bookingId});
+  return data.review;
 }
-
-export async function submitReview(bookingId: string, rating: number, comment: string): Promise<void> {
-  await httpsCallable(functions, "submitReview")({ bookingId, rating, comment });
+export async function submitReview(bookingId: string, rating: number, comment: string, jobId?:string): Promise<void> {
+  await httpsCallable(functions, 'submitReview')(jobId?{jobId,rating,comment}:{bookingId,rating,comment});
 }
 
 export type ServiceReviews = {

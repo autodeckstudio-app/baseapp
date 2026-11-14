@@ -1,3 +1,4 @@
+import{useCataloguePublication}from'../../hooks/useCataloguePublication';
 import {useForegroundRefresh,useContentClock} from '../../hooks/useForegroundRefresh';
 import {withReadDeadline} from '../../lib/foreground-refresh';
 import { invoiceHref } from "../../lib/invoice-display";
@@ -122,6 +123,7 @@ export default function HomeScreen() {
   const pricingVehicle = {category:normalizeSegment(home.model?.activeVehicle?.category)};
   const vehiclePrices = useVehiclePrices(catalogue, pricingVehicle.category);
   const publicFocusOwner=useRef<string|null>(null);
+  useCataloguePublication(()=>setRetryTick(t=>t+1));
   useForegroundRefresh(()=>{if(publicFocusOwner.current!==owner){publicFocusOwner.current=owner;return;}setRetryTick(t=>t+1)},owner);
   useEffect(()=>{setOpen(null);setSeen(new Set())},[owner]);
   useEffect(()=>{

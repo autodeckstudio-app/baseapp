@@ -1,3 +1,5 @@
+import {VisitFeedback} from '../../../ui/VisitFeedback';
+import {VisitRecords} from '../../../ui/VisitRecords';
 import { cancellationErrorMessage } from "../../../lib/cancellation-error";
 import { JobWorkAndCoverage } from "../../../ui/JobWorkAndCoverage";
 import{verifyMyCustomerDocId}from'../../../lib/auth-service';
@@ -137,25 +139,24 @@ export default function BookingDetailScreen() {
   const liveApprovalsRef=useRef(approvals);liveApprovalsRef.current=approvals;
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const { colors } = useExperienceTheme();
+  const reviewEdits=useRef(0);
   const [stars, setStars] = useState(0);
   const [note, setNote] = useState("");
   const [rated, setRated] = useState(false);
+
   const [rateBusy, setRateBusy] = useState(false);
   const [rateError, setRateError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!id || booking?.status !== "COMPLETED") return;
-    let alive=true;void getReview(id).then((r) => { if (alive&&r) { setStars(r.rating); setNote(r.comment); setRated(true); } }).catch(() => undefined);return()=>{alive=false};
-  }, [id, booking?.status]);
+
 
   async function handleRate() {
     if (mockWriteBlocked()) return;
-    if (!id || stars < 1||actionLock.current) return;
+    if (!id || booking?.status!=="COMPLETED" || stars < 1||actionLock.current) return;
     const scope=routeScope,gen=actionEpoch.current;const current=()=>routeRef.current===scope&&actionEpoch.current===gen;actionLock.current=true;
     setRateBusy(true);
     setRateError(null);
     try {
-      await submitReview(id, stars, note);
+      await submitReview(id, stars, note,job?.id);
       if(current())setRated(true);
     } catch {
       if(current())setRateError("Couldn't save your rating. Try again.");
@@ -211,6 +212,12 @@ export default function BookingDetailScreen() {
   const bookOwnerKey=authB.status==='ready'?listOwnerKey(authB):null;const ownerKey=authB.status==='ready'&&job&&booking&&job.customerId===booking.customerId&&bookOwnerKey!==null&&bookOwnerKey.key===job.customerId&&job.tenantId===booking.tenantId&&job.tenantId===authB.claims.tenantId&&resolvedRoute===id?[authB.user.uid,authB.claims.tenantId,job.customerId,job.id,id].join('|'):'';
   useEffect(()=>{let alive=true;setVerifiedOwner('');if(ownerKey&&job)void verifyMyCustomerDocId(job.customerId).then(ok=>{if(alive&&ok)setVerifiedOwner(ownerKey)}).catch(()=>{});return()=>{alive=false};},[ownerKey]);
   const ownerVerified=Boolean(ownerKey)&&verifiedOwner===ownerKey;
+  useEffect(()=>{
+    if(!id||!booking||authB.status!=='ready'||booking.tenantId!==authB.claims.tenantId||listOwnerKey(authB)?.key!==booking.customerId||booking?.status!=='COMPLETED'||isMock)return;
+    const edit=reviewEdits.current;let alive=true;
+    void getReview(id,job?.id).then(r=>{if(alive&&r&&reviewEdits.current===edit){setStars(r.rating);setNote(r.comment);setRated(true)}}).catch(()=>{});
+    return()=>{alive=false};
+  },[id,booking?.status,job?.id,ownerVerified,routeScope,isMock]);
   const advanceBinding = booking?.combinedPayment?.choice === "advance20" && booking.paymentStatus === "unpaid" && booking.advancePaymentId ? { paymentId: booking.advancePaymentId, bookingId: booking.id, amount: booking.combinedPayment.payNowPaise, studioId: booking.studioId } : undefined;
   useEffect(() => {
     if(isMock)return;const generation=++paymentGeneration.current;resumeLock.current=false;setPayingNow(false);setPayment(null);setPaymentRead('loading');setPaymentScope('');
@@ -444,27 +451,7 @@ export default function BookingDetailScreen() {
         />
       ) : null}
 
-      {booking.status === "COMPLETED" ? (
-        <Pane pad="inset">
-          <View style={{ gap: space.line }}>
-            <T role="heading">{rated ? "Thanks for rating" : "How was your visit?"}</T>
-            <View style={{ flexDirection: "row", gap: space.breath }}>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <Pressable key={n} accessibilityRole="button" accessibilityLabel={`${n} star${n > 1 ? "s" : ""}`} onPress={() => { setStars(n); setRated(false); }}>
-                  <Icon name="star" color={n <= stars ? colors.accent : colors.textTertiary} size={32} filled={n <= stars} />
-                </Pressable>
-              ))}
-            </View>
-            {stars > 0 && !rated ? (
-              <View style={{ gap: space.breath }}>
-                <Field label="Anything to add? (optional)" value={note} onChangeText={setNote} placeholder="What went well, or what could be better" />
-                {rateError ? <T role="caption" tone="accent">{rateError}</T> : null}
-                <Button label="Send rating" busy={rateBusy} onPress={() => void handleRate()} />
-              </View>
-            ) : null}
-          </View>
-        </Pane>
-      ) : null}
+      {booking.status==='COMPLETED'?<VisitFeedback key={routeScope} stars={stars} note={note} rated={rated} busy={rateBusy} error={rateError} onStars={n=>{reviewEdits.current++;setStars(n);setRated(false)}} onNote={n=>{reviewEdits.current++;setNote(n)}} onSend={()=>void handleRate()}/>:null}
 
       {booking.status === "COMPLETED" || booking.status === "CANCELLED" ? (
         <Button label="Book again" onPress={() => { if (mockWriteBlocked()) return; router.push(`/(tabs)/book/${booking.serviceId}`); }} />
@@ -495,6 +482,7 @@ export default function BookingDetailScreen() {
       {job && !["CANCELLED","EXPIRED"].includes(booking.status) && jobStage(job.status) && job.status !== "PENDING_VEHICLE" ? <JobTimeline status={job.status} history={job.statusHistory ?? []} /> : null}
 
 
+      {!isMock && ownerVerified && job && booking.status==='COMPLETED' ? <VisitRecords key={routeScope+job.id} jobId={job.id} vehicle={car?`${car.make} ${car.model}`:'This visit'} hasInspection={inspection?.status==='finalized'} onInspection={()=>router.push({pathname:'/(tabs)/bookings/inspection',params:{jobId:job.id}})}/> : <>
       {!isMock && ownerVerified && job ? <View style={{gap:12}}><Pane pad="gap"><Row title="Work record" expanded={workOpen} detail={workOpen?"Hide performed work":"View performed work and QC"} onPress={()=>setWorkOpen(v=>!v)} last/></Pane>{workOpen?<JobWorkAndCoverage key={job.id} jobId={job.id} vehicle={car?`${car.make} ${car.model}`:"This visit"}/>:null}</View>:null}
 
       {inspection?.status === "finalized" && job ? (
@@ -507,6 +495,8 @@ export default function BookingDetailScreen() {
           />
         </Pane>
       ) : null}
+
+      </>}
 
       {approvals
         .filter((a) => a.status === "pending" && !(job && jobStage(job.status)))

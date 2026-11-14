@@ -1,0 +1,2 @@
+import fs from 'node:fs';import assert from 'node:assert/strict';import {test} from 'node:test';
+test('Home service cards keep copy and links but no arrow component',()=>{const p=fs.readFileSync('src/pages/index.astro','utf8'),h=fs.readFileSync('src/data/redesign/home.html','utf8');assert(!p.includes('Arrow'));assert(p.includes('<Fragment set:html={content}/>'));assert.equal((h.match(/class="service-orbit-card"/g)||[]).length,5);assert.equal((h.match(/<strong>Explore service /g)||[]).length,5)});

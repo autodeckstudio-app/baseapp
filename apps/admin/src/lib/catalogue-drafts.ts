@@ -1,13 +1,16 @@
+import {verifyWebsitePublication}from'../experience/catalogue-publish-review';
+import type {Service as ReviewedType0} from '@autodeck/core';
+import type {BrandEnquiry as ReviewedType1} from '@autodeck/core';
 import{httpsCallable}from'firebase/functions';import{functions}from'./firebase';import type{ServicePayload}from'../experience/services-draft';
 export const publicCatalogueDestinations=['Ceramic','Coatings','Garage','Modifications and wraps','Paint Protection','Pickup and drop','Wash and care']as const;
 export type PublicCatalogueDestination=typeof publicCatalogueDestinations[number];
-export interface CatalogueDraftView{id:string;serviceId:string|null;expectedServiceUpdatedAt:string|null;version:number;state:'draft'|'reviewed'|'publishing'|'published'|'blocked';payload:ServicePayload & {active?:boolean};publicDestination?:PublicCatalogueDestination|null;reviewHash:string|null;updatedAt:string}
+export interface CatalogueDraftView{expectedNewTabHash?:string|null;newServiceId?:string|null;id:string;serviceId:string|null;expectedServiceUpdatedAt:string|null;version:number;state:'draft'|'reviewed'|'publishing'|'published'|'blocked';payload:ServicePayload & {active?:boolean};publicDestination?:PublicCatalogueDestination|null;reviewHash:string|null;updatedAt:string}
 export async function getCatalogueDrafts():Promise<{drafts:CatalogueDraftView[];publishedCount:number}>{const data=(await httpsCallable<Record<string,never>,{drafts:CatalogueDraftView[];publishedCount?:number}>(functions,'getCatalogueDrafts')({})).data;return{drafts:data.drafts,publishedCount:data.publishedCount??0};}
 export async function getCatalogueDraftHistory(cursor?:string):Promise<{history:CatalogueDraftView[];nextHistoryCursor:string|null}>{const data=(await httpsCallable<{history:boolean;historyCursor?:string},{history?:CatalogueDraftView[];nextHistoryCursor?:string|null}>(functions,'getCatalogueDrafts')({history:true,...(cursor?{historyCursor:cursor}:{})})).data;return{history:data.history??[],nextHistoryCursor:data.nextHistoryCursor??null};}
 export async function saveCatalogueDraft(input:{draftId?:string;serviceId:string|null;expectedServiceUpdatedAt:string|null;expectedDraftVersion:number;publicDestination?:PublicCatalogueDestination|null;payload:ServicePayload & {active?:boolean}}){return(await httpsCallable<typeof input,{draft:CatalogueDraftView}>(functions,'saveCatalogueDraft')(input)).data.draft;}
 export async function reviewCatalogueDraftVersion(input:{draftId:string;expectedVersion:number}){return(await httpsCallable<typeof input,{draft:CatalogueDraftView}>(functions,'reviewCatalogueDraftVersion')(input)).data.draft;}
 
-export async function getManagedCataloguePublishStatus(publishId:string){if(!/^[A-Za-z0-9_-]{1,128}$/.test(publishId))throw Error('Exact operation ID required');const result=(await httpsCallable<{publishId:string},{publishId:string;phase:'reserved'|'sheet-write-in-flight'|'sheet-verified'|'needs-recovery-readback'|'complete'}>(functions,'getManagedCataloguePublishStatus')({publishId})).data;if(result.publishId!==publishId||!['reserved','sheet-write-in-flight','sheet-verified','needs-recovery-readback','complete'].includes(result.phase))throw Error('Exact operation status unavailable');return result;}
+export async function getManagedCataloguePublishStatus(publishId:string){if(!/^[A-Za-z0-9_-]{1,128}$/.test(publishId))throw Error('Exact operation ID required');const result=(await httpsCallable<{publishId:string},{publishId:string;phase:'reserved'|'sheet-write-in-flight'|'sheet-verified'|'needs-recovery-readback'|'complete';customerPublication?:{publishId:string;hash:string}|null}>(functions,'getManagedCataloguePublishStatus')({publishId})).data;if(result.publishId!==publishId||!['reserved','sheet-write-in-flight','sheet-verified','needs-recovery-readback','complete'].includes(result.phase))throw Error('Exact operation status unavailable');return result;}
 
 export async function reviewManagedCatalogue(input:{draftId:string;expectedVersion:number}){return(await httpsCallable<typeof input,{id:string}>(functions,'reviewManagedCatalogue')(input)).data;}
 export async function publishManagedCatalogue(input:{publishId:string;reviews:{draftId:string;reviewHash:string}[]}){return(await httpsCallable<typeof input,{phase:string}>(functions,'publishManagedCatalogue')(input)).data;}
@@ -15,3 +18,13 @@ export async function inspectManagedCatalogueRecovery(publishId:string){return(a
 export async function reviewManagedCatalogueRecovery(publishId:string){return(await httpsCallable<{publishId:string},{assessmentDigest:string}>(functions,'reviewManagedCatalogueRecovery')({publishId})).data;}
 export async function finishManagedCatalogueRecovery(input:{publishId:string;assessmentDigest:string}){return(await httpsCallable<typeof input,{phase:string}>(functions,'finishManagedCatalogueRecovery')(input)).data;}
 export async function discardCatalogueDraft(input:{draftId:string;expectedVersion:number}){return(await httpsCallable<typeof input,{ok:boolean}>(functions,'discardCatalogueDraft')(input)).data;}
+
+export async function readCustomerPublication():Promise<{publishId:string;hash:string;services:ReviewedType0[];references?:ReviewedType1[]}>{
+ const {data}=await httpsCallable<{customerPublication:true},{services:ReviewedType0[];references?:ReviewedType1[];cataloguePublication:{publishId:string;hash:string}}>(functions,'getServiceCatalogue')({customerPublication:true});
+ if(!data.cataloguePublication?.publishId||!data.cataloguePublication.hash||!Array.isArray(data.services))throw Error('Authenticated Customer publication unavailable');
+ const customer={...data.cataloguePublication,services:data.services,...(data.references?{references:data.references}:{})};
+ const response=await fetch('https://asia-south1-autodeck-studio.cloudfunctions.net/getPublicCatalogue',{cache:'no-store'});if(!response.ok)throw Error('Website publication readback failed');
+ verifyWebsitePublication(customer,await response.json());return customer;
+}
+
+export async function reviewManagedCatalogueBatch(drafts:CatalogueDraftView[]){return(await httpsCallable<{drafts:{draftId:string;expectedVersion:number}[]},{drafts:{id:string;version:number;reviewHash:string}[]}>(functions,'reviewManagedCatalogue')({drafts:drafts.map(d=>({draftId:d.id,expectedVersion:d.version}))})).data;}

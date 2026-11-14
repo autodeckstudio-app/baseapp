@@ -14,7 +14,7 @@ export { restoreVehicle } from "./functions/vehicle/restoreVehicle.js";
 export { deleteVehicle } from "./functions/vehicle/deleteVehicle.js";
 export { createWalkinCustomer } from "./functions/auth/createWalkinCustomer.js";
 export { updateCustomerContact } from "./functions/auth/updateCustomerContact.js";
-export { submitReview } from "./functions/booking/submitReview.js";
+export { submitReview, getMyVisitReview } from "./functions/booking/submitReview.js";
 export { publishVehiclePhoto } from "./functions/vehicle/publishVehiclePhoto.js";
 export { getPrivateFileUrl } from "./functions/files/getPrivateFileUrl.js";
 export { removeMyVehicleImage } from "./functions/vehicle/removeMyVehicleImage.js";
@@ -244,3 +244,5 @@ export {getCombinedReturnReview,approveCombinedReturn,settleCombinedManualReturn
 
 // Approved-batch financial activation only; actual receipt/cancellation still needs authority.
 export { getCashReconciliationReview, recordCashAlreadyReceived, reconcileCashAlreadyReceived } from './functions/payment/cashReconciliation.js';
+export { getVisitFeedback } from './functions/booking/getVisitFeedback.js';
+export {getPublicCatalogue}from'./functions/service/getPublicCatalogue.js';

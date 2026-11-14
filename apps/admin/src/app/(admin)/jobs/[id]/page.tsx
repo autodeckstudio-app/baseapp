@@ -1,4 +1,5 @@
 "use client";
+import{VisitFeedback}from"../../../../components/VisitFeedback";
 import{CashReconciliationPanel}from "../../../../components/CashReconciliationPanel";
 import{CASH_RECONCILIATION_ENABLED}from "../../../../lib/backend-features";
 import { JobWorkCoverage } from "../../../../components/JobWorkCoverage";
@@ -185,6 +186,7 @@ export default function JobDetailPage() {
 
       <div className="ax-detail">
         <div className="ax-detail-main">
+          {currentScope&&job.status==='DELIVERED'?<VisitFeedback target={{jobId:job.id}}/>:null}
           {booking ? <BookingPanels compact booking={booking} job={job} service={service} bayName={bayName} onError={setError} /> : null}
           <details className="ax-panel ax-job-disclosure"><summary>Performed work and QC</summary><JobWorkCoverage key={job.id} job={job}/></details>
           <details className="ax-panel ax-job-disclosure">

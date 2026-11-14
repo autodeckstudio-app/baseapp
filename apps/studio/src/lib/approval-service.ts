@@ -1,3 +1,4 @@
+import { alignedCustomerServices } from "@autodeck/core";
 import { httpsCallable } from "firebase/functions";
 import { collection, query, where, orderBy, onSnapshot, type Unsubscribe } from "firebase/firestore";
 import { db, functions } from "./firebase";
@@ -73,8 +74,8 @@ export function listenToPendingApprovalsForStudio(
 
 type GetServiceCatalogueOutput = { services: Service[] };
 
-export async function getActiveServices(): Promise<Service[]> {
+export async function getActiveServices(options?:{catalogueOnly?:boolean}): Promise<Service[]> {
   const fn = httpsCallable<Record<string, never>, GetServiceCatalogueOutput>(functions, "getServiceCatalogue");
   const result = await fn({});
-  return result.data.services.filter((s) => s.active);
+  return options?.catalogueOnly===false?result.data.services.filter(s=>s.active):alignedCustomerServices(result.data.services).filter(s=>s.catalogueEntryKind!=='enquiry');
 }

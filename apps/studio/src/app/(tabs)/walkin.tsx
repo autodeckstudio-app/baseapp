@@ -19,7 +19,7 @@ import {
 } from "../../lib/walkin-service";
 import { loadCustomerDirectory, filterDirectory, type CustomerDirectory } from "../../lib/lookup-service";
 import { getActiveServices } from "../../lib/approval-service";
-import { STAFF_SEGMENTS, normalizeSegment, jobHoldsBay } from "@autodeck/core";
+import { STAFF_SEGMENTS, normalizeSegment, jobHoldsBay, SERVICE_HOMES, servicePlacement, alignedCustomerPriceLabel } from "@autodeck/core";
 import type { Customer, Vehicle, Service, ServiceJob, StudioConfig, VehicleCategory, PriceBreakdown } from "@autodeck/core";
 import { colors, spacing, radius, typography, Button, TextInput, StatusBadge, LoadingState, ErrorState } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
@@ -258,24 +258,9 @@ export default function WalkinScreen() {
     backgroundColor: selected ? colors.accentMuted : colors.surface,
   });
 
-  const CATEGORY_LABELS: Record<string, string> = {
-    washing: "Wash",
-    ceramic: "Ceramic",
-    coating: "Coating",
-    ppf: "PPF",
-    tinting: "Tint",
-    inspection: "Inspection",
-    other: "Other",
-    garage: "Garage",
-    modifications: "Mods",
-    pickup: "Pickup",
-  };
-  const CATEGORY_ORDER = ["washing", "ceramic", "coating", "ppf", "garage", "modifications", "pickup", "tinting", "inspection", "other"];
-  const categoriesPresent = useMemo(() => {
-    const set = new Set(services.map((s) => String(s.category)));
-    return CATEGORY_ORDER.filter((c) => set.has(c)).concat([...set].filter((c) => !CATEGORY_ORDER.includes(c)));
-  }, [services]);
-  const visibleServices = services.filter((s) => catFilter === "all" || String(s.category) === catFilter);
+  const CATEGORY_LABELS:Record<string,string>=Object.fromEntries(SERVICE_HOMES.map(h=>[h.key,h.label]));
+  const categoriesPresent=useMemo(()=>SERVICE_HOMES.filter(h=>services.some(s=>servicePlacement(s)?.home===h.key)).map(h=>h.key),[services]);
+  const visibleServices = services.filter((s) => catFilter === "all" || servicePlacement(s)?.home === catFilter);
 
   function goBack() {
     setActionError(null);
@@ -287,7 +272,7 @@ export default function WalkinScreen() {
     setShowNew(false); setShowAddVehicle(false); setActionError(null); setVehicleCategory(null); setNewVehicleType(null); setCatFilter("all"); setPriceBreakdown(null);
     reloadDirectory();
   }
-  const priceText = (s: Service) => (s.priceOnRequest === true ? "Consult" : typeof s.basePrice === "number" ? `from ₹${(s.basePrice / 100).toLocaleString("en-IN")}` : "");
+  const priceText = alignedCustomerPriceLabel;
 
   const titles: Record<Step, string> = {
     customer: "Who's the customer?",
@@ -432,7 +417,7 @@ export default function WalkinScreen() {
               <TouchableOpacity key={s.id} activeOpacity={0.8} onPress={() => { setSelectedServiceId(s.id); setSelectedBayId(null); setStep("review"); }} style={{ ...tapRow(selected), flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>{s.name}</Text>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>{CATEGORY_LABELS[String(s.category)] ?? String(s.category)}</Text>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>{servicePlacement(s)?.family ?? CATEGORY_LABELS[String(s.category)] ?? String(s.category)}</Text>
                 </View>
                 <Text style={{ ...typography.captionMedium, color: colors.textSecondary }}>{priceText(s)}</Text>
               </TouchableOpacity>

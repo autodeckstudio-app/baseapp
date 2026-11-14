@@ -1,3 +1,4 @@
+import{catalogueReferences}from'../lib/catalogue-references';
 import { Image, View, Pressable, useWindowDimensions, type ImageSourcePropType } from "react-native";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import {
@@ -204,7 +205,7 @@ export function ServicesExplorer({
   const { colors } = useExperienceTheme();
   // Pickup/drop is a booking option, never a standalone sale card. This is presentation only.
   const rows = currentServices(services).filter(s=>s.category!=="pickup"),
-    refs = referenceChoices(rows);
+    refs = referenceChoices(rows,catalogueReferences());
   const home = SERVICE_HOMES.find((h) => h.key === path.home);
   const searching = !!query.trim();
   const products = (xs: Service[], rs: BrandEnquiry[]) => (

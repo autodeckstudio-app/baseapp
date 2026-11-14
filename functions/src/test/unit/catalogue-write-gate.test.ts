@@ -1,0 +1,2 @@
+import{it,expect}from'vitest';import{assertReviewedCatalogueWrite}from'../../lib/catalogue-write-gate.js';
+it('managed tenant cannot mutate public catalogue through legacy endpoints',()=>{expect(()=>assertReviewedCatalogueWrite('automodz')).toThrow('Review & publish');expect(()=>assertReviewedCatalogueWrite('automodz',{serviceId:'a',basePrice:500})).toThrow('Review & publish');expect(()=>assertReviewedCatalogueWrite('automodz',{serviceId:'a',internalRating:'A'})).not.toThrow();expect(()=>assertReviewedCatalogueWrite('other')).not.toThrow()});

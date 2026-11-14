@@ -1,3 +1,4 @@
+import{useCataloguePublication}from'../../../hooks/useCataloguePublication';
 import {useAuth} from '../../../hooks/useAuth';
 import {useForegroundRefresh} from '../../../hooks/useForegroundRefresh';
 import {homeCatalogueBack,catalogueReturnParams} from "../../../lib/home-service-navigation";
@@ -57,6 +58,7 @@ export default function CatalogueScreen() {
       if(generation===loadGeneration.current&&scope===ownerRef.current)setError(true);
     }
   }, []);
+  useCataloguePublication(()=>{void load()});
   useForegroundRefresh(()=>{void load()},ownerScope);
   useEffect(()=>()=>{loadGeneration.current++},[]);
   const all = useMemo(() => currentServices(loadedScope.current===ownerScope?services ?? []:[]), [services,ownerScope]);

@@ -1,4 +1,5 @@
 "use client";
+import{VisitFeedback}from"../../../../components/VisitFeedback";
 import { membershipCoveredLabel } from "@autodeck/core";
 
 import { goBackOrTo, replaceWithoutCounting } from "../../../../lib/go-back";
@@ -118,7 +119,8 @@ export default function BookingDetailPage() {
 
       <div className="ax-detail">
         <div className="ax-detail-main">
-          <BookingPanels booking={booking} job={job} service={service} bayName={bayName} onError={setError} />
+          {booking.id===id&&booking.tenantId===claims?.tenantId&&booking.status==='COMPLETED'?<VisitFeedback target={{bookingId:booking.id}}/>:null}
+      <BookingPanels booking={booking} job={job} service={service} bayName={bayName} onError={setError} />
 
           {approvals.length > 0 && (
             <section className="ax-panel">

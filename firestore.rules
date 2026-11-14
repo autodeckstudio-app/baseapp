@@ -377,6 +377,11 @@ service cloud.firestore {
     // âââ /services/{serviceId} ââââââââââââââââââââââââââââââââââââââââââââââ
     // Catalogue mutations are server-authoritative (createService/updateService/
     // setServiceActive) so they are audited â no direct client write, even by admin.
+    // Version notification only. Full customer payload stays behind the safe reader.
+    match /cataloguePublishedVersions/{tenantId} {
+      allow read: if isAuthenticated() && request.auth.token.tenantId == tenantId;
+      allow write: if false;
+    }
     match /services/{serviceId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data));

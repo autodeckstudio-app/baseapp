@@ -37,7 +37,7 @@ export const calculateServicePrice = onCall({ region: "asia-south1" , enforceApp
   // Cross-tenant access denied — client cannot request pricing from another tenant's catalogue
   assertTenant(user, service.tenantId);
 
-  if (!service.active) {
+  if (!service.active || service.catalogueEntryKind==='enquiry') {
     throw new HttpsError("failed-precondition", "Service is not currently available.");
   }
 

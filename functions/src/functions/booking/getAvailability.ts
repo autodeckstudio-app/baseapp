@@ -39,7 +39,7 @@ export const getAvailability = onCall({ region: "asia-south1" , enforceAppCheck:
   if (service.tenantId !== user.claims.tenantId) {
     throw new HttpsError("permission-denied", "Cross-tenant access denied.");
   }
-  if (!service.active) {
+  if (!service.active || service.catalogueEntryKind==='enquiry') {
     throw new HttpsError("failed-precondition", "Service is not currently available.");
   }
 

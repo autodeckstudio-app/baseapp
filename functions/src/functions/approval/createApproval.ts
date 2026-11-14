@@ -40,7 +40,7 @@ export const createApproval = onCall({ region: "asia-south1" , enforceAppCheck: 
   if (!serviceSnap.exists) throw new HttpsError("not-found", "Service not found.");
   const service = serviceSnap.data() as Service;
   assertTenant(user, service.tenantId);
-  if (!service.active) throw new HttpsError("failed-precondition", "Service is not active.");
+  if (!service.active || service.catalogueEntryKind==='enquiry') throw new HttpsError("failed-precondition", "Service is not active.");
 
   const now = new Date().toISOString();
   const ref = db.collection(COLLECTIONS.approvals()).doc();

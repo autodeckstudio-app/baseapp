@@ -96,6 +96,7 @@ export const setServiceActiveSchema = z.object({
 }).strict();
 
 export const getServiceCatalogueSchema = z.object({
+  customerPublication: z.boolean().optional(),
   includeInactive: z.boolean().optional(),
   category: serviceCategoryEnum.optional(),
   // Optional: when set, the response carries server-computed display totals for this car size,

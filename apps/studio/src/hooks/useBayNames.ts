@@ -25,7 +25,7 @@ export function useJobLabels(studioId:string|null,owner:string|null,tenantId:str
     const refresh=()=>{
       if(AppState.currentState!==null&&AppState.currentState!=='active')return;
       const request=++generation;
-      void getActiveServices().then(list=>{if(active&&current.current===scope&&request===generation){services=Object.fromEntries(list.filter(s=>s.tenantId===tenantId).map(s=>[s.id,s.name]));publish()}}).catch(()=>{if(active&&current.current===scope&&request===generation){services={};publish()}});
+      void getActiveServices({catalogueOnly:false}).then(list=>{if(active&&current.current===scope&&request===generation){services=Object.fromEntries(list.filter(s=>s.tenantId===tenantId).map(s=>[s.id,s.name]));publish()}}).catch(()=>{if(active&&current.current===scope&&request===generation){services={};publish()}});
     };
     refresh();
     const timer=setInterval(refresh,60_000);
