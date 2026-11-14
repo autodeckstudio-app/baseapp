@@ -26,6 +26,7 @@ const BLANK_WARRANTY_IDS = new Set([
   "menu-coat-3m-ceramic",
 ]);
 export function applyBrandWarranty(s: Service): Service {
+  if(s.customerMenu)return s;
   const k = s.name.toLowerCase();
   if (k in FILM_WARRANTY) return { ...s, warrantyLabel: FILM_WARRANTY[k] ?? null };
   if (BLANK_WARRANTY_IDS.has(s.id) || s.id.startsWith("menu-ppf-")) return { ...s, warrantyLabel: null };

@@ -1,3 +1,4 @@
+import{assertReviewedCatalogueWrite}from'../../lib/catalogue-write-gate.js';
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
@@ -32,6 +33,7 @@ export const updateService = onCall({ region: "asia-south1", enforceAppCheck: sh
 
     const existing = snap.data() as Service;
     assertTenant(user, existing.tenantId);
+    assertReviewedCatalogueWrite(existing.tenantId,data);
 
     const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
     if (data.name !== undefined) updates["name"] = data.name;
@@ -55,7 +57,7 @@ export const updateService = onCall({ region: "asia-south1", enforceAppCheck: sh
     if (data.imageUrl !== undefined) updates["imageUrl"] = data.imageUrl;
 
     if(data.internalRating !== undefined) tx.set(db.collection("servicePrivate").doc(data.serviceId),{tenantId:existing.tenantId,internalRating:data.internalRating,updatedAt:updates["updatedAt"]},{merge:true});
-    tx.update(ref, updates);
+    if(Object.keys(data).some(key=>key!=='serviceId'&&key!=='internalRating'))tx.update(ref, updates);
     writeAuditLog(tx, {
       action: "service.updated",
       entityType: "Service",

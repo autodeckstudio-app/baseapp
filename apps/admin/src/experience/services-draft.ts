@@ -1,11 +1,15 @@
 // Service editor draft: every number is a string while typing (so an empty
 // field is distinct from 0) and money is in rupees. toServicePayload turns
 // it into the stored shape (paise, integers) or explains what's wrong.
-import {customerServiceName} from "@autodeck/core";
+import {customerServiceName,servicePlacement,reviewedStartingPrice} from "@autodeck/core";
 import type { BayType, Service, ServiceCategory, VehicleCategory, VehicleCategoryPricing, WarrantyDurationUnit } from "@autodeck/core";
 
 export interface SizeRuleDraft { vehicleCategory: VehicleCategory; extraRupees: string; extraMinutes: string }
 export interface ServiceDraft {
+  catalogueEntryKind?:'enquiry';referenceKey?:string;referenceGroup?:'ppf'|'coatings';referenceSurface?:string;
+  priceEstimate?:boolean;
+  customerMenu?: NonNullable<Service["customerMenu"]>;
+  originalPriceMode?:"fixed"|"from"|"consult";
   serviceId: string | null;
   internalRating?: "A" | "B" | "C" | "D" | null;
   ratingChanged?: boolean;
@@ -38,6 +42,10 @@ export const EMPTY_SERVICE: ServiceDraft = {
 export function draftFromService(s: Service): ServiceDraft {
   return {
     serviceId: s.id,
+    ...(s.priceEstimate!==undefined?{priceEstimate:s.priceEstimate}:{}),
+    ...(s.catalogueEntryKind?{catalogueEntryKind:s.catalogueEntryKind,referenceKey:s.referenceKey,referenceGroup:s.referenceGroup,...(s.referenceSurface?{referenceSurface:s.referenceSurface}:{})}:{}),
+    ...(servicePlacement(s)?{customerMenu:s.customerMenu??{...servicePlacement(s)!,priceMode:reviewedStartingPrice(s)?'from':s.priceOnRequest?'quote':s.priceFrom?'from':'fixed',priceNote:reviewedStartingPrice(s)?.note??'',priceCondition:reviewedStartingPrice(s)?.condition??''}}:{}),
+    originalPriceMode:s.priceOnRequest?'consult':s.priceFrom?'from':'fixed',
     name: customerServiceName(s.name),
     ...(s.internalRating !== undefined ? {internalRating:s.internalRating} : {}),
     ratingChanged: false,
@@ -62,6 +70,9 @@ export function draftFromService(s: Service): ServiceDraft {
 }
 
 export interface ServicePayload {
+  catalogueEntryKind?:'enquiry';referenceKey?:string;referenceGroup?:'ppf'|'coatings';referenceSurface?:string;
+  priceEstimate?:boolean;
+  customerMenu?:NonNullable<Service["customerMenu"]>;
   internalRating?: "A" | "B" | "C" | "D" | null;
   name: string;
   category: ServiceCategory;
@@ -87,12 +98,14 @@ export interface ServicePayload {
 const paise = (rupees: string) => Math.round(Number(rupees) * 100);
 
 export function toServicePayload(d: ServiceDraft): { ok: true; payload: ServicePayload } | { ok: false; problem: string } {
+  if(d.customerMenu&&(!['paint','detailing','washing','garage','modifications'].includes(d.customerMenu.home)||!d.customerMenu.family.trim()))return{ok:false,problem:'Choose a Customer section and service group.'};
   if (!d.name.trim()) return { ok: false, problem: "Give the service a name." };
   if (!d.description.trim()) return { ok: false, problem: "Add a short description customers will read." };
+  if(d.catalogueEntryKind==='enquiry'&&(d.priceMode!=='consult'||Number(d.priceRupees)!==0||Number(d.minutes)!==0))return{ok:false,problem:'An enquiry has no booking price or duration.'};
   const price = Number(d.priceRupees);
   if (!Number.isFinite(price) || price < 0 || (d.priceMode !== "consult" && (!d.priceRupees.trim() || price <= 0))) return { ok: false, problem: "Starting price must be more than ₹0." };
   const minutes = Number(d.minutes);
-  if (!Number.isInteger(minutes) || minutes <= 0) return { ok: false, problem: "Time needed must be a whole number of minutes." };
+  if (!Number.isInteger(minutes) || (d.catalogueEntryKind==='enquiry'?minutes!==0:minutes<=0)) return { ok: false, problem: "Time needed must be a whole number of minutes." };
   const order = Number(d.displayOrder || "0");
   if (!Number.isInteger(order)) return { ok: false, problem: "Position must be a whole number." };
 
@@ -121,7 +134,10 @@ export function toServicePayload(d: ServiceDraft): { ok: true; payload: ServiceP
   return {
     ok: true,
     payload: {
+      ...(d.catalogueEntryKind?{catalogueEntryKind:d.catalogueEntryKind,referenceKey:d.referenceKey!,referenceGroup:d.referenceGroup!,...(d.referenceSurface?{referenceSurface:d.referenceSurface}:{})}:{}),
+      ...(d.priceEstimate!==undefined?{priceEstimate:d.priceEstimate}:{}),
       name: customerServiceName(d.name.trim()),
+      ...(d.customerMenu?{customerMenu:{...d.customerMenu,...(d.originalPriceMode!==undefined&&d.originalPriceMode===d.priceMode?{}:{priceMode:d.priceMode==='consult'?'quote':d.priceMode}),...(d.priceMode==='fixed'?{priceNote:'',priceCondition:''}:{})}}:{}),
       ...(d.ratingChanged ? {internalRating: d.internalRating ?? null} : {}),
       category: d.category,
       brand: d.brand.trim() || null,

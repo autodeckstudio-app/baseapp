@@ -5,6 +5,17 @@
 # Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
 # Unknown base commit or git error => build (safe default).
 app="$1"
+# Reviewed catalogue/feedback release: all four affected apps, exact base and paths.
+catalogue_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/site-service-arrows-remove-20261114 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$catalogue_parent" = ea891c3c3e9806017dfe8f54069af5fd8792cf98 ]; }; then
+  catalogue_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$catalogue_root" ] || exit 0
+  cd "$catalogue_root" || exit 0
+  [ "$catalogue_parent" = ea891c3c3e9806017dfe8f54069af5fd8792cf98 ] || exit 0
+  git diff --name-only "$catalogue_parent" HEAD > /tmp/catalogue-release-paths-actual || exit 0
+  [ "$(cat /tmp/catalogue-release-paths-actual)" = "$(cat scripts/catalogue-release-paths-20261114.txt)" ] || exit 0
+  case "$app" in customer|admin|studio|site) exit 1 ;; *) exit 0 ;; esac
+fi
+
 # Restore existing website service carousel styles only: exact parent/path contract.
 service_restore_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/site-services-style-restore-20261114 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$service_restore_parent" = 8fd4ebb48cb45bb4130c5b69a678dd8fb5127c78 ]; }; then

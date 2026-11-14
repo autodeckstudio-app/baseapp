@@ -1,3 +1,4 @@
+import{assertReviewedCatalogueWrite}from'../../lib/catalogue-write-gate.js';
 import { onCall } from "firebase-functions/v2/https";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
@@ -15,6 +16,7 @@ export const createService = onCall({ region: "asia-south1", enforceAppCheck: sh
   assertRole(user, "admin", "superadmin");
   assertTenant(user, user.claims.tenantId);
 
+  assertReviewedCatalogueWrite(user.claims.tenantId);
   const data = validate(createServiceSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "service.create");
   assertValidMinorUnits(data.basePrice, "basePrice");

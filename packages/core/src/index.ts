@@ -63,3 +63,9 @@ export * from './combined-checkout.js';
 
 export * from "./pickup-tariff.js";
 export * from './studio-clock.js';
+
+export {alignedCustomerServices,isOnCustomerMenu,servicePlacement,referencePlacement,referenceChoices,HOME_COPY,FAMILY_COPY,BRAND_ENQUIRIES} from "./catalogue-display";
+export type {BrandEnquiry} from "./catalogue-display";
+
+export {alignedCustomerPriceLabel,reviewedStartingPrice} from "./catalogue-price-display";
+export {alignedCustomerWarranty} from "./catalogue-warranty-display";

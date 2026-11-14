@@ -1,3 +1,4 @@
+import{assertReviewedCatalogueWrite}from'../../lib/catalogue-write-gate.js';
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
@@ -25,6 +26,7 @@ export const setServiceActive = onCall({ region: "asia-south1", enforceAppCheck:
 
     const existing = snap.data() as Service;
     assertTenant(user, existing.tenantId);
+    assertReviewedCatalogueWrite(existing.tenantId);
 
     tx.update(ref, { active: data.active, updatedAt: new Date().toISOString() });
     writeAuditLog(tx, {

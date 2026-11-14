@@ -64,7 +64,7 @@ export const standbyBooking = onCall({ region: "asia-south1", enforceAppCheck: s
     const service = serviceSnap.data() as Service;
     assertTenant(user, config.tenantId); assertTenant(user, service.tenantId);
     const bay = config.bays.find(b => b.id === data.bayId && b.active && b.bayType === service.requiredBayType);
-    if (!bay || !service.active) throw new HttpsError("failed-precondition", "Choose an active bay compatible with this service.");
+    if (!bay || !service.active || service.catalogueEntryKind==='enquiry') throw new HttpsError("failed-precondition", "Choose an active bay compatible with this service.");
     const date = utcToLocalDate(nowDate, config.timezone);
     const time = utcToLocalTime(nowDate, config.timezone);
     const hours = config.operatingHours.find(h => h.dayOfWeek === getDayOfWeek(date));

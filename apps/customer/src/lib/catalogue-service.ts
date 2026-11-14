@@ -1,3 +1,4 @@
+import{setCatalogueReferences}from'./catalogue-references';import type{BrandEnquiry}from'./brand-enquiries';
 import {reviewedStartingPrice} from './reviewed-starting-prices';
 import { customerOfferingVisible } from './customer-offering-visibility';
 import { httpsCallable } from "firebase/functions";
@@ -32,7 +33,7 @@ export function invalidateCatalogueDisplayReads(){catalogueRevision++;memo=null;
 // unreachable; the scope listener also clears them immediately.
 const totalsEpoch=new Map<string,number>();
 const totalsMemo = new Map<string, { at: number; pending:boolean; p: Promise<Record<string, number>> }>();
-onPriceCacheScopeChange(() => { catalogueRevision++;memo=null;totalsMemo.clear();totalsEpoch.clear(); });
+onPriceCacheScopeChange(() => { catalogueRevision++;memo=null;setCatalogueReferences(undefined);totalsMemo.clear();totalsEpoch.clear(); });
 
 const store = (): { getItem(k: string): string | null; setItem(k: string, v: string): void } | null => {
   try { return (globalThis as unknown as { localStorage?: { getItem(k: string): string | null; setItem(k: string, v: string): void } }).localStorage ?? null; } catch { return null; }
@@ -42,21 +43,22 @@ const store = (): { getItem(k: string): string | null; setItem(k: string, v: str
 export function peekCatalogue(): Service[] | null {
   try {
     const raw = store()?.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Service[]).filter(previewEligible).map(customerRatingPrivacy) : null;
+    if(!raw)return null;const cached=JSON.parse(raw)as Service[]|{services:Service[];references?:BrandEnquiry[]};setCatalogueReferences(Array.isArray(cached)?undefined:cached.references);return(Array.isArray(cached)?cached:cached.services).filter(previewEligible).map(customerRatingPrivacy);
   } catch { return null; }
 }
 
 async function fetchCatalogue(category?: ServiceCategory): Promise<Service[]> {
   const revision=catalogueRevision,scope=priceCache.scopeKey();
-  const fn = httpsCallable<{ category?: ServiceCategory }, { services: Service[] }>(
+  const fn = httpsCallable<{ category?: ServiceCategory }, { services: Service[];references?:BrandEnquiry[] }>(
     functions,
     "getServiceCatalogue",
   );
   const result = await fn(category !== undefined ? { category } : {});
   const list = result.data.services.filter(previewEligible).map(customerRatingPrivacy).map(applyBrandWarranty);
   if (category === undefined && revision===catalogueRevision && scope===priceCache.scopeKey()) {
+    setCatalogueReferences(result.data.references);
     primeVisuals(list);
-    try { store()?.setItem(KEY, JSON.stringify(list)); } catch { /* storage full or blocked */ }
+    try { store()?.setItem(KEY, JSON.stringify({services:list,references:result.data.references})); } catch { /* storage full or blocked */ }
   }
   return list;
 }

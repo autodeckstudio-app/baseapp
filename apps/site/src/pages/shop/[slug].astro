@@ -1,4 +1,5 @@
 ---
+import{websiteText}from'../../lib/website-text';
 import Base from '../../layouts/Base.astro';
 import '../../styles/store.css';
 import '../../styles/shop-flow.css';
@@ -17,26 +18,26 @@ export function getStaticPaths() {
 }
 const { p } = Astro.props as { p: Product };
 const test = !!p.fixture && import.meta.env.DEV;
-const buyable = !!p.pricePaise && Number.isInteger(p.pricePaise) && p.pricePaise > 0 && !p.fixture;
-const price = (buyable || test) ? `Rs ${(p.pricePaise! / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : null;
+
+
 ---
-<Base title={`${p.name} · AutoDeck Store`} description={p.description} page="shop">
+<Base title={`${websiteText(p.name) || 'AutoDeck collection'} · AutoDeck Store`} description={websiteText(p.description)} page="shop">
 <section class="wrap pp">
-  <div class="pp-photo"><img src={p.image} alt={p.imageAlt} /></div>
+  <div class="pp-photo"><img src={p.image} alt={websiteText(p.imageAlt)} /></div>
   <div class="pp-copy">
     {p.fixture && <span class="fx-tag"><i></i> Fixture. Layout test, not a product</span>}
-    <p class="eyebrow" style="margin-top:14px"><i></i> {p.department}</p>
-    <h1>{p.name}</h1>
-    <p>{p.description}</p>
-    {p.details && p.details.length > 0 && <dl>{p.details.map(d => <div><dt>{d.label}</dt><dd>{d.value}</dd></div>)}</dl>}
-    {price ? <p class="pp-price">{price}{test && <small style="font-size:12px;font-weight:400;color:#ffb27a"> test value</small>}</p> : <p class="pp-sub">No price yet. Not available to order.</p>}
+    <p class="eyebrow" style="margin-top:14px"><i></i> {websiteText(p.department)}</p>
+    <h1>{websiteText(p.name) || 'AutoDeck collection'}</h1>
+    <p>{websiteText(p.description)}</p>
+    {p.details && p.details.length > 0 && <dl>{p.details.filter(d=>websiteText(d.label)&&websiteText(d.value)).map(d => <div><dt>{d.label}</dt><dd>{d.value}</dd></div>)}</dl>}
+    <p class="pp-sub">Not available to order.</p>
     {test ? (
       <div data-pp>
         <div class="sizes" role="radiogroup" aria-label="Size">{(p.variants || []).map((v, i) => <label><input type="radio" name="size" value={v.id} disabled={v.stock === 0} checked={i === 0 && v.stock !== 0} /><span>{v.label}{v.stock === 0 ? '' : ''}</span></label>)}</div>
         <button class="btn-solid" type="button" data-add-to-cart={p.id}>Add to cart</button><a class="btn-link" href="/shop/cart">View cart</a>
         <p class="pp-sub" data-cart-msg style="margin-top:12px"></p>
       </div>
-    ) : <p class="pp-sub">{buyable ? 'Ordering opens when delivery and returns rules are published.' : ''}</p>}
+    ) : null}
     <p style="margin-top:22px"><a class="btn-link" style="margin:0" href="/shop">Back to the store</a></p>
   </div>
 </section>

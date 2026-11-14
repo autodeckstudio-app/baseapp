@@ -1,3 +1,4 @@
+import{useCataloguePublication}from'../../../hooks/useCataloguePublication';
 import {MediaFrame} from "../../../ui/MediaFrame";
 import{reviewedStartingPrice,reviewedQuoteRequired}from '../../../lib/reviewed-starting-prices';
 import {detailHomeBack} from "../../../lib/home-service-navigation";
@@ -43,6 +44,7 @@ export default function ServiceDetailScreen() {
   const [loadError, setLoadError] = useState(false);
   const [catalogueTry, setCatalogueTry] = useState(0);
   const auth = useAuth();
+  const publicationRevision=useCataloguePublication();
   const pricingVehicle = usePricingVehicle();
   // The size comes only from the selected car's saved type (edited in Garage). Flat-priced services do not depend on size, so the server
   // only needs a valid value there; size-priced (PPF) with no saved type has no price until the type is saved. Never a guessed size.
@@ -56,7 +58,7 @@ export default function ServiceDetailScreen() {
 
   useEffect(() => {
     let alive=true;setService(null);setLoading(true);setLoadError(false);setSourceHold(false);setReviews(null);setPriceBreakdown(null);
-    if (!id || !customerOfferingVisible({id})) {setLoading(false);return;}
+    if (!id) {setLoading(false);return;}
     if (!customerCatalogueEligible({id},__DEV__ && /identityPreview=1/.test((globalThis as {location?:{search?:string}}).location?.search ?? ""))) {setSourceHold(true);setLoading(false);return;}
     void (async () => {
       try {
@@ -66,7 +68,7 @@ export default function ServiceDetailScreen() {
       finally {if(alive)setLoading(false);}
     })();
     return()=>{alive=false};
-  }, [id, catalogueTry]);
+  }, [id, catalogueTry,publicationRevision,auth.status,auth.status==='ready'?auth.user.uid:null,auth.status==='ready'?auth.claims.tenantId:null]);
 
   useEffect(() => {
     setPriceBreakdown(null);

@@ -1,4 +1,5 @@
 "use client";
+import { alignedCustomerServices } from "@autodeck/core";
 
 import { httpsCallable } from "firebase/functions";
 import type {
@@ -21,7 +22,7 @@ export async function getServiceCatalogue(category?: ServiceCategory): Promise<S
     "getServiceCatalogue",
   );
   const result = await fn(category !== undefined ? { category } : {});
-  return result.data.services;
+  return alignedCustomerServices(result.data.services).filter(s=>s.catalogueEntryKind!=='enquiry');
 }
 
 // The callable returns active services only. Hidden ones are read directly so the

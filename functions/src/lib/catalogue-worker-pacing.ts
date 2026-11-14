@@ -17,7 +17,7 @@ export interface CatalogueWorkerPacingOptions{
   now?:()=>number;
 }
 
-const WRITE_OPS=new Set(['write-reviewed-public-row','append-reviewed-public-row']);
+const WRITE_OPS=new Set(['write-reviewed-public-row','append-reviewed-public-row','append-reviewed-public-rows','apply-reviewed-public-batch']);
 
 export function paceCatalogueWorkerSend(send:Send,opts:CatalogueWorkerPacingOptions={}):Send{
   const minRead=opts.minReadIntervalMs??9000;

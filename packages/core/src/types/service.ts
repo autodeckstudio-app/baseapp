@@ -41,7 +41,21 @@ export interface VehicleCategoryPricing {
 // "no fixed term" (distinct from 'lifetime', which is an explicit term).
 export type WarrantyDurationUnit = "days" | "months" | "years" | "lifetime";
 
+export interface CustomerMenuPresentation {
+  home: 'paint'|'detailing'|'washing'|'garage'|'modifications';
+  family: string;
+  priceMode: 'fixed'|'from'|'quote';
+  priceNote: string;
+  priceCondition: string;
+}
 export interface Service {
+  catalogueEntryKind?: "enquiry";
+  referenceKey?: string;
+  referenceGroup?: "ppf"|"coatings";
+  referenceSurface?: string;
+  // Written only by the reviewed publisher. Not an active-flag shortcut.
+  customerMenu?: CustomerMenuPresentation;
+
   id: string;
   tenantId: string; // tenant isolation key (not in doc06 spec but architecturally required)
   internalRating?: "A" | "B" | "C" | "D" | null; // Staff-only, never customer copy.

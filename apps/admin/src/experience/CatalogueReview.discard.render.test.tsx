@@ -1,6 +1,6 @@
 import React from'react';import{create,act}from'react-test-renderer';import{it,expect,vi}from'vitest';
 const h=vi.hoisted(()=>({discarded:[]as any[]}));
-vi.mock('../lib/catalogue-drafts',()=>({getCatalogueDraftHistory:async()=>({history:[],nextHistoryCursor:null}),publicCatalogueDestinations:['Wash and care']}));
+vi.mock('../lib/catalogue-drafts',()=>({getCatalogueDraftHistory:async()=>({history:[{id:'p1',payload:{name:'Synthetic Draft Wash'},state:'published',version:5}],nextHistoryCursor:null}),publicCatalogueDestinations:['Wash and care']}));
 import{CatalogueReview}from'./CatalogueReview';
 const draft=(over:any={})=>({id:'d1',serviceId:null,expectedServiceUpdatedAt:null,version:2,state:'draft',payload:{name:'Synthetic Draft Wash',category:'washing',basePrice:50000,estimatedDurationMinutes:30,requiredBayType:'wash',description:'Synthetic included work',priceOnRequest:false,brand:null},reviewHash:null,updatedAt:'2026-11-10T00:00:00.000Z',...over});
 const onDiscard=async(d:any)=>{h.discarded.push(d)};
@@ -26,8 +26,8 @@ it('discard requires the explicit confirm and reports the exact draft; keep canc
  await act(async()=>r.unmount());
 });
 it('published history rows never show a discard control',async()=>{
- let r:any;await act(async()=>{r=create(<CatalogueReview drafts={[draft({id:'p1',state:'published',version:5})]} onReview={async()=>{}} onDiscard={onDiscard} busy={false}/>)});
- await act(async()=>r.root.findAllByType('button').find((b:any)=>b.props.children==='Synthetic Draft Wash').props.onClick());
+ let r:any;await act(async()=>{r=create(<CatalogueReview drafts={[]} publishedCount={1} onReview={async()=>{}} onDiscard={onDiscard} busy={false}/>)});
+ await act(async()=>r.root.findAllByType('button').find((b:any)=>b.props.children==='Load history').props.onClick());
  const json=JSON.stringify(r.toJSON());
  expect(json).not.toContain('Discard draft');
  expect(json).toContain('Published');

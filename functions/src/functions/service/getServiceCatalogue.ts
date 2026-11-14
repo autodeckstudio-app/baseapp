@@ -1,3 +1,4 @@
+import {readPublicCatalogue} from './getPublicCatalogue.js';
 import { customerCatalogueEligible, customerRatingPrivacy } from "@autodeck/core";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
@@ -22,6 +23,11 @@ export const getServiceCatalogue = onCall({ region: "asia-south1" , enforceAppCh
 
   const db = getFirestore();
   const isAdmin = user.claims.role === "admin" || user.claims.role === "superadmin";
+  if(data.customerPublication){
+    if(!isAdmin||user.claims.tenantId!=='automodz')throw new HttpsError('permission-denied','Admin publication readback required');
+    const published=await readPublicCatalogue(user.claims.tenantId);
+    return {services:published.services,references:published.references,cataloguePublication:{publishId:published.publishId,hash:published.hash}};
+  }
   if(data.includeInactive && !isAdmin) throw new HttpsError("permission-denied", "Staff catalogue access required");
   // Preserve existing indexed query shapes; no new tenant+order-only index is assumed.
   const queryFor=(active:boolean)=>{
@@ -33,7 +39,7 @@ export const getServiceCatalogue = onCall({ region: "asia-south1" , enforceAppCh
   // Missing-active historical records remain excluded, exactly as the old active/hidden readers did.
   const docs=pages.flatMap(page=>page.docs).sort((a,b)=>(a.data()["displayOrder"]??0)-(b.data()["displayOrder"]??0)||a.id.localeCompare(b.id));
   const privateMetadata = isAdmin ? new Map((await Promise.all(docs.map(doc=>db.collection("servicePrivate").doc(doc.id).get()))).filter(x=>x.exists).map(x=>[x.id,x.data()!])) : new Map();
-  const services = docs.filter(doc => isAdmin || customerCatalogueEligible({id:doc.id},process.env["CATALOGUE_IDENTITY_HOLD_PREVIEW"] === "true")).map((doc) => {
+  let services = docs.filter(doc => isAdmin || customerCatalogueEligible({id:doc.id},process.env["CATALOGUE_IDENTITY_HOLD_PREVIEW"] === "true")).map((doc) => {
     const svc = doc.data() as Service;
     if (isAdmin) {
       const metadata=privateMetadata.get(doc.id);
@@ -44,6 +50,10 @@ export const getServiceCatalogue = onCall({ region: "asia-south1" , enforceAppCh
     const { internalNotes: _n, priceBasis, priceBasisAt: _a, ...rest } = svc;
     return customerRatingPrivacy({ ...rest, priceEstimate: svc.priceEstimate === true || /estimate/i.test(priceBasis ?? "") } as Service);
   });
+
+  let references:Awaited<ReturnType<typeof readPublicCatalogue>>['references']|undefined;
+  let cataloguePublication:{publishId:string;hash:string}|undefined;
+  if(!isAdmin&&user.claims.tenantId==='automodz'){const published=await readPublicCatalogue(user.claims.tenantId);references=published.references;cataloguePublication={publishId:published.publishId,hash:published.hash};services=published.services.filter(s=>data.category===undefined||s.category===data.category);}
 
   // Display totals for list tiles, computed with the same engine bookings use while the
   // documents are already loaded. Replaces one calculateServicePrice round trip per visible
@@ -69,5 +79,5 @@ export const getServiceCatalogue = onCall({ region: "asia-south1" , enforceAppCh
     }
   }
 
-  return displayTotals === undefined ? { services } : { services, displayTotals };
+  return displayTotals === undefined ? { services, references, cataloguePublication } : { services, references, displayTotals, cataloguePublication };
 });

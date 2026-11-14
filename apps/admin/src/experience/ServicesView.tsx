@@ -6,7 +6,7 @@ import type { IconName } from "@autodeck/ui/theme";
 // row shows starting price, time and warranty; the editor opens in a drawer.
 import { useState, useEffect } from "react";
 import type { BayType, Service, ServiceCategory, VehicleCategory, WarrantyDurationUnit } from "@autodeck/core";
-import { formatDuration } from "@autodeck/core";
+import { formatDuration, alignedCustomerPriceLabel, alignedCustomerWarranty, SERVICE_HOMES, HOME_COPY, alignedCustomerServices, isOnCustomerMenu, servicePlacement, referencePlacement, referenceChoices } from "@autodeck/core";
 import { PageHead, Toolbar, Segmented, Drawer } from "./Office";
 import { formatPaise } from "../lib/format";
 import { uploadServiceImage } from "../lib/service-image";
@@ -26,12 +26,7 @@ export function duration(mins: number): string {
   return formatDuration(mins);
 }
 
-function warranty(s: Service): string | null {
-  if (!s.warrantyLabel) return null;
-  if (s.warrantyDurationUnit === "lifetime") return `${s.warrantyLabel} · lifetime`;
-  if (s.warrantyDurationUnit && s.warrantyDurationValue) return `${s.warrantyLabel} · ${s.warrantyDurationValue} ${s.warrantyDurationUnit}`;
-  return s.warrantyLabel;
-}
+function warranty(s:Service):string|null{return isOnCustomerMenu(s)?alignedCustomerWarranty(s).warrantyLabel:s.warrantyLabel;}
 
 export function ServicesView(p: {
   services: Service[];
@@ -46,15 +41,24 @@ export function ServicesView(p: {
   onSave: (serviceId: string | null, payload: ServicePayload) => void | Promise<boolean>;
   onToggle: (s: Service) => void;
 }) {
-  const [cat, setCat] = useState<ServiceCategory | "">("");
+  const [cat, setCat] = useState<string>("");
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState<ServiceDraft | null>(null);
   useEffect(()=>{if(p.incomingDraft)setDraft(p.incomingDraft.value)},[p.incomingDraft?.key]);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const q = search.trim().toLowerCase();
-  const rows = p.services.filter((s) => (!cat || s.category === cat) && (!q || s.name.toLowerCase().includes(q) || (s.brand ?? "").toLowerCase().includes(q)));
-  const present = CATEGORIES.filter((c) => p.services.some((s) => s.category === c));
-  const groups = present.filter((c) => rows.some((s) => s.category === c));
+  const menu=alignedCustomerServices(p.services);
+  const references=referenceChoices(p.services);
+  const storedCount=p.services.filter(s=>s.catalogueEntryKind==='enquiry'?!references.some(r=>r.key===s.referenceKey):!isOnCustomerMenu(s)).length;
+  const displayHome=(s:Service)=>isOnCustomerMenu(s)?servicePlacement(s)!.home:'stored';
+  const rows=p.services.filter(s=>s.catalogueEntryKind!=='enquiry'&&(cat==='stored'?displayHome(s)==='stored':isOnCustomerMenu(s)&&(!cat||displayHome(s)===cat))&&(!q||`${s.name} ${s.brand??''} ${servicePlacement(s)?.family??''}`.toLowerCase().includes(q)));
+  const storedReferences=cat==='stored'?p.services.filter(s=>s.catalogueEntryKind==='enquiry'&&!references.some(r=>r.key===s.referenceKey)&&(!q||`${s.name} ${s.brand??''}`.toLowerCase().includes(q))):[];
+  const refRows=(cat==='stored'?[]:references).filter(r=>(!cat||referencePlacement(r).home===cat)&&(!q||`${r.name} ${r.brand??''} ${referencePlacement(r).family}`.toLowerCase().includes(q)));
+  const present=[...SERVICE_HOMES.map(h=>h.key)].filter(key=>p.services.some(s=>displayHome(s)===key)||references.some(r=>referencePlacement(r).home===key));
+  const groups=(cat==='stored'?['stored']:present).filter(key=>storedReferences.length>0||rows.some(s=>displayHome(s)===key)||refRows.some(r=>referencePlacement(r).home===key));
+  const groupLabel=(key:string)=>SERVICE_HOMES.find(h=>h.key===key)?.label??'Stored records';
+  const groupCopy=(key:string)=>key==='stored'?'Not shown in the customer catalogue':HOME_COPY[key as keyof typeof HOME_COPY];
+  const groupIcon=(key:string):IconName=>key==='paint'?'ceramic':key==='detailing'?'coating':key==='washing'?'wash':key==='garage'?'inspect':'tools';
   const result = draft ? toServicePayload(draft) : null;
   const set = (patch: Partial<ServiceDraft>) => draft && setDraft({ ...draft, ...patch });
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -71,32 +75,34 @@ export function ServicesView(p: {
   return (
     <div className="ax-page ax-pricing-page">
       <style>{`@media(max-width:480px){.ax-service-fields{grid-template-columns:minmax(0,1fr)!important;}}`}</style>
-      <PageHead eyebrow="Office" title="Pricing" kpis={[{ value: p.services.filter((s) => s.active).length, label: "On the menu", tone: "premium" }, { value: p.services.filter((s) => !s.active).length, label: "Hidden" }]}>
+      <PageHead eyebrow="Office" title="Pricing" kpis={[{ value: menu.length+references.length, label: "On the menu", tone: "premium" }, { value: storedCount, label: "Stored only" }]}>
         <button type="button" className="ax-button ax-button--primary" onClick={() => {p.onOpenLive?.();setDraft(EMPTY_SERVICE)}}>New service</button>
       </PageHead>
       {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
       {p.message && <p className="ax-status-msg">{p.message}</p>}
-      <Toolbar count={{ shown: rows.length, total: p.services.length }}>
-        <Segmented value={cat} onChange={setCat} options={[{ value: "", label: "All" }, ...present.map((c) => ({ value: c, label: CATEGORY_NAME[c] }))]} />
+      {p.services.length>menu.length?<details style={{margin:'12px 0'}}><summary>Stored history ({storedCount})</summary><p className="ax-sub">Not part of the working menu. Past records stay intact.</p><button type="button" className="ax-button" onClick={()=>setCat(cat==='stored'?'':'stored')}>{cat==='stored'?'Return to working menu':'View stored records'}</button></details>:null}
+      <Toolbar count={{ shown: rows.length+refRows.length, total: cat==='stored'?storedCount:menu.length+references.length }}>
+        <Segmented value={cat} onChange={setCat} options={[{ value: "", label: "All" }, ...present.map((c) => ({ value: c, label: groupLabel(c) }))]} />
         <input className="ax-search" type="search" placeholder="Search services" value={search} onChange={(e) => setSearch(e.target.value)} />
       </Toolbar>
 
       {p.loading ? (
         <div className="ax-list">{[0, 1, 2, 3].map((i) => <div key={i} className="ax-skel ax-skel--row" />)}</div>
-      ) : rows.length === 0 ? (
+      ) : rows.length+refRows.length === 0 ? (
         <div className="ax-panel ax-empty">
           <p className="ax-title">{p.services.length ? "Nothing matches" : "Your menu is empty"}</p>
           <p>{p.services.length ? "Try another kind or search." : "Add your first service so customers can book it."}</p>
         </div>
       ) : (
         groups.map((g) => {
-          const inCat = rows.filter((s) => s.category === g);
-          const brands = Array.from(new Set(inCat.map((s) => s.brand || ""))).sort((x, y) => (x === "" ? 1 : y === "" ? -1 : x.localeCompare(y)));
+          const inCat = rows.filter((s) => displayHome(s) === g);
+          const inRefs=refRows.filter(r=>referencePlacement(r).home===g);
+          const brands = Array.from(new Set([...inCat.map((s) => s.brand || ""),...inRefs.map(r=>r.brand||"")])).sort((x, y) => (x === "" ? 1 : y === "" ? -1 : x.localeCompare(y)));
           return (
             <section key={g} className="ax-svc-group">
               <div className="ax-cat-head">
-                <span className="ax-cat-icon" aria-hidden="true"><Icon name={CATEGORY_ICON[g]} size={30} /></span>
-                <div><p className="ax-cat-name">{CATEGORY_NAME[g]}</p><p className="ax-sub">{CATEGORY_BLURB[g]} · {inCat.length}</p></div>
+                <span className="ax-cat-icon" aria-hidden="true"><Icon name={groupIcon(g)} size={30} /></span>
+                <div><p className="ax-cat-name">{groupLabel(g)}</p><p className="ax-sub">{groupCopy(g)} · {inCat.length+inRefs.length}</p></div>
               </div>
               {brands.map((b) => (
                 <div key={b || "none"} className="ax-brand-block">
@@ -107,11 +113,11 @@ export function ServicesView(p: {
                         <div className="ax-svc-card-top">
                           <span className="ax-person-name">{s.name}</span>
                           {s.internalRating ? <span className="ax-chip">Internal rating: {s.internalRating}</span> : null}
-                          {!s.active && <span className="ax-chip">Hidden</span>}
+                          {isOnCustomerMenu(s)?<span className="ax-chip">{servicePlacement(s)?.family}</span>:<span className="ax-chip">{s.active?'Not on customer menu':'Hidden'}</span>}
                         </div>
                         {s.description ? <p className="ax-sub ax-svc-desc">{s.description}</p> : null}
                         <div className="ax-svc-card-price">
-                          <span className="ax-data ax-svc-from">{s.vehicleCategoryPricing.length > 0 ? "From " : ""}{formatPaise(s.basePrice)}</span>
+                          <span className="ax-data ax-svc-from">{isOnCustomerMenu(s)?alignedCustomerPriceLabel(s):s.priceOnRequest?"Quote on request":`${s.priceFrom||s.vehicleCategoryPricing.length > 0 ? "From " : ""}${formatPaise(s.basePrice)}`}</span>
                           <span className="ax-sub">{duration(s.estimatedDurationMinutes)}{warranty(s) ? ` · ${warranty(s)}` : ""}{s.membershipWashEligible ? " · member wash" : ""}</span>
                         </div>
                         <div className="ax-row-actions">
@@ -127,6 +133,7 @@ export function ServicesView(p: {
                         </div>
                       </div>
                     ))}
+                    {inRefs.filter(r=>(r.brand||'')===b).map(r=><div key={'reference:'+r.key} className="ax-svc-card"><div className="ax-svc-card-top"><span className="ax-person-name">{r.brand&& !r.name.toLowerCase().startsWith(r.brand.toLowerCase())?`${r.brand} ${r.name}`:r.name}</span><span className="ax-chip">{referencePlacement(r).family}</span></div><p className="ax-sub ax-svc-desc">{r.note}</p><div className="ax-svc-card-price"><span className="ax-data ax-svc-from">Quote to confirm</span><span className="ax-sub">Customer enquiry option, not a priced booking</span></div>{(()=>{const record=p.services.find(s=>s.catalogueEntryKind==='enquiry'&&s.referenceKey===r.key);return record?<div className="ax-svc-card-actions"><button type="button" className="ax-button" disabled={p.busy} onClick={()=>setDraft(draftFromService(record))}>Edit</button>{confirmId===record.id?<><p className="ax-sub">Remove from new enquiries? Existing quotes are kept.</p><button type="button" className="ax-button ax-button--danger" disabled={p.busy} onClick={()=>{p.onToggle(record);setConfirmId(null)}}>{p.draftMode?'Draft removal from menu':'Remove from menu'}</button><button type="button" className="ax-button" onClick={()=>setConfirmId(null)}>Cancel</button></>:<button type="button" className="ax-button" onClick={()=>setConfirmId(record.id)}>Remove from menu</button>}</div>:<p className="ax-sub">Available to edit after catalogue setup.</p>})()}</div>)}
                   </div>
                 </div>
               ))}
@@ -135,9 +142,14 @@ export function ServicesView(p: {
         })
       )}
 
+      {storedReferences.map(s=><div className="ax-svc-card" key={s.id}><span className="ax-person-name">{s.name}</span><p className="ax-sub">Removed enquiry. Existing quote records are kept.</p><div className="ax-svc-card-actions"><button type="button" className="ax-button" disabled={p.busy} onClick={()=>setDraft(draftFromService(s))}>Edit</button><button type="button" className="ax-button" disabled={p.busy} onClick={()=>p.onToggle(s)}>{p.draftMode?'Draft show on menu':'Show on menu'}</button></div></div>)}
       {draft && (
         <Drawer portal eyebrow={draft.serviceId ? "Edit service" : "New service"} title={draft.name || "Untitled service"} onClose={() => {setDraft(null);p.onCloseDraft?.()}}>
           <form className="ax-service-editor" onSubmit={async(e) => { e.preventDefault(); if (result?.ok) { const saved=await p.onSave(draft.serviceId, result.payload);if(saved!==false)setDraft(null); } }}>
+            <label className="ax-form-row"><span>Customer menu section</span><select value={draft.customerMenu?.home??''} onChange={e=>set({customerMenu:{home:e.target.value as 'paint'|'detailing'|'washing'|'garage'|'modifications',family:draft.customerMenu?.family??'',priceMode:draft.customerMenu?.priceMode??'fixed',priceNote:draft.customerMenu?.priceNote??'',priceCondition:draft.customerMenu?.priceCondition??''}})}><option value="">Choose section</option>{SERVICE_HOMES.map(h=><option key={h.key} value={h.key}>{h.label}</option>)}</select></label>
+            <label className="ax-form-row"><span>Service group</span><input value={draft.customerMenu?.family??''} onChange={e=>set({customerMenu:{home:draft.customerMenu?.home??'washing',family:e.target.value,priceMode:draft.customerMenu?.priceMode??'fixed',priceNote:draft.customerMenu?.priceNote??'',priceCondition:draft.customerMenu?.priceCondition??''}})} placeholder="For example, Exterior wash"/></label>
+            {draft.customerMenu&&draft.priceMode!=='fixed'?<><label className="ax-form-row"><span>Price note shown to customers</span><textarea value={draft.customerMenu.priceNote} onChange={e=>set({customerMenu:{...draft.customerMenu!,priceNote:e.target.value}})} maxLength={700}/></label><label className="ax-form-row"><span>Price condition</span><input value={draft.customerMenu.priceCondition} onChange={e=>set({customerMenu:{...draft.customerMenu!,priceCondition:e.target.value}})} maxLength={200}/></label></>:null}
+
             <label className="ax-form-row"><span>Name customers see</span><input value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="Ceramic coat" /></label>
             <label className="ax-form-row"><span>Staff rating</span><select value={draft.internalRating ?? ""} onChange={(e) => set({ratingChanged:true, internalRating: e.target.value ? e.target.value as "A" | "B" | "C" | "D" : null})}><option value="">Unrated</option>{["A", "B", "C", "D"].map(r => <option key={r} value={r}>{r}</option>)}</select><small>Staff only; keep public details factual.</small></label>
             <div className="ax-form-pair ax-service-fields">
@@ -153,7 +165,7 @@ export function ServicesView(p: {
                 </select>
               </label>
               <label className="ax-form-row"><span>How the price shows</span>
-                <select value={draft.priceMode} onChange={(e) => set({ priceMode: e.target.value as ServiceDraft["priceMode"] })}>
+                <select disabled={draft.catalogueEntryKind==='enquiry'} value={draft.priceMode} onChange={(e) => set({ priceMode: e.target.value as ServiceDraft["priceMode"] })}>
                   <option value="fixed">Exact price</option><option value="from">From price</option><option value="consult">Consult (no price shown)</option>
                 </select>
               </label>
@@ -170,10 +182,10 @@ export function ServicesView(p: {
             <label className="ax-form-row"><span>Included work · customer-facing</span><textarea rows={5} placeholder="Describe the service, then list the included work on separate lines. Only include what the studio actually provides." value={draft.description} onChange={(e) => set({ description: e.target.value })} /></label>
             {draft.internalNotes ? <label className="ax-form-row"><span>Internal notes · staff only</span><textarea rows={3} value={draft.internalNotes} readOnly /></label> : null}
 
-            <p className="ax-label ax-form-section">Price and time</p>
+            <p className="ax-label ax-form-section">Price and time</p>{draft.catalogueEntryKind!=='enquiry'?<label className="ax-form-row"><span style={{display:"flex",alignItems:"center",gap:8}}><input style={{width:16,height:16,margin:0,flexShrink:0}} type="checkbox" checked={draft.priceEstimate===true} onChange={e=>set({priceEstimate:e.target.checked})}/> Provisional estimate</span><small>Customers see that the studio must confirm the final amount.</small></label>:null}
             <div className="ax-form-pair ax-service-fields">
-              <label className="ax-form-row"><span>{draft.priceMode === "consult" ? "Price reference (₹)" : "Starting price (₹)"}</span><input inputMode="decimal" value={draft.priceRupees} onChange={(e) => set({ priceRupees: e.target.value })} placeholder="1299" /></label>
-              <label className="ax-form-row"><span>Time needed (min)</span><input inputMode="numeric" value={draft.minutes} onChange={(e) => set({ minutes: e.target.value })} /></label>
+              <label className="ax-form-row"><span>{draft.priceMode === "consult" ? "Price reference (₹)" : "Starting price (₹)"}</span><input disabled={draft.catalogueEntryKind==='enquiry'} inputMode="decimal" value={draft.priceRupees} onChange={(e) => set({ priceRupees: e.target.value })} placeholder="1299" /></label>
+              <label className="ax-form-row"><span>Time needed (min)</span><input disabled={draft.catalogueEntryKind==='enquiry'} inputMode="numeric" value={draft.minutes} onChange={(e) => set({ minutes: e.target.value })} /></label>
             </div>
             {draft.category === "ppf" ? (
             <>

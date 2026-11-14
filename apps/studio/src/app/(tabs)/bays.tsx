@@ -69,7 +69,7 @@ export default function BayBoardScreen() {
   }, [auth.status, studioId, attempt]);
 
   useEffect(() => {
-    void getActiveServices().then((services) => {
+    void getActiveServices({catalogueOnly:false}).then((services) => {
       const map: Record<string, string> = {};
       for (const s of services) map[s.id] = s.name;
       setServiceNames(map);

@@ -8,6 +8,6 @@ test('five service homes, compatible leaf URLs and exact offering handoffs never
   const h=read('dist/services/'+slug+'/index.html');assert(h.includes('https://app.autodeck.in/catalogue'));assert(!/href="[^"]*\/book\//.test(h));
   assert(!h.includes('data-offering-id'));assert(!/href="https:\/\/app.autodeck.in\/catalogue\//.test(h));
  }
- const paint=read('dist/services/paint-protection/index.html');assert(paint.includes('Ceramic coating'));assert(!paint.includes('cat=ppf'));assert(!paint.includes('/catalogue/enquiry'));assert(paint.includes('PPF installation and PPS are not listed as available offerings here.'));
+ const paint=read('dist/services/paint-protection/index.html');assert(paint.includes('Ceramic coating'));assert(!paint.includes('cat=ppf'));assert(!paint.includes('/catalogue/enquiry'));assert(!paint.includes('PPF installation and PPS are not listed as available offerings here.'));assert(paint.includes('data-public-catalogue-home="paint"'));const live=read('src/scripts/public-catalogue.ts');assert(live.includes('getPublicCatalogue'));assert(live.includes('new URLSearchParams({home,family})'));assert(live.includes("encodeURIComponent(row.id)"));
  const js=read('src/scripts/redesign.ts');assert(js.includes("link.href=categoryLink||'https://app.autodeck.in/'"));assert(js.includes('Continue to the matching service category'));assert(!js.includes('Your choice is not automatically passed'));
 });

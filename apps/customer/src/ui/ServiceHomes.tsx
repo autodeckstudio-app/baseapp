@@ -1,15 +1,16 @@
+import{BRAND_ENQUIRIES as REFERENCE_RANGES}from'../lib/brand-enquiries';
 import {BrandIdentity} from "./BrandIdentity";
 import{SceneCard}from "./SceneCard";
 import{ServicePackageCard}from './ServicePackageCard';import{customerOfferingVisible}from '../lib/customer-offering-visibility';
-import{useState}from'react';import{Image,Pressable,View,useWindowDimensions}from'react-native';import{useExperienceTheme}from'@autodeck/ui/native';import{serviceHomeImages}from'../lib/service-home-images';import{REFERENCE_RANGES,referenceServiceFamily,SERVICE_HOMES,serviceHome,serviceFamily,uniqueServices,PPF_CUSTOMER_OPTIONS,ppfWorkServices,type ServiceHomeKey,type Service}from'@autodeck/core';import{Button,Pane,T}from'./kit';
+import{useState}from'react';import{Image,Pressable,View,useWindowDimensions}from'react-native';import{useExperienceTheme}from'@autodeck/ui/native';import{serviceHomeImages}from'../lib/service-home-images';import{referenceServiceFamily,SERVICE_HOMES,serviceHome,serviceFamily,uniqueServices,PPF_CUSTOMER_OPTIONS,ppfWorkServices,type ServiceHomeKey,type Service}from'@autodeck/core';import{Button,Pane,T}from'./kit';
 export function ServiceHomes({services,onOpen,onReference,priceLabel}:{services:Service[];onOpen:(s:Service)=>void;onReference?:(key:string,work?:string)=>void;priceLabel:(s:Service)=>string|null|undefined}){
  const{colors}=useExperienceTheme();
 
  const homeCopy={paint:'Care for painted surfaces',detailing:'Care for fabric, glass, leather and trim',washing:'Exterior and interior wash care',garage:'Inspection and repair care',modifications:'Wraps, tint and accessories'};
  const[home,setHome]=useState<ServiceHomeKey|null>(null),[family,setFamily]=useState<string|null>(null),[work,setWork]=useState<typeof PPF_CUSTOMER_OPTIONS[number]['key']|null>(null),[brand,setBrand]=useState<string|null>(null);
  const records=uniqueServices(services).filter(s=>s.active&&customerOfferingVisible(s)),choices=records.filter(s=>serviceHome(s)===home);
- const referenceFamily=(r:typeof REFERENCE_RANGES[number])=>r.surface==='colour-ppf'?'Colour PPF':r.key==='pps-spray'?'PPS':referenceServiceFamily(r)==='ppf'?'PPF':referenceServiceFamily(r)==='ceramic'?'Ceramic':serviceFamily({name:r.surface==='ppf-coat'?'Film maintenance':r.surface??r.name,category:'coating'});
- const referenceHome=(r:typeof REFERENCE_RANGES[number])=>r.surface==='colour-ppf'?'modifications':referenceServiceFamily(r)==='coating'?'detailing':'paint';
+ const referenceFamily=(r:typeof REFERENCE_RANGES[number])=>r.customerMenu?.family??(r.surface==='colour-ppf'?'Colour PPF':r.key==='pps-spray'?'PPS':referenceServiceFamily(r)==='ppf'?'PPF':referenceServiceFamily(r)==='ceramic'?'Ceramic':serviceFamily({name:r.surface==='ppf-coat'?'Film maintenance':r.surface??r.name,category:'coating'}));
+ const referenceHome=(r:typeof REFERENCE_RANGES[number])=>r.customerMenu?.home??(r.surface==='colour-ppf'?'modifications':referenceServiceFamily(r)==='coating'?'detailing':'paint');
  // Film ranges belong to full-body fitting only; removal/replacement fall back to the confirm pane.
  const refs=REFERENCE_RANGES.filter(r=>customerOfferingVisible(r)&&referenceHome(r)===home&&referenceFamily(r)===family&&(family!=='PPF'||!work||work==='full_body'));
  const families=[...new Set([...choices.map(serviceFamily),...REFERENCE_RANGES.filter(r=>customerOfferingVisible(r)&&referenceHome(r)===home).map(referenceFamily)])];

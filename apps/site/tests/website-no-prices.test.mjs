@@ -1,0 +1,6 @@
+import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';
+const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
+const walk=d=>fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(d+'/'+e.name):[d+'/'+e.name]);
+test('website build carries no price payloads or structured offers',()=>{for(const f of walk(new URL('../dist',import.meta.url).pathname).filter(p=>/\.(?:html|json|js)$/.test(p))){const s=fs.readFileSync(f,'utf8');assert.doesNotMatch(s,/basePrice|pricePaise|vehicleCategoryPricing|priceCurrency|lowPrice|highPrice|"offers"\s*:/,f);if(f.endsWith('.html'))assert.doesNotMatch(s,/(?:₹|\b(?:INR|Rs\.?)\s*\d|[$€£]\s*\d)/,f)}});
+test('future product details never render prices, totals or checkout',()=>{const source=read('src/pages/shop/[slug].astro');assert.doesNotMatch(source,/pp-price|const price\s*=|toLocaleString|buyable/);assert.match(source,/websiteText\(p.description\)/);assert.match(source,/websiteText\(p.imageAlt\)/)});
+test('dynamic catalogue never consumes price fields or price notes',()=>{const source=read('src/scripts/public-catalogue.ts');assert.doesNotMatch(source,/basePrice|currency|priceMode|priceNote|priceCondition|Quote to confirm/);assert.match(source,/websiteText\(row.description\)/)});

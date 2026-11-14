@@ -61,8 +61,9 @@ export function workFirstFamily(home: ServiceHomeKey | undefined, family: string
 }
 /** Display grouping only. Product identity, price, eligibility and scope remain on the original record. */
 export function servicePlacement(
-  s: Pick<Service, "id" | "name" | "category" | "description">,
+  s: Pick<Service, "id" | "name" | "category" | "description" | "customerMenu">,
 ): { home: ServiceHomeKey; family: string } | null {
+  if(s.customerMenu)return {home:s.customerMenu.home,family:s.customerMenu.family};
   const n = s.name.toLowerCase(),
     d = (s.description ?? "").toLowerCase();
   if (s.category === "pickup") return null;
@@ -144,6 +145,7 @@ export function referencePlacement(r: BrandEnquiry): {
 } {
   // Owner taxonomy (5 Nov): black/white/colour films live under
   // Modifications & Wraps > Colour PPF, not under Paint Protection.
+  if(r.customerMenu)return r.customerMenu;
   if (r.surface === "colour-ppf")
     return { home: "modifications", family: "Colour PPF" };
   if (r.group === "ppf")
@@ -181,6 +183,7 @@ export function referenceChoices(
   return refs.filter(
     (r) =>
       customerOfferingVisible(r) &&
+      !(referencePlacement(r).home==='detailing'&&xs.some(s=>s.active===true&&s.brand===null&&s.customerMenu?.home==='detailing'&&s.customerMenu.family===referencePlacement(r).family)) &&
       !xs.some(
         (s) =>
           s.productKey === r.key ||

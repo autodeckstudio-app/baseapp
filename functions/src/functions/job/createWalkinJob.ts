@@ -59,7 +59,7 @@ export const createWalkinJob = onCall({ region: "asia-south1" , enforceAppCheck:
     throw new HttpsError("failed-precondition", "Vehicle does not belong to the given customer.");
   }
 
-  if (!service.active) {
+  if (!service.active || service.catalogueEntryKind==='enquiry') {
     throw new HttpsError("failed-precondition", "Service is not currently available.");
   }
 

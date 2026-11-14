@@ -105,7 +105,7 @@ export const rescheduleBooking = onCall({ region: "asia-south1" , enforceAppChec
   const config = configSnap.data() as StudioConfig;
   assertTenant(user, service.tenantId);
   assertTenant(user, config.tenantId);
-  if (!service.active) throw new HttpsError("failed-precondition", "Service is not currently available.");
+  if (!service.active || service.catalogueEntryKind==='enquiry') throw new HttpsError("failed-precondition", "Service is not currently available.");
 
   const newStart = localToUTC(data.newDate, data.newTime, config.timezone);
   if (newStart <= new Date()) {

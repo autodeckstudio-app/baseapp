@@ -1,3 +1,4 @@
+import{useCataloguePublication}from'../../../hooks/useCataloguePublication';
 import {ServiceTimePicker} from '../../../ui/ServiceTimePicker';
 import { customerOfferingVisible } from '../../../lib/customer-offering-visibility';
 import { CarThumb } from "../../../ui/CarThumb";
@@ -60,21 +61,22 @@ export default function BookServiceScreen() {
   // More services in the same visit: same bay type only, so one slot fits them all. The server checks again.
   const [catalogue, setCatalogue] = useState<Service[]>([]);
   // A combo is one fixed bundle: no options, no default selections, nothing added to price or time.
+  const publicationRevision=useCataloguePublication();
   const combo = comboFor(catalogue, serviceId);
-  useEffect(() => { let alive = true; void getServiceCatalogue().then((c) => { if (alive) setCatalogue(c); }).catch(() => undefined); return () => { alive = false; }; }, []);
+  useEffect(() => { let alive = true; void getServiceCatalogue().then((c) => { if (alive) setCatalogue(c); }).catch(() => undefined); return () => { alive = false; }; }, [publicationRevision]);
 
   useEffect(() => {
     setTotal(null);
-    if (!serviceId || !selectedCategory || !customerOfferingVisible({id:serviceId}) || !service || !customerOfferingVisible(service)) return;
+    if (!serviceId || !selectedCategory || !service || !customerOfferingVisible(service)) return;
     let current=true;
     void calculateServicePrice(serviceId, selectedCategory).then(({ breakdown }) => {if(current)setTotal(breakdown.total);}).catch(() => {if(current)setTotal(null);});
     return ()=>{current=false;};
   }, [serviceId, selectedCategory, service]);
 
   const ownerKey=listOwnerKey(auth);const owner=auth.status==='ready'&&ownerKey?`${auth.claims.tenantId}:${auth.user.uid}:${ownerKey.key}`:null;
-  useEffect(()=>{let alive=true;setService(null);setSlots([]);setPickedSlot(null);setLoadError(false);setLoading(true);if(!serviceId||!customerOfferingVisible({id:serviceId})||auth.status!=='ready'){setLoading(false);return;}
+  useEffect(()=>{let alive=true;setService(null);setSlots([]);setPickedSlot(null);setLoadError(false);setLoading(true);if(!serviceId||auth.status!=='ready'){setLoading(false);return;}
     void getServiceCatalogue().then(list=>{if(alive)setService(list.find(s=>s.id===serviceId && s.active === true && customerOfferingVisible(s))??null)}).catch(()=>{if(alive)setLoadError(true)}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false};
-  },[serviceId,owner,retryTick]);
+  },[serviceId,owner,retryTick,publicationRevision]);
   const preferredVehicle=useVehiclePreference(ownerKey?.key??null,auth.status==='ready'?auth.claims.tenantId:null);const preferredRef=useRef(preferredVehicle);preferredRef.current=preferredVehicle;
   useEffect(()=>{setVehicles([]);setSelectedVehicle(null);setVehiclesLoaded(false);setChoosingVehicle(false);setVehiclesError(false);if(auth.status!=='ready'||!ownerKey)return;let alive=true,initialized=false;
     const stop=listenToMyVehicles(ownerKey.key,auth.claims.tenantId,list=>{if(!alive)return;setVehicles(list);setVehiclesLoaded(true);const first=!initialized;initialized=true;setSelectedVehicle(cur=>{

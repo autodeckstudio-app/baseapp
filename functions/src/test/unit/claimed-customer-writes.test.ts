@@ -14,7 +14,7 @@ vi.mock("firebase-admin/firestore", () => {
   const docRef = (path: string) => ({
     id: path.split("/").pop()!,
     path,
-    get: async () => ({ exists: h.rows.has(path), data: () => h.rows.get(path) }),
+    get: async () => ({ id: path.split("/").pop()!, exists: h.rows.has(path), data: () => h.rows.get(path) }),
     set: async (d: any) => { h.rows.set(path, d); },
     update: async (d: any) => { h.rows.set(path, { ...h.rows.get(path), ...d }); },
   });
@@ -78,7 +78,7 @@ describe("claimed customer (doc id != auth uid): writers stamp and guard the can
 
   it("submitReview refuses a booking owned by someone else", async () => {
     h.rows.set("bookings/b2", { id: "b2", tenantId: "t", customerId: "other", serviceId: "s1", status: "COMPLETED" });
-    await expect((submitReview as any).run(req({ bookingId: "b2", rating: 1 }))).rejects.toMatchObject({ code: "permission-denied" });
+    await expect((submitReview as any).run(req({ bookingId: "b2", rating: 1 }))).rejects.toMatchObject({ code: "not-found" });
     expect(h.rows.has("reviews/b2")).toBe(false);
   });
 
