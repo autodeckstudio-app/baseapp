@@ -5,6 +5,28 @@
 # Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
 # Unknown base commit or git error => build (safe default).
 app="$1"
+# Scoped Bookings cleanup: exact parent and paths, Customer only.
+bookings_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/bookings-suggestions-car-20261114 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$bookings_parent" = 11348205950bc80817542bfae23b3f54a29b6715 ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0
+  cd "$root" || exit 0
+  [ "$bookings_parent" = 11348205950bc80817542bfae23b3f54a29b6715 ] || exit 0
+  actual="$(git diff --name-only 11348205950bc80817542bfae23b3f54a29b6715 HEAD 2>/dev/null)" || exit 0
+  expected=$(cat <<'BOOKING_PATHS'
+apps/customer/src/app/(tabs)/book/[serviceId].tsx
+apps/customer/src/app/(tabs)/book/booking-car-continuity.render.test.tsx
+apps/customer/src/app/(tabs)/bookings/index.tsx
+apps/customer/src/lib/booking-ideas.test.ts
+apps/customer/src/lib/booking-ideas.ts
+apps/customer/src/ui/BookingSuggestions.tsx
+apps/customer/src/ui/booking-suggestions.render.test.tsx
+docs/bookings-suggestions-car-20261114.md
+scripts/vercel-ignore.sh
+BOOKING_PATHS
+)
+  [ "$actual" = "$expected" ] || exit 0
+  case "$app" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
 # Approved all-Home choice correction. Exact parent/path contract, Customer only.
 choices_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = preview/home-all-service-choices-20261112 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$choices_parent" = 1c8a6bfefa5f7560df1606ca20cc14811f502f25 ]; }; then

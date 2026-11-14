@@ -3,7 +3,7 @@ import type * as NodePath from "node:path";
 import { describe, expect, it } from "vitest";
 import { MENU_SEED } from "@autodeck/core";
 import { LIVE_PACKAGE_SAMPLE } from "./live-packages-sample";
-import { comboCards, dueSoonFor, lastServiceFor, pickDay } from "./booking-ideas";
+import { bookingSuggestions, comboCards, dueSoonFor, lastServiceFor, pickDay } from "./booking-ideas";
 
 const svc = (m: (typeof MENU_SEED)[number]) => ({ id: m.id, name: m.name, category: m.category, active: true, priceOnRequest: m.consult === true }) as never;
 const cat = MENU_SEED.map(svc);
@@ -80,7 +80,8 @@ describe("booking ideas", () => {
     const { readFileSync } = require("node:fs") as typeof NodeFs;
     const { join } = require("node:path") as typeof NodePath;
     const page = readFileSync(join(__dirname, "../app/(tabs)/bookings/index.tsx"), "utf8");
-    for (const h of ["Book again", "Due soon", "Earliest time for"]) expect(page).toMatch(new RegExp(`seg === "upcoming" && !error && !next && [^\\n]*\\n[^\\n]*\\n[^\\n]*${h}`));
+    expect(page).toContain('seg === "upcoming" && !error && !next && selCar ? <BookingSuggestions');
+    expect(page).not.toContain('Earliest time for');
     const src = readFileSync(join(__dirname, "booking-ideas.ts"), "utf8") + page.slice(page.indexOf("Ideas for the empty page"), page.indexOf("const doCancel"));
     expect(src).not.toMatch(/discount|% off|\bsave\b|rupees\(/i);
   });
@@ -91,4 +92,12 @@ describe("booking ideas", () => {
     expect(block).toContain("VisitCard");
     expect(block).not.toMatch(/PhotoCard|height=\{400\}/);
   });
+});
+
+describe("car-scoped booking suggestions",()=>{
+ const wash={id:"wash",name:"Regular Wash"}as any,battery={id:"battery",name:"Battery check"}as any;
+ it("merges identical service with due status, not duplicate last-service copy",()=>{expect(bookingSuggestions(wash,{service:wash,label:"Wash",days:-4})).toEqual([{service:wash,reason:"Wash overdue by 4 days"}])});
+ it("preserves distinct services and puts due work first",()=>{expect(bookingSuggestions(battery,{service:wash,label:"Wash",days:4})).toEqual([{service:wash,reason:"Wash due in 4 days"},{service:battery,reason:"Your last service"}])});
+ it("empty and last-only states do not invent due information",()=>{expect(bookingSuggestions(undefined,null)).toEqual([]);expect(bookingSuggestions(wash,null)).toEqual([{service:wash,reason:"Your last service"}])});
+ it("today and singular labels are correct",()=>{expect(bookingSuggestions(undefined,{service:wash,label:"Wash",days:0})[0]?.reason).toBe("Wash due today");expect(bookingSuggestions(undefined,{service:wash,label:"Wash",days:-1})[0]?.reason).toBe("Wash overdue by 1 day")});
 });

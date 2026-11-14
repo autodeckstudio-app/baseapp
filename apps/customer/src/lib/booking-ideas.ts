@@ -61,3 +61,11 @@ export function comboFor(catalogue: Service[], serviceId: string | undefined): {
   if (!serviceId) return null;
   return comboCards(catalogue).find((c) => c.service.id === serviceId) ?? null;
 }
+
+/** Due work leads; a last-service shortcut is retained only when it is a different service. */
+export function bookingSuggestions(lastService: Service | undefined, due: {service:Service;label:string;days:number}|null): Array<{service:Service;reason:string}> {
+  const rows:Array<{service:Service;reason:string}>=[];
+  if(due)rows.push({service:due.service,reason:due.days<0?`${due.label} overdue by ${-due.days} ${due.days===-1?"day":"days"}`:due.days===0?`${due.label} due today`:`${due.label} due in ${due.days} ${due.days===1?"day":"days"}`});
+  if(lastService&&lastService.id!==due?.service.id)rows.push({service:lastService,reason:"Your last service"});
+  return rows;
+}
