@@ -23,6 +23,16 @@ SITE_FRONT_PATHS
   [ "$actual" = "$expected" ] || exit 0
   case "$app" in site) exit 1 ;; *) exit 0 ;; esac
 fi
+# Correct approved studio-image fit against intrinsic RN asset dimensions.
+fit_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/home-studio-fit-correction-20261114 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$fit_parent" = b40ab44d1802fb2077cc5e8f88cb5eeca7f7e618 ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0; cd "$root" || exit 0
+  [ "$fit_parent" = b40ab44d1802fb2077cc5e8f88cb5eeca7f7e618 ] || exit 0
+  actual="$(git diff --name-only b40ab44d1802fb2077cc5e8f88cb5eeca7f7e618 HEAD 2>/dev/null)" || exit 0
+  expected=$(printf '%s\n' apps/customer/src/ui/StudioFooterMockup.tsx apps/customer/src/ui/home-studio-card.render.test.tsx scripts/vercel-ignore.sh)
+  [ "$actual" = "$expected" ] || exit 0
+  case "$app" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
 # Approved Home studio-front crop: exact parent/path contract, Customer only.
 front_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/home-studio-frontage-20261114 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$front_parent" = 5164c55d654cd295d44b903a9b1662a045b22e9a ]; }; then
