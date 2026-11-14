@@ -30,7 +30,9 @@ const VEHICLE_CATEGORIES = CAR_SEGMENTS;
 const durationText = formatDuration;
 
 export default function BookServiceScreen() {
-  const { serviceId, day } = useLocalSearchParams<{ serviceId: string; day?: string }>();
+  const { serviceId, day, vehicleId: requestedVehicleId } = useLocalSearchParams<{ serviceId: string; day?: string; vehicleId?: string }>();
+  const [choosingVehicle,setChoosingVehicle]=useState(false);
+  const [vehiclesLoaded,setVehiclesLoaded]=useState(false);
   const [dayMissed, setDayMissed] = useState(false);
   const router = useRouter();
   const navigation = useNavigation();
@@ -74,7 +76,13 @@ export default function BookServiceScreen() {
     void getServiceCatalogue().then(list=>{if(alive)setService(list.find(s=>s.id===serviceId && s.active === true && customerOfferingVisible(s))??null)}).catch(()=>{if(alive)setLoadError(true)}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false};
   },[serviceId,owner,retryTick]);
   const preferredVehicle=useVehiclePreference(ownerKey?.key??null,auth.status==='ready'?auth.claims.tenantId:null);const preferredRef=useRef(preferredVehicle);preferredRef.current=preferredVehicle;
-  useEffect(()=>{setVehicles([]);setSelectedVehicle(null);setVehiclesError(false);if(auth.status!=='ready'||!ownerKey)return;let alive=true;const stop=listenToMyVehicles(ownerKey.key,auth.claims.tenantId,list=>{if(!alive)return;setVehicles(list);setSelectedVehicle(cur=>{const keep=cur&&list.find(v=>v.id===cur.id);return keep??list.find(v=>v.id===preferredRef.current)??list[0]??null})},()=>{if(alive)setVehiclesError(true)});return()=>{alive=false;stop()};},[owner,retryTick]);
+  useEffect(()=>{setVehicles([]);setSelectedVehicle(null);setVehiclesLoaded(false);setChoosingVehicle(false);setVehiclesError(false);if(auth.status!=='ready'||!ownerKey)return;let alive=true,initialized=false;
+    const stop=listenToMyVehicles(ownerKey.key,auth.claims.tenantId,list=>{if(!alive)return;setVehicles(list);setVehiclesLoaded(true);const first=!initialized;initialized=true;setSelectedVehicle(cur=>{
+      if(!first)return cur?list.find(v=>v.id===cur.id)??null:null;
+      // A named suggestion must never silently become a different customer's/car's booking.
+      return requestedVehicleId?list.find(v=>v.id===requestedVehicleId)??null:list.find(v=>v.id===preferredRef.current)??list[0]??null;
+    })},()=>{if(alive){setVehiclesError(true);setVehiclesLoaded(false);setSelectedVehicle(null)}});return()=>{alive=false;stop()};
+  },[owner,requestedVehicleId,retryTick]);
 
 
   useEffect(()=>{setSelectedCategory(normalizeSegment(selectedVehicle?.category));setSizeError(null);},[selectedVehicle?.id,selectedVehicle?.category]);
@@ -150,10 +158,10 @@ export default function BookServiceScreen() {
       <View style={{ borderRadius: 24, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}><ServicePhoto service={service} aspect={3} radius={0} /><View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0) 50%, rgba(5,5,6,0.7) 100%)" } as object) }} /></View>
       <View style={{ gap: space.line }}>
         <Kicker>Booking for</Kicker>
-        {selectedVehicle && vehicles.length <= 1 ? <Pane pad="inset"><View style={{flexDirection:"row",alignItems:"center",gap:14}}>{selectedVehicle.photoUrl?<CarThumb car={selectedVehicle} height={60} width={84} radius={12}/>:null}<View style={{flex:1,gap:6}}><T role="heading">{selectedVehicle.make} {selectedVehicle.model}</T><Plate value={selectedVehicle.registrationNumber}/></View></View></Pane> : null}
+        {selectedVehicle ? <Pane pad="inset"><View style={{flexDirection:"row",alignItems:"center",gap:14}}>{selectedVehicle.photoUrl?<CarThumb car={selectedVehicle} height={60} width={84} radius={12}/>:null}<View style={{flex:1,gap:6}}><T role="heading">{selectedVehicle.make} {selectedVehicle.model}</T><Plate value={selectedVehicle.registrationNumber}/></View></View>{vehicles.length>1&&!choosingVehicle?<Button kind="quiet" label="Change car" onPress={()=>setChoosingVehicle(true)}/>:null}</Pane> : null}
         {vehiclesError ? <Notice title="Can't load your cars" body="Try again before choosing a time." action={<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>}/> : vehicles.length === 0 ? (
           <Notice title="Add your car first" body="We price and plan the work around it." action={<Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} />} />
-        ) : vehicles.length === 1 ? null : (
+        ) : selectedVehicle && !choosingVehicle ? null : (
           <Pane pad="gap">
             {vehicles.map((v, i) => {
               const selected = selectedVehicle?.id === v.id;
@@ -167,6 +175,7 @@ export default function BookServiceScreen() {
                     if(sizeSaving)return;
                     setSelectedVehicle(v);
                     setSelectedCategory(v.category??null);
+                    setChoosingVehicle(false);
                   }}
                   last={i === vehicles.length - 1}
                 />
@@ -176,6 +185,7 @@ export default function BookServiceScreen() {
         )}
       </View>
 
+      {vehiclesLoaded&&!vehiclesError&&!selectedVehicle&&vehicles.length>0?<Notice title="Choose a car before choosing a time" body={requestedVehicleId?"The car from this suggestion is no longer available. Choose one of your current saved cars to continue.":"Select the car for this booking."}/>:null}
       {selectedVehicle && !selectedVehicle.category ? <View style={{gap:space.line}}>
         <Kicker>Car type needed</Kicker>
         <T role="caption" tone="secondary">This car has no type saved yet. Add it once in your garage, then book.</T>

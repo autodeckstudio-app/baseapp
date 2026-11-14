@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import {useVehiclePreference} from "../../../lib/active-vehicle";
-import { DAYS, dueSoonFor, lastServiceFor } from "../../../lib/booking-ideas";
+import { bookingSuggestions, dueSoonFor, lastServiceFor } from "../../../lib/booking-ideas";
 import { isBookingMissed, type Booking } from "@autodeck/core";
 import { formatDateShort } from "@autodeck/ui";
 import { listOwnerKey } from "../../../lib/owner-key";
@@ -21,6 +21,7 @@ import { getMyBookings } from "../../../lib/booking-service";
 
 import { listenToMyJobs, bookingFromJob } from "../../../lib/job-service";
 import { VisitCard } from "../../../ui/VisitCard";
+import { BookingSuggestions } from "../../../ui/BookingSuggestions";
 import { CombosSection } from "../../../ui/CombosSection";
 import { CarThumb } from "../../../ui/CarThumb";
 import { NextVisitHero } from "../../../ui/NextVisitHero";
@@ -156,8 +157,7 @@ export default function BookingsScreen() {
   const lastId = lastServiceFor(all, selCar?.id ?? null);
   const lastSvc = lastId ? svcs[lastId] : undefined;
   const due = dueSoonFor(jobs as never, selCar?.id ?? null, svcs, Date.now());
-  const target = due?.service ?? (lastSvc && !lastSvc.priceOnRequest ? lastSvc : undefined);
-  const carName = selCar ? `${selCar.make} ${selCar.model}` : "";
+  const suggestions = bookingSuggestions(lastSvc, due);
   const doCancel = async () => {
     if (!next||cancelLock.current) return;const scope=owner;cancelLock.current=true;
     setCancelBusy(true);
@@ -243,32 +243,7 @@ export default function BookingsScreen() {
         </Pane>
       ) : null}
 
-      {seg === "upcoming" && !error && !next && lastSvc ? (
-        <View style={{ gap: space.line }}>
-          <SectionTitle>Book again</SectionTitle>
-          <VisitCard onPress={() => router.push(`/(tabs)/book/${lastSvc.id}`)} photo={<ServicePhoto service={lastSvc} height={64} />} title={lastSvc.name.replace(/^Kovalent\s+/i, "")} car={carName} when="Your last service" price="" chip={<Chip label="Book again" tone="accent" />} />
-        </View>
-      ) : null}
-
-      {seg === "upcoming" && !error && !next && due ? (
-        <View style={{ gap: space.line }}>
-          <SectionTitle>Due soon</SectionTitle>
-          <VisitCard onPress={() => router.push(`/(tabs)/book/${due.service.id}`)} photo={<ServicePhoto service={due.service} height={64} />} title={due.label} car={carName} when={due.days < 0 ? `Overdue ${-due.days} d` : due.days === 0 ? "Due today" : `Due in ${due.days} d`} price="" chip={<Chip label="Book" tone="accent" />} />
-        </View>
-      ) : null}
-
-      {seg === "upcoming" && !error && !next && target ? (
-        <View style={{ gap: space.line }}>
-          <SectionTitle>Earliest time for {target.name.replace(/^Kovalent\s+/i, "")}</SectionTitle>
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            {DAYS.map((d) => (
-              <Pressable key={d.key} accessibilityRole="button" accessibilityLabel={`${d.label}, ${target.name}`} onPress={() => router.push({ pathname: "/(tabs)/book/[serviceId]", params: { serviceId: target.id, day: d.key } })} style={{ flex: 1, minHeight: 44, borderRadius: 9999, alignItems: "center", justifyContent: "center", ...glassInner }}>
-                <T role="bodyStrong">{d.label}</T>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      ) : null}
+      {seg === "upcoming" && !error && !next && selCar ? <BookingSuggestions vehicle={selCar} suggestions={suggestions} onChooseTime={(serviceId,vehicleId)=>router.push({pathname:"/(tabs)/book/[serviceId]",params:{serviceId,vehicleId}})} /> : null}
 
       {seg === "upcoming" && !error && !next ? <CombosSection catalogue={Object.values(svcs)} onBook={(id) => router.push(`/(tabs)/book/${id}`)} /> : null}
 
