@@ -1,3 +1,4 @@
+import{visitReturnHash}from'../../lib/visit-service-return-state.js';
 import {readVisitReturnLedger,visitReturnLedgerTotals} from '../../lib/visit-return-ledger.js';
 import {readVisitOnlineLedger,visitOnlineLedgerTotals} from '../../lib/visit-online-ledger.js';
 import {parseVisitInvoiceRead} from '@autodeck/core';
@@ -106,7 +107,10 @@ export const getAccountantMoney = onCall({ region: "asia-south1" , enforceAppChe
    const raw=d.data();if(raw['id']!==d.id||raw['tenantId']!==tenantId||raw['studioId']!==data.studioId||raw['kind']!=='shared_visit_invoice'||raw['status']!=='issued'||raw['createdAt']!==raw['issuedAt'])throw new HttpsError('failed-precondition','Shared issued invoice history needs office review.');
    try{return projectVisitInvoice(raw)}catch{throw new HttpsError('failed-precondition','Shared issued invoice snapshot needs office review.');}
   }).filter(i=>utcToLocalDate(new Date(i.issuedAt),'Asia/Kolkata').startsWith(data.month));
-  const combinedInvoices=[...invoices.map(projectInvoice),...sharedInvoices].sort((a,b)=>(b.issuedAt??'').localeCompare(a.issuedAt??'')||a.id.localeCompare(b.id));
+  const chargeSnap=await db.collection('visitCancellationChargeInvoices').where('tenantId','==',tenantId).where('studioId','==',data.studioId).limit(ACCOUNTANT_CAP+1).get();
+  if(chargeSnap.size>ACCOUNTANT_CAP)throw new HttpsError('resource-exhausted','Cancellation charge invoice history exceeds the report cap.');
+  const chargeInvoices=[];for(const doc of chargeSnap.docs){const raw=doc.data();if(raw['id']!==doc.id||typeof raw['visitId']!=='string')throw new HttpsError('failed-precondition','Cancellation charge invoice needs review.');const{readVisitBilling}=await import('../../lib/visit-billing.js'),bill=await db.runTransaction(tx=>readVisitBilling(tx,db,raw['visitId'])),c=bill.chargeReviews.find(c=>c.record['id']===doc.id);if(!c?.invoice||c.record['tenantId']!==tenantId||c.record['studioId']!==data.studioId||visitReturnHash(raw)!==visitReturnHash(c.invoice))throw new HttpsError('failed-precondition','Cancellation charge invoice source changed.');const i=c.invoice;if(utcToLocalDate(new Date(i['issuedAt']),'Asia/Kolkata').startsWith(data.month))chargeInvoices.push({id:i['id'] as string,invoiceNumber:i['invoiceNumber'] as string,status:'issued',issuedAt:i['issuedAt'] as string,voidedAt:null,customerName:i['customerSnapshot']['name'] as string,lineItems:[{quantity:1,unitPrice:i['totalPaise'] as number,total:i['totalPaise'] as number}],subtotal:i['subtotalPaise'] as number,discount:0,roundOffPaise:0,taxRatePercent:0,tax:0,total:i['totalPaise'] as number,currency:'INR'});}
+  const combinedInvoices=[...invoices.map(projectInvoice),...sharedInvoices,...chargeInvoices].sort((a,b)=>(b.issuedAt??'').localeCompare(a.issuedAt??'')||a.id.localeCompare(b.id));
   if(new Set(combinedInvoices.map(i=>i.id)).size!==combinedInvoices.length)throw new HttpsError('failed-precondition','Invoice identities need office review.');
   const dayCloses = closeSnaps.filter((s) => s.exists).map((s) => projectDayClose(s.data() as Record<string, unknown>));
 

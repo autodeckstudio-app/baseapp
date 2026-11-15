@@ -1,3 +1,4 @@
+import{assertVisitCancellationChargesSettled}from'./visit-cancellation-charge.js';
 import{assertVisitMemberInvoice}from'./visit-invoice-settlement.js';
 import{readVisitBilling}from'./visit-billing.js';
 import {visitWorkReview} from './visit-work-review.js';
@@ -17,6 +18,7 @@ export async function readVisitHandoverMember(tx:Transaction,db:Firestore,job:Se
  // Recheck the whole physical visit before EACH member outcome. A later
  // approval, unpaid balance or reopened work elsewhere cannot slip through
  // merely because this member's own timestamp stayed unchanged.
+ await assertVisitCancellationChargesSettled(tx,db,job.visitId);
  const billing=job.visitInvoiceId?await readVisitBilling(tx,db,job.visitId):null;
  for(const memberId of visit['jobIds']){
   const {job:member,member:projection}=await readVisitMember(tx,db,memberId);

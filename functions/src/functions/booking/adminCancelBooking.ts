@@ -471,6 +471,7 @@ export const settleCancellationFee = onCall({ region: "asia-south1", enforceAppC
     if (!snap.exists) throw new HttpsError("not-found", "Booking not found.");
     const b = snap.data() as Booking;
     assertTenant(user, b.tenantId);
+    if(b.visitId||(b as any).visitCancellationChargeId)throw new HttpsError('failed-precondition','Record this shared visit charge through its exact actual receipt review.');
     assertStudio(user, b.studioId, "Booking");
     if (b.status !== "CANCELLED") throw new HttpsError("failed-precondition", "Only a cancelled booking has a cancellation fee.");
     if (!(b.cancellationFeePaise && b.cancellationFeePaise > 0)) throw new HttpsError("failed-precondition", "This booking has no cancellation fee.");

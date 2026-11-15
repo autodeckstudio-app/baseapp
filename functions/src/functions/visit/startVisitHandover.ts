@@ -1,3 +1,4 @@
+import{assertVisitCancellationChargesSettled}from'../../lib/visit-cancellation-charge.js';
 import{assertVisitMemberInvoice}from'../../lib/visit-invoice-settlement.js';
 import{readVisitBilling}from'../../lib/visit-billing.js';
 import {visitWorkReview} from '../../lib/visit-work-review.js';
@@ -38,7 +39,8 @@ export const startVisitHandover=onCall({region:'asia-south1',enforceAppCheck: sh
   if(data.review&&(data.review.members.length!==members.length||new Set(data.review.members.map(m=>m.jobId)).size!==members.length||members.some(m=>!data.review!.members.some(r=>r.jobId===m.job.id&&r.expectedUpdatedAt===m.job.updatedAt))))throw new HttpsError('failed-precondition','Review every current service.');
   const [car,customer]=await Promise.all([tx.get(db.collection('vehicles').doc(visit.vehicleId)),tx.get(db.collection('customers').doc(visit.customerId))]);
   if(!car.exists||car.data()?.['tenantId']!==visit.tenantId||car.data()?.['ownerId']!==visit.customerId||car.data()?.['deletedAt']||!customer.exists||customer.data()?.['tenantId']!==visit.tenantId||customer.data()?.['deletedAt'])throw new HttpsError('failed-precondition','Visit ownership changed.');
-  const expected:Record<string,{updatedAt:string;recordedWorkRevision:number;recordedWorkHash:string}>={},outcomes:Record<string,{status:string;at:string;by:string}>={};
+  await assertVisitCancellationChargesSettled(tx,db,visit.id);
+ const expected:Record<string,{updatedAt:string;recordedWorkRevision:number;recordedWorkHash:string}>={},outcomes:Record<string,{status:string;at:string;by:string}>={};
   const billing=members.some(m=>m.job.visitInvoiceId)?await readVisitBilling(tx,db,visit.id):null;
   for(const {job,member} of members){
    const outcome=prior?.['outcomes']?.[job.id];

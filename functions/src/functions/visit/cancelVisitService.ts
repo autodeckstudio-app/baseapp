@@ -1,3 +1,5 @@
+import{assertConnectedVisitRuntime}from'../../lib/connected-visit-release.js';
+import{visitReturnHash}from'../../lib/visit-service-return-state.js';
 import{visitCancelHold}from'../../lib/visit-cancel-review.js';
 import{createHash}from'node:crypto';
 import{z}from'zod';
@@ -29,11 +31,13 @@ export const cancelVisitService=onCall({region:'asia-south1',enforceAppCheck:sho
   const terms=target.booking['combinedPayment']?combinedCancellationTerms(target.job.priceBreakdown,{categories,scheduledAtMs,nowMs:Date.now()}):cancellationTerms({categories,totalPaise:target.job.totalAmount,scheduledAtMs,nowMs:Date.now()});
   const fee=visitCancellationFee(scope.visit,scope.members.map(m=>m.member),d.jobId,terms.feePaise);if(fee.feePaise!==d.expectedFeePaise)throw new HttpsError('failed-precondition','Cancellation fee changed. Review this service again.');
   const restores=await readCancelReads(tx,db,target.booking as Booking,target.job.bookingId!);
+  if(fee.feePaise)assertConnectedVisitRuntime();
   const now=new Date().toISOString(),revision=scope.visit.revision+1;if(!Number.isSafeInteger(revision))throw new HttpsError('failed-precondition','Visit revision needs review.');
   const result={visitId:d.visitId,jobId:d.jobId,feePaise:fee.feePaise,feeReason:fee.reason,revision};
   writeCancelRestores(tx,restores,target.booking as Booking,target.job.bookingId!,user,now,'Visit service cancelled');
-  tx.update(target.ref,{status:'CANCELLED',statusHistory:[...(target.job.statusHistory??[]),{status:'CANCELLED',changedAt:now,changedBy:user.uid,notes:d.reason}],updatedAt:now});
-  tx.update(db.collection('bookings').doc(target.job.bookingId!),{status:'CANCELLED',cancelledAt:now,cancelledBy:'admin',cancellationReason:d.reason,cancellationFeePaise:fee.feePaise,cancellationFeeStatus:fee.feePaise?'due':'none',visitCancellation:{visitId:d.visitId,reviewToken:d.reviewToken,reason:fee.reason,continuingJobIds:fee.continuingJobIds},updatedAt:now});
+  if(fee.feePaise){const charge={id:d.jobId,version:1,kind:'visit_cancellation_charge',currency:'INR',tenantId:scope.visit.tenantId,studioId:scope.visit.studioId,customerId:scope.visit.customerId,vehicleId:scope.visit.vehicleId,visitId:d.visitId,jobId:d.jobId,bookingId:target.job.bookingId,cancellationReceiptId:key,sourceToken:d.reviewToken,moneyToken:scope.moneyTokens.get(d.jobId)!,revision,amountPaise:fee.feePaise,transportPaise:0,categories,scheduledAt:target.booking['scheduledAt'],combinedPayment:!!target.booking['combinedPayment'],reason:d.reason,createdAt:now,createdBy:user.uid};tx.create(db.collection('visitCancellationCharges').doc(d.jobId),{...charge,recordHash:visitReturnHash(charge)});}
+  tx.update(target.ref,{...(fee.feePaise?{visitCancellationChargeId:d.jobId}:{}),status:'CANCELLED',statusHistory:[...(target.job.statusHistory??[]),{status:'CANCELLED',changedAt:now,changedBy:user.uid,notes:d.reason}],updatedAt:now});
+  tx.update(db.collection('bookings').doc(target.job.bookingId!),{...(fee.feePaise?{visitCancellationChargeId:d.jobId,cancelledByUid:user.uid}:{}),status:'CANCELLED',cancelledAt:now,cancelledBy:'admin',cancellationReason:d.reason,cancellationFeePaise:fee.feePaise,cancellationFeeStatus:fee.feePaise?'due':'none',visitCancellation:{visitId:d.visitId,reviewToken:d.reviewToken,reason:fee.reason,continuingJobIds:fee.continuingJobIds},updatedAt:now});
   // Serializes simultaneous removals: two callers cannot both claim another
   // continuing service from the same obsolete review and waive the final fee.
   tx.update(ref,{revision,updatedAt:now,updatedBy:user.uid});

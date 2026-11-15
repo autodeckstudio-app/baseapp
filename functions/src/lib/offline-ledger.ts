@@ -42,6 +42,12 @@ export async function readOfflineLedger(db: Firestore, tenantId: string, studioI
    throw new HttpsError('failed-precondition','Offline return values need office review. No partial money total returned.');
   return {id:d.id,jobId:r['jobId'],createdAt:r['createdAt'],method:r['method'],amountPaise:r['amountPaise']};
  });
+ // Cancellation charges are separate original actual-money events, not job
+ // payment projections or a second copy of a visit receipt. Read every scoped
+ // obligation as well as the rows so deleted money does not disappear silently.
+ const[charges,chargeReceipts]=await Promise.all(['visitCancellationCharges','visitCancellationChargeReceipts'].map(name=>db.collection(name).where('tenantId','==',tenantId).where('studioId','==',studioId).limit(OFFLINE_LEDGER_CAP+1).get()));
+ if(!charges||!chargeReceipts||charges.size>OFFLINE_LEDGER_CAP||chargeReceipts.size>OFFLINE_LEDGER_CAP)throw new HttpsError('resource-exhausted','Cancellation charge report cap exceeded.');
+ if(charges.size||chargeReceipts.size){const{readVisitBilling}=await import('./visit-billing.js');const visits=new Set<string>();for(const c of charges.docs){const r=c.data();if(r['id']!==c.id||r['tenantId']!==tenantId||r['studioId']!==studioId||typeof r['visitId']!=='string')throw new HttpsError('failed-precondition','Cancellation charge report needs review.');visits.add(r['visitId']);}const verified=new Map<string,Record<string,any>>();for(const visitId of visits){const bill=await db.runTransaction(tx=>readVisitBilling(tx,db,visitId));for(const c of bill.chargeReviews){if(c.record['tenantId']!==tenantId||c.record['studioId']!==studioId||!charges.docs.some(d=>d.id===c.record['id']))throw new HttpsError('failed-precondition','Cancellation charge scope changed.');for(const row of c.receipts)verified.set(row.id,row);}}if(verified.size!==chargeReceipts.size||chargeReceipts.docs.some(d=>!verified.has(d.id)))throw new HttpsError('failed-precondition','Cancellation charge receipt set needs review.');for(const r of verified.values())receiptRows.push({actualReceiptId:r['id'],id:r['id'],jobId:r['jobId'],createdAt:r['createdAt'],method:r['method'],receivedPaise:r['receivedPaise'],appliedPaise:r['receivedPaise'],officeReturnDuePaise:0,balanceDuePaise:0});}
  return {receipts:receiptRows,returns:returnRows};
 }
 export function offlineLedgerTotals(ledger: {receipts: OfflineReceiptRow[]; returns: OfflineReturnRow[]}, dateOrMonth: string) {

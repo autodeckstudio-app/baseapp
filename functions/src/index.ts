@@ -274,3 +274,5 @@ export {onVisitInvoiceCreatedPdf} from "./functions/invoice/onVisitInvoiceCreate
 export{getRetainedTransportList}from'./functions/visit/getRetainedTransportList.js';
 export{reviewRetainedTransport,executeRetainedTransport}from'./functions/visit/retainedTransportOperations.js';
 export{reviewVisitService,executeVisitService,reconcileVisitService}from'./functions/visit/visitServiceOperations.js';
+
+export{recordVisitCancellationCharge}from'./functions/visit/recordVisitCancellationCharge.js';

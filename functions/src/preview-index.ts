@@ -26,3 +26,7 @@ export{getOfficeReport}from'./functions/office/getOfficeReport.js';
 export{getAccountantMoney}from'./functions/office/getAccountantMoney.js';
 export{getMyVisitReview}from'./functions/booking/submitReview.js';
 export{getVisitFeedback}from'./functions/booking/getVisitFeedback.js';
+
+export{recordVisitCancellationCharge}from'./functions/visit/recordVisitCancellationCharge.js';
+
+export{cancelVisitService}from"./functions/visit/cancelVisitService.js";

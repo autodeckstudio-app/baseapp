@@ -1,3 +1,4 @@
+import{assertVisitCancellationChargesSettled}from'./visit-cancellation-charge.js';
 import type {Firestore,Transaction} from 'firebase-admin/firestore';
 import {HttpsError} from 'firebase-functions/v2/https';
 import {sharedVisitState,type Booking,type SharedVisit} from '@autodeck/core';
@@ -24,6 +25,7 @@ export async function readVisitTransport(tx:Transaction,db:Firestore,booking:Boo
  return{ref,visit,members,state,jobId:job['id'] as string};
 }
 export async function checkVisitDrop(tx:Transaction,db:Firestore,scope:NonNullable<Awaited<ReturnType<typeof readVisitTransport>>>){
+ await assertVisitCancellationChargesSettled(tx,db,scope.visit.id);
  if(!['ready','delivered'].includes(scope.state))throw new HttpsError('failed-precondition','Finish every visit service before returning the car.');
  if(!scope.visit.activeHandoverId)throw new HttpsError('failed-precondition','Review shared handover before returning the car.');
  const h=(await tx.get(db.collection('visitHandovers').doc(scope.visit.activeHandoverId))).data();
