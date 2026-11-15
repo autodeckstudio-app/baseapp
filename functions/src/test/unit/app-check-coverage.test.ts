@@ -56,6 +56,7 @@ function listTsFilesRecursive(dir: string): string[] {
 // with no native/EAS blocker.
 const ENFORCED = [
   "visit/getRetainedTransportList.ts",
+  "visit/retainedTransportOperations.ts",
   "visit/cancelVisitService.ts",
   "visit/getVisitBill.ts",
   "visit/getVisitInvoice.ts",

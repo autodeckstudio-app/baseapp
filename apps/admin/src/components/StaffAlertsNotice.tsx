@@ -16,6 +16,7 @@ export function useStaffAlerts(): StaffAlert[] {
 
 /** Count only: no customer details. Persistent, read-only. */
 const TEXT: Record<string, (n: number) => string> = {
+  shared_visit_cancel_capture_review: (n) => `${n} shared-visit captures · Review cancellation · No automatic refund`,
   unmatched_payment_capture: (n) => `${n} verified payment capture(s) could not be matched to a payment record. Reconcile in Razorpay before collecting again.`,
   membership_manual_review: (n) => `${n} membership payment(s) need a provider check before another payment link can be opened.`,
   gift_manual_review: (n) => `${n} gift payment(s) need a provider check before another payment link can be opened.`,

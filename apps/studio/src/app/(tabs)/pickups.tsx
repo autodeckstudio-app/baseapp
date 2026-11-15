@@ -1,3 +1,4 @@
+import{RetainedTransportActions}from"../../components/RetainedTransportActions";
 import{RETAINED_TRANSPORT_PREVIEW,useRetainedTransportPreview}from'../../lib/use-retained-transport-preview';
 import{retainedTransportLabel}from'@autodeck/core';
 import { pickupEligibility } from "@autodeck/core";
@@ -195,6 +196,7 @@ export default function PickupsScreen() {
                 {!retained&&outstandingNote(r) ? <Text style={{ ...typography.caption, color: colors.textMuted }}>{outstandingNote(r)}</Text> : null}
               </View>
             ) : null}
+            {retained?.placement==='active'?<RetainedTransportActions key={principalScope+JSON.stringify(retained)} requestId={r.id}/>:null}
             {!retained&&PICKUP_HANDOVER_ENABLED && (confirmed || history) ? <View style={{gap:spacing.sm}}>{legsFor(r).map(l=><PickupHandoverForm key={`${r.id}:${l.leg}:${tenantId}:${studioId}:${principalId}`} requestId={r.id} leg={l.leg} record={l.leg==="pickup"?r.pickupHandover:r.dropHandover} unavailable={r.handoverUnavailable} readOnly={history} onSaved={()=>void load()}/>)}</View> : null}
             {error && rows !== null && errId === r.id ? <Text style={{ ...typography.caption, color: colors.error }}>{error}</Text> : null}
             {!retained&&!history ? <View style={{ flexDirection: "row", gap: spacing.sm }}>

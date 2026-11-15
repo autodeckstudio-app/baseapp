@@ -1,4 +1,5 @@
-/** Dedicated read-only emulator entrypoint. Never production's build target.
+/** Dedicated local emulator entrypoint. Never production's build target.
+ * Explicit staff-confirmed retained-journey actions only.
  * No automatic source-mutating Firestore triggers are registered here. */
 import{initializeApp}from'firebase-admin/app';initializeApp();
 export{getRetainedTransportList}from'./functions/visit/getRetainedTransportList.js';
@@ -7,3 +8,4 @@ export{getMyVisitBill,getStaffVisitBill}from'./functions/visit/getVisitBill.js';
 export{getVisitInvoice,listStaffVisitInvoices,getVisitInvoicePdfUrl}from'./functions/visit/getVisitInvoice.js';
 export{getCustomerJobs}from'./functions/customer/getCustomerJobs.js';
 export{getPublicCatalogue}from'./functions/service/getPublicCatalogue.js';
+export{reviewRetainedTransport,executeRetainedTransport}from'./functions/visit/retainedTransportOperations.js';

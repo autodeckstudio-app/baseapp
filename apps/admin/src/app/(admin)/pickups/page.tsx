@@ -1,4 +1,5 @@
 "use client";
+import{RetainedTransportActions}from"../../../components/RetainedTransportActions";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -207,6 +208,7 @@ export default function PickupsPage() {
                 ) : r.staffNote ? <p className="ax-pu-staffnote">{r.staffNote}</p> : null}
 
                 {bookingNote.note ? <p className="ax-pu-staffnote" role="note">{bookingNote.note}</p> : null}
+                {retained?.placement==='active'?<RetainedTransportActions key={scope+JSON.stringify(retained)} requestId={r.id}/>:null}
                 <div className="ax-pu-foot">
                   <Link href={`/bookings/${r.bookingId}`} className="ax-linkbtn">Open booking</Link>
                   {open ? (

@@ -307,3 +307,43 @@ Final closeout reran the full Functions unit suite INCLUDING the5boundary checks
 2005pass/1skip/1unchanged shared_visit_cancel_capture_review alert-label failure.
 This supersedes the preceding explicit no-full2005claim. Normal Functions build
 was restored again afterward. Source tree clean at the recorded custody commit.
+
+## Operational staff continuation, local preview only
+
+Staff can now Review journey on the actual Admin/Studio pickup routes, then
+select a source-reviewed leg, confirm it, and use the existing transactional
+progress checks. Admin can review exact retained/return/actually-returned amounts
+and the unused leg, then explicitly close it. Studio receives no closure action
+and shows Admin closure needed. The original writers own current scope, exact
+request/bill tokens, work/payment/handover checks and atomic retry. Saved exact
+commands survive a response-loss retry. No implicit refreshed confirmation.
+Only the dedicated demo/emulator callable entry exposes these operations;
+production index is unchanged and normal production Functions build restored.
+No collection/selector expansion, provider activation, deployment or live writes.
+
+12 operational emulator tests pass, including successful drop after actual work
+and shared handover, exact replay, unfinished-work denial, stale proof and
+cross-role/tenant/studio isolation. Functions full2012pass/1skip, no failure:
+the old shared_visit_cancel_capture_review label gap is fixed with short status
+text, without changing financial/cancellation semantics. Existing Admin168 and
+Studio154 mounted tests pass. Three affected type checks pass; actual optimized
+Admin and Studio web exports pass. These counts precede the final additive
+return-summary projection; after that, Functions/Admin types and actual routed
+staff confirmation/closure were rechecked successfully. Full445billing regression
+is NOT claimed: prior433 baseline plus12new operational cases is the evidence.
+
+Focused actual-route390 proof uses1retained request: Admin review/confirmation,
+unchanged original request after closure, History1, Studio no closure action,
+and actual Bookings staff-alert text. Pixels inspected, confirmation wrapping
+fixed. The old complete23-row/3-app read harness remains separate evidence.
+New23-row all-three operational run exceeded the120s local harness budget after
+successful Admin closure and refreshed History; it is NOT a completed combined
+operational3-app proof. A focused run completed instead. New320/1280 operational
+pixels, routed successful pickup/drop, response-loss UI interaction coverage,
+final post-summary regression and the combined owner review remain unfinished.
+
+Broader funding/tax/registered issuer, final-fee/trip allocation, online/provider
+and benefit-extra paths remain unfinished engineering/qualification, not proven
+owner-only decisions. No new owner question is established. Existing source
+semantics and provider holds remain in force; do not ask for approval of unbuilt
+paths. The whole requested multi-service operational outcome is still open.
