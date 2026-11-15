@@ -1,3 +1,4 @@
+import{combinedCancellationTerms}from'@autodeck/core';
 import {readRetainedTransportIssuedProof} from './visit-retained-transport-issued-proof.js';
 import { readVisitReturnProgress } from './visit-service-return-progress.js';
 import {readRetainedTransportProof} from './visit-transport-retention-state.js';
@@ -70,10 +71,11 @@ export async function readCancelledVisitReturn(tx: Transaction, db: Firestore, i
   }
   if(review.transport)await readRetainedTransportProof(tx,db,record,review);
   else if((review.transportRetainedPaise??0)!==0)return fail();
-  await readRetainedTransportIssuedProof(tx,db,record,review,job['priceBreakdown']);
+  const retainedIssue=await readRetainedTransportIssuedProof(tx,db,record,review,job['priceBreakdown']);
+  if(retainedIssue?.raw['version']===2){const p=record['partialPolicy'];if(!p||!Array.isArray(p.categories)||p.scheduledAt!==b['scheduledAt']||review.feeReason!=='last_service_policy'||review.continuingJobIds?.length!==0||combinedCancellationTerms(job['priceBreakdown'],{categories:p.categories,scheduledAtMs:Date.parse(p.scheduledAt),nowMs:Date.parse(record['cancelledAt'])}).feePaise!==review.feePaise)return fail();}
   const progress=await readVisitReturnProgress(tx,db,record,review);
   if(b['refundStatus']!==progress.refundStatus||b['refundedPaise']!==progress.returnedPaise||b['manualRefundDuePaise']!==progress.manualDuePaise)return fail();
-  return { id: record['id'] as string, jobId: input.jobId, status:progress.status,
+  return { ...(retainedIssue?{retainedInvoice:{id:retainedIssue.invoice.id,invoiceNumber:retainedIssue.invoice.invoiceNumber,feePaise:review.feePaise as number,transportPaise:review.transportRetainedPaise as number,totalPaise:retainedIssue.invoice.totalPaise}}:{}),id: record['id'] as string, jobId: input.jobId, status:progress.status,
     paidPaise: review.paidPaise as number, retainedPaise: review.retainedPaise as number,
     returnPaise: review.returnPaise as number, returnedPaise:progress.returnedPaise,manualDuePaise:progress.manualDuePaise,onlineDuePaise:progress.onlineDuePaise,progressToken:progress.progressToken,accountingReviewNeeded:progress.accountingReviewNeeded,entries:progress.entries,invoiceId: input.invoiceId };
 }
