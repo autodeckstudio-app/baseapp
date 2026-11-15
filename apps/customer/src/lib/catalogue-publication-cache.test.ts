@@ -1,0 +1,22 @@
+import{afterEach,expect,it,vi}from'vitest';
+const h=vi.hoisted(()=>({call:vi.fn()}));
+vi.mock('firebase/functions',()=>({httpsCallable:()=>h.call}));
+vi.mock('./firebase',()=>({functions:{},auth:{currentUser:{uid:'local-test'}}}));
+vi.mock('./dev-catalogue-loader',()=>({devCatalogue:null}));
+vi.mock('../ui/kit',()=>({rupees:()=>''}));
+vi.mock('./imagery',()=>({primeVisuals:()=>{}}));
+import{BRAND_ENQUIRIES}from'@autodeck/core';
+import{getServiceCatalogue,peekCatalogue,getCatalogueDisplayTotals}from'./catalogue-service';
+import{catalogueReferences,setCatalogueReferences}from'./catalogue-references';
+import{referenceChoices}from'./services-navigation';
+afterEach(()=>{setCatalogueReferences(undefined);vi.unstubAllGlobals();h.call.mockReset()});
+it('fresh bad publication removes cached brands, repaired exact publication survives refresh, car-price reads and warm reload',async()=>{
+ vi.stubGlobal('__DEV__',false);const store=new Map<string,string>();vi.stubGlobal('localStorage',{getItem:(k:string)=>store.get(k)??null,setItem:(k:string,v:string)=>store.set(k,v)});
+ const ppf=BRAND_ENQUIRIES.filter(r=>r.group==='ppf'&&r.brand!==null);expect(ppf).toHaveLength(8);
+ store.set('autodeck.catalogue.v1',JSON.stringify({services:[],references:ppf}));peekCatalogue();expect(referenceChoices([],catalogueReferences())).toHaveLength(8);
+ h.call.mockResolvedValueOnce({data:{services:[],references:[]}});await getServiceCatalogue(undefined,{fresh:true});expect(referenceChoices([],catalogueReferences())).toEqual([]);peekCatalogue();expect(catalogueReferences()).toEqual([]);
+ h.call.mockResolvedValueOnce({data:{services:[],references:ppf}});await getServiceCatalogue(undefined,{fresh:true});expect(referenceChoices([],catalogueReferences())).toHaveLength(8);
+ h.call.mockResolvedValueOnce({data:{displayTotals:{}}});await getCatalogueDisplayTotals('suv',{fresh:true});expect(referenceChoices([],catalogueReferences())).toHaveLength(8);
+ setCatalogueReferences(undefined);peekCatalogue();expect(referenceChoices([],catalogueReferences())).toHaveLength(8);
+ h.call.mockResolvedValueOnce({data:{services:[],references:ppf}});await getServiceCatalogue(undefined,{fresh:true});expect(referenceChoices([],catalogueReferences())).toHaveLength(8);expect(h.call).toHaveBeenCalledTimes(4);
+});

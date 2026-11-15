@@ -35,6 +35,7 @@ No change to published service prices, warranty wording, issued invoices, operat
 - Functions: 2049 passed, one existing skip.
 - Customer: 1144 passed.
 - Core, Functions and Customer typechecks passed.
+- Additional real catalogue-cache regression passed: cached brands disappear under the bad fresh publication, then the repaired exact reference set survives fresh fetch, vehicle-price reads and warm reload.
 - Before/after local actual catalogue screen checked at 320, 390 and 1280 pixels. Current snapshot versus references-only restoration. Theme-colored ambient stand-in; screen, cards, logos, header and bottom navigation are actual app components. These are proposed local pixels, not production proof.
 
 Status: prepared, not pushed/deployed or applied live. Owner visual review remains required.
