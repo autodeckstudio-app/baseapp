@@ -155,10 +155,19 @@ export function referenceChoices(
   xs: Service[],
   refs: BrandEnquiry[] = BRAND_ENQUIRIES,
 ): BrandEnquiry[] {
-  if(xs.some(row=>row.catalogueEntryKind==='enquiry'))return referenceChoices(xs.filter(row=>row.catalogueEntryKind!=='enquiry'),xs.filter(row=>row.catalogueEntryKind==='enquiry'&&row.active===true).map(row=>({key:row.referenceKey as string,brand:row.brand,name:row.name,group:row.referenceGroup as BrandEnquiry["group"],note:row.description,...(row.referenceSurface?{surface:row.referenceSurface}:{}),...(row.customerMenu?{customerMenu:{home:row.customerMenu.home,family:row.customerMenu.family}}:{})}))); 
+  // Explicit published records are authoritative. A bundled legacy key list
+  // must not erase a reviewed enquiry when its record has valid placement.
+  const explicit=xs.filter(row=>row.catalogueEntryKind==='enquiry');
+  if(explicit.length){
+    const accepted=explicit.filter(row=>row.active===true&&customerOfferingVisible(row));
+    return chooseReferenceRows(xs.filter(row=>row.catalogueEntryKind!=='enquiry'),accepted.map(row=>({key:row.referenceKey as string,brand:row.brand,name:row.name,group:row.referenceGroup as BrandEnquiry["group"],note:row.description,...(row.referenceSurface?{surface:row.referenceSurface}:{}),...(row.customerMenu?{customerMenu:{home:row.customerMenu.home,family:row.customerMenu.family}}:{})})),true);
+  }
+  return chooseReferenceRows(xs,refs,false);
+}
+function chooseReferenceRows(xs:Service[],refs:BrandEnquiry[],explicit:boolean):BrandEnquiry[]{
   return refs.filter(
     (r) =>
-      customerOfferingVisible(r) &&
+      (explicit||customerOfferingVisible(r)) &&
       !(referencePlacement(r).home==='detailing'&&xs.some(s=>s.active===true&&s.brand===null&&s.customerMenu?.home==='detailing'&&s.customerMenu.family===referencePlacement(r).family)) &&
       !xs.some(
         (s) =>

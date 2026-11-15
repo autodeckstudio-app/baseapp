@@ -178,11 +178,12 @@ const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
 /** A reference is not another product when the same exact named/brand range is already published. Different tiers remain distinct. */
 export function referenceChoices(
   xs: Service[],
-  refs: BrandEnquiry[] = BRAND_ENQUIRIES,
+  refs?: BrandEnquiry[],
 ): BrandEnquiry[] {
-  return refs.filter(
+  // A supplied list is the exact reviewed publication, not the static fallback.
+  return (refs??BRAND_ENQUIRIES).filter(
     (r) =>
-      customerOfferingVisible(r) &&
+      (refs!==undefined||customerOfferingVisible(r)) &&
       !(referencePlacement(r).home==='detailing'&&xs.some(s=>s.active===true&&s.brand===null&&s.customerMenu?.home==='detailing'&&s.customerMenu.family===referencePlacement(r).family)) &&
       !xs.some(
         (s) =>
