@@ -269,3 +269,8 @@ export {recordVisitReceipt} from "./functions/visit/recordVisitReceipt.js";
 export {getVisitInvoice,listStaffVisitInvoices,getVisitInvoicePdfUrl} from "./functions/visit/getVisitInvoice.js";
 
 export {onVisitInvoiceCreatedPdf} from "./functions/invoice/onVisitInvoiceCreatedPdf.js";
+
+// Default-off connected-visit operations. Runtime gate is checked before reads/effects.
+export{getRetainedTransportList}from'./functions/visit/getRetainedTransportList.js';
+export{reviewRetainedTransport,executeRetainedTransport}from'./functions/visit/retainedTransportOperations.js';
+export{reviewVisitService,executeVisitService,reconcileVisitService}from'./functions/visit/visitServiceOperations.js';

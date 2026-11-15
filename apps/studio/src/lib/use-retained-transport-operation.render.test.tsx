@@ -1,3 +1,4 @@
+vi.mock('./connected-visit-release',()=>({assertConnectedVisitTarget:(s:any)=>{if(!s.auth.app.options.projectId?.startsWith('demo-')||!s.db._settings?.host?.match(/^(localhost|127\.0\.0\.1):[0-9]+$/)||!s.functions.emulatorOrigin?.match(/^http:\/\/(localhost|127\.0\.0\.1):[0-9]+$/)||!s.auth.emulatorConfig)throw Error('Local target required')}}));
 import{it,expect,vi,beforeEach}from'vitest';import{createElement}from'react';import{act,create}from'react-test-renderer';
 const h=vi.hoisted(()=>({execute:vi.fn(),read:vi.fn(),sdk:{auth:{app:{options:{projectId:'demo-test'}},emulatorConfig:{},currentUser:{uid:'staff'}},db:{_settings:{host:'127.0.0.1:8099'}},functions:{emulatorOrigin:'http://127.0.0.1:5001'}}}));
 vi.mock('./firebase',()=>h.sdk);vi.mock('./use-retained-transport-preview',()=>({RETAINED_TRANSPORT_PREVIEW:true}));vi.mock('firebase/functions',()=>({httpsCallable:(_:unknown,name:string)=>name==='reviewRetainedTransport'?h.read:h.execute}));

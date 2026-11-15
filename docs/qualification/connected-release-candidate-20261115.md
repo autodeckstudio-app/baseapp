@@ -1,0 +1,40 @@
+# Coordinated connected-visit release candidate
+
+Status: prepared locally, OFF, not deployed or owner-approved. Full requested outcome remains open. This checkpoint replaces the demo-only wiring obstacle; it does not finish missing financial paths or select deferred scope.
+
+## Coordinated wiring
+
+The production entrypoint now includes the same retained-list, explicit physical operation and original-method cancellation/approval/manual-return callables used by the review. Every such route authenticates its existing roles, checks a mandatory default-off backend gate before source access and continues through its original scoped transaction proofs. Operational callable wrappers use existing rate-limit budgets. AppCheck behavior remains as configured by the existing application policy.
+
+All three clients use one target-check implementation per app. The original preview import remains a compatibility alias, not an accidental ungated path. Admin original-money controls, staff retained operations, all retained readers, Accountant activation and Office/Accountant new return panels share the coordinated gate. Demo runs still require demo project and loopback Auth/Firestore/Functions. Release mode requires an explicit enabled build flag, an exact matching configured project, no emulator mode and Auth/Firestore/Functions belonging to that same live Firebase app. A mixed SDK target is refused. No release activation value was added to configuration.
+
+The backend requires both explicit release intent and an exact project match in a non-emulator, non-demo runtime. Client settings cannot authorize backend access. A new export alone does not activate the operation. The backend gate does not enable any provider factory, capture/refund submission, live-money test or existing disabled provider adapter.
+
+## Release sequence, not authorization
+
+1. Finish the remaining in-scope financial paths below in the same candidate.
+2. Review the actual proposed user-visible batch, preserving before evidence and explaining different-record test captures.
+3. Obtain visual approval and any required release authority. Neither is supplied by this file.
+4. Prepare exact matching project settings for one coordinated backend and three-client batch. Verify inactive build first, then authorized activation and live read-only smoke checks. Do not expose client controls before their backend exists. No activation, push or deployment has occurred.
+
+## Verification of this wiring
+
+- Backend default-off/project/runtime/role/command and AppCheck coverage: 222 tests passed.
+- Functions full unit: 2,031 passed, one skipped.
+- Admin unit 330 passed; mounted Admin194, Customer581 and Studio160 passed.
+- Three client release target matrices: three cases per client passed.
+- All four typechecks passed; optimized Admin build and native web exports passed.
+- Eight selected emulator cases passed: preview denied scopes, funded cancellation/separate approval/actual return, exact transport choice and mixed actual/held return. An initial emulator command omitted FUNCTIONS_EMULATOR=true and correctly denied three operational cases; the corrected local runtime rerun passed. No scope guard was weakened to hide that failure.
+- Actual authenticated mixed cancellation/manual return/Office/Accountant route passed at320/390/1280 using fresh app builds. Actual gross Rs3,600, returned cash Rs240 and held online Rs960 remain separate. Injected online fixture is not a live provider capture. Existing layout is unchanged.
+- Production Functions bundle restored after local route work.
+
+## Full outcome still to finish
+
+1. Original unpaid retained trip and existing last-service policy-fee obligations, collection and issuance. Do not put unpaid debt into the fully funded refund record, rewrite original snapshots or infer partial fee-versus-trip priority.
+2. Grouped prearrival collection with original proportional service allocation.
+3. Registered/taxed invoice/PDF particulars, using existing fiscal source rules rather than invented tax policy.
+4. General benefit extras across approval, actual receipt, work/QC and invoice truth.
+5. Credential-free online integration and its actual invocation contracts. Production provider activation remains held, never implicitly selected by the release gate.
+6. One final combined candidate regression and owner review. Existing independent proofs remain evidence, not a substitute for that release boundary.
+
+These are retained scope, not owner-approved deferrals. Production wiring itself is no longer merely a missing local design after this checkpoint, but it stays OFF. No release readiness or live-completion claim follows.
