@@ -531,3 +531,54 @@ it('dormant cancellation respects customer erasure before committing',async()=>{
  await db.collection('customers').doc('c').update({erasureState:'pending',deletedAt:'erasing'});await expect(ready.cancel()).rejects.toBeDefined();
  expect((await db.collection('visitServiceReturns').get()).empty).toBe(true);
 });
+
+async function transportReturnFixture(){
+ const pb={vehicleCategory:'hatchback',basePrice:120000,scopeAdjustment:0,addOns:[],subtotal:123003,membershipDiscount:0,membershipDiscountPercent:null,pickupFee:1001,dropFee:2002,taxRatePercent:18,taxDescription:'GST',tax:22141,total:145144,currency:'INR'};
+ await db.collection('jobs').doc('wash').update({priceBreakdown:pb,totalAmount:pb.total,status:'VEHICLE_RECEIVED'});
+ await db.collection('bookings').doc('b_wash').update({priceBreakdown:pb,totalAmount:pb.total});
+ await db.collection('carVisits').doc('v').update({transportJobId:'wash'});
+ const request={id:'b_wash',bookingId:'b_wash',jobId:'wash',visitId:'v',tenantId:'t',studioId:'s',customerId:'c',kind:'both',status:'CONFIRMED',feePaise:3003,pickupFeePaise:1001,dropFeePaise:2002,feeBilled:true,billingVersion:2,pickupCompletedAt:'2026-11-15T00:30:00.000Z',dropCompletedAt:null,legs:[{leg:'pickup',feePaise:1001,roadMeters:1},{leg:'drop',feePaise:2002,roadMeters:2}]};
+ await db.collection('pickupRequests').doc('b_wash').set(request);
+ const {readVisitTransportReturnReview}=await import('../../lib/visit-transport-return-review.js');
+ return{pb,request,read:(legs:('pickup'|'drop')[]=[])=>db.runTransaction(tx=>readVisitTransportReturnReview(tx,db,'v','wash',legs))};
+}
+it('dormant transport review retains one exact original physical request and fee with no sibling reprice or money effect',async()=>{
+ const f=await transportReturnFixture(),sibling=(await db.collection('jobs').doc('interior').get()).data(),visit=(await db.collection('carVisits').doc('v').get()).data();
+ const review=await f.read();expect(review).toMatchObject({requestId:'b_wash',continuingJobIds:['interior'],completedLegs:['pickup'],proposedUnusedLegs:[],retainedLegs:['pickup','drop'],needsUnusedLegDecision:false,originalTotalPaise:145144,retainedTransportPaise:3544,unusedTransportReviewPaise:0});
+ expect(review.components.service.totalPaise+review.retainedTransportPaise).toBe(f.pb.total);
+ expect((await db.collection('jobs').doc('interior').get()).data()).toEqual(sibling);expect((await db.collection('carVisits').doc('v').get()).data()).toEqual(visit);
+ expect((await db.collection('pickupRequests').doc('b_wash').get()).data()).toEqual(f.request);
+ for(const c of['refundRequests','visitServiceReturns','payments','visitInvoices'])expect((await db.collection(c).get()).empty,c).toBe(true);
+});
+it('dormant unused-leg proposal is exact Admin review only and can never include a completed leg',async()=>{
+ const f=await transportReturnFixture(),kept=await f.read(),unused=await f.read(['drop']);
+ expect(unused).toMatchObject({completedLegs:['pickup'],proposedUnusedLegs:['drop'],retainedLegs:['pickup'],retainedTransportPaise:1181,unusedTransportReviewPaise:2363});
+ expect(unused.reviewToken).not.toBe(kept.reviewToken);await expect(f.read(['pickup'])).rejects.toThrow();await expect(f.read(['drop','drop'])).rejects.toThrow();
+ expect((await db.collection('pickupRequests').doc('b_wash').get()).data()).toEqual(f.request);
+});
+it('dormant final-service transport review requires an explicit unused-leg choice and never auto-closes the car return',async()=>{
+ const f=await transportReturnFixture();await db.collection('jobs').doc('interior').update({status:'CANCELLED'});await db.collection('bookings').doc('b_interior').update({status:'CANCELLED'});
+ expect(await f.read()).toMatchObject({continuingJobIds:[],needsUnusedLegDecision:true,retainedLegs:['pickup','drop']});
+ expect(await f.read(['drop'])).toMatchObject({needsUnusedLegDecision:false,completedLegs:['pickup'],proposedUnusedLegs:['drop']});
+ expect((await db.collection('pickupRequests').doc('b_wash').get()).data()!.status).toBe('CONFIRMED');
+});
+it('dormant DONE transport without historical per-leg stamps is used, never two unused legs',async()=>{
+ const f=await transportReturnFixture();await db.collection('pickupRequests').doc('b_wash').update({status:'DONE',pickupCompletedAt:null,dropCompletedAt:null});
+ expect(await f.read()).toMatchObject({completedLegs:['pickup','drop'],retainedLegs:['pickup','drop']});await expect(f.read(['drop'])).rejects.toThrow();
+});
+it.each([{feePaise:3004},{pickupFeePaise:1000},{memberMembershipId:'benefit'},{memberBenefitState:'reserved'},{studioId:'other'},{jobId:'interior'},{status:'DECLINED'},{dropCompletedAt:'invalid'},{feeBilled:false},{legs:[{leg:'pickup',feePaise:1502},{leg:'drop',feePaise:1501}]}])('dormant transport review refuses inconsistent source %j',async patch=>{
+ const f=await transportReturnFixture();await db.collection('pickupRequests').doc('b_wash').update(patch);await expect(f.read()).rejects.toThrow();expect((await db.collection('refundRequests').get()).empty).toBe(true);
+});
+it('dormant transport review binds live leg progress and rejects a second hidden physical request',async()=>{
+ const f=await transportReturnFixture(),before=await f.read(['drop']);await db.collection('pickupRequests').doc('b_wash').update({dropCompletedAt:'2026-11-15T00:40:00.000Z'});
+ const after=await f.read();expect(after.reviewToken).not.toBe(before.reviewToken);await expect(f.read(['drop'])).rejects.toThrow();
+ await db.collection('pickupRequests').doc('hidden').set({...f.request,id:'hidden'});await expect(f.read()).rejects.toThrow();
+});
+it('dormant transport review refuses a changed booking price even when the request still matches the job',async()=>{
+ const f=await transportReturnFixture();await db.collection('bookings').doc('b_wash').update({'priceBreakdown.dropFee':2001});await expect(f.read()).rejects.toThrow();
+});
+it('dormant transport quote snapshot cannot be replaced with a new leg split while cancelling one service',async()=>{
+ const f=await transportReturnFixture(),snapshot={quoteId:'original_quote',kind:'both',feePaise:3003,pickupFeePaise:1001,dropFeePaise:2002,legs:f.request.legs};
+ await db.collection('jobs').doc('wash').update({transportSnapshot:snapshot});await db.collection('bookings').doc('b_wash').update({transportSnapshot:snapshot});await db.collection('pickupRequests').doc('b_wash').update({quoteId:'original_quote'});
+ expect(await f.read()).toMatchObject({retainedTransportPaise:3544});await db.collection('pickupRequests').doc('b_wash').update({quoteId:'new_quote'});await expect(f.read()).rejects.toThrow();
+});
