@@ -55,6 +55,24 @@ function listTsFilesRecursive(dir: string): string[] {
 // the admin app gets a genuine free App Check provider (ReCaptchaV3Provider)
 // with no native/EAS blocker.
 const ENFORCED = [
+  "visit/getRetainedTransportList.ts",
+  "visit/retainedTransportOperations.ts",
+  "visit/visitServiceOperations.ts",
+  "visit/cancelVisitService.ts",
+  "visit/getVisitBill.ts",
+  "visit/getVisitInvoice.ts",
+  "visit/getVisitSeparateInvoicePdf.ts",
+  "visit/prepareVisitBill.ts",
+  "visit/recordVisitReceipt.ts",
+  "visit/recordVisitCancellationCharge.ts",
+  "visit/visitBay.ts",
+  "visit/visitSchedule.ts",
+  "visit/walkinVisitIntake.ts",
+  "visit/getVisit.ts",
+  "visit/joinVisit.ts",
+  "visit/startVisitHandover.ts",
+  "visit/getVisitJoinOptions.ts",
+  "visit/completeVisitHandover.ts",
   "work/recordJobPerformedWork.ts", // combined candidate, staged enforcement wiring
   "work/getJobWorkCoverage.ts", // combined read candidate; uses staged enforcement wiring
   "service/catalogueDrafts.ts",
@@ -222,6 +240,7 @@ const ENFORCED = [
 // all (unlike onCall/onRequest) — they cannot become publicly callable
 // regardless of App Check.
 const EXCLUDED_NON_CALLABLE = [
+  "invoice/onVisitInvoiceCreatedPdf.ts",
   "employee/cleanExpiredStaffDocumentUploads.ts",
   "invoice/onInvoiceCreatedPdf.ts",
   "service/catalogueRuntime.ts",
@@ -271,7 +290,7 @@ describe("Phase 5B P1-13: App Check coverage", () => {
 
   it.each(ENFORCED)("%s enforces App Check (env-gated or hardcoded)", (relPath) => {
     const source = readFileSync(join(FUNCTIONS_DIR, relPath), "utf8");
-    const gated = source.includes("enforceAppCheck: shouldEnforceAppCheck()");
+    const gated = /enforceAppCheck\s*:\s*shouldEnforceAppCheck\s*\(\s*\)/.test(source);
     // Managed catalogue callables pin enforceAppCheck:true (stronger than the
     // staged flag): accepted, and the environment import is not required then.
     const hardcoded = /enforceAppCheck\s*:\s*true/.test(source);

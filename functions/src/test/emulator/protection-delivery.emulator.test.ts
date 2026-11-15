@@ -10,7 +10,7 @@ import { initializeTestEnvironment, type RulesTestEnvironment } from "@firebase/
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { getFirestore } from "firebase-admin/firestore";
-import { advanceJobStatus } from "../../functions/job/advanceJobStatus.js";
+import {stageFixture as advanceJobStatus} from './stage-fixture.js';
 import { TEST_PROJECT_ID } from "../emulator-setup";
 
 const db = getFirestore();

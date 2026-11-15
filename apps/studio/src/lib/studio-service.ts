@@ -33,7 +33,7 @@ function addDaysLocal(dateStr: string, days: number): string {
 type GetStudioJobsInput = { studioId: string; date?: string };
 type GetStudioJobsOutput = { jobs: ServiceJob[]; date: string };
 
-type AdvanceJobStatusInput = { jobId: string; notes?: string; rework?: boolean; protectionWork?: ProtectionWorkEvent[]; recordedWorkRevision?: number };
+type AdvanceJobStatusInput = { expectedStatus:ServiceJob["status"];expectedUpdatedAt:string;operationId:string;jobId: string; notes?: string; rework?: boolean; protectionWork?: ProtectionWorkEvent[]; recordedWorkRevision?: number; visitHandoverId?:string };
 type AdvanceJobStatusOutput = { jobId: string; previousStatus: string; newStatus: string };
 
 type CreateWalkinJobInput = {
@@ -65,22 +65,25 @@ export async function getStudioJobs(
 
 export async function advanceJobStatus(
   jobId: string,
-  notes?: string,
-  rework?: boolean,
-  protectionWork?: ProtectionWorkEvent[],
-  recordedWorkRevision?: number,
+  notes: string|undefined,
+  rework: boolean|undefined,
+  protectionWork: ProtectionWorkEvent[]|undefined,
+  recordedWorkRevision: number|undefined,
+  visitHandoverId:string|undefined,
+  command:Pick<AdvanceJobStatusInput,"expectedStatus"|"expectedUpdatedAt"|"operationId">,
 ): Promise<AdvanceJobStatusOutput> {
   const fn = httpsCallable<AdvanceJobStatusInput, AdvanceJobStatusOutput>(
     functions,
     "advanceJobStatus",
   );
-  const input: AdvanceJobStatusInput = notes !== undefined ? { jobId, notes } : { jobId };
+  const input: AdvanceJobStatusInput = notes !== undefined ? { jobId, notes,...command } : { jobId,...command };
   if (rework) input.rework = true;
   // The staff-declared protection-work declaration. Sent ONLY on the
   // READY_FOR_DELIVERY -> DELIVERED advance (the backend rejects it on any
   // other transition and requires it on that one).
   if (protectionWork !== undefined) input.protectionWork = protectionWork;
   if (recordedWorkRevision !== undefined) input.recordedWorkRevision = recordedWorkRevision;
+  if(visitHandoverId)input.visitHandoverId=visitHandoverId;
   const result = await fn(input);
   return result.data;
 }

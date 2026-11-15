@@ -19,7 +19,7 @@ import type { StudioConfig, Service, Vehicle, Booking, ServiceJob, Warranty, Pro
 process.env["USE_PAYMENT_MOCK"] = "true";
 
 import { createBooking } from "../../functions/booking/createBooking.js";
-import { advanceJobStatus } from "../../functions/job/advanceJobStatus.js";
+import {stageFixture as advanceJobStatus} from './stage-fixture.js';
 import { recordManualPayment } from "../../functions/payment/recordManualPayment.js";
 import { createProtection } from "../../functions/protection/createProtection.js";
 import { updateProtection } from "../../functions/protection/updateProtection.js";

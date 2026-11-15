@@ -1,3 +1,5 @@
+import {readVisitReturnLedger,visitReturnLedgerTotals} from '../../lib/visit-return-ledger.js';
+import {readVisitOnlineLedger,visitOnlineLedgerTotals} from '../../lib/visit-online-ledger.js';
 import {readOfflineLedger,offlineLedgerTotals} from "../../lib/offline-ledger.js";
 import { onCall } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
@@ -71,6 +73,9 @@ export const getOfficeReport = onCall({ region: "asia-south1" , enforceAppCheck:
   const offline = offlineLedgerTotals(await readOfflineLedger(db,tenantId,data.studioId),data.month);
   totalRevenuePaise += offline.appliedPaise; cashPaise += offline.cashPaise; upiPaise += offline.upiPaise; bankTransferPaise += offline.bankTransferPaise; paymentCount += offline.paymentCount;
   for(const [day,applied] of Object.entries(offline.revenueByDay))revenueByDay[day]=(revenueByDay[day]??0)+applied;
+  const online=visitOnlineLedgerTotals(await readVisitOnlineLedger(db,tenantId,data.studioId),data.month);
+  totalRevenuePaise+=online.receivedPaise;razorpayPaise+=online.receivedPaise;paymentCount+=online.paymentCount;
+  for(const[day,received]of Object.entries(online.receivedByDay))revenueByDay[day]=(revenueByDay[day]??0)+received;
   let expensesPaise = 0;
   const expensesByCategory: Record<string, number> = {};
   for (const doc of expensesSnap.docs) {
@@ -94,7 +99,12 @@ export const getOfficeReport = onCall({ region: "asia-south1" , enforceAppCheck:
     else if (j.status === "CANCELLED") jobsCancelled += 1;
   }
 
+  const serviceReturns=visitReturnLedgerTotals(await readVisitReturnLedger(db,tenantId,data.studioId),data.month);
+
   return {
+    // This manual due overlaps legacy refundsOwed. Online due is separate;
+    // neither is netted from original gross receipts or added twice.
+    serviceReturns,
     offlineReceivedPaise:offline.receivedPaise,
     offlineReturnsPaise:offline.returnedPaise,
     cashOfflineReturnsPaise:offline.cashReturnedPaise,

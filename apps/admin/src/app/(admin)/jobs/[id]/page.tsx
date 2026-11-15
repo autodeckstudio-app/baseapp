@@ -1,4 +1,12 @@
 "use client";
+import{VisitOriginalMoneyControl}from"../../../../components/VisitOriginalMoneyControl";
+import{VisitCancelControl}from'../../../../components/VisitCancelControl';
+import{VisitReceiptControl}from'../../../../components/VisitReceiptControl';
+import{useVisitBill}from'../../../../lib/use-visit-bill';
+import{visitFundingLabel}from'@autodeck/core';
+import{VisitCharges}from"../../../../components/VisitCharges";
+import {useSharedVisit} from "../../../../lib/use-shared-visit";
+import {visitReviewedServiceStage} from "@autodeck/core";
 import{VisitFeedback}from"../../../../components/VisitFeedback";
 import{CashReconciliationPanel}from "../../../../components/CashReconciliationPanel";
 import{CASH_RECONCILIATION_ENABLED}from "../../../../lib/backend-features";
@@ -41,6 +49,9 @@ export default function JobDetailPage() {
   const [bayName,setBayName] = useState("");
   const [booking, setBooking] = useState<Booking | null>(null);
   const [job, setJob] = useState<ServiceJob | null | undefined>(undefined);
+  const sharedVisit=useSharedVisit(job);
+  const visitFunding=useVisitBill(sharedVisit.data);
+  const groupedPaymentLabel=job?.visitId?(visitFundingLabel(sharedVisit.data,visitFunding.bill,job.id,visitFunding.error)??'Checking visit bill'):null;
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [payment, setPayment] = useState<Payment | null | undefined>(undefined); // undefined = not loaded yet (never show "no payment" before the listener answers)
   const [linking, setLinking] = useState(false);
@@ -172,15 +183,17 @@ export default function JobDetailPage() {
         </div>
         <div className="ax-hero-side ax-job-summary">
           <div className="ax-job-highlight"><JobSummaryIcon name="tools"/><div>
-          <span className="ax-label">Job stage</span><StatusBadge label={job.status} />
+          <span className="ax-label">{job.visitId?"Service stage":"Job stage"}</span><StatusBadge label={job.visitId?visitReviewedServiceStage(sharedVisit.data,job.id,sharedVisit.error):job.status} />
           </div></div><div className="ax-job-highlight"><JobSummaryIcon name="invoice"/><div><span className="ax-label">Job total</span><span className="ax-hero-total">{formatPaise(job.totalAmount)}</span>
-          </div></div><div className="ax-job-highlight"><JobSummaryIcon name="payments"/><div><span className="ax-label">Payment</span><StatusBadge label={membershipCoveredLabel(job) ?? ((payment as (Payment & {invoiceReviewNeeded?:boolean})|null)?.invoiceReviewNeeded ? "Received - needs review" : (payment?.status==="completed"&&job.paymentStatus!=="paid")||(job.paymentStatus==="paid"&&payment?.status!=="completed") ? "Payment records syncing" : job.paymentStatus)} />
+          </div></div><div className="ax-job-highlight"><JobSummaryIcon name="payments"/><div><span className="ax-label">Payment</span><StatusBadge label={groupedPaymentLabel??membershipCoveredLabel(job) ?? ((payment as (Payment & {invoiceReviewNeeded?:boolean})|null)?.invoiceReviewNeeded ? "Received - needs review" : (payment?.status==="completed"&&job.paymentStatus!=="paid")||(job.paymentStatus==="paid"&&payment?.status!=="completed") ? "Payment records syncing" : job.paymentStatus)} />
           </div></div>
           <details className="ax-job-price-details"><summary><span>Price breakdown</span><JobSummaryIcon name="chevron"/></summary><div className="kv"><span>Service</span><span>{typeof job.priceBreakdown?.total==="number"?formatPaise(job.priceBreakdown.total):"Not available"}</span></div>{job.additionalWorkDelta!==0?<div className="kv"><span>Extra work</span><span>{formatPaise(job.additionalWorkDelta)}</span></div>:null}<p className="ax-note">Original booking prices and payment receipts are listed separately below.</p></details>
         </div>
       </header>
 
-      <StageTrack current={job.status} compact />
+      {job.visitId&&sharedVisit.progress?<div className="ax-job-progress-label"><span>Visit · {sharedVisit.progress.headline}</span><span>{sharedVisit.progress.line}</span></div>:null}
+      {job.visitId&&!sharedVisit.progress?<div role="status">{sharedVisit.error?"Visit unavailable":"Checking visit…"}</div>:<StageTrack current={sharedVisit.progress?.status??job.status} {...(job.visitId?{scope:"visit" as const}:{})} compact />}
+      <VisitCharges view={sharedVisit.data} funding={visitFunding}/>{job.visitId?<VisitOriginalMoneyControl key={JSON.stringify([user?.uid,claims?.tenantId,job.visitId,job.id])} visitId={job.visitId} jobId={job.id} onChanged={()=>{sharedVisit.refresh();setAttempt(n=>n+1)}}/>:null}{job.visitId?<VisitReceiptControl key={JSON.stringify([user?.uid,claims?.tenantId,job.visitId])} visitId={job.visitId} view={sharedVisit.data} bill={visitFunding.bill} onRecorded={sharedVisit.refresh}/>:null}{job.visitId?<VisitCancelControl key={JSON.stringify([user?.uid,claims?.tenantId,job.visitId])+"cancel"} visitId={job.visitId} view={sharedVisit.data} bill={visitFunding.bill} onCancelled={()=>setAttempt(n=>n+1)}/>:null}
       <JobControls job={job} routeId={id} />
       <MembershipSettlement job={job} booking={booking ?? null} />
 

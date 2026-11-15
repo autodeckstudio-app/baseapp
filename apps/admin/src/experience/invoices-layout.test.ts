@@ -19,3 +19,10 @@ describe("invoices list: the Issued badge and the amount can never overlap", () 
     expect(views).toContain('{ key: "total", head: "Total", kind: "data", align: "end", width: "120px", cell: (i) => formatPaise(i.total) }');
   });
 });
+
+it("invoice issue status is never presented as evidence of unpaid debt", () => {
+ const views=read("src/experience/OfficeViews.tsx");
+ const invoices=views.slice(views.indexOf("export function InvoicesView"),views.indexOf("export function AuditView"));
+ expect(invoices).toContain("label: `${issued.length} issued`");
+ expect(invoices).not.toMatch(/unpaid|outstanding/);
+});

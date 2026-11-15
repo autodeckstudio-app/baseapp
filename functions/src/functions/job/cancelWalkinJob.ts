@@ -1,3 +1,4 @@
+import {checkVisitCancellation} from '../../lib/visit-cancellation.js';
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { ServiceJob } from "@autodeck/core";
@@ -28,6 +29,7 @@ export const cancelWalkinJob = onCall({ region: "asia-south1" , enforceAppCheck:
       throw new HttpsError("permission-denied", "Job belongs to a different studio.");
     }
     if (job.status === "CANCELLED") return { jobId: data.jobId, alreadyCancelled: true };
+    await checkVisitCancellation(tx,db,job);
     const block = walkinCancelBlock(job);
     if (block) throw new HttpsError("failed-precondition", block);
 

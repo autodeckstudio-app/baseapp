@@ -13,3 +13,5 @@ describe("membershipCoveredLabel", () => {
     expect(membershipCoveredLabel({})).toBeNull();
   });
 });
+
+it("does not label payable additional work as covered",()=>{expect(membershipCoveredLabel({settlementKind:"membership_covered",membershipWashUsed:true,totalAmount:5000})).toBeNull()});

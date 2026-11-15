@@ -149,12 +149,12 @@ export async function uploadVehiclePhoto(vehicleId: string, blob: VehiclePhotoBo
 }
 
 /** Resolves a stored vehicle photo path to a renderable URL (rules-gated read). */
-export async function resolveVehiclePhotoUrl(path: string, _version?: string | null): Promise<string> {
+export async function resolveVehiclePhotoUrl(path: string, version?: string | null, refresh=false): Promise<string> {
   // A private signed URL must not be modified after signing. Do not fall back to
   // the legacy publisher: its owner check used auth UID, not canonical customer ID.
   const parts = path.split('/');
   if (parts[1] !== 'vehicles' || !parts[2] || path.includes('..')) throw new Error('Saved car photo path is invalid.');
-  return readPrivatePhoto('vehiclePhoto', parts[2], path);
+  return readPrivatePhoto('vehiclePhoto', parts[2], path, refresh, version);
 }
 
 export function normalizePlate(value: string): string {

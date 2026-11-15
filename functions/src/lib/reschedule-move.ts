@@ -52,6 +52,7 @@ export async function runRescheduleMove(
     if (!freshBooking || freshBooking.status !== "CONFIRMED" || freshBooking.scheduledAt !== booking.scheduledAt || freshBooking.rescheduleCount !== booking.rescheduleCount) {
       throw new HttpsError("failed-precondition", "Booking changed. Reload it before rescheduling.");
     }
+    if(freshBooking.visitId)throw new HttpsError('failed-precondition','Move this visit with the studio so its services stay together.');
     params.extraFreshnessCheck?.(freshBooking);
 
     const jobsSnap = await tx.get(

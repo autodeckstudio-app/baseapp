@@ -21,6 +21,7 @@ export const releaseCompletedBay=onCall({region:'asia-south1',enforceAppCheck: s
   const snap=await tx.get(ref);if(!snap.exists)throw new HttpsError('not-found','Job not found.');
   const job=snap.data() as ServiceJob;assertTenant(user,job.tenantId);
   if(user.claims.role==='studio'&&user.claims.studioId!==job.studioId)throw new HttpsError('permission-denied','Job belongs to another studio.');
+  if(job.visitId)throw new HttpsError('failed-precondition','Review all attached visit services before releasing the empty bay.');
   if(job.status!=='READY_FOR_DELIVERY'||!job.bayId)throw new HttpsError('failed-precondition','Only completed work waiting for pickup can release an empty bay.');
   if(hasReleasedBay(job))return {jobId:data.jobId,released:true,alreadyReleased:true,bayReleasedAt:job.bayReleasedAt};
   const lock=db.collection(COLLECTIONS.bayLocks()).doc(`${job.tenantId}__${job.studioId}__${job.bayId}`);await tx.get(lock);

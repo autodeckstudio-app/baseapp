@@ -59,3 +59,17 @@ it('stale CONFIRMED booking with progressed job refuses customer cancellation an
 it('v3 round-off stays in captured funding and return ledger, never silently re-rounded or absorbed into tax',async()=>{
  const s=await seed(true);await capture(s);await recordOfflineReceipt.run({auth:s.staff,data:{jobId:s.job.id,receiptKey:'rounded-'+s.id,receivedPaise:s.cp.balancePaise,method:'cash'}}as never);await db.collection('bookings').doc(s.booking.id).update({scheduledAt:new Date(Date.now()+7200000).toISOString(),cancelCategories:['washing']});await cancel(s);const r=await review(s);expect(r.plan).toMatchObject({paidPaise:115100,feePaise:10000,refundPaise:105100,status:'awaiting_admin'});expect(r.plan.entries.reduce((sum:number,e:any)=>sum+e.returnPaise+e.retainedPaise,0)).toBe(115100);expect((await db.collection('bookings').doc(s.booking.id).get()).data()!.priceBreakdown).toMatchObject({tax:17550,roundOffPaise:50,total:115100});expect((await db.collection('refundRequests').where('bookingId','==',s.booking.id).get()).empty).toBe(true);
 });
+it.each(['booking','job'])('direct combined cancellation and waiting helper recheck %s shared membership before any financial write or provider close',async member=>{
+ const {decideCombinedReturn}=await import('../../lib/combined-return.js');const {requestCombinedWaitingCancel}=await import('../../lib/combined-waiting-cancel.js');
+ const s=await seed();const col=member==='booking'?'bookings':'jobs',id=member==='booking'?s.booking.id:s.job.id;
+ await db.collection(col).doc(id).update({visitId:'synthetic-shared'});
+ const b=(await db.collection('bookings').doc(s.booking.id).get()).data(),j=(await db.collection('jobs').doc(s.job.id).get()).data(),p=(await db.collection('payments').doc(s.payment.id).get()).data();
+ const user={uid:s.admin.uid,claims:s.admin.token} as any;const beforeClose=waitMock.closed.length;
+ await expect(requestCombinedWaitingCancel(db,user,{bookingId:s.booking.id,reason:'Synthetic shared check'},'admin')).rejects.toThrow('Review this shared visit');
+ await capture(s);const capturedBooking=(await db.collection('bookings').doc(s.booking.id).get()).data(),capturedJob=(await db.collection('jobs').doc(s.job.id).get()).data(),capturedPayment=(await db.collection('payments').doc(s.payment.id).get()).data();
+ await expect(decideCombinedReturn(db,user,{bookingId:s.booking.id,reason:'Synthetic shared check',feeAction:'waive'},'admin','cancellation')).rejects.toThrow('Review this shared visit');
+ expect((await db.collection('bookings').doc(s.booking.id).get()).data()).toEqual(capturedBooking);expect((await db.collection('jobs').doc(s.job.id).get()).data()).toEqual(capturedJob);
+ expect(waitMock.closed.length).toBe(beforeClose);expect((await db.collection('bookingCancelIntents').doc(s.booking.id).get()).exists).toBe(false);
+ expect((await db.collection('refundRequests').where('paymentId','==',s.payment.id).get()).empty).toBe(true);
+ expect((await db.collection('payments').doc(s.payment.id).get()).data()).toEqual(capturedPayment);
+});

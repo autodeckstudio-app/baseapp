@@ -57,8 +57,8 @@ export function hasReleasedBay(j:{status:string;bayReleasedAt?:string;bayRelease
  return j.status==='READY_FOR_DELIVERY'&&typeof j.bayReleasedBy==='string'&&j.bayReleasedBy.length>0&&Number.isFinite(Date.parse(j.bayReleasedAt??''));
 }
 
-export function jobHoldsBay(j: { status: string; estimatedEndAt: string;bayReleasedAt?:string;bayReleasedBy?:string }, now: number = Date.now()): boolean {
-  if (hasReleasedBay(j)) return false;
+export function jobHoldsBay(j: { bayId?:string;status: string; estimatedEndAt: string;bayReleasedAt?:string;bayReleasedBy?:string }, now: number = Date.now()): boolean {
+  if (hasReleasedBay(j)||j.bayId==='') return false;
   if (j.status === "PENDING_VEHICLE") {
     const end = Date.parse(j.estimatedEndAt);
     return Number.isFinite(end) ? now < end : true;

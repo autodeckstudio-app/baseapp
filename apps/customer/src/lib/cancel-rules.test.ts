@@ -65,9 +65,9 @@ describe("expected ready never precedes the start", () => {
 });
 
 describe("booking hero chips stay readable on the dark hero in Day mode", () => {
-  it("both hero chips use onDark", () => {
+  it("remaining status chip uses onDark without a misleading Live badge", () => {
     const src = readFileSync(`${__dirname}/../app/(tabs)/bookings/[id].tsx`, "utf8");
-    expect(src).toContain('<Chip label="Live" tone="accent" onDark />');
+    expect(src).not.toContain('<Chip label="Live"');
     expect(src).toMatch(/BOOKING_CHIP_TONE\[booking\.status\] \?\? "neutral"\} onDark \/>/);
   });
 });
@@ -75,7 +75,9 @@ describe("booking hero chips stay readable on the dark hero in Day mode", () => 
 describe("booking page text stays readable in Night", () => {
   const src = readFileSync(`${__dirname}/../app/(tabs)/bookings/[id].tsx`, "utf8");
   it("Time, Duration, Expected ready and Payment rows use the stronger detail tone", () => {
-    for (const t of ["Time", "Duration", "Expected ready", "Payment"]) expect(src).toMatch(new RegExp(t === "Expected ready" ? `<Row detailTone="secondary" title=\\{readyRowTitle\\(vt\\?\\.phase\\)\\}` : `<Row detailTone="secondary" title="${t}"`));
+    for (const t of ["Slot", "Duration", "Payment"]) expect(src).toContain(`<Row detailTone="secondary" title="${t}"`);
+    expect(src).toContain('"Original planned finish":readyRowTitle(vt?.phase)');
+    expect(src).not.toContain('title="Time"');
   });
   it("the reschedule explanation is not tertiary", () => {
     expect(src).not.toMatch(/tone="tertiary">\{rescheduleEligibility\.reason\}/);

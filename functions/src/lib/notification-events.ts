@@ -1,3 +1,6 @@
+import{visitScheduleNotification}from'./visit-schedule-notification.js';
+import {visitIntakeNotification} from './visit-intake-notification.js';
+import {visitNotification} from './visit-notification.js';
 // Maps an AuditLog entry to a customer-facing Notification, or null if the
 // action has no customer notification (Phase 2C architecture: AuditLog is
 // the sole authoritative event source - no second event bus, no invented
@@ -103,6 +106,9 @@ export async function buildNotification(
   log: AuditLog,
 ): Promise<NotificationDraft | null> {
   switch (log.action) {
+    case "visit.intakePrepared":
+    case "visit.intakeOffered":
+      return visitIntakeNotification(db,log);
     case "booking.created":
     case "booking.confirmed": {
       const booking = (await db.collection(COLLECTIONS.bookings()).doc(log.entityId).get()).data() as
@@ -180,6 +186,7 @@ export async function buildNotification(
         | Booking
         | undefined;
       if (!booking) return null;
+      if(booking.visitId)return visitScheduleNotification(db,booking,log.after?.["visitRevision"],log.after?.["visitId"]);
       const vehicle = await vehicleLabel(db, booking.vehicleId);
       return {
         userId: booking.customerId,
@@ -200,6 +207,7 @@ export async function buildNotification(
         | undefined;
       if (!job) return null;
       const vehicle = await vehicleLabel(db, job.vehicleId);
+      if(job.visitId)return visitNotification(db,job,nextStatus!,cap(vehicle));
 
       const updates: Record<string, { type: NotificationType; title: string; body: string }> = {
         VEHICLE_RECEIVED: { type: "vehicle_received", title: "Your car is in", body: `${cap(vehicle)} is checked in and in good hands.` },

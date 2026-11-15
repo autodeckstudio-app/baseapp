@@ -1,7 +1,10 @@
+import {randomUUID} from 'expo-crypto';
+import {prepareVisitIntake} from '../../lib/visit-intake-service';
+import type {VisitIntakeRead} from '@autodeck/core';
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
 import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -62,6 +65,12 @@ export default function WalkinScreen() {
   const [addingVehicle, setAddingVehicle] = useState(false);
 
   const [services, setServices] = useState<Service[]>([]);
+  const [additionalServices,setAdditionalServices]=useState<string[]>([]);
+  const [addingService,setAddingService]=useState(false);
+  const [estimate,setEstimate]=useState<VisitIntakeRead|null>(null);
+  const [estimateScope,setEstimateScope]=useState<string|null>(null);
+  const [estimateOperation,setEstimateOperation]=useState<string|null>(null);
+  const multi=additionalServices.length>0;
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   // No default size: the car's saved type is used, and when it has none the staff must pick one.
   const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory | null>(null);
@@ -99,6 +108,13 @@ export default function WalkinScreen() {
 
   const selectedService = services.find((s) => s.id === selectedServiceId) ?? null;
   const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId) ?? null;
+  const intakeScope=auth.status==='ready'?JSON.stringify([auth.user.uid,auth.claims,customer?.id,selectedVehicleId,selectedServiceId,additionalServices,notes]):null;
+  const intakeLive=useRef(intakeScope);intakeLive.current=intakeScope;const intakeLock=useRef(false);
+  const staffKey=auth.status==='ready'?JSON.stringify([auth.user.uid,auth.claims]):null;
+  const priorStaff=useRef(staffKey);
+  useEffect(()=>{if(priorStaff.current!==staffKey){priorStaff.current=staffKey;startOver()}},[staffKey]);
+
+
 
   useEffect(() => {
     setVehicleCategory(selectedVehicle?.category ? normalizeSegment(selectedVehicle.category) : null);
@@ -206,6 +222,12 @@ export default function WalkinScreen() {
   }
 
   async function handleCreateJob() {
+    if(multi){
+      if(intakeLock.current||submitting||feedError||!studioId||!customer||!selectedVehicleId||!selectedServiceId||!selectedVehicle?.category)return;
+      const scope=intakeScope;intakeLock.current=true;setActionError(null);setSubmitting(true);
+      const operationId=estimateOperation??randomUUID();setEstimateOperation(operationId);
+      try{const saved=await prepareVisitIntake({operationId,studioId,customerId:customer.id,vehicleId:selectedVehicleId,serviceIds:[selectedServiceId,...additionalServices],...(notes.trim()?{notes:notes.trim()}:{})});if(intakeLive.current===scope){setEstimateScope(scope);setEstimate(saved)}}catch(err){if(intakeLive.current===scope)showActionError("Estimate not confirmed",err instanceof Error?err.message:"Try again.")}finally{intakeLock.current=false;if(intakeLive.current===scope)setSubmitting(false)}return;
+    }
     if (submitting || feedError || !vehicleCategory || !studioId || !customer || !selectedVehicleId || !selectedServiceId || !selectedBayId) return;
     setActionError(null);setSubmitting(true);
     try {
@@ -237,7 +259,7 @@ export default function WalkinScreen() {
   }
 
   const shownCustomers = directory ? filterDirectory(directory, phone) : [];
-  const canSubmit = Boolean(vehicleCategory && customer && selectedVehicleId && selectedServiceId && selectedBayId && !feedError);
+  const canSubmit = Boolean(vehicleCategory && customer && selectedVehicleId && selectedServiceId && (multi?selectedVehicle?.category:selectedBayId) && !feedError);
 
   // Guided flow: one decision per screen, big tap targets, back always available.
   type Step = "customer" | "vehicle" | "service" | "review";
@@ -267,7 +289,7 @@ export default function WalkinScreen() {
     if (stepIndex > 0) setStep(STEPS[stepIndex - 1]!);
   }
   function startOver() {
-    setStep("customer"); setPhone(""); setSearched(false); setCustomer(null); setVehicles([]);
+    setSubmitting(false);setAdditionalServices([]);setAddingService(false);setEstimate(null);setEstimateScope(null);setEstimateOperation(null);setStep("customer"); setPhone(""); setSearched(false); setCustomer(null); setVehicles([]);
     setSelectedVehicleId(null); setSelectedServiceId(null); setSelectedBayId(null); setNotes(""); setJustRegistered(false);
     setShowNew(false); setShowAddVehicle(false); setActionError(null); setVehicleCategory(null); setNewVehicleType(null); setCatFilter("all"); setPriceBreakdown(null);
     reloadDirectory();
@@ -412,9 +434,9 @@ export default function WalkinScreen() {
             })}
           </ScrollView>
           {visibleServices.map((s) => {
-            const selected = selectedServiceId === s.id;
+            const selected = selectedServiceId === s.id||additionalServices.includes(s.id);
             return (
-              <TouchableOpacity key={s.id} activeOpacity={0.8} onPress={() => { setSelectedServiceId(s.id); setSelectedBayId(null); setStep("review"); }} style={{ ...tapRow(selected), flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm }}>
+              <TouchableOpacity key={s.id} activeOpacity={0.8} onPress={() => { if(addingService){if(s.id!==selectedServiceId&&!additionalServices.includes(s.id))setAdditionalServices(old=>[...old,s.id]);setVehicleCategory(selectedVehicle?.category?normalizeSegment(selectedVehicle.category):null);}else{setSelectedServiceId(s.id);setAdditionalServices(old=>old.filter(id=>id!==s.id));}setEstimateOperation(null);setAddingService(false);setSelectedBayId(null);setStep("review"); }} style={{ ...tapRow(selected), flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>{s.name}</Text>
                   <Text style={{ ...typography.caption, color: colors.textMuted }}>{servicePlacement(s)?.family ?? CATEGORY_LABELS[String(s.category)] ?? String(s.category)}</Text>
@@ -427,23 +449,26 @@ export default function WalkinScreen() {
         </View>
       )}
 
-      {step === "review" && selectedService && (
+      {step === "review" && selectedService && (!estimate||estimateScope!==intakeScope) && (
         <View style={{ gap: spacing.md }}>
           <View style={panel}>
             <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>{selectedService.name}</Text>
+            {additionalServices.map(id=><View key={id} style={{flexDirection:'row',alignItems:'center',gap:spacing.sm}}><Text style={{...typography.bodyMedium,color:colors.textPrimary,flex:1}}>{services.find(s=>s.id===id)?.name??'Service'}</Text><Button label="Remove" variant="ghost" onPress={()=>{setAdditionalServices(old=>old.filter(x=>x!==id));setEstimateOperation(null)}}/></View>)}
+            <Button label="Add another service" variant="ghost" onPress={()=>{setAddingService(true);setStep('service')}}/>
+            {multi?<Text style={{...typography.caption,color:colors.textMuted}}>One estimate · customer approval first</Text>:null}
             <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm }}>{vehicleCategory ? "Vehicle type" : "This car has no type saved. Pick one to see the price."}</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs }}>
               {VEHICLE_CATEGORIES.map(({ value, label }) => {
                 const on = vehicleCategory === value;
                 return (
-                  <TouchableOpacity key={value} onPress={() => setVehicleCategory(value)} style={{ minHeight: 44, justifyContent: "center", paddingHorizontal: spacing.md, borderRadius: radius.full, borderWidth: 1.5, borderColor: on ? colors.accent : colors.border, backgroundColor: on ? colors.accentMuted : "transparent" }}>
+                  <TouchableOpacity key={value} disabled={multi} onPress={() => setVehicleCategory(value)} style={{ minHeight: 44, justifyContent: "center", paddingHorizontal: spacing.md, borderRadius: radius.full, borderWidth: 1.5, borderColor: on ? colors.accent : colors.border, backgroundColor: on ? colors.accentMuted : "transparent" }}>
                     <Text style={{ ...typography.caption, color: on ? colors.accentPressed : colors.textSecondary }}>{label}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
             <View style={{ marginTop: spacing.md }}>
-              {priceLoading ? (
+              {multi?<Text style={{...typography.caption,color:colors.textMuted}}>{selectedVehicle?.category?"Prices checked on estimate":"Save this car's type first"}</Text>:priceLoading ? (
                 <LoadingState fill={false} />
               ) : priceBreakdown ? (
                 <>
@@ -454,7 +479,7 @@ export default function WalkinScreen() {
             </View>
           </View>
 
-          <View style={panel}>
+          {!multi?<View style={panel}>
             <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>Pick a bay</Text>
             {freeBays.length === 0 ? (
               <View style={{ gap: spacing.sm }}>
@@ -473,16 +498,17 @@ export default function WalkinScreen() {
                 })}
               </View>
             )}
-          </View>
+          </View>:null}
 
           <View style={panel}>
             <TextInput label="Notes (optional)" placeholder="Anything the studio should know" value={notes} onChangeText={setNotes} multiline />
           </View>
 
-          <Button label="Start job" onPress={() => void handleCreateJob()} loading={submitting} disabled={!canSubmit} />
+          <Button label={multi?"Prepare estimate":"Start job"} onPress={() => void handleCreateJob()} loading={submitting} disabled={!canSubmit} />
           <Button label="Start over" variant="ghost" onPress={startOver} />
         </View>
       )}
+      {step==='review'&&estimate&&estimateScope===intakeScope?<View style={{gap:spacing.md}}><View style={panel}><Text style={{...typography.bodyMedium,color:colors.textPrimary}}>{estimate.status==='draft'?'Office quote needed':'Awaiting customer approval'}</Text>{estimate.lines.map(l=><Text key={l.id} style={{...typography.body,color:colors.textPrimary}}>{l.name} · {l.totalAmount===null?'Quote needed':`₹${(l.totalAmount/100).toLocaleString('en-IN')}`}</Text>)}{estimate.totalAmount!==null?<Text style={{...typography.price,color:colors.textPrimary}}>₹{(estimate.totalAmount/100).toLocaleString('en-IN')}</Text>:null}<Text style={{...typography.caption,color:colors.textMuted}}>No work started · no bay reserved</Text></View><Button label="Next customer" onPress={startOver}/></View>:null}
     </ScrollView>
   );
 }

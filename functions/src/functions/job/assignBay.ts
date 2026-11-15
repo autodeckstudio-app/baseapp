@@ -35,6 +35,7 @@ export const assignBay = onCall({ region: "asia-south1", enforceAppCheck: should
     throw new HttpsError("permission-denied", "Job belongs to a different studio.");
   }
 
+  if(job.visitId)throw new HttpsError('failed-precondition','Review every attached visit service before moving this car.');
   if (job.status === "STANDBY") throw new HttpsError("failed-precondition", "Admit standby through the waiting queue, not bay reassignment.");
 
   if (job.status === "DELIVERED" || job.status === "CANCELLED") {
@@ -74,7 +75,7 @@ export const assignBay = onCall({ region: "asia-south1", enforceAppCheck: should
   await db.runTransaction(async (tx) => {
     const freshSnap = await tx.get(db.collection(COLLECTIONS.jobs()).doc(data.jobId));
     const fresh = freshSnap.data() as ServiceJob | undefined;
-    if (!fresh || hasReleasedBay(fresh) || fresh.status === "STANDBY" || fresh.status === "DELIVERED" || fresh.status === "CANCELLED" || fresh.status !== job.status || fresh.bayId !== job.bayId || fresh.scheduledAt !== job.scheduledAt) {
+    if (!fresh || fresh.visitId!==job.visitId || hasReleasedBay(fresh) || fresh.status === "STANDBY" || fresh.status === "DELIVERED" || fresh.status === "CANCELLED" || fresh.status !== job.status || fresh.bayId !== job.bayId || fresh.scheduledAt !== job.scheduledAt) {
       throw new HttpsError("failed-precondition", "Job changed. Reload it before assigning a bay.");
     }
 

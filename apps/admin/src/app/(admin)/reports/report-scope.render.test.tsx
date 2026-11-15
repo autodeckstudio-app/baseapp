@@ -1,0 +1,26 @@
+import React from 'react';
+import { it, expect, vi } from 'vitest';
+import { act, create } from 'react-test-renderer';
+const h=vi.hoisted(()=>({read:vi.fn()}));
+vi.mock('../../../lib/office-service',()=>({getOfficeReport:h.read}));
+vi.mock('../../../lib/auth-context',()=>({useAdminAuth:()=>({claims:{studioId:'s'}})}));
+vi.mock('../../../experience/ReportsView',()=>({ReportsView:(p:any)=><section {...p}/>}));
+import Page from './page';
+it('late month results cannot replace current report and failure clears prior truth',async()=>{
+ const pending:Array<{month:string,resolve:(x:any)=>void,reject:(x:any)=>void}>=[];
+ h.read.mockImplementation((_studio:string,month:string)=>new Promise((resolve,reject)=>pending.push({month,resolve,reject})));
+ let r:any;await act(async()=>{r=create(<Page/>)});
+ await act(async()=>r.root.findByType('section').props.onMonthChange('2026-10'));
+ await act(async()=>pending[1]!.resolve({studioId:'s',month:'2026-10',totalRevenuePaise:12}));
+ expect(r.root.findByType('section').props.report.totalRevenuePaise).toBe(12);
+ await act(async()=>pending[0]!.resolve({studioId:'s',month:pending[0]!.month,totalRevenuePaise:99}));
+ expect(r.root.findByType('section').props.report.totalRevenuePaise).toBe(12);
+ await act(async()=>r.root.findByType('section').props.onMonthChange('2026-09'));
+ expect(r.root.findByType('section').props.report).toBeNull();
+ await act(async()=>pending[2]!.reject(Error('Unavailable')));
+ expect(r.root.findByType('section').props.report).toBeNull();expect(r.root.findByType('section').props.error).toBe('Unavailable');
+ await act(async()=>r.root.findByType('section').props.onMonthChange('2026-08'));
+ await act(async()=>pending[3]!.resolve({studioId:'another',month:'2026-08'}));
+ expect(r.root.findByType('section').props.report).toBeNull();expect(r.root.findByType('section').props.error).toContain('scope');
+ await act(async()=>r.unmount());
+});

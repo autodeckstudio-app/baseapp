@@ -180,7 +180,7 @@ describe("manual refund DUE guards (real emulator)", () => {
     expect((await db.collection("refundRequests").where("paymentId", "==", s.paymentId!).get()).size).toBe(0);
     const jobs = await db.collection("jobs").where("bookingId", "==", s.bookingId).get();
     expect(jobs.docs[0]!.data()["status"]).toBe("CANCELLED");
-    const { advanceJobStatus } = await import("../../functions/job/advanceJobStatus.js");
+    const { advanceJobStatus } = await import('./stage-fixture.js');
     const studioAuth = { uid: uid("st"), token: { role: "studio", tenantId: TENANT, studioId: STUDIO }, rawToken: "t" };
     await expect(advanceJobStatus.run({ data: { jobId: jobs.docs[0]!.id }, auth: studioAuth } as never)).rejects.toMatchObject({ code: "failed-precondition" });
     expect((await db.collection("jobs").doc(jobs.docs[0]!.id).get()).data()!["status"]).toBe("CANCELLED");

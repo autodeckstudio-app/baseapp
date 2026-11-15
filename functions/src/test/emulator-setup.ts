@@ -13,6 +13,13 @@ process.env["FIREBASE_STORAGE_EMULATOR_HOST"] ??= "localhost:9199";
 process.env["GCLOUD_PROJECT"] ??= "autodeck-dev";
 const PROJECT = process.env["GCLOUD_PROJECT"]!;
 export const TEST_PROJECT_ID = PROJECT;
+// emulators:exec does not promise FUNCTIONS_EMULATOR when only Auth,
+// Firestore and Storage are started. Direct .run() calls still need an
+// explicit demo-only runtime, independent of test-file execution order.
+// Production/non-demo identifiers never acquire this fixture permission.
+if (PROJECT.startsWith("demo-") && process.env["FIRESTORE_EMULATOR_HOST"]) {
+  process.env["FUNCTIONS_EMULATOR"] ??= "true";
+}
 
 // A throwaway service-account keypair can be injected for tests that mint
 // real signed URLs (e.g. storage upload URL flows); without it the app uses

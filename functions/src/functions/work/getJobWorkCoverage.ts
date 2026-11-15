@@ -1,3 +1,4 @@
+import type { ServiceJob } from "@autodeck/core";
 // Combined read-only integration candidate, not deployed.
 // A booked/paid/invoiced service is never promoted into performed work here.
 import{onCall,HttpsError}from'firebase-functions/v2/https';
@@ -9,14 +10,11 @@ import{extractUser,extractCustomerUser,assertRole}from'../../middleware/auth.js'
 import{requireCustomerDocId}from'../../lib/customer-identity.js';
 import{shouldEnforceAppCheck}from'../../lib/environment.js';
 import{enforceRateLimit,subjectFrom}from'../../middleware/rateLimit.js';
+import {workSnapshotSchema} from '../../lib/work-snapshot-schema.js';
+export {workSnapshotSchema} from '../../lib/work-snapshot-schema.js';
+import {readVisitWorkReadiness} from '../../lib/visit-work-readiness.js';
 const id=z.string().min(1).max(120).regex(/^[A-Za-z0-9_-]+$/);
 const input=z.object({jobId:id}).strict();
-const scope=z.object({tenantId:id,studioId:id,jobId:id,vehicleId:id,customerId:id}).strict();
-const date=z.string().datetime({offset:true});
-const warranty=z.discriminatedUnion('kind',[z.object({kind:z.literal('unknown')}).strict(),z.object({kind:z.literal('none'),reviewedBy:id}).strict(),z.object({kind:z.literal('terms'),id,version:z.number().int().positive()}).strict()]);
-const ledgerSchema=z.object({scope,revision:z.number().int().positive(),sealedAt:date.nullable(),lines:z.array(z.object({id,serviceId:id,productId:id.nullable(),title:z.string().min(1).max(300),source:z.enum(['booked','approved_extra']),approvalId:id.nullable(),approvalStatus:z.literal('approved').nullable()}).strict()).min(1).max(100),facts:z.array(z.object({lineId:id,action:z.enum(['service','install','replace','remove']),productId:id.nullable(),productKind:z.string().min(1).max(80).nullable().optional(),coverage:z.string().min(1).max(300).nullable(),targetId:id.nullable(),targetRevision:z.number().int().min(0).nullable(),performedBy:id,performedAt:date,qcBy:id.nullable(),qcAt:date.nullable(),warranty}).strict()).max(100)}).strict();
-const evidenceSchema=z.array(z.object({lineId:id,productId:id,coverage:z.string().min(1).max(300),termId:id.nullable(),termVersion:z.number().int().positive().nullable(),registration:z.enum(['not_confirmed','confirmed','not_required']),eligibility:z.enum(['not_confirmed','eligible','needs_review']),sourceUrl:z.string().max(2000).nullable()}).strict()).max(100);
-export const workSnapshotSchema=z.object({sourceJobHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),ledger:ledgerSchema,products:z.record(z.string().min(1).max(120),z.string().min(1).max(300)).refine(v=>Object.keys(v).length<=100),evidence:evidenceSchema}).strict();
 const termSchema=z.object({id,version:z.number().int().positive(),productId:id,coverage:z.string().min(1).max(300),text:z.string().min(1).max(20000),label:z.string().min(1).max(300),tenantId:id,approved:z.literal(true),sourceUrl:z.string().url().max(2000)}).strict();
 // Both the linked term snapshot and coverage evidence must name the same exact
 // source; a matching product name alone never supplies coverage.
@@ -65,7 +63,8 @@ async function read(request:any,self:boolean){
    targets.push(resolved);}
   const audience=self?'customer':user.claims.role==='studio'?'studio':'admin';
   const items=buildWorkCoverageView(snap.ledger as WorkLedger,{scope:currentScope,vehicleActive:true,terms,targets},evidence,snap.products,audience);
-  return{status:'recorded' as const,jobId:j.id,revision:snap.ledger.revision,workLock:snap.sourceJobHash?(snap.ledger.sealedAt?'locked' as const:'open' as const):'unknown' as const,items,handoverReady:items.every(i=>i.workStatus==='QC recorded')&&!!snap.sourceJobHash&&recordedWorkHandover(snap.ledger as WorkLedger,currentScope)!==null};
+  const visitWork=await readVisitWorkReadiness(tx,db,{...job,id:j.id} as unknown as ServiceJob);
+  return{status:'recorded' as const,jobId:j.id,workReady:visitWork?.ready??false,revision:snap.ledger.revision,workLock:snap.sourceJobHash?(snap.ledger.sealedAt?'locked' as const:'open' as const):'unknown' as const,items,handoverReady:visitWork?.ready===true&&items.every(i=>i.workStatus==='QC recorded')&&!!snap.sourceJobHash&&recordedWorkHandover(snap.ledger as WorkLedger,currentScope)!==null};
  });
 }
 export const getMyJobWorkCoverage=onCall({region:'asia-south1',enforceAppCheck: shouldEnforceAppCheck()},request=>read(request,true));

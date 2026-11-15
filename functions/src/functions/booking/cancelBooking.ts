@@ -1,3 +1,4 @@
+import {checkVisitCancellation} from '../../lib/visit-cancellation.js';
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Booking, ServiceJob } from "@autodeck/core";
@@ -104,6 +105,7 @@ export const cancelBooking = onCall({ region: "asia-south1", secrets: ["RAZORPAY
     const cancellableStatuses: string[] = ["PENDING_VEHICLE", "STANDBY", "VEHICLE_RECEIVED"];
     const jobDoc = jobsSnap.docs[0];
     const job = jobDoc ? (jobDoc.data() as ServiceJob) : null;
+    if(job)await checkVisitCancellation(tx,db,job);
     // Work already started: a customer cannot cancel online and the advance is not refunded. The studio handles it.
     if (job && !cancellableStatuses.includes(job.status)) {
       throw new HttpsError("failed-precondition", isCustomer ? "Work on your car has already started. Please contact the studio." : "Work has already started on this job, so the booking cannot be cancelled here.");

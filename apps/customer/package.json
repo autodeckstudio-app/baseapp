@@ -43,7 +43,8 @@
     "web-vitals": "^5.1.0",
     "expo-print": "~14.1.4",
     "expo-sharing": "~13.1.5",
-    "expo-file-system": "~18.1.11"
+    "expo-file-system": "~18.1.11",
+    "leaflet": "^1.9.4"
   },
   "devDependencies": {
     "@autodeck/config": "workspace:*",
@@ -53,6 +54,7 @@
     "expo-build-properties": "~0.14.8",
     "react-test-renderer": "19.0.0",
     "typescript": "^5.8.3",
-    "vitest": "^2.1.8"
+    "vitest": "^2.1.8",
+    "@types/leaflet": "^1.9.21"
   }
 }

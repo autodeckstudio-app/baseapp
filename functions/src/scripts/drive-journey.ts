@@ -1,3 +1,4 @@
+import {jobStageCommand} from "@autodeck/core";
 /**
  * End-to-end V1 journey driver for a deployed (non-emulator) environment.
  * Drives the real callable chain over HTTPS as two identities:
@@ -166,7 +167,8 @@ async function main(): Promise<void> {
   // ── Advance the job through the full chain ─────────────────────────────────
   for (const next of ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY", "DELIVERED"]) {
     try {
-      const r = await callFn("advanceJobStatus", owner.token, { jobId, notes: `journey drive -> ${next}` });
+      const stageSnapshot=(await db.collection("jobs").doc(jobId).get()).data()!;
+      const r = await callFn("advanceJobStatus", owner.token, { jobId,...jobStageCommand(stageSnapshot as any), notes: `journey drive -> ${next}` });
       log("advanceJobStatus", (r.job?.status ?? r.status ?? next) as string);
     } catch (e) {
       log("advanceJobStatus", `skip (${next}): ${(e as Error).message.slice(0, 140)}`);

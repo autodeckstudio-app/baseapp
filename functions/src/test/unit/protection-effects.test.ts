@@ -147,7 +147,7 @@ describe("planProtectionEvents", () => {
 });
 
 describe("advanceJobStatusSchema protectionWork events", () => {
-  const b = { jobId: "j1" };
+  const b = { jobId: "j1",expectedStatus:"READY_FOR_DELIVERY",expectedUpdatedAt:"fixture-version",operationId:"fixture-command" };
   it("accepts install/replace/remove events and the explicit-none empty array", () => {
     expect(advanceJobStatusSchema.safeParse({ ...b, protectionWork: [] }).success).toBe(true);
     expect(advanceJobStatusSchema.safeParse({ ...b, protectionWork: [install()] }).success).toBe(true);
@@ -168,7 +168,7 @@ describe("advanceJobStatusSchema protectionWork events", () => {
 describe("advanceJobStatus wiring", () => {
   it("declaration gating, fresh revalidation, and in-transaction event writes are all present", () => {
     const s = readFileSync("src/functions/job/advanceJobStatus.ts", "utf8");
-    expect(s).toContain('(data.protectionWork !== undefined || data.recordedWorkRevision !== undefined) && nextStatus !== "DELIVERED"'); // reject off-delivery
+    expect(s).toContain('(data.protectionWork !== undefined || data.recordedWorkRevision !== undefined || data.visitHandoverId !== undefined) && nextStatus !== "DELIVERED"'); // reject off-delivery
     expect(s).toContain("REQUIRES an explicit performed-work declaration"); // deployed-live lineage adopted: declaration REQUIRED at the server - absent is refused, never a silent none
     const tx = s.slice(s.indexOf("db.runTransaction"));
     const deliver = tx.slice(tx.indexOf('if (nextStatus === "DELIVERED")'));

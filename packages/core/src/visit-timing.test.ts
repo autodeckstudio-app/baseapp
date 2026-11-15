@@ -1,3 +1,4 @@
+function fixtureValue<T>(value:T|null|undefined):T { if(value===null||value===undefined)throw Error('Missing required test fixture value'); return value; }
 import { describe, it, expect } from "vitest";
 import { visitTiming, formatSpan, customerTimingLine, hasTimingLabel } from "./visit-timing.js";
 import type { JobStatus } from "./types/job.js";
@@ -66,3 +67,7 @@ describe("visitTiming", () => {
     expect(hasTimingLabel(visitTiming({ status: "IN_PROGRESS", ...slot }, T("15:30")))).toBe(true);
   });
 });
+
+import{recordedReadyAt}from'./visit-timing';
+it('old ready records retain collection attention with actual ready age, never the planned end age',()=>{const now=Date.parse('2026-11-15T00:23:00+05:30'),history=[{status:'VEHICLE_RECEIVED',changedAt:'2026-10-21T14:54:00+05:30'},{status:'IN_PROGRESS',changedAt:'2026-11-04T02:58:00+05:30'},{status:'QUALITY_CHECK',changedAt:'2026-11-04T02:58:00+05:30'},{status:'READY_FOR_DELIVERY',changedAt:'2026-11-04T02:58:00+05:30'}];const t=visitTiming({status:'READY_FOR_DELIVERY',scheduledAt:fixtureValue(history[0]).changedAt,estimatedEndAt:'2026-10-21T16:54:00+05:30',statusHistory:history},now);expect(t).toMatchObject({phase:'ready',needsAttention:true,tone:'warning',label:'Collection pending · ready recorded 10d 21h ago'});expect(recordedReadyAt(history,now)).toBe(fixtureValue(history[3]).changedAt);expect(t.label).not.toContain('24d');expect(visitTiming({status:'READY_FOR_DELIVERY',...slot},now).label).toContain('date needs review')});
+it('missing, future, malformed and superseded ready dates never create collection history',()=>{const now=T('16:00');for(const h of[[],[{status:'READY_FOR_DELIVERY',changedAt:'bad'}],[{status:'READY_FOR_DELIVERY',changedAt:'2026-12-01'}],[{status:'READY_FOR_DELIVERY',changedAt:'2026-10-29T14:00:00+05:30'},{status:'IN_PROGRESS',changedAt:'2026-10-29T15:00:00+05:30'}]])expect(recordedReadyAt(h,now)).toBeNull()});

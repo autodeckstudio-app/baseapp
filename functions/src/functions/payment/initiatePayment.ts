@@ -28,6 +28,7 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
   if (!jobSnap.exists) throw new HttpsError("not-found", "Job not found.");
 
   const job = jobSnap.data() as ServiceJob;
+    if(job.visitId)throw new HttpsError('failed-precondition','Use the current itemized visit bill, not a separate job payment.');
   if(job.combinedPayment){
     if(!combinedCheckoutEnabled())throw new HttpsError("failed-precondition","Combined payments are not active.");
     try{checkedCombinedPayment(job.combinedPayment,job.totalAmount)}catch{throw new HttpsError("failed-precondition","Combined price changed. Review the booking before paying.")}
@@ -95,7 +96,7 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
   // existing payment instead of creating a duplicate.
   const claim = await db.runTransaction(async (tx) => {
     const freshJob=(await tx.get(db.collection(COLLECTIONS.jobs()).doc(data.jobId))).data() as ServiceJob | undefined;
-    if(!freshJob||freshJob.id!==job.id||freshJob.customerId!==job.customerId||freshJob.studioId!==job.studioId||freshJob.tenantId!==job.tenantId||freshJob.totalAmount!==job.totalAmount||freshJob.status==="CANCELLED"||freshJob.offlineSettlement||(freshJob as ServiceJob & {cashReconciliationId?:string}).cashReconciliationId)throw new HttpsError("failed-precondition","Job or receipt balance changed. Refresh before payment.");
+    if(!freshJob||freshJob.visitId||freshJob.id!==job.id||freshJob.customerId!==job.customerId||freshJob.studioId!==job.studioId||freshJob.tenantId!==job.tenantId||freshJob.totalAmount!==job.totalAmount||freshJob.status==="CANCELLED"||freshJob.offlineSettlement||(freshJob as ServiceJob & {cashReconciliationId?:string}).cashReconciliationId)throw new HttpsError("failed-precondition","Job or receipt balance changed. Refresh before payment.");
     const basis=await readCombinedPaymentBasis(db,tx,freshJob);
     const dueAmount=basis?.balanceDuePaise??freshJob.totalAmount;
     if(!Number.isSafeInteger(dueAmount)||dueAmount<0||(basis?dueAmount===0:false))throw new HttpsError("failed-precondition","No verified payable balance remains.");

@@ -6,5 +6,5 @@ function formatPaise(paise: number): string {
 export function manualRefundNotice(booking: { status: string; manualRefundDuePaise?: unknown }) {
   const due = booking.manualRefundDuePaise;
   if (booking.status !== "CANCELLED" || typeof due !== "number" || !Number.isSafeInteger(due) || due <= 0) return null;
-  return { title: "Refund owed by the studio", body: `The studio owes you ${formatPaise(due)}. It has not been recorded as returned. Contact the studio to arrange the return.` };
+  return { title: "Refund owed by the studio", body: `Return due · ${formatPaise(due)} · Not recorded as returned · Contact studio` };
 }

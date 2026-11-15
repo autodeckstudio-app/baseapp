@@ -23,11 +23,16 @@ import { functions } from "../../../../lib/firebase";
 import { getServicesIncludingHidden } from "../../../../lib/catalogue-service";
 import { CustomerView, type ContactPatch, type VehiclePatch } from "../../../../experience/CustomerView";
 
-export default function CustomerDetailPage() {
+export default function CustomerDetailPage(){
+ const {id}=useParams<{id:string}>();const {user,claims,loading}=useAdminAuth();
+ if(loading||!user||!claims)return <div className="ax-page" role="status">Checking customer access…</div>;
+ return <CustomerDetailBody key={[id,user.uid,claims.tenantId,claims.role,claims.studioId??''].join('|')}/>;
+}
+function CustomerDetailBody() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { claims } = useAdminAuth();
-
+  const [loaded,setLoaded]=useState<Set<string>>(()=>new Set());
   const [customer, setCustomer] = useState<Customer | null | undefined>(undefined);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -45,24 +50,23 @@ export default function CustomerDetailPage() {
   useEffect(() => { void getServicesIncludingHidden().then(setServices).catch(() => setServices([])); }, []);
 
   useEffect(() => {
-    if (!id) return undefined;
-    return listenToCustomer(id, setCustomer, (err) => setError(err.message));
-  }, [id]);
-
-  useEffect(() => {
-    if (!id || !claims) return undefined;
-    const unsubs = [
-      listenToCustomerVehicles(id, claims.tenantId, setVehicles, (err) => setError(err.message)),
-      listenToCustomerBookings(id, claims.tenantId, setBookings, (err) => setError(err.message)),
-      listenToCustomerJobs(id, claims.tenantId, setJobs, (err) => setError(err.message)),
-      listenToCustomerMemberships(id, claims.tenantId, setMemberships, (err) => setError(err.message)),
-      listenToCustomerPayments(id, claims.tenantId, setPayments, (err) => setError(err.message)),
-      listenToCustomerInvoices(id, claims.tenantId, setInvoices, (err) => setError(err.message)),
-      listenToCustomerNotifications(id, claims.tenantId, setNotifications, (err) => setError(err.message)),
-      listenToCustomerAudit(id, claims.tenantId, setAudit, (err) => setError(err.message)),
+    if(!id||!claims)return;
+    let alive=true;setLoaded(new Set());
+    const read=<T,>(name:string,set:(value:T)=>void)=>(value:T)=>{if(alive){set(value);setLoaded(prior=>new Set([...prior,name]));}};
+    const fail=(err:Error)=>{if(alive)setError(err.message)};
+    const unsubs=[
+      listenToCustomer(id,read('customer',setCustomer),fail),
+      listenToCustomerVehicles(id,claims.tenantId,read('vehicles',setVehicles),fail),
+      listenToCustomerBookings(id,claims.tenantId,read('bookings',setBookings),fail),
+      listenToCustomerJobs(id,claims.tenantId,read('jobs',setJobs),fail),
+      listenToCustomerMemberships(id,claims.tenantId,read('memberships',setMemberships),fail),
+      listenToCustomerPayments(id,claims.tenantId,read('payments',setPayments),fail),
+      listenToCustomerInvoices(id,claims.tenantId,read('invoices',setInvoices),fail),
+      listenToCustomerNotifications(id,claims.tenantId,read('notifications',setNotifications),fail),
+      listenToCustomerAudit(id,claims.tenantId,read('audit',setAudit),fail),
     ];
-    return () => unsubs.forEach((u) => u());
-  }, [id, claims]);
+    return()=>{alive=false;unsubs.forEach(stop=>stop())};
+  },[id,claims?.tenantId]);
 
   const vehicleKey = vehicles.map((v) => v.id).sort().join(",");
   useEffect(() => {
@@ -76,6 +80,8 @@ export default function CustomerDetailPage() {
   }, [id, claims, vehicleKey]);
 
   if (error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Couldn&apos;t load this customer</p><p>{error}</p></div>;
+  if(customer&&(customer.id!==id||customer.tenantId!==claims?.tenantId))return <div role="alert">Customer scope could not be verified.</div>;
+  if(loaded.size<9)return <div className="ax-page" role="status">Loading customer records…</div>;
   if (customer === undefined) return <div className="ax-page"><div className="ax-skel" style={{ height: 140, marginBottom: 16 }} /><div className="ax-skel" style={{ height: 320 }} /></div>;
   if (customer === null) return <div className="ax-panel ax-empty"><p className="ax-title">Customer not found</p><p>They may have been merged or removed.</p></div>;
 

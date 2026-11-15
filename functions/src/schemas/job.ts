@@ -49,6 +49,9 @@ export const protectionWorkEventSchema = z.discriminatedUnion("action", [
 ]);
 
 export const advanceJobStatusSchema = z.object({
+  expectedStatus:z.enum(["PENDING_VEHICLE","VEHICLE_RECEIVED","STANDBY","IN_PROGRESS","QUALITY_CHECK","READY_FOR_DELIVERY","DELIVERED","CANCELLED"]),
+  expectedUpdatedAt:z.string().min(1).max(128),
+  operationId:z.string().min(1).max(240).regex(/^[^/]+$/),
   jobId: z.string().min(1),
   rework: z.boolean().optional(),
   notes: z.string().max(500).optional(),
@@ -57,6 +60,7 @@ export const advanceJobStatusSchema = z.object({
   // any kind", an absent field means the choice was never made.
   protectionWork: z.array(protectionWorkEventSchema).optional(),
   recordedWorkRevision: z.number().int().positive().optional(),
+  visitHandoverId: z.string().min(1).max(120).regex(/^[A-Za-z0-9_-]+$/).optional(),
 }).strict();
 
 export const cancelWalkinJobSchema = z.object({

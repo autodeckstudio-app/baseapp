@@ -48,7 +48,7 @@ vi.mock("./DeliveryDeclaration", async (importOriginal) => {
 import { JobControls } from "./JobControls";
 
 const prot = (id: string, o: Partial<Protection> = {}): Protection => ({ id, tenantId: "t", vehicleId: "vA", customerId: "c", kind: "ppf", provider: "Garware", policyNumber: null, startDate: "2026-06-12", expiryDate: null, documentUrl: null, status: "unverified", source: "customer", verifiedBy: null, verifiedAt: null, notes: null, revision: 2, coverage: "full_body", createdAt: "x", updatedAt: "x", ...o });
-const job = (o: Partial<ServiceJob> = {}): ServiceJob => ({ id: "jA", vehicleId: "vA", tenantId: "t", studioId: "s1", status: "READY_FOR_DELIVERY", paymentStatus: "paid", serviceId: "sv1", ...o } as ServiceJob);
+const job = (o: Partial<ServiceJob> = {}): ServiceJob => ({ updatedAt:"fixture-v1", id: "jA", vehicleId: "vA", tenantId: "t", studioId: "s1", status: "READY_FOR_DELIVERY", paymentStatus: "paid", serviceId: "sv1", ...o } as ServiceJob);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const textOf = (el: any): string => {
@@ -228,3 +228,4 @@ describe("JobControls + DeliveryDeclaration mounted interaction", () => {
     expect(declRenders).toHaveLength(1); // never remounted
   });
 });
+it('one explicit stage action sends one snapshot-bound command, never an unbound two-step loop',async()=>{let el:any;advanceCallable.mockClear();await act(async()=>{el=create(createElement(JobControls,{job:job({status:'IN_PROGRESS',updatedAt:'stage-v2'})}))});const b=el.root.findAllByType('button').find((n:any)=>n.children.join('')==='Send to quality check');expect(b).toBeTruthy();await act(async()=>b.props.onClick());expect(advanceCallable).toHaveBeenCalledTimes(1);expect(advanceCallable).toHaveBeenCalledWith(expect.objectContaining({jobId:'jA',expectedStatus:'IN_PROGRESS',expectedUpdatedAt:'stage-v2',operationId:'IN_PROGRESS:stage-v2:forward'}));await act(async()=>el.unmount())});

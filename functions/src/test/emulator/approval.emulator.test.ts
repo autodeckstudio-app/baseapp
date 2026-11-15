@@ -1,3 +1,5 @@
+import {randomUUID} from 'node:crypto';
+import {recordJobPerformedWork} from '../../functions/work/recordJobPerformedWork.js';
 import type * as LegacyAdvanceModule from "../../lib/advance-payment.js";
 /**
  * Emulator integration tests for the additional-work approval workflow
@@ -19,7 +21,7 @@ process.env["USE_PAYMENT_MOCK"] = "true";
 
 import { createBooking } from "../../functions/booking/createBooking.js";
 import { cancelBooking } from "../../functions/booking/cancelBooking.js";
-import { advanceJobStatus } from "../../functions/job/advanceJobStatus.js";
+import {stageFixture as advanceJobStatus} from './stage-fixture.js';
 import { recordManualPayment } from "../../functions/payment/recordManualPayment.js";
 import { initiatePayment } from "../../functions/payment/initiatePayment.js";
 import { createApproval } from "../../functions/approval/createApproval.js";
@@ -623,7 +625,7 @@ describe("Approval / additional-work workflow", () => {
       await expect(advanceOnce(jobId, studioUid)).rejects.toMatchObject({ code: "failed-precondition" });
 
       const job = (await db.collection("jobs").doc(jobId).get()).data() as ServiceJob;
-      expect(job.status).toBe("READY_FOR_DELIVERY");
+      expect(job.status).toBe("QUALITY_CHECK");
     });
 
     it("job delivers normally once the pending approval is resolved", async () => {
@@ -641,10 +643,40 @@ describe("Approval / additional-work workflow", () => {
         auth: customerAuth(cust),
       } as never);
 
+      expect((await db.collection("jobs").doc(jobId).get()).data()!.status).toBe("IN_PROGRESS");
+      let revision=0;
+      for(const [lineId,approvalId] of [["booked-0",null],[`extra-${created.approvalId}`,created.approvalId]] as const){
+        await recordJobPerformedWork.run({auth:studioAuth(studioUid),data:{jobId,operationId:randomUUID(),expectedRevision:revision++,action:"record",lineId,approvalId,performed:true,work:{kind:"service"}}} as never);
+        await recordJobPerformedWork.run({auth:studioAuth(studioUid),data:{jobId,operationId:randomUUID(),expectedRevision:revision++,action:"qc",lineId,checked:true}} as never);
+      }
+      await advanceOnce(jobId,studioUid); // work -> QC
+      await advanceOnce(jobId,studioUid); // all lines checked -> one ready
+      await recordJobPerformedWork.run({auth:adminAuth(studioUid),data:{jobId,operationId:randomUUID(),expectedRevision:revision++,action:"seal",confirmed:true}} as never);
       await payInFull(jobId, studioUid);
-      await advanceToDelivered(jobId, studioUid); // -> DELIVERED, should now succeed
+      await advanceJobStatus.run({auth:studioAuth(studioUid),data:{jobId,recordedWorkRevision:revision}} as never);
       const job = (await db.collection("jobs").doc(jobId).get()).data() as ServiceJob;
       expect(job.status).toBe("DELIVERED");
+    });
+
+    it("later approved work opens a new work revision without changing old QC or history",async()=>{
+      const{jobId,cust}=await setupInProgressJob("cust-reopen-work");
+      const run=(data:any,admin=false)=>recordJobPerformedWork.run({auth:admin?adminAuth(studioUid):studioAuth(studioUid),data:{jobId,operationId:randomUUID(),...data}}as never);
+      await run({expectedRevision:0,action:"record",lineId:"booked-0",approvalId:null,performed:true,work:{kind:"service"}});
+      await run({expectedRevision:1,action:"qc",lineId:"booked-0",checked:true});
+      await run({expectedRevision:2,action:"seal",confirmed:true},true);
+      const before=(await db.collection("jobPerformedWork").doc(jobId).get()).data()!;
+      await advanceOnce(jobId,studioUid);await advanceOnce(jobId,studioUid);
+      const addSvc=await seedAdditionalService(uid("svc-reopen"),TENANT_A,"Extra",30000);
+      const created=await createApproval.run({auth:studioAuth(studioUid),data:{jobId,serviceId:addSvc.id,reason:"Extra requested"}}as never) as {approvalId:string};
+      expect((await db.collection("jobs").doc(jobId).get()).data()!.status).toBe("QUALITY_CHECK");
+      await respondToApproval.run({auth:customerAuth(cust),data:{approvalId:created.approvalId,decision:"approved"}}as never);
+      const reopened=(await db.collection("jobPerformedWork").doc(jobId).get()).data()!;
+      expect(reopened.ledger).toMatchObject({revision:4,sealedAt:null,facts:before.ledger.facts});
+      expect(reopened.ledger.lines.map((l:any)=>l.id)).toEqual(["booked-0",`extra-${created.approvalId}`]);
+      expect((await db.collection("jobPerformedWork").doc(jobId).collection("revisions").doc("3").get()).data()).toEqual(before);
+      expect((await db.collection("jobs").doc(jobId).get()).data()!.status).toBe("IN_PROGRESS");
+      await advanceOnce(jobId,studioUid);
+      await expect(advanceOnce(jobId,studioUid)).rejects.toThrow("Check every service");
     });
 
     it("booking cancelled while an early-stage approval is pending: job becomes CANCELLED and the approval can no longer be approved by the customer, but studio can still cancel it", async () => {

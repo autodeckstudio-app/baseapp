@@ -1,3 +1,4 @@
+import {readVisitTransport,checkVisitDrop} from '../../lib/visit-transport.js';
 import {pickupTariffVersion} from '@autodeck/core';
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { pickupBlockedForRequest } from "../../lib/pickup-booking-guard";
@@ -161,6 +162,10 @@ export const requestPickupDrop = onCall({ region: "asia-south1" , enforceAppChec
     updatedAt: now,
   };
   await db.runTransaction(async (tx) => {
+    const freshSnap=await tx.get(db.collection(COLLECTIONS.bookings()).doc(data.bookingId)),fresh=freshSnap.data() as Booking|undefined;
+    if(!fresh||fresh.tenantId!==user.claims.tenantId||fresh.customerId!==booking.customerId||fresh.vehicleId!==booking.vehicleId||fresh.studioId!==booking.studioId||['CANCELLED','COMPLETED','EXPIRED','NO_SHOW'].includes(fresh.status))throw new HttpsError('failed-precondition','Booking changed. Reload transport.');
+    const shared=await readVisitTransport(tx,db,fresh);
+    if(shared&&(shared.state==='cancelled'||['pickup','both'].includes(data.kind)&&shared.members.some(m=>m.job.status!=='PENDING_VEHICLE')))throw new HttpsError('failed-precondition','The car is already with this visit. Request return only.');
     const existing = await tx.get(ref);
     if (existing.exists && (existing.data() as { status: string }).status !== "DECLINED") {
       throw new HttpsError("already-exists", "A pickup request is already open for this booking.");
@@ -173,7 +178,8 @@ export const requestPickupDrop = onCall({ region: "asia-south1" , enforceAppChec
       }
       tx.update(quoteRef, { consumedAt: now });
     }
-    tx.set(ref, doc);
+    if(shared&&!shared.visit.transportJobId)tx.update(shared.ref,{transportJobId:shared.jobId,updatedAt:now});
+    tx.set(ref, {...doc,...(shared?{visitId:shared.visit.id,jobId:shared.jobId}:{})});
     writeAuditLog(tx, { action: "pickup.requested", entityType: "PickupRequest", entityId: ref.id, user, studioId: booking.studioId, after: { kind: data.kind } });
   });
   return { request: doc };
@@ -209,6 +215,7 @@ export const updatePickupRequest = onCall({ region: "asia-south1" , enforceAppCh
     const curFeePaise = data.feePaise ?? cur.feePaise ?? null;
     if ((data.status === "CONFIRMED" || data.status === "DONE") && cur.bookingId) {
       const bk = (await tx.get(db.collection(COLLECTIONS.bookings()).doc(cur.bookingId))).data() as Booking | undefined;
+      if(bk){const shared=await readVisitTransport(tx,db,bk);if(shared&&(data.markLegCompleted==='drop'||data.status==='DONE'&&cur.kind!=='pickup'))await checkVisitDrop(tx,db,shared);}
       if (pickupBlockedForRequest(cur, bk?.status)) throw new HttpsError("failed-precondition", bk ? bk.status === "COMPLETED" ? "This booking is completed and nothing is owed on this request, so it can only be declined." : "This booking is closed, so the request can only be declined." : "No booking was found for this request, so it can only be declined.");
     }
 

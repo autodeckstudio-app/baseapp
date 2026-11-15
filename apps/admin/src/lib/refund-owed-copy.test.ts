@@ -7,6 +7,12 @@ describe("refund owed copy", () => {
     expect(t).toMatch(/could not be totalled/);
     expect(t).not.toMatch(/undefined|NaN| - /);
   });
+  it("missing successful-response fields are unavailable, not finite incomplete legacy evidence", () => {
+    const legacyResponse = { totalRevenuePaise: 360000 } as Record<string, number>;
+    expect(refundsOwedTotalText(legacyResponse.refundsOwedPaise!, legacyResponse.refundsOwedCount!, false)).toMatch(/could not be totalled/);
+    const incomplete = refundsOwedTotalText(3000, 1, true);
+    expect(incomplete).toMatch(/may be incomplete/);expect(incomplete).not.toMatch(/could not be totalled/);
+  });
   it("never says refunded, sent or initiated as done; says not yet returned", () => {
     const t = refundOwedText(10000);
     expect(t).toMatch(/not yet returned/); expect(t).toMatch(/not sent anything/);

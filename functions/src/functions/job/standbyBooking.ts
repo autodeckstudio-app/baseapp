@@ -52,6 +52,7 @@ export const standbyBooking = onCall({ region: "asia-south1", enforceAppCheck: s
       writeAuditLog(tx, { action: "booking.standby_arrived", entityType: "Booking", entityId: booking.id, user, studioId: job.studioId, before: { bayId: job.bayId }, after: { status: "STANDBY", bayId: null } });
       return { jobId: job.id, status: "STANDBY" };
     }
+    if(job.visitId)throw new HttpsError('failed-precondition','Review the shared car and its service bays before admission.');
     if (job.status !== "STANDBY" || booking.status !== "ACTIVE") throw new HttpsError("failed-precondition", "This car is not waiting on standby.");
     if (!data.bayId) throw new HttpsError("invalid-argument", "Choose an available compatible bay.");
     const [configSnap, serviceSnap, allJobs] = await Promise.all([

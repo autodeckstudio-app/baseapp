@@ -1,3 +1,5 @@
+vi.mock('../../../hooks/useAuth',()=>({useAuth:()=>({status:'unauthenticated'})}));
+const visit=vi.hoisted(()=>({get:vi.fn()}));vi.mock('../../../lib/visit-service',()=>({getVisit:(...a:any[])=>visit.get(...a),getVisitBill:async()=>{throw Error('No money fixture in this stage-only test')}}));
 vi.mock('../../../lib/work-targets-service',()=>({listenToWorkTargets:(_s:any,cb:any)=>{cb([]);return()=>{}}}));
 // Mounts the REAL JobDetailScreen (the actual route component) with firebase
 // and services mocked at the module boundary, and drives the route-level
@@ -42,13 +44,14 @@ const STAFF: JobAuthT = { uid: "u1", role: "studio", tenantId: "t", studioId: "s
 const jobAuthListeners = new Set<(a: JobAuthT | null | undefined) => void>();
 const fireAuth = (a: JobAuthT | null | undefined) => act(() => { jobAuthListeners.forEach((l) => l(a)); });
 const advanceJobStatus = vi.fn();
+const getStudioConfig=vi.fn(async(..._args:any[])=>null as any);
 const getCurrentProtections = vi.fn(async () => []);
 vi.mock("../../../lib/studio-service", () => ({
   updateStandby: vi.fn(),
   advanceJobStatus: (...a: unknown[]) => (advanceJobStatus as (...b: unknown[]) => unknown)(...a),
   cancelWalkinJob: vi.fn(),
   assignBay: vi.fn(),
-  getStudioConfig: async () => null,
+  getStudioConfig:(...a:any[])=>getStudioConfig(...a),
   getCurrentProtections: (...a: unknown[]) => (getCurrentProtections as (...b: unknown[]) => unknown)(...a),
   getReslotOptions: async () => [],
   reslotBooking: vi.fn(),
@@ -155,7 +158,7 @@ beforeEach(() => {
   jobListeners.clear();
   jobAuthListeners.clear();
   advanceJobStatus.mockReset();
-  getCurrentProtections.mockClear();
+  getCurrentProtections.mockClear();getStudioConfig.mockReset();getStudioConfig.mockResolvedValue(null);
   params.id = "jA";
 });
 
@@ -601,3 +604,9 @@ it('opening record hides redundant outer action and cash retry is available only
  });
 
 });
+
+it('actual shared floor badge uses checked member state and service timing never promises whole-car readiness',async()=>{visit.get.mockResolvedValue({status:'grouped',jobId:'jA',visitId:'v',revision:1,state:'working',bill:{totalAmount:20000},members:[{jobId:'jA',status:'READY_FOR_DELIVERY',serviceStatus:'Check work',lines:[{name:'Wash'}],history:[]},{jobId:'jB',status:'IN_PROGRESS',serviceStatus:'In progress',lines:[{name:'Detail'}],history:[]}]});let r:any;await act(async()=>{r=create(createElement(JobDetailScreen))});emitJob('jA',mkJob('jA',{visitId:'v',updatedAt:'one'}));await flush();expect(textOf(r)).toContain('Check work');expect(textOf(r)).not.toContain('Work complete');expect(textOf(r)).toContain('Service estimate');expect(textOf(r)).not.toContain('Expected ready');visit.get.mockRejectedValue(Error('offline'));emitJob('jA',mkJob('jA',{visitId:'v',updatedAt:'two'}));await flush();expect(textOf(r)).toContain('Visit unavailable');expect(textOf(r)).not.toContain('Work complete');await act(async()=>r.unmount())});
+it('a new cash hold kills an armed counter confirmation and old callbacks cannot collect again',async()=>{const svc=await import('../../../lib/payment-service');vi.mocked(svc.recordManualPayment).mockClear();let el:any;await act(async()=>{el=create(createElement(JobDetailScreen))});emitJob('jA',mkJob('jA',{paymentStatus:'unpaid'}));await flush();deliverPayment(null);press(el,'Record payment');press(el,'I have the cash');const stale=capturePress(el,'Confirm');emitJob('jA',mkJob('jA',{paymentStatus:'unpaid',cashReconciliationId:'held'}));expect(textOf(el)).toContain('Cash receipt under review - do not collect again');act(()=>stale());await flush();expect(svc.recordManualPayment).not.toHaveBeenCalled();expect(textOf(el)).not.toContain('Record payment');await act(async()=>el.unmount())});
+it('one Send to quality check click binds the displayed job version and never advances Ready implicitly',async()=>{advanceJobStatus.mockResolvedValue({newStatus:'QUALITY_CHECK'});let el:any;await act(async()=>{el=create(createElement(JobDetailScreen))});emitJob('jA',mkJob('jA',{status:'IN_PROGRESS',updatedAt:'stage-v2'}));await flush();press(el,'Send to quality check');await flush();expect(advanceJobStatus).toHaveBeenCalledTimes(1);expect(advanceJobStatus.mock.calls[0]![6]).toEqual({expectedStatus:'IN_PROGRESS',expectedUpdatedAt:'stage-v2',operationId:'IN_PROGRESS:stage-v2:forward'});await act(async()=>el.unmount())});
+
+it('bay source distinguishes loaded unassigned, exact reservation, missing bay and unavailable config',async()=>{getStudioConfig.mockResolvedValue({tenantId:'t',bays:[{id:'wash',name:'Wash Bay 1',active:true,bayType:'wash'}]});let el:any;await act(async()=>{el=create(createElement(JobDetailScreen))});emitJob('jA',mkJob('jA',{bayId:''}));await flush();expect(textOf(el)).toContain('No bay assigned');expect(textOf(el)).not.toContain('Loading bay');emitJob('jA',mkJob('jA',{bayId:'wash'}));await flush();expect(textOf(el)).toContain('Wash Bay 1');emitJob('jA',mkJob('jA',{bayId:'removed'}));await flush();expect(textOf(el)).toContain('Bay needs review');getStudioConfig.mockRejectedValue(Error('unavailable'));emitJob('jA',mkJob('jA',{studioId:'s2',bayId:'wash'}));await flush();expect(textOf(el)).toContain('Bay unavailable');expect(textOf(el)).not.toContain('Wash Bay 1');await act(async()=>el.unmount())});

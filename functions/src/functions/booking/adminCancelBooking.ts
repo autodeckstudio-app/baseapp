@@ -1,3 +1,4 @@
+import {checkVisitCancellation} from '../../lib/visit-cancellation.js';
 import {requestCombinedWaitingCancel} from '../../lib/combined-waiting-cancel.js';
 import {decideCombinedReturn} from '../../lib/combined-return.js';
 import { transactionRead } from "../../lib/transaction-read.js";
@@ -57,10 +58,16 @@ export async function runCancel(
     if (!snap.exists) throw new HttpsError("not-found", "Booking not found.");
     const booking = snap.data() as Booking;
     assertTenant(user, booking.tenantId);
+  if(booking.visitId)throw new HttpsError('failed-precondition','Review this shared visit before cancelling through the office payment flow.');
     assertStudio(user, booking.studioId, "Booking");
     if (actor === "customer") {
       if (booking.customerId !== customerDocId) throw new HttpsError("permission-denied", "Cannot cancel another customer's booking.");
     }
+    // Group membership may be present only on the linked job in an older or
+    // interrupted projection. Detect it before ANY provider/combined branch.
+    const initialJobs = await db.collection(COLLECTIONS.jobs()).where("bookingId", "==", data.bookingId).limit(2).get();
+    if(initialJobs.size>1)throw new HttpsError('failed-precondition','Booking jobs need review before cancellation.');
+    if(initialJobs.docs.some(d=>d.data()["visitId"]))throw new HttpsError('failed-precondition','Review this shared visit before cancelling through the office payment flow.');
     if(booking.combinedPayment){const waiting=await requestCombinedWaitingCancel(db,user,data,actor);if(waiting)return waiting;return decideCombinedReturn(db,user,data,actor,"cancellation");}
     if (booking.status === "CANCELLED") return { success: true, alreadyCancelled: true };
     if (booking.status === "COMPLETED" || booking.status === "EXPIRED") {
@@ -211,6 +218,7 @@ export async function runCancel(
       if (jobs.size > 1) throw new HttpsError("failed-precondition", "This booking has more than one job. Cancel it by hand.");
       const jobDoc = jobs.docs[0];
       const j = jobDoc?.data() as ServiceJob | undefined;
+      if(j)await checkVisitCancellation(tx,db,j);
       if(j?.offlineSettlement)throw new HttpsError("failed-precondition","Actual receipt was recorded while cancelling. Refresh and review the receipt-funded cancellation.");
       if (j && !CANCELLABLE_JOB.includes(j.status)) throw new HttpsError("failed-precondition", "Work has already started on this job.");
       // Payment eligibility is re-derived INSIDE the transaction with the
@@ -463,6 +471,7 @@ export const settleCancellationFee = onCall({ region: "asia-south1", enforceAppC
     if (!snap.exists) throw new HttpsError("not-found", "Booking not found.");
     const b = snap.data() as Booking;
     assertTenant(user, b.tenantId);
+    if(b.visitId||(b as any).visitCancellationChargeId)throw new HttpsError('failed-precondition','Record this shared visit charge through its exact actual receipt review.');
     assertStudio(user, b.studioId, "Booking");
     if (b.status !== "CANCELLED") throw new HttpsError("failed-precondition", "Only a cancelled booking has a cancellation fee.");
     if (!(b.cancellationFeePaise && b.cancellationFeePaise > 0)) throw new HttpsError("failed-precondition", "This booking has no cancellation fee.");

@@ -42,6 +42,7 @@ export function DashboardView({ today, now, revenueToday, refundsOwedText, tiles
   if (counts.failedPayments) alerts.push({ tone: "danger", text: `${n(counts.failedPayments, "payment", "payments")} failed`, href: "/payments", action: "Review" });
   if (counts.unpaidDelivered) alerts.push({ tone: "danger", text: `${n(counts.unpaidDelivered, "delivered car", "delivered cars")} not paid for yet`, href: "/jobs", action: "Collect" });
   if (counts.pendingApprovals) alerts.push({ tone: "warning", text: `${n(counts.pendingApprovals, "extra-work request is", "extra-work requests are")} waiting on the customer`, href: "/jobs", action: "View" });
+  if (floor.ready) alerts.push({tone:"warning",text:`${n(floor.ready,"car has","cars have")} collection pending`,href:"/jobs",action:"Review"});
   if (counts.staleJobs) alerts.push({ tone: "warning", text: `${n(counts.staleJobs, "job hasn't", "jobs haven't")} moved in over 48 hours`, href: "/jobs", action: "Check" });
   if (counts.pendingPayments) alerts.push({ tone: "warning", text: `${n(counts.pendingPayments, "payment is", "payments are")} waiting for confirmation`, href: "/payments", action: "Confirm" });
   if (counts.expiringMemberships) alerts.push({ tone: "warning", text: `${n(counts.expiringMemberships, "membership ends", "memberships end")} within 7 days`, href: "/memberships", action: "View" });

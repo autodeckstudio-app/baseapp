@@ -1,6 +1,10 @@
 "use client";
+import{VisitScheduleControl}from'./VisitScheduleControl';
+import {VisitBayControl} from "./VisitBayControl";
+import {JoinVisit} from "./JoinVisit";
 import { useEffect, useRef, useState } from "react";
 import { httpsCallable } from "firebase/functions";
+import {jobStageCommand} from "@autodeck/core";
 import type { ServiceJob, StudioConfig } from "@autodeck/core";
 import { doc, getDoc } from "firebase/firestore";
 import { COLLECTIONS } from "@autodeck/database";
@@ -9,7 +13,7 @@ import { useAdminAuth } from "../lib/auth-context";
 import { DeliveryDeclaration } from "./DeliveryDeclaration";
 
 type Slot = { date: string; startTime: string; startAt: string };
-const NEXT: Record<string, string> = { PENDING_VEHICLE: "Car arrived, start work", VEHICLE_RECEIVED: "Start work", IN_PROGRESS: "Done, ready for handover", QUALITY_CHECK: "Mark ready", READY_FOR_DELIVERY: "Mark delivered" };
+const NEXT: Record<string, string> = { PENDING_VEHICLE: "Mark car arrived", VEHICLE_RECEIVED: "Start work", IN_PROGRESS: "Send to quality check", QUALITY_CHECK: "Mark ready", READY_FOR_DELIVERY: "Mark delivered" };
 const label = (slot: Slot) => new Date(slot.startAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) + " IST";
 
 export function JobControls({ job, routeId }: { job: ServiceJob; routeId?: string }) {
@@ -63,7 +67,7 @@ export function JobControls({ job, routeId }: { job: ServiceJob; routeId?: strin
     if(busy) return;
     setBusy(true); setError(null);
     try {
-      if (operation === "rework") await httpsCallable(functions, "advanceJobStatus")({ jobId: job.id, rework: true });
+      if (operation === "rework") await httpsCallable(functions, "advanceJobStatus")({ jobId: job.id, rework: true, ...jobStageCommand(job,true) });
       else await httpsCallable(functions, "standbyBooking")({ jobId: job.id, action: operation, ...(operation === "admit" ? { bayId: bay } : {}) });
       setOperation(null);
     } catch (err) { setError(err instanceof Error ? err.message : "Could not update job."); }
@@ -82,7 +86,7 @@ export function JobControls({ job, routeId }: { job: ServiceJob; routeId?: strin
   async function advance() {
     if(busy) return;
     setBusy(true); setError(null); setDone(null);
-    try { const steps = job.status === "PENDING_VEHICLE" || job.status === "IN_PROGRESS" ? 2 : 1; for (let i = 0; i < steps; i++) await httpsCallable(functions, "advanceJobStatus")({ jobId: job.id }); setAdvanceConfirm(null); }
+    try { await httpsCallable(functions, "advanceJobStatus")({ jobId: job.id, ...jobStageCommand(job) }); setAdvanceConfirm(null); }
     catch (err) { setError(err instanceof Error ? err.message : "Could not update the stage."); }
     finally { setBusy(false); }
   }
@@ -99,6 +103,8 @@ export function JobControls({ job, routeId }: { job: ServiceJob; routeId?: strin
   if (!next && job.status !== "STANDBY") return null;
   return <section className="ax-card" style={{ display: "grid", gap: 12, padding: 20 }}>
     <h2 className="ax-label">Job controls</h2>
+    <JoinVisit job={job}/>
+    {job.visitId?<><VisitBayControl job={job}/><VisitScheduleControl job={job}/></>:null}
     {error ? <p role="alert">{error}</p> : null}
     {done ? <p role="status">{done}</p> : null}
     {operation ? <div style={{display: "grid", gap: 8}}>
@@ -107,12 +113,12 @@ export function JobControls({ job, routeId }: { job: ServiceJob; routeId?: strin
       <button className="ax-button ax-button--primary" disabled={busy || (operation === "admit" && !bay)} onClick={() => void perform()}>Confirm {operation === "enqueue" ? "standby arrival" : operation === "rework" ? "send back" : "admission"}</button>
       <button className="ax-button" disabled={busy} onClick={() => setOperation(null)}>Cancel</button>
     </div> : null}
-    {job.status === "STANDBY" ? <><p>Waiting since {new Date(job.standbyArrivedAt ?? job.createdAt).toLocaleString("en-IN", {timeZone: "Asia/Kolkata"})}. No bay or time reserved.</p><button className="ax-button ax-button--primary" disabled={busy} onClick={() => void prepareStandby()}>Admit from standby</button></> : null}
+    {!job.visitId&&job.status === "STANDBY" ? <><p>Waiting since {new Date(job.standbyArrivedAt ?? job.createdAt).toLocaleString("en-IN", {timeZone: "Asia/Kolkata"})}. No bay or time reserved.</p><button className="ax-button ax-button--primary" disabled={busy} onClick={() => void prepareStandby()}>Admit from standby</button></> : null}
     {job.status === "PENDING_VEHICLE" && job.bookingId ? <button className="ax-button" disabled={busy || Date.parse(job.scheduledAt) > Date.now()} onClick={() => setOperation("enqueue")}>Arrived - standby</button> : null}
-    {job.status === "QUALITY_CHECK" ? <button type="button" className="ax-inline-add" style={{ justifySelf: "start" }} disabled={busy} onClick={() => setOperation("rework")}>Not up to standard? Send back for rework</button> : null}
+    {!job.visitBayPause&&job.status === "QUALITY_CHECK" ? <button type="button" className="ax-inline-add" style={{ justifySelf: "start" }} disabled={busy} onClick={() => setOperation("rework")}>Not up to standard? Send back for rework</button> : null}
     {job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid" ? <p role="status">{job.totalAmount === 0 ? "Settle the membership-covered visit before marking delivered." : "Collect and confirm full payment before marking delivered."}</p> : null}
-    {next ? <>{advanceConfirm ? (job.status === "READY_FOR_DELIVERY" ? <DeliveryDeclaration key={`${job.id}:${job.vehicleId}`} job={job} onDelivered={() => setAdvanceConfirm(null)} onCancel={() => setAdvanceConfirm(null)} /> : <div style={{ display: "grid", gap: 8 }}><p>{next}? This updates the studio, admin and customer tracker.</p><button className="ax-button ax-button--primary" disabled={busy} onClick={() => void advance()}>Confirm {next.toLowerCase()}</button><button className="ax-button" disabled={busy} onClick={() => setAdvanceConfirm(null)}>Cancel</button></div>) : <button className={job.status === "READY_FOR_DELIVERY" ? "ax-button" : "ax-button ax-button--primary"} disabled={busy || (job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid")} onClick={() => job.status === "READY_FOR_DELIVERY" ? setAdvanceConfirm({ route: routeId, jobId: job.id, status: job.status, epoch: advanceEpoch.current }) : void advance()}>{next}</button>}</> : null}
-    {job.status === "PENDING_VEHICLE" && job.bookingId ? <>
+    {next&&!job.visitBayPause&&!(job.visitId&&job.status==='PENDING_VEHICLE') ? <>{advanceConfirm ? (job.status === "READY_FOR_DELIVERY" ? <DeliveryDeclaration key={`${job.id}:${job.vehicleId}`} job={job} onDelivered={() => setAdvanceConfirm(null)} onCancel={() => setAdvanceConfirm(null)} /> : <div style={{ display: "grid", gap: 8 }}><p>{next}? This updates the studio, admin and customer tracker.</p><button className="ax-button ax-button--primary" disabled={busy} onClick={() => void advance()}>Confirm {next.toLowerCase()}</button><button className="ax-button" disabled={busy} onClick={() => setAdvanceConfirm(null)}>Cancel</button></div>) : <button className={job.status === "READY_FOR_DELIVERY" ? "ax-button" : "ax-button ax-button--primary"} disabled={busy || (job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid")} onClick={() => job.status === "READY_FOR_DELIVERY" ? setAdvanceConfirm({ route: routeId, jobId: job.id, status: job.status, epoch: advanceEpoch.current }) : void advance()}>{next}</button>}</> : null}
+    {!job.visitId&&job.status === "PENDING_VEHICLE" && job.bookingId ? <>
       <p>Late arrival? Move this booking to an upcoming slot before check-in. Same booking and job kept.</p>
       {!open ? <button className="ax-button" disabled={busy} onClick={() => void loadSlots()}>Reschedule</button> : <>
         {busy ? <p role="status">Loading or saving...</p> : null}

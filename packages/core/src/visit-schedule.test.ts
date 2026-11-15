@@ -1,0 +1,4 @@
+import{it,expect}from'vitest';import{visitScheduleProblem}from'./visit-schedule';const a={jobId:'a',bayId:'wash',requiredBayType:'wash',bayType:'wash',startAt:'2026-11-16T04:00:00Z',endAt:'2026-11-16T05:00:00Z'};
+it('same car parallel compatible service work can share one bay without an invented serial ordering',()=>expect(visitScheduleProblem([a,{...a,jobId:'b'}])).toBeNull());
+it('different bays cannot overlap but exact work-end transfer is possible',()=>{expect(visitScheduleProblem([a,{...a,jobId:'b',bayId:'next'}])).toBe('different_bays_overlap');expect(visitScheduleProblem([a,{...a,jobId:'b',bayId:'next',startAt:a.endAt,endAt:'2026-11-16T06:00:00Z'}])).toBeNull()});
+it.each([{lines:[a,a]},{lines:[{...a,startAt:'unknown'}]},{lines:[{...a,endAt:a.startAt}]},{lines:[{...a,bayType:'detail'}]},{lines:[]}])('invalid or ambiguous service plan fails closed',({lines})=>expect(visitScheduleProblem(lines)).toBe('invalid_schedule'));

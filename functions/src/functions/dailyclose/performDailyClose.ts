@@ -39,6 +39,9 @@ export const performDailyClose = onCall({ region: "asia-south1" , enforceAppChec
         );
       }
       tx.update(ref, {
+        serviceReturnsPaise:agg.serviceReturns?.returnedPaise??0,
+        cashServiceReturnsPaise:agg.serviceReturns?.cashReturnedPaise??0,
+        onlineServiceReturnsPaise:agg.serviceReturns?.onlineReturnedPaise??0,
         expectedCashPaise: agg.expectedCashPaise,
         upiPaise: agg.upiPaise,
         cardPaise: agg.razorpayPaise,
@@ -71,6 +74,9 @@ export const performDailyClose = onCall({ region: "asia-south1" , enforceAppChec
         studioId: data.studioId,
         date: data.date,
         status: "CLOSED",
+        serviceReturnsPaise:agg.serviceReturns?.returnedPaise??0,
+        cashServiceReturnsPaise:agg.serviceReturns?.cashReturnedPaise??0,
+        onlineServiceReturnsPaise:agg.serviceReturns?.onlineReturnedPaise??0,
         expectedCashPaise: agg.expectedCashPaise,
         upiPaise: agg.upiPaise,
         cardPaise: agg.razorpayPaise,

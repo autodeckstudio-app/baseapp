@@ -2,7 +2,7 @@
 export type NotificationChip = "all" | "bookings" | "papers" | "club";
 
 const GROUP: Record<string, NotificationChip> = {
-  Booking: "bookings", Approval: "bookings", Invoice: "bookings", ServiceJob: "bookings",
+  VisitIntake: "bookings", Booking: "bookings", Approval: "bookings", Invoice: "bookings", ServiceJob: "bookings",
   Vehicle: "papers", Protection: "papers", Warranty: "papers", Paper: "papers",
   Membership: "club",
 };

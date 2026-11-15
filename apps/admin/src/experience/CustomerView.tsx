@@ -2,6 +2,7 @@
 
 // One customer, whole relationship: cars and papers, membership, visits,
 // money, and one log of changes and messages sent, on one glass page with tabs.
+import {customerServiceBalance,nextCustomerBooking} from "../lib/customer-money-summary";
 import { useState } from "react";
 import { STAFF_SEGMENTS } from "@autodeck/core";
 import type { AuditLog, Booking, Customer, Invoice, Membership, Notification, Payment, Protection, Service, ServiceJob, Vehicle, Warranty } from "@autodeck/core";
@@ -27,8 +28,8 @@ export interface CustomerData {
   protections: Array<Protection & { vehicleId: string }>;
 }
 
-function Row({ onClick, children, log }: { onClick?: () => void; children: React.ReactNode; log?: boolean }) {
-  const cls = log ? "ax-crow ax-crow--log" : "ax-crow";
+function Row({ onClick, children, log, invoice }: { onClick?: () => void; children: React.ReactNode; log?: boolean;invoice?:boolean }) {
+  const cls = log ? "ax-crow ax-crow--log" : invoice?"ax-crow ax-crow--invoice":"ax-crow";
   return onClick ? <button type="button" className={`${cls} is-link`} onClick={onClick}>{children}</button> : <div className={cls}>{children}</div>;
 }
 
@@ -114,10 +115,11 @@ export function CustomerView({ d, services, onBack, onOpen, onSave, onSaveVehicl
   const activeMember = d.memberships.find((m) => m.status === "active");
   const visits = d.jobs.filter((j) => j.status === "DELIVERED").length;
   const delivered = d.jobs.filter((j) => j.status === "DELIVERED");
-  const outstanding = d.invoices.filter((i) => i.status !== "paid" && i.status !== "void").reduce((n, i) => n + i.total, 0);
+  const balance=customerServiceBalance(d.customer,d.jobs,d.payments,d.invoices);
+  const outstanding=balance.duePaise;
   const lastVisit = delivered.map((j) => j.scheduledAt ?? "").sort().pop() ?? null;
   const nowIso = new Date().toISOString();
-  const nextBooking = d.bookings.filter((b) => b.scheduledAt && b.scheduledAt >= nowIso && !["CANCELLED", "COMPLETED", "NO_SHOW", "MISSED"].includes(String(b.status))).map((b) => b.scheduledAt).sort()[0] ?? null;
+  const nextBooking=nextCustomerBooking(d.bookings,d.jobs,nowIso);
   const avgTicket = visits > 0 ? Math.round(paid / visits) : 0;
   const waDigits = (d.customer.phone ?? "").replace(/\D/g, "");
   // One row per visit: a booking that became a job shows once, as the job. Walk-ins are jobs with no booking.
@@ -147,8 +149,8 @@ export function CustomerView({ d, services, onBack, onOpen, onSave, onSaveVehicl
           <p className="ax-hero-sub">{activeMember ? `${statusLabel(activeMember.tier)} member` : "Customer"}{d.vehicles.length ? ` · ${d.vehicles.length} ${d.vehicles.length === 1 ? "car" : "cars"}` : ""}{onSave && !editing ? <> · <button type="button" className="ax-edit-details" onClick={startEdit}>Edit details</button></> : null}</p>
         </div>
         <div className="ax-kpis">
-          <div><span className="ax-kpi-v ax-kpi-v--premium">{formatPaise(paid)}</span><span className="ax-label">Paid to date</span></div>
-          <div><span className={`ax-kpi-v${outstanding > 0 ? " ax-kpi-v--accent" : ""}`}>{formatPaise(outstanding)}</span><span className="ax-label">Unpaid</span></div>
+          <div><span className="ax-kpi-v ax-kpi-v--premium">{formatPaise(paid)}</span><span className="ax-label">Completed payments</span></div>
+          <div><span className={`ax-kpi-v${outstanding > 0 ? " ax-kpi-v--accent" : ""}`}>{balance.needsReview&&outstanding===0?"Review":formatPaise(outstanding)}</span><span className="ax-label">Service balance</span>{balance.needsReview?<span className="ax-note">{balance.needsReview} need review</span>:null}</div>
           <div><span className="ax-kpi-v">{visits}</span><span className="ax-label">Cars delivered</span></div>
           <div><span className="ax-kpi-v">{formatPaise(avgTicket)}</span><span className="ax-label">Avg per visit</span></div>
         </div>
@@ -304,7 +306,7 @@ export function CustomerView({ d, services, onBack, onOpen, onSave, onSaveVehicl
           <section className="ax-panel ax-detail-side">
             <span className="ax-label">Invoices</span>
             {d.invoices.length === 0 ? <p className="ax-note" style={{ marginTop: 0 }}>No invoices.</p> : d.invoices.map((inv) => (
-              <Row key={inv.id} onClick={() => onOpen(`/invoices/${inv.id}`)}>
+              <Row invoice key={inv.id} onClick={() => onOpen(`/invoices/${inv.id}`)}>
                 <span className="ax-data" style={{ flex: 1 }}>{inv.invoiceNumber || "Draft"}</span>
                 <StatusBadge label={inv.status} />
                 <span className="ax-data">{formatPaise(inv.total)}</span>

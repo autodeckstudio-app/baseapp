@@ -75,3 +75,27 @@ describe('booking-target pending advance with no job waiting cancellation',()=>{
 });
 
 it('job created while advance waits is transactionally checked; started job never cancelled or refunded automatically',async()=>{const s=await seed('processing');await db.collection('jobs').doc(s.id).delete();await db.collection('bookings').doc(s.id).update({advancePaymentId:s.id});await db.collection('payments').doc(s.id).update({jobId:null,targetType:'booking'});await req(s);await db.collection('jobs').doc(s.id).set({id:s.id,bookingId:s.id,tenantId:'wc',studioId:'s',customerId:s.customerId,status:'WORK_IN_PROGRESS',statusHistory:[]});await processProviderEvent(db,event(s.id));expect((await doc('bookings',s.id)).status).toBe('PENDING');expect((await doc('jobs',s.id)).status).toBe('WORK_IN_PROGRESS');expect((await db.collection('refundRequests').where('paymentId','==',s.id).get()).empty).toBe(true)});
+
+it.each(['booking','job'])('retained intent with later %s shared membership records capture but never cancels or reserves a refund',async member=>{
+ const s=await seed('processing');await req(s);
+ await db.collection(member==='booking'?'bookings':'jobs').doc(s.id).update({visitId:'shared-car'});
+ const b=await doc('bookings',s.id),j=await doc('jobs',s.id);
+ const ev=event(s.id);expect((await processProviderEvent(db,ev)).outcome).toBe('completed');
+ expect(await doc('payments',s.id)).toMatchObject({status:'completed',razorpayPaymentId:ev.providerPaymentId});
+ expect(await doc('bookings',s.id)).toMatchObject({status:b.status,paymentStatus:b.paymentStatus,cancelIntent:{state:'needs_review'}});
+ expect(await doc('jobs',s.id)).toEqual(j);
+ expect((await db.collection('refundRequests').where('paymentId','==',s.id).get()).empty).toBe(true);
+ expect(await doc('staffAlerts',`waiting_cancel_${s.id}`)).toMatchObject({kind:'shared_visit_cancel_capture_review'});
+ expect((await processProviderEvent(db,ev)).outcome).toBe('duplicate');
+ await processProviderEvent(db,event(s.id,'payment.captured'));
+ expect((await db.collection('refundRequests').where('paymentId','==',s.id).get()).empty).toBe(true);
+ expect((await doc('bookings',s.id)).status).toBe('PENDING');
+});
+it.each(['booking','job'])('ordinary waiting request rejects existing %s shared membership inside its transaction',async member=>{
+ const {requestWaitingCancel}=await import('../../lib/waiting-cancel.js');const s=await seed();
+ await db.collection(member==='booking'?'bookings':'jobs').doc(s.id).update({visitId:'shared-car'});
+ const b=await doc('bookings',s.id),p=await doc('payments',s.id);
+ await expect(requestWaitingCancel(db,b as never,p as never,{uid:'admin',claims:{tenantId:'wc',role:'admin',studioId:null}}as never,'review')).rejects.toThrow('Review this shared visit');
+ expect((await db.collection('bookingCancelIntents').doc(s.id).get()).exists).toBe(false);
+ expect(await doc('bookings',s.id)).toEqual(b);expect(await doc('payments',s.id)).toEqual(p);
+});

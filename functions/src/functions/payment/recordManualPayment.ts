@@ -68,6 +68,7 @@ export const recordManualPayment = onCall({ region: "asia-south1" , enforceAppCh
     const jobSnap = await tx.get(jobRef);
     if (!jobSnap.exists) throw new HttpsError("not-found", "Job not found.");
     const job = jobSnap.data() as ServiceJob;
+    if(job.visitId)throw new HttpsError('failed-precondition','Use the current itemized visit bill, not a separate job payment.');
     if((job as ServiceJob & {cashReconciliationId?:string}).cashReconciliationId)throw new HttpsError('failed-precondition','Cash reconciliation is held. Do not collect again.');
     if(job.offlineSettlement)throw new HttpsError("failed-precondition","Actual offline receipts already exist. Use the receipt balance, not a second payment.");
 

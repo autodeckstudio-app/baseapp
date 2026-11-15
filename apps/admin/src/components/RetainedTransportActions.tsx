@@ -1,0 +1,8 @@
+"use client";
+import{useRetainedTransportOperation}from'../lib/use-retained-transport-operation';
+export function RetainedTransportActions({requestId}:{requestId:string}){const o=useRetainedTransportOperation(requestId),selected=o.review?.actions.find(a=>a.action===o.choice);return <div className="ax-pu-actions" aria-label="Retained journey actions" style={{flexWrap:"wrap"}}>
+ {o.review?<span style={{flexBasis:"100%"}}>Retained Rs {(o.review.returnSummary.retainedPaise/100).toFixed(2)} · Return review Rs {(o.review.returnSummary.returnPaise/100).toFixed(2)} · Returned Rs {(o.review.returnSummary.returnedPaise/100).toFixed(2)}</span>:null}
+ {o.review?.physical.unusedLegs.length?<span style={{flexBasis:"100%"}}>Unused: {o.review.physical.unusedLegs.map(l=>l==='pickup'?'Pickup':'Drop back').join(' · ')}</span>:null}
+ {!o.review?<button type="button" className="ax-button" disabled={o.busy} onClick={()=>void o.read()}>Review journey</button>:o.choice?<><span style={{flexBasis:"100%"}}>{selected?.label}?</span><button type="button" className="ax-button ax-button--primary" disabled={o.busy} onClick={()=>void o.confirm()}>Confirm {selected?.label.toLowerCase()}</button><button type="button" className="ax-button" disabled={o.busy} onClick={()=>o.choose(null)}>Back</button></>:<><button type="button" className="ax-button" disabled={o.busy} onClick={()=>void o.read()}>Refresh review</button>{o.review.actions.map(a=><div key={a.action}><button type="button" className="ax-button" disabled={o.busy||!a.enabled} onClick={()=>o.choose(a.action)}>{a.label}</button>{a.reason?<span role="status">{a.reason}</span>:null}</div>)}</>}
+ {o.message?<span role="status">{o.message}</span>:null}
+ </div>}

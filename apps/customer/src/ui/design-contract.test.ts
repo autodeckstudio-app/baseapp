@@ -663,10 +663,10 @@ it("confirm booking shows the total once", () => {
 });
 
 describe("booking detail (batch 3)", () => {
-  it("shows the car photo with a Live badge and one price card holding payment and the Invoice button", () => {
+  it("shows the car photo and current booking status without a timeless Live badge, with one payment card", () => {
     const d = read("src/app/(tabs)/bookings/[id].tsx");
     expect(d).toContain("<CarThumb");
-    expect(d).toContain('label="Live"');
+    expect(d).not.toContain('label="Live"');
     expect(d).not.toContain("<Kicker>Payment</Kicker>");
     expect(d.split('label="Invoice"').length - 1).toBe(1);
   });
@@ -771,7 +771,7 @@ describe("no studio photo behind app pages; the page light is the orange lamp gl
 });
 
 it("gift-covered zero-total detail says no payment needed rather than offering payment (also actual route tested)",()=>{
-  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain("Boolean(booking.giftId) && booking.priceBreakdown.total === 0");expect(b).toContain("Included with your gift - no payment needed");expect(b).toContain("const canPay = !noPaymentDue");
+  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain("Boolean(booking.giftId) && booking.priceBreakdown.total === 0");expect(b).toContain("Included with your gift - no payment needed");expect(b).toContain("const canPay = !job?.visitId&&!job?.cashReconciliationId&&!noPaymentDue");
   const c=read("src/app/(tabs)/book/confirm.tsx");expect(c).toContain("gift:Boolean(giftCode)");expect(read("src/lib/booking-confirm-copy.ts")).toContain("Your gift covers the selected wash.");expect(c).not.toContain("Price may vary based on final work.");
 });
 

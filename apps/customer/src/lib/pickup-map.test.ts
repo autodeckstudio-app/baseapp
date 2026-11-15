@@ -1,0 +1,3 @@
+import {it,expect} from 'vitest';import {pickupMapPoint,PICKUP_MAP_TILES,PICKUP_MAP_ATTRIBUTION} from './pickup-map';
+it('only finite exact Web Mercator points enter map review; invalid input never coerces to the studio',()=>{expect(pickupMapPoint({lat:23,lng:72})).toEqual({lat:23,lng:72});for(const p of[null,{},'23,72',{lat:NaN,lng:72},{lat:Infinity,lng:72},{lat:90,lng:72},{lat:23,lng:181},{lat:'23',lng:72}])expect(pickupMapPoint(p)).toBeNull()});
+it('no paid key/geocoding endpoint or private query strings; OSM attribution remains visible',()=>{expect(PICKUP_MAP_TILES).toBe('https://tile.openstreetmap.org/{z}/{x}/{y}.png');expect(PICKUP_MAP_TILES).not.toContain('?');expect(PICKUP_MAP_ATTRIBUTION).toContain('https://www.openstreetmap.org/copyright')});

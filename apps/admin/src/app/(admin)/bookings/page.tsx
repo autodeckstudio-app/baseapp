@@ -1,4 +1,5 @@
 "use client";
+import {WalkinVisitEstimates} from "../../../components/WalkinVisitEstimates";
 import {BoundedListNotice} from "../../../components/BoundedListNotice";
 import { membershipCoveredLabel } from "@autodeck/core";
 
@@ -170,7 +171,8 @@ export default function BookingsPage() {
       <BoundedListNotice kind="bookings" limit={BOOKINGS_LIST_LIMIT}/>
 
       <div className="ax-toolbar">
-        {dayMode ? (
+        <WalkinVisitEstimates />
+      {dayMode ? (
           <div className="ax-daynav" role="group" aria-label="Day">
             <button type="button" className="ax-button" aria-label="Previous day" onClick={() => setDate(shiftDay(date, -1))}>‹</button>
             <span className="ax-daynav-date" aria-live="polite">{date === today ? "Today" : formatDayLong(date)}</span>

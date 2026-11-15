@@ -8,6 +8,8 @@ import { create, act } from "react-test-renderer";
 import { createElement } from "react";
 import type { Protection, ServiceJob } from "@autodeck/core";
 
+const visitApi=vi.hoisted(()=>({get:vi.fn(),start:vi.fn(),complete:vi.fn()}));
+vi.mock('../lib/visit-service',()=>({getVisit:(...a:any[])=>visitApi.get(...a),startVisitHandover:(...a:any[])=>visitApi.start(...a),completeVisitHandover:(...a:any[])=>visitApi.complete(...a)}));
 const workState=vi.hoisted(()=>({value:null as any}));
 vi.mock('../lib/work-coverage-service',()=>({getStaffJobWorkCoverage:async(jobId:string)=>workState.value??({status:'not_recorded',jobId,revision:null,workLock:'open',items:[]})}));
 const getCurrentProtections = vi.fn();
@@ -33,7 +35,7 @@ vi.mock("../lib/studio-service", () => ({
 import { DeliveryConfirmPane } from "./DeliveryConfirmPane";
 
 const prot = (id: string, o: Partial<Protection> = {}): Protection => ({ id, tenantId: "t", vehicleId: "vA", customerId: "c", kind: "ppf", provider: "Garware", policyNumber: null, startDate: "2026-06-12", expiryDate: null, documentUrl: null, status: "unverified", source: "customer", verifiedBy: null, verifiedAt: null, notes: null, revision: 2, coverage: "full_body", createdAt: "x", updatedAt: "x", ...o });
-const job = (o: Partial<ServiceJob> = {}): ServiceJob => ({ id: "jA", vehicleId: "vA", tenantId: "t", studioId: "s1", status: "READY_FOR_DELIVERY", ...o } as ServiceJob);
+const job = (o: Partial<ServiceJob> = {}): ServiceJob => ({ updatedAt:"fixture-v1", id: "jA", vehicleId: "vA", tenantId: "t", studioId: "s1", status: "READY_FOR_DELIVERY", ...o } as ServiceJob);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const textOf = (el: any): string => {
@@ -383,7 +385,7 @@ describe("DeliveryConfirmPane mounted", () => {
   it("recorded sealed QC work replaces re-entry with automatic exact-revision handover, never a manual none",async()=>{
     workState.value={status:'recorded',jobId:'jA',revision:5,workLock:'locked',handoverReady:true,items:[]};getCurrentProtections.mockResolvedValue([]);let el:any;await act(async()=>{el=create(createElement(DeliveryConfirmPane,{job:job(),onDelivered:vi.fn(),onCancel:vi.fn()}))});
     expect(textOf(el)).toContain("checked work record is used automatically");expect(textOf(el)).not.toContain('No protection work');
-    const b=(label:string)=>el.root.findAll((n:any)=>n.props.label===label&&n.props.onPress)[0];expect(el.root.findAll((n:any)=>n.props.label==='Use recorded work')).toHaveLength(0);expect(b('Confirm mark delivered').props.disabled).toBe(false);advanceJobStatus.mockResolvedValue({});await act(async()=>b('Confirm mark delivered').props.onPress());expect(advanceJobStatus).toHaveBeenCalledWith('jA',undefined,undefined,undefined,5);await act(async()=>el.unmount());
+    const b=(label:string)=>el.root.findAll((n:any)=>n.props.label===label&&n.props.onPress)[0];expect(el.root.findAll((n:any)=>n.props.label==='Use recorded work')).toHaveLength(0);expect(b('Confirm mark delivered').props.disabled).toBe(false);advanceJobStatus.mockResolvedValue({});await act(async()=>b('Confirm mark delivered').props.onPress());expect(advanceJobStatus).toHaveBeenCalledWith('jA',undefined,undefined,undefined,5,undefined,expect.objectContaining({expectedStatus:'READY_FOR_DELIVERY',expectedUpdatedAt:expect.any(String),operationId:expect.any(String)}));await act(async()=>el.unmount());
   });
   it("partial or unsealed recorded work cannot fall back to manual none or guessed handover",async()=>{
     for(const state of[{status:'recorded',workLock:'open',handoverReady:false},{status:'needs_review',workLock:'unknown',handoverReady:false}]){workState.value={...state,jobId:'jA',revision:3,items:[]};getCurrentProtections.mockResolvedValue([]);let el:any;await act(async()=>{el=create(createElement(DeliveryConfirmPane,{job:job(),onDelivered:vi.fn(),onCancel:vi.fn()}))});expect(textOf(el)).not.toContain('No protection work');expect(textOf(el)).toContain('Finish recording, QC');expect(el.root.findAll((n:any)=>n.props.label==='Confirm mark delivered'&&n.props.onPress)[0].props.disabled).toBe(true);await act(async()=>el.unmount())}
@@ -391,3 +393,19 @@ describe("DeliveryConfirmPane mounted", () => {
   it('automatic record reuse fails closed for a different visit or invalid revision',async()=>{
     for(const record of[{jobId:'other',revision:5},{jobId:'jA',revision:null},{jobId:'jA',revision:0}]){workState.value={status:'recorded',workLock:'locked',handoverReady:true,items:[],...record};getCurrentProtections.mockResolvedValue([]);let el:any;await act(async()=>{el=create(createElement(DeliveryConfirmPane,{job:job(),onDelivered:vi.fn(),onCancel:vi.fn()}))});expect(el.root.findAll((n:any)=>n.props.label==='Confirm mark delivered'&&n.props.onPress)[0].props.disabled).toBe(true);expect(textOf(el)).not.toContain('No protection work');await act(async()=>el.unmount())}
   });
+
+it('grouped delivery requires an exact whole-visit review and one confirmation runs the durable handover',async()=>{
+ workState.value={jobId:'jA',status:'recorded',revision:5,workLock:'locked',handoverReady:true,items:[]};getCurrentProtections.mockResolvedValue([]);
+ const shared={status:'grouped',jobId:'jA',visitId:'visit',revision:1,state:'ready',handover:null,members:[{jobId:'jA',updatedAt:'one',serviceStatus:'Work complete',paymentStatus:'paid',lines:[{name:'Wash'}]},{jobId:'other',updatedAt:'two',serviceStatus:'Work complete',paymentStatus:'paid',lines:[{name:'Ceramic'}]}]};
+ visitApi.get.mockResolvedValue(shared);visitApi.start.mockResolvedValue({manifestId:'handover_one'});visitApi.complete.mockResolvedValue({status:'complete'});const done=vi.fn();let el:any;
+ await act(async()=>{el=create(createElement(DeliveryConfirmPane,{job:job({visitId:'visit',updatedAt:'one'}),onDelivered:done,onCancel:()=>{}}));});
+ const button=(label:string)=>el.root.findAll((n:any)=>n.props.label===label&&n.props.onPress)[0];
+ expect(button('Confirm visit handover').props.disabled).toBe(true);
+ await act(async()=>button('Review all visit services').props.onPress());
+ await act(async()=>button('Confirm visit handover').props.onPress());
+ expect(visitApi.start).toHaveBeenCalledWith(expect.objectContaining({visitId:'visit',expectedRevision:1,confirmed:true}));expect(visitApi.complete).toHaveBeenCalledWith('handover_one');expect(advanceJobStatus).not.toHaveBeenCalled();expect(done).toHaveBeenCalledOnce();await act(async()=>el.unmount());
+});
+it('incomplete shared handover stays open and repeats the same exact operation, not a new release',async()=>{
+ workState.value={jobId:'jA',status:'recorded',revision:5,workLock:'locked',handoverReady:true,items:[]};getCurrentProtections.mockResolvedValue([]);visitApi.start.mockClear();visitApi.complete.mockClear();
+ visitApi.get.mockResolvedValue({status:'grouped',jobId:'jA',visitId:'visit',revision:1,state:'handover_incomplete',handover:{manifestId:'prior'},members:[{jobId:'jA',updatedAt:'one',serviceStatus:'Work complete',paymentStatus:'paid',lines:[{name:'Wash'}]},{jobId:'other',updatedAt:'two',serviceStatus:'Work complete',paymentStatus:'paid',lines:[{name:'Ceramic'}]}]});visitApi.start.mockResolvedValue({manifestId:'handover_next'});visitApi.complete.mockResolvedValue({status:'incomplete',error:'Remaining work changed'});const done=vi.fn();let el:any;await act(async()=>{el=create(createElement(DeliveryConfirmPane,{job:job({visitId:'visit',updatedAt:'one'}),onDelivered:done,onCancel:()=>{}}));});const button=(label:string)=>el.root.findAll((n:any)=>n.props.label===label&&n.props.onPress)[0];await act(async()=>button('Review all visit services').props.onPress());await act(async()=>button('Confirm visit handover').props.onPress());expect(textOf(el)).toContain('Remaining work changed');expect(done).not.toHaveBeenCalled();const original=visitApi.start.mock.calls[0]![0];await act(async()=>button('Confirm visit handover').props.onPress());expect(visitApi.start.mock.calls[1]![0]).toEqual(original);expect(original.review).toEqual({priorManifestId:'prior',members:[{jobId:'jA',expectedUpdatedAt:'one',recordedWork:null},{jobId:'other',expectedUpdatedAt:'two',recordedWork:null}]});await act(async()=>el.unmount());
+});

@@ -9,14 +9,16 @@ vi.mock("firebase-admin/firestore", () => ({ getFirestore: () => {
     q.get = async () => ({ docs: [...h.rows].filter(([k,v]) => k.startsWith(name+"/") && q.filters.every(([f,op,val]: any[]) => op === "==" ? v[f] === val : op === "in" ? val.includes(v[f]) : op === ">=" ? v[f]>=val : op === "<=" ? v[f]<=val : false)).map(([key]) => snap(key)), get empty() { return this.docs.length === 0; } }); return q;
   }, runTransaction: async (fn: any) => {
     const writes: any[] = [];
-    const result = await fn({ get: async (r: any) => r.key ? snap(r.key) : r.get(), update: (r: any, value: any) => writes.push([r.key,value]), set: (r: any,value: any) => writes.push([r.key,value]) });
+    const result = await fn({ get: async (r: any) => r.key ? snap(r.key) : r.get(), create: (r:any,value:any)=>writes.push([r.key,value]),update: (r: any, value: any) => writes.push([r.key,value]), set: (r: any,value: any) => writes.push([r.key,value]) });
     for (const [key,value] of writes) { h.rows.set(key, {...h.rows.get(key),...value}); h.writes.push([key,value]); } return result;
   } }; return db;
 } }));
 import { standbyBooking } from "../../functions/job/standbyBooking.js";
 import { createWalkinJob } from "../../functions/job/createWalkinJob.js";
 import { assignBay } from "../../functions/job/assignBay.js";
-import { advanceJobStatus } from "../../functions/job/advanceJobStatus.js";
+import {advanceJobStatus as rawAdvance} from '../../functions/job/advanceJobStatus.js';
+import {jobStageCommand} from '@autodeck/core';
+const advanceJobStatus={run:(r:any)=>rawAdvance.run({...r,data:{...jobStageCommand(h.rows.get('jobs/'+r.data.jobId)),...r.data}})};
 import { buildNotification } from "../../lib/notification-events.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { getFirestore } from "firebase-admin/firestore";
@@ -33,7 +35,7 @@ const expectErr = async (p: Promise<unknown>, code: string, message?: RegExp) =>
   expect(err.code).toBe(code);
   if (message) expect(String(err.message)).toMatch(message);
 };
-const job = (id = "j", extra = {}): any => ({id,tenantId:"t",studioId:"s",bookingId:"b",customerId:"c",vehicleId:"v",serviceId:"svc",bayId:"wash",status:"PENDING_VEHICLE",statusHistory:[],scheduledAt:"2026-10-07T04:30:00Z",scheduledDate:"2026-10-07",estimatedEndAt:"2026-10-07T06:00:00Z",estimatedDurationMinutes:30,createdAt:"2026-10-01T00:00:00Z",paymentStatus:"unpaid",...extra});
+const job = (id = "j", extra = {}): any => ({id,tenantId:"t",studioId:"s",bookingId:"b",customerId:"c",vehicleId:"v",serviceId:"svc",bayId:"wash",status:"PENDING_VEHICLE",statusHistory:[],scheduledAt:"2026-10-07T04:30:00Z",scheduledDate:"2026-10-07",estimatedEndAt:"2026-10-07T06:00:00Z",estimatedDurationMinutes:30,createdAt:"2026-10-01T00:00:00Z",updatedAt:"2026-10-01T00:00:00Z",paymentStatus:"unpaid",...extra});
 beforeEach(() => {
   vi.useFakeTimers(); vi.setSystemTime(h.now); h.rows.clear(); h.writes=[]; h.role="studio";h.studio="s";h.tenant="t";
   h.rows.set("jobs/j",job()); h.rows.set("bookings/b",{id:"b",tenantId:"t",studioId:"s",customerId:"c",status:"CONFIRMED"});
@@ -89,7 +91,7 @@ describe("QC and delivery",()=>{
   // the test would fail at the first gate and prove nothing about its own guard.
   const deliverableBase = (extra = {}) => { h.rows.set("jobs/j",job("j",{status:"READY_FOR_DELIVERY",...extra})); h.rows.set("vehicles/v",{id:"v",tenantId:"t",ownerId:"c",deletedAt:null}); };
   it.each(["unpaid","partial","refunded"])("blocks delivered with %s payment",async paymentStatus=>{deliverableBase({paymentStatus});await expectErr(advanceJobStatus.run(request({jobId:"j",protectionWork:[]})),"failed-precondition",/full payment/);expect(h.writes).toHaveLength(0);});
-  it("keeps pending extra approval block even when paid",async()=>{deliverableBase({paymentStatus:"paid"});h.rows.set("invoices/i",{jobId:"j",tenantId:"t",status:"issued"});h.rows.set("approvals/a",{jobId:"j",status:"pending"});await expectErr(advanceJobStatus.run(request({jobId:"j",protectionWork:[]})),"failed-precondition",/approval awaiting/);});
+  it("keeps pending extra approval block even when paid",async()=>{deliverableBase({paymentStatus:"paid"});h.rows.set("invoices/i",{jobId:"j",tenantId:"t",status:"issued"});h.rows.set("approvals/a",{id:"a",tenantId:"t",studioId:"s",jobId:"j",customerId:"c",vehicleId:"v",serviceId:"extra",serviceName:"Extra",status:"pending"});await expectErr(advanceJobStatus.run(request({jobId:"j",protectionWork:[]})),"failed-precondition",/approval pending/i);expect(h.writes).toHaveLength(0);});
   it("blocks delivery of a paid job with no live invoice",async()=>{deliverableBase({paymentStatus:"paid"});await expectErr(advanceJobStatus.run(request({jobId:"j",protectionWork:[]})),"failed-precondition",/no invoice/);});
   it("permits paid delivery and syncs completed booking",async()=>{h.rows.set("jobs/j",job("j",{status:"READY_FOR_DELIVERY",paymentStatus:"paid"}));h.rows.set("invoices/i",{jobId:"j",tenantId:"t",status:"issued"});h.rows.delete("services/svc");h.rows.set("vehicles/v",{id:"v",tenantId:"t",ownerId:"c",deletedAt:null});await advanceJobStatus.run(request({jobId:"j",protectionWork:[]}));expect(h.rows.get("bookings/b").status).toBe("COMPLETED");});
   it("delivery without the explicit declaration is refused (an absent field is never a silent none)",async()=>{h.rows.set("jobs/j",job("j",{status:"READY_FOR_DELIVERY",paymentStatus:"paid"}));h.rows.set("invoices/i",{jobId:"j",tenantId:"t",status:"issued"});h.rows.set("vehicles/v",{id:"v",tenantId:"t",ownerId:"c",deletedAt:null});await expectErr(advanceJobStatus.run(request({jobId:"j"})),"failed-precondition",/declaration/);expect(h.rows.get("jobs/j").status).toBe("READY_FOR_DELIVERY");});

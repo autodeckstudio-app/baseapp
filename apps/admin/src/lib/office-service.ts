@@ -1,4 +1,5 @@
 "use client";
+import type{VisitReturnTotalsRead}from'../components/VisitReturnTotals';
 
 import { httpsCallable } from "firebase/functions";
 import type { DailyClose } from "@autodeck/core";
@@ -43,6 +44,7 @@ export async function performDailyClose(input: {
 }
 
 export interface OfficeReport {
+  serviceReturns?:VisitReturnTotalsRead;
   month: string;
   studioId: string;
   totalRevenuePaise: number;

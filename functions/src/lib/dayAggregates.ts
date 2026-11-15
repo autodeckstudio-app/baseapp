@@ -1,3 +1,5 @@
+import {readVisitReturnLedger,visitReturnLedgerTotals} from './visit-return-ledger.js';
+import {readVisitOnlineLedger,visitOnlineLedgerTotals} from './visit-online-ledger.js';
 import {readOfflineLedger,offlineLedgerTotals} from "./offline-ledger.js";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Expense, Payment } from "@autodeck/core";
@@ -6,6 +8,7 @@ import { utcToLocalDate } from "./schedule.js";
 import { refundsOwed } from "./refunds-owed.js";
 
 export interface DayAggregates {
+  serviceReturns?: ReturnType<typeof visitReturnLedgerTotals>;
   offlineReturnsPaise?: number;
   cashOfflineReturnsPaise?: number;
   cashPaise: number; // completed cash payments (gross, before cash expenses)
@@ -17,7 +20,7 @@ export interface DayAggregates {
   expensesPaise: number; // all recorded expenses for the date
   cashExpensesPaise: number;
   expenseCount: number;
-  expectedCashPaise: number; // cashPaise - cashExpensesPaise
+  expectedCashPaise: number; // gross cash less cash expenses and actual cash returns
   /** OPEN manual refunds owed to customers (running total, not for this date, not netted into any figure above). */
   refundsOwedPaise: number;
   refundsOwedCount: number;
@@ -91,8 +94,12 @@ export async function dayAggregates(
   const offline = offlineLedgerTotals(await readOfflineLedger(db,tenantId,studioId),date);
   agg.cashPaise += offline.cashPaise; agg.upiPaise += offline.upiPaise; agg.bankTransferPaise += offline.bankTransferPaise;
   agg.totalRevenuePaise += offline.appliedPaise; agg.paymentCount += offline.paymentCount;
+  const online=visitOnlineLedgerTotals(await readVisitOnlineLedger(db,tenantId,studioId),date);
+  agg.razorpayPaise+=online.receivedPaise;agg.totalRevenuePaise+=online.receivedPaise;agg.paymentCount+=online.paymentCount;
   agg.offlineReturnsPaise = offline.returnedPaise; agg.cashOfflineReturnsPaise = offline.cashReturnedPaise;
-  agg.expectedCashPaise = agg.cashPaise - agg.cashExpensesPaise - offline.cashReturnedPaise;
+  const serviceReturns=visitReturnLedgerTotals(await readVisitReturnLedger(db,tenantId,studioId),date);
+  agg.serviceReturns=serviceReturns;
+  agg.expectedCashPaise = agg.cashPaise - agg.cashExpensesPaise - offline.cashReturnedPaise - serviceReturns.cashReturnedPaise;
   const owed = await refundsOwed(db, tenantId, studioId);
   agg.refundsOwedPaise = owed.owedPaise; agg.refundsOwedCount = owed.count; agg.refundsOwedTruncated = owed.truncated;
   return agg;

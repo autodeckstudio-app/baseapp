@@ -1,4 +1,8 @@
 "use client";
+import type { HandoverReview } from "../lib/visit-service";
+import {jobStageCommand} from "@autodeck/core";
+import type {VisitRead} from '@autodeck/core';
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
@@ -22,7 +26,7 @@ const recordLabel = (p: Protection) => {
 };
 
 type OperatorAuth = { uid: string; role: string | null; tenantId: string | null; studioId: string | null };
-type FrozenContext = { jobId: string; vehicleId: string; customerId:string; tenantId: string; studioId: string; auth: OperatorAuth | null };
+type FrozenContext = { visitId:string|null;updatedAt:string|null;jobId: string; vehicleId: string; customerId:string; tenantId: string; studioId: string; auth: OperatorAuth | null };
 type InvalidReason = "verifying" | "job" | "stage" | "account" | null;
 
 const sameAuth = (a: OperatorAuth | null, b: OperatorAuth | null) =>
@@ -45,7 +49,7 @@ const affirmable = (a: OperatorAuth | null, job: { tenantId: string; studioId: s
  * synchronously at render time, so a prop or auth change invalidates the
  * open declaration in the SAME render - no effect needs to flush first. */
 const contextSig = (job: ServiceJob, auth: OperatorAuth | null): string =>
-  [job.id, job.vehicleId, job.customerId, job.tenantId, job.studioId, job.status,
+  [job.id,job.visitId??"",job.updatedAt??"", job.vehicleId, job.customerId, job.tenantId, job.studioId, job.status,
    auth ? `${auth.uid}:${auth.role ?? "-"}:${auth.tenantId ?? "-"}:${auth.studioId ?? "-"}` : "signed-out"].join("|");
 
 /** Admin delivery declaration: the same explicit staff-declared contract as
@@ -67,6 +71,9 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [integrityError, setIntegrityError] = useState(false);
+  const [visit,setVisit]=useState<VisitRead|null>(null);
+  const [visitReviewed,setVisitReviewed]=useState(false);
+  const handoverAttempt=useRef<HandoverReview|null>(null);
   const[work,setWork]=useState<JobWorkCoverage|null>(null);
   const[useRecorded,setUseRecorded]=useState(false);
   const [draft, setDraft] = useState<DeclarationDraft>({ choice: null });
@@ -93,7 +100,7 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
   // delivery-capable role, tenant/studio scope matching THIS job. Signed-out
   // or wrong-scope operators never become a frozen valid context.
   if (frozen.current === null && authReady && affirmable(liveAuth, job)) {
-    frozen.current = { jobId: job.id, vehicleId: job.vehicleId, customerId:job.customerId, tenantId: job.tenantId, studioId: job.studioId, auth: liveAuth };
+    frozen.current = { visitId:job.visitId??null,updatedAt:job.updatedAt??null,jobId: job.id, vehicleId: job.vehicleId, customerId:job.customerId, tenantId: job.tenantId, studioId: job.studioId, auth: liveAuth };
   }
 
   const f = frozen.current;
@@ -101,7 +108,7 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
     !authReady ? "verifying"
     : !affirmable(liveAuth, job) ? "account"
     : !f ? null
-    : (job.id !== f.jobId || job.vehicleId !== f.vehicleId || job.customerId!==f.customerId || job.tenantId !== f.tenantId || job.studioId !== f.studioId) ? "job"
+    : (job.id !== f.jobId || (job.visitId??null)!==f.visitId || (job.updatedAt??null)!==f.updatedAt || job.vehicleId !== f.vehicleId || job.customerId!==f.customerId || job.tenantId !== f.tenantId || job.studioId !== f.studioId) ? "job"
     : !sameAuth(liveAuth, f.auth) ? "account"
     : job.status !== "READY_FOR_DELIVERY" ? "stage"
     : null;
@@ -111,13 +118,13 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
   const load = useCallback(async (ctx: FrozenContext) => {
     const gen = ++generation.current;
     const startSig = liveSigRef.current;
-    setLoading(true); setLoadError(false); setIntegrityError(false);setWork(null);setUseRecorded(false);
+    setLoading(true); setLoadError(false); setIntegrityError(false);setWork(null);setVisit(null);setVisitReviewed(false);handoverAttempt.current=null;setUseRecorded(false);
     try {
-      const [snap,recorded] = await Promise.all([getDocs(query(collection(db, SUBCOLLECTIONS.vehicleProtections(ctx.vehicleId)), where("tenantId", "==", ctx.tenantId))),getStaffJobWorkCoverage(ctx.jobId)]);
+      const [snap,recorded,shared] = await Promise.all([getDocs(query(collection(db, SUBCOLLECTIONS.vehicleProtections(ctx.vehicleId)), where("tenantId", "==", ctx.tenantId))),getStaffJobWorkCoverage(ctx.jobId),ctx.visitId?import('../lib/visit-service').then(m=>m.getVisit(ctx.jobId)):Promise.resolve(null)]);
       if (gen !== generation.current || liveSigRef.current !== startSig) return; // superseded, invalidated, or unmounted
       const records = snap.docs.map((d) => ({ ...d.data(), id: d.id }) as Protection);
       if (records.some((r) => r.vehicleId !== ctx.vehicleId)) { setIntegrityError(true); setProtections([]); return; }
-      setProtections(records);setWork(recorded);
+      setProtections(records);setWork(recorded);setVisit(shared);
     } catch {
       if (gen !== generation.current || liveSigRef.current !== startSig) return;
       setLoadError(true); setProtections([]);
@@ -142,7 +149,7 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
   useEffect(() => {
     if (invalid !== null && invalid !== "verifying") {
       generation.current += 1;
-      setLoading(false); setLoadError(false); setIntegrityError(false); setProtections([]); setDraft({ choice: null });setWork(null);setUseRecorded(false);
+      setLoading(false); setLoadError(false); setIntegrityError(false); setProtections([]); setDraft({ choice: null });setWork(null);setVisit(null);setVisitReviewed(false);handoverAttempt.current=null;setUseRecorded(false);
       setPending(false); setSubmitError(null);
     }
   }, [invalid]);
@@ -150,7 +157,7 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
   function reload() {
     if (inFlight.current || !authReady) return; // never re-aim while a commit is in flight or the session is unverified
     if (!affirmable(liveAuth, job)) return; // signed-out / wrong-scope operators cannot re-aim a declaration
-    frozen.current = { jobId: job.id, vehicleId: job.vehicleId, customerId:job.customerId, tenantId: job.tenantId, studioId: job.studioId, auth: liveAuth };
+    frozen.current = { visitId:job.visitId??null,updatedAt:job.updatedAt??null,jobId: job.id, vehicleId: job.vehicleId, customerId:job.customerId, tenantId: job.tenantId, studioId: job.studioId, auth: liveAuth };
     setDraft({ choice: null });
     setSubmitError(null);
     setReset((k) => k + 1);
@@ -158,7 +165,8 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
   }
 
   const recordedRevision=work?.jobId===f?.jobId&&work?.status==='recorded'&&work.workLock==='locked'&&work.handoverReady===true&&useRecorded?work.revision:null;
-  const declarationReady=recordedRevision!==null||work?.status==='not_recorded'&&payload!==null;
+  const visitReady=!f?.visitId||visit?.status==='grouped'&&visit.visitId===f.visitId&&['ready','handover_incomplete'].includes(visit.state)&&visitReviewed;
+  const declarationReady=visitReady&&(recordedRevision!==null||!f?.visitId&&work?.status==='not_recorded'&&payload!==null);
   async function confirm() {
     if (inFlight.current) return;
     if (!contextValid || loading || loadError || integrityError || !declarationReady) return;
@@ -177,7 +185,20 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
     // readback claim: the operator reloads and looks.
     const stillCurrent = () => mounted.current && liveSigRef.current === startSig && invalidGen.current === startGen;
     try {
-      await httpsCallable(functions, "advanceJobStatus")({ jobId: ctx.jobId, ...(frozenRecordedRevision!==null?{recordedWorkRevision:frozenRecordedRevision}:{protectionWork:frozenPayload}) });
+      let visitHandoverId:string|undefined;
+      if(ctx.visitId){
+       if(visit?.status!=='grouped'||visit.visitId!==ctx.visitId||!visitReviewed)throw new Error('Review every visit service.');
+       const api=await import('../lib/visit-service');
+       handoverAttempt.current??={visitId:visit.visitId,expectedRevision:visit.revision,operationId:crypto.randomUUID(),confirmed:true,members:visit.members.map(m=>({jobId:m.jobId,expectedUpdatedAt:m.updatedAt!,recordedWork:m.recordedWork??null})),...(visit.handover?{review:{priorManifestId:visit.handover.manifestId,members:visit.members.map(m=>({jobId:m.jobId,expectedUpdatedAt:m.updatedAt!,recordedWork:m.recordedWork??null}))}}:{})};
+       const result=await api.startVisitHandover(handoverAttempt.current);
+       if(!stillCurrent()){inFlight.current=false;return;}
+       visitHandoverId=result.manifestId;
+       const completion=await api.completeVisitHandover(visitHandoverId);
+       if(!stillCurrent()){inFlight.current=false;return;}
+       if(completion.status!=='complete')throw new Error(completion.error??'Handover incomplete. Reload remaining services.');
+       onDelivered();return;
+      }
+      await httpsCallable(functions, "advanceJobStatus")({ jobId: ctx.jobId,...jobStageCommand({status:"READY_FOR_DELIVERY",updatedAt:ctx.updatedAt!}), ...(visitHandoverId?{visitHandoverId}:{}), ...(frozenRecordedRevision!==null?{recordedWorkRevision:frozenRecordedRevision}:{protectionWork:frozenPayload}) });
       if (!stillCurrent()) { inFlight.current = false; return; }
       onDelivered();
     } catch (err) {
@@ -195,7 +216,7 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
 
   return (
     <div className="ax-delivery" style={{ display: "grid", gap: 8, minWidth: 0 }} key={reset}>
-      <p>Mark delivered? This updates the studio, admin and customer tracker.</p>
+      <p>{job.visitId?"Review whole-visit handover":"Mark delivered? This updates the studio, admin and customer tracker."}</p>
       {invalid === "verifying" ? (
         <p role="status">Verifying the signed-in account...</p>
       ) : invalid === "job" ? (
@@ -221,7 +242,7 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
         <p role="alert">The car's protection records failed an integrity check (a record does not belong to this car). Go back and reopen the job before delivering.</p>
       ) : (
         <>
-          {work?.status==='recorded'||work?.status==='needs_review'?<div style={{display:'grid',gap:10}}><strong>Recorded work</strong><p>{work.handoverReady&&work.workLock==='locked'?'Use the checked work record for this visit. No re-entry or new warranty confirmation.':'Finish recording, QC and locking this visit before handover. Missing details are not a no-work declaration.'}</p>{work.handoverReady&&work.workLock==='locked'?<div><button type="button" className="ax-button" disabled={dis||useRecorded} onClick={()=>setUseRecorded(true)}>{useRecorded?'Recorded work selected':'Use recorded work'}</button></div>:null}</div>:<fieldset disabled={dis} style={{ display: "grid", gap: 8, border: "none", padding: 0, margin: 0, minWidth: 0 }}>
+          {work?.status==='recorded'||work?.status==='needs_review'?<div style={{display:'grid',gap:10}}><strong>Recorded work</strong><p>{work.handoverReady&&work.workLock==='locked'?(job.visitId?'Checked work · QC · Locked. No new warranty confirmation.':'Use the checked work record for this visit. No re-entry or new warranty confirmation.'):'Finish recording, QC and locking this visit before handover. Missing details are not a no-work declaration.'}</p>{work.handoverReady&&work.workLock==='locked'?<div><button type="button" className="ax-button" disabled={dis||useRecorded} onClick={()=>setUseRecorded(true)}>{useRecorded?'Recorded work selected':'Use recorded work'}</button></div>:null}</div>:<fieldset disabled={dis} style={{ display: "grid", gap: 8, border: "none", padding: 0, margin: 0, minWidth: 0 }}>
             <legend className="ax-label">Protection work on this visit</legend>
             <p>Record exactly the protection work performed on this visit - this becomes the car's protection history. Choose "none" only if no protection work was done.</p>
             <div style={{ display: "flex", gap: 8 }}>
@@ -278,8 +299,9 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
           <button className="ax-button" style={{justifySelf:"start"}} disabled={dis} onClick={reload}>Reload records</button>
         </>
       )}
+      {visit?.status==='grouped'?<div style={{display:'grid',gap:8}}>{visit.members.map(m=><div key={m.jobId}>{m.lines.map(l=>l.name).join(' + ')} · {m.serviceStatus} · {m.paymentStatus}</div>)}<label><input type="checkbox" checked={visitReviewed} disabled={pending} onChange={e=>setVisitReviewed(e.target.checked)}/> Reviewed all visit services</label></div>:null}
       {submitError ? <p role="alert">{submitError}</p> : null}
-      <button className="ax-button" style={{justifySelf:"start"}} disabled={dis || !contextValid || loading || loadError || integrityError || !declarationReady} onClick={() => void confirm()}>Confirm mark delivered</button>
+      <button className="ax-button" style={{justifySelf:"start"}} disabled={dis || !contextValid || loading || loadError || integrityError || !declarationReady} onClick={() => void confirm()}>{f?.visitId?"Confirm visit handover":"Confirm mark delivered"}</button>
       <button className="ax-button" style={{justifySelf:"start"}} disabled={dis} onClick={onCancel}>Cancel</button>
     </div>
   );

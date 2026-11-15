@@ -1,3 +1,13 @@
+import{VisitReceiptControl}from'../../../components/VisitReceiptControl';
+import{useVisitBill}from'../../../lib/use-visit-bill';
+import{visitFundingLabel}from'@autodeck/core';
+import {jobStageCommand} from "@autodeck/core";
+import{VisitCharges}from'../../../components/VisitCharges';
+import{VisitScheduleControl}from'../../../components/VisitScheduleControl';
+import {VisitBayControl} from '../../../components/VisitBayControl';
+import {JoinVisit} from '../../../components/JoinVisit';
+import {useSharedVisit} from '../../../lib/use-shared-visit';
+import {visitReviewedServiceStage} from "@autodeck/core";
 import{CombinedCashReceipt}from "../../../components/CombinedCashReceipt";
 import { JobWorkSession } from "../../../components/JobWorkSession";
 import {ReleaseCompletedBayPane} from "../../../components/ReleaseCompletedBayPane";
@@ -76,9 +86,9 @@ const JOB_STATUS_LABELS: Record<string, string> = {
 };
 
 const ADVANCE_ACTION_LABELS: Record<string, string> = {
-  PENDING_VEHICLE: "Car arrived, start work",
+  PENDING_VEHICLE: "Mark car arrived",
   VEHICLE_RECEIVED: "Start Work",
-  IN_PROGRESS: "Done, ready for handover",
+  IN_PROGRESS: "Send to quality check",
   QUALITY_CHECK: "Mark Ready",
   READY_FOR_DELIVERY: "Mark Delivered",
 };
@@ -100,13 +110,19 @@ export default function JobDetailScreen() {
   const bookingKey=job?`${job.tenantId}|${job.id}|${job.bookingId??""}|${bookingRetry}`:"";
   const booking=bookingSnap?.key===bookingKey?bookingSnap.record:null;
   const bookingRead=bookingSnap?.key===bookingKey?bookingSnap.read:"loading";
+  const sharedVisit=useSharedVisit(job,booking?.updatedAt);
+  const visitFunding=useVisitBill(sharedVisit.data);
+  const groupedPaymentLabel=job?.visitId?(visitFundingLabel(sharedVisit.data,visitFunding.bill,job.id,visitFunding.error)??'Checking visit bill'):null;
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const [startingInspection, setStartingInspection] = useState(false);
   const [vehicle,setVehicle] = useState<Vehicle|null>(null);
   const [customerName,setCustomerName] = useState<string|null>(null);
   const [serviceName,setServiceName] = useState<string|null>(null);
   const [requiredBayType, setRequiredBayType] = useState<string | null>(null);
-  const [config, setConfig] = useState<StudioConfig | null>(null);
+  const [configRaw, setConfig] = useState<StudioConfig | null>(null);const[configStudio,setConfigStudio]=useState<string|null>(null);const config=configStudio===job?.studioId?configRaw:null;
+  const[configRead,setConfigRead]=useState<'loading'|'ready'|'error'>('loading');
+  const currentConfigRead=configStudio===job?.studioId?configRead:'loading';
+  useEffect(()=>{let active=true;setConfig(null);setConfigStudio(job?.studioId??null);setConfigRead('loading');if(job?.studioId)void getStudioConfig(job.studioId).then(c=>{if(active){if(!c||c.tenantId!==job.tenantId||!Array.isArray(c.bays))throw Error('Studio bays unavailable');setConfig(c);setConfigRead('ready')}}).catch(()=>{if(active)setConfigRead('error')});return()=>{active=false}},[job?.studioId,job?.tenantId]);
   const [feedError,setFeedError] = useState<string|null>(null);
   const [attempt,setAttempt] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -162,9 +178,7 @@ export default function JobDetailScreen() {
           void getDoc(doc(db,COLLECTIONS.vehicles(),j.vehicleId)).then(s=>alive&&setVehicle(s.exists()?s.data() as Vehicle:null)).catch(()=>{if(alive)setVehicle(null)});
           void getDoc(doc(db,COLLECTIONS.customers(),j.customerId)).then(s=>alive&&setCustomerName((s.data() as Customer|undefined)?.name??null)).catch(()=>{if(alive)setCustomerName(null)});
           void getDoc(doc(db, COLLECTIONS.services(), j.serviceId)).then(s => { if(!alive)return;const data=s.data() as Service|undefined; setRequiredBayType(data?.requiredBayType??null);setServiceName(data?.name??null); }).catch(()=>{if(alive)setServiceName(null)});
-          if (!config) {
-            void getStudioConfig(j.studioId).then(c=>{if(alive)setConfig(c)});
-          }
+
         }
         setLoading(false);
       },
@@ -366,7 +380,7 @@ export default function JobDetailScreen() {
   // fresh generation. The read state (including ready/null) is only valid
   // under the exact scope that produced it - an unscoped null authenticates
   // nothing.
-  const payScopeKey = `${staffAuthFingerprint(advanceAuth)}|${job?.id ?? "none"}|${job?.tenantId ?? ""}|${paymentRetryTick}|${paymentRead}|${payment?.id ?? "null"}|${payment?.status ?? ""}|${payment?.method ?? ""}|${job?.paymentStatus ?? ""}|${job?.status ?? ""}`;
+  const payScopeKey = `${staffAuthFingerprint(advanceAuth)}|${job?.id ?? "none"}|${job?.tenantId ?? ""}|${paymentRetryTick}|${paymentRead}|${payment?.id ?? "null"}|${payment?.status ?? ""}|${payment?.method ?? ""}|${job?.paymentStatus ?? ""}|${job?.status ?? ""}|${job?.cashReconciliationId ?? ""}`;
   const payGenRef = useRef({ n: 0, key: "" });
   if (payGenRef.current.key !== payScopeKey) { payGenRef.current = { n: payGenRef.current.n + 1, key: payScopeKey }; }
   const payGen = payGenRef.current.n;
@@ -374,7 +388,7 @@ export default function JobDetailScreen() {
   // Synchronous binding check, evaluated at render: an invalid binding never
   // reaches the screen, even on the render before any effect could run.
   function cashBindingLive(b: CashBinding | null, j: ServiceJob | null, pay: Payment | null, read: "loading" | "ready" | "error", epoch: number, gen: number): b is CashBinding {
-    if (!b || !j) return false;
+    if (!b || !j || j.cashReconciliationId) return false;
     // Generation equality subsumes every scope input: any change (including
     // an A -> B -> A return) has minted a new generation.
     if (b.gen !== gen) return false;
@@ -484,7 +498,7 @@ export default function JobDetailScreen() {
     if (!id || !staffAction || advancing) return;
     setActionError(null);setAdvancing(true);
     try {
-      if (staffAction === "rework") await advanceJobStatus(id, "Sent back for rework", true);
+      if (staffAction === "rework") await advanceJobStatus(id, "Sent back for rework", true,undefined,undefined,undefined,jobStageCommand(job!,true));
       else await updateStandby(id, staffAction, staffAction === "admit" ? standbyBay : undefined);
       setStaffAction(null);
     } catch (err) { setActionError(err instanceof Error ? err.message : "Could not update job."); }
@@ -494,8 +508,7 @@ export default function JobDetailScreen() {
     if (!job || !id || advancing) return;
     setActionError(null);setAdvancing(true);
     try {
-      const steps = job.status === "PENDING_VEHICLE" || job.status === "IN_PROGRESS" ? 2 : 1;
-      for (let i = 0; i < steps; i++) await advanceJobStatus(id);
+      await advanceJobStatus(id,undefined,undefined,undefined,undefined,undefined,jobStageCommand(job));
       setAdvanceConfirm(null);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Failed to advance status.");
@@ -531,7 +544,7 @@ export default function JobDetailScreen() {
   if (!job) return <ErrorState title="Job not found" />;
 
   const transitions = JOB_STATUS_TRANSITIONS[job.status] ?? [];
-  const canAdvance = job.status !== "STANDBY" && transitions.some((s) => s !== "CANCELLED");
+  const canAdvance = !job.visitBayPause&&!(job.visitId&&job.status==='PENDING_VEHICLE')&&job.status !== "STANDBY" && transitions.some((s) => s !== "CANCELLED");
   const quotePaymentHold=Boolean(job.bookingId)&&(!booking||(booking.priceOnRequest===true||(booking as Booking & {requiresPriceApproval?:boolean}).requiresPriceApproval===true)&&booking.quoteStatus!=='approved');
   const quoteWorkHold=job.status==='VEHICLE_RECEIVED'&&Boolean(job.bookingId)&&(!booking||(booking.priceOnRequest===true||(booking as Booking & {requiresPriceApproval?:boolean}).requiresPriceApproval===true)&&booking.quoteStatus!=='approved');
   const advanceLabel = ADVANCE_ACTION_LABELS[job.status] ?? "Advance";
@@ -549,7 +562,7 @@ export default function JobDetailScreen() {
 
   const paymentReview=(payment as (Payment & {invoiceReviewNeeded?:boolean})|null)?.invoiceReviewNeeded===true;
   const paymentSyncing=paymentRead==='ready'&&!paymentReview&&((payment?.status==='completed'&&job.paymentStatus!=='paid')||(job.paymentStatus==='paid'&&payment?.status!=='completed'));
-  const unifiedPaymentLabel=!payment&&paymentRead==='ready'?(job.paymentStatus==='paid'?'No payment record found':'Not yet initiated'):paymentReview?'Received - needs office review':paymentSyncing?'Payment records syncing - do not collect again':job.paymentStatus==='paid'?'Paid':payment?.status==='completed'?'Checking payment status':payment?PAYMENT_STATUS_LABELS[payment.status]??payment.status:job.paymentStatus==='unpaid'?'Unpaid':job.paymentStatus;
+  const unifiedPaymentLabel=groupedPaymentLabel??(!payment&&paymentRead==='ready'?(job.paymentStatus==='paid'?'No payment record found':'Not yet initiated'):paymentReview?'Received - needs office review':paymentSyncing?'Payment records syncing - do not collect again':job.paymentStatus==='paid'?'Paid':payment?.status==='completed'?'Checking payment status':payment?PAYMENT_STATUS_LABELS[payment.status]??payment.status:job.paymentStatus==='unpaid'?'Unpaid':job.paymentStatus);
   const isMultiDay = job.scheduledDate !== job.estimatedEndDate;
   const estimatedEndTime = new Date(job.estimatedEndAt).toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata",
@@ -565,25 +578,30 @@ export default function JobDetailScreen() {
       ? `~${formatDuration(job.estimatedDurationMinutes)}`
       : `~${Math.round(job.estimatedDurationMinutes / 60)} hrs of service time`;
 
-  const compatibleBays = config?.bays.filter((b) => b.active && b.id !== job.bayId && b.bayType === requiredBayType) ?? [];
+  const compatibleBays = config?.bays?.filter((b) => b.active && b.id !== job.bayId && b.bayType === requiredBayType) ?? [];
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: "transparent" }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, width:"100%",maxWidth: 1040,alignSelf:"center" }}>
       <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
         <View style={{gap:spacing.xs}}><Text style={{...typography.title,color:colors.textPrimary}}>{vehicle?.registrationNumber??"Vehicle details"}</Text><Text style={{...typography.body,color:colors.textMuted}}>{vehicle?`${vehicle.make} ${vehicle.model}`:"Loading vehicle..."}{customerName?` · ${customerName}`:""}</Text></View>
-      <StatusBadge label={statusLabel} tone={statusTone(job.status)} />
+      <StatusBadge label={job.visitId?'Service · '+visitReviewedServiceStage(sharedVisit.data,job.id,sharedVisit.error):statusLabel} tone={statusTone(job.status)} />
         {job.isWalkIn && <StatusBadge label="Walk-in" tone="accent" />}
       </View>
 
       <Section>
-        <Row label="Bay" value={job.status === "STANDBY" ? "No bay reserved" : config?.bays.find(b=>b.id===job.bayId)?.name??"Loading bay..."} />
+        {job.visitId?<Row label="Visit" value={sharedVisit.progress?.headline??(sharedVisit.error?"Visit unavailable":"Checking visit…")}/>:null}
+        {sharedVisit.progress?.services.map(s=><Row key={s.id} label={s.name} value={s.status}/>)}
+        <Row label="Bay" value={job.status === "STANDBY" ? "No bay reserved" : currentConfigRead==='loading'?"Checking bay…":currentConfigRead==='error'?"Bay unavailable":!job.bayId?"No bay assigned":config?.bays.find(b=>b.id===job.bayId)?.name??"Bay needs review"} />
         <Row label="Service" value={serviceName??"Loading service..."} />
         <Row label="Scheduled" value={job.status === "STANDBY" ? "Waiting - no slot reserved" : scheduledTime} />
         <Row label="Duration" value={durationLabel} />
-        <Row label="Expected ready" value={job.status === "STANDBY" ? "Set on admission" : estimatedEndTime} />
-        <Row label="Payment" value={membershipCoveredLabel(job) ?? (booking ? membershipCoveredLabel(booking) : null) ?? unifiedPaymentLabel} />
+        <Row label={job.visitId?"Service estimate":"Expected ready"} value={job.status === "STANDBY" ? "Set on admission" : estimatedEndTime} />
+        {!job.visitId?<Row label="Payment" value={membershipCoveredLabel(job) ?? (booking && job.totalAmount === 0 ? membershipCoveredLabel(booking) : null) ?? unifiedPaymentLabel} />:null}
       </Section>
 
+      <VisitCharges view={sharedVisit.data} funding={visitFunding}/>
+      {job.visitId?<VisitReceiptControl key={JSON.stringify([job.id,job.visitId])} visitId={job.visitId} view={sharedVisit.data} bill={visitFunding.bill} onRecorded={sharedVisit.refresh}/>:null}
+      <JoinVisit key={job.id} job={job}/>
       {actionError?<ErrorState title="Action not completed" message={actionError} fill={false}/>:null}
       {isMultiDay && (
         <View style={{ backgroundColor: colors.accentMuted, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}>
@@ -619,7 +637,7 @@ export default function JobDetailScreen() {
         </View>
       )}
 
-      <Text style={sectionTitle}>Job stage history</Text>
+      {job.statusHistory.length?<><Text style={sectionTitle}>Job stage history</Text>
       <Section>
         {job.statusHistory.map((entry, i) => (
           <View key={i} style={{ flexDirection: "row", justifyContent: "space-between" }}>
@@ -627,7 +645,7 @@ export default function JobDetailScreen() {
             <Text style={{ ...typography.caption, color: colors.textMuted }}>{formatTime(entry.changedAt)}</Text>
           </View>
         ))}
-      </Section>
+      </Section></>:null}
 
       <Text style={sectionTitle}>Photos and damage note (optional)</Text>
       <Section>
@@ -651,9 +669,9 @@ export default function JobDetailScreen() {
         <Text style={{color:colors.textPrimary}}>Membership-covered, not yet settled</Text>
         <Button label="Settle membership-covered visit" loading={paymentActionLoading} onPress={()=>{setPaymentActionLoading(true);setActionError(null);void httpsCallable(functions,"settleMembershipCoveredJob")({jobId:job.id}).catch(e=>setActionError(e instanceof Error?e.message:"Could not settle this visit.")).finally(()=>setPaymentActionLoading(false));}} />
       </Section> : null}
-      <Text style={sectionTitle}>Payment</Text>
+      <Text style={sectionTitle}>{job.visitId?"Service payment":"Payment"}</Text>
       <Section>
-        <Row label="Status" value={membershipCoveredLabel(job) ?? (booking ? membershipCoveredLabel(booking) : null) ?? (paymentRead === "loading" ? "Checking payment status..." : paymentRead === "error" ? "Payment status unavailable" : unifiedPaymentLabel)} />
+        <Row label="Status" value={job.cashReconciliationId&&job.paymentStatus!=="paid"?"Cash receipt under review - do not collect again":membershipCoveredLabel(job) ?? (booking && job.totalAmount === 0 ? membershipCoveredLabel(booking) : null) ?? (paymentRead === "loading" ? "Checking payment status..." : paymentRead === "error" ? "Payment status unavailable" : unifiedPaymentLabel)} />
         {paymentRead === "error" && (
           <>
             <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
@@ -662,7 +680,7 @@ export default function JobDetailScreen() {
             <Button label="Retry payment status" size="md" variant="secondary" style={{ marginTop: spacing.xs }} onPress={() => setPaymentRetryTick((t) => t + 1)} />
           </>
         )}
-        {paymentRead === "ready" && !payment && job.paymentStatus === "paid" && (
+        {!job.visitId&&paymentRead === "ready" && !payment && job.paymentStatus === "paid" && (
           <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
             This job is marked paid, but no payment record was found. Do not collect again - ask the office to reconcile the payment record.
           </Text>
@@ -671,12 +689,12 @@ export default function JobDetailScreen() {
         {payment?.method === "cash" && ["failed","cancelled"].includes(payment.status) ? <Text style={{color:colors.textMuted}}>The previous recording attempt did not complete. Check whether cash is already in hand before recording it. Do not collect it again.</Text> : null}
         <Row label="Job total" value={formatPaise(job.totalAmount)} />
         {job.combinedSettlement?<><Row label="Verified advance" value={formatPaise(job.combinedSettlement.advanceCapturedPaise)}/><Row label="Balance due" value={formatPaise(job.combinedSettlement.balanceDuePaise)}/></>:null}
-        {job.combinedPayment&&(job.combinedPayment.choice==="full"||Boolean(job.combinedSettlement?.advancePaymentId))&&job.paymentStatus!=="paid"&&job.status!=="CANCELLED"&&paymentRead==="ready"&&!quotePaymentHold&&(!payment||["failed","cancelled"].includes(payment.status))&&job.combinedSettlement?.balanceDuePaise!==0?<CombinedCashReceipt jobId={job.id} balancePaise={Math.max(0,job.totalAmount-(job.combinedSettlement?.advanceCapturedPaise??0)-(job.offlineSettlement?.appliedPaise??0))}/>:null}
+        {!job.visitId&&!job.cashReconciliationId&&job.combinedPayment&&(job.combinedPayment.choice==="full"||Boolean(job.combinedSettlement?.advancePaymentId))&&job.paymentStatus!=="paid"&&job.status!=="CANCELLED"&&paymentRead==="ready"&&!quotePaymentHold&&(!payment||["failed","cancelled"].includes(payment.status))&&job.combinedSettlement?.balanceDuePaise!==0?<CombinedCashReceipt jobId={job.id} balancePaise={Math.max(0,job.totalAmount-(job.combinedSettlement?.advanceCapturedPaise??0)-(job.offlineSettlement?.appliedPaise??0))}/>:null}
         {payment ? <Row label="Method" value={payment.method === "cash" ? "Cash" : payment.method === "razorpay_payment_link" ? "Online payment link" : payment.method === "upi_manual" ? "UPI - office confirmation" : "Bank transfer - office confirmation"} /> : null}
         {invoice && <Row label="Invoice" value={invoice.invoiceNumber} />}
         {paymentRead === "ready" && payment?.method === "razorpay_payment_link" && ["pending","processing"].includes(payment.status)?<Button label="Refresh recorded payment status" size="md" variant="secondary" onPress={()=>setPaymentRetryTick(t=>t+1)}/>:null}
 
-        {!(MEMBERSHIP_SETTLEMENT_ENABLED && (membershipCoveredLabel(job) || (booking && membershipCoveredLabel(booking)))) && !job.combinedPayment && !cashConfirmLive && paymentRead === "ready" && (!payment || (payment.method === "cash" && ["failed","cancelled"].includes(payment.status))) && job.paymentStatus !== "paid" && job.status !== "CANCELLED" && (
+        {!job.visitId&&!job.cashReconciliationId&&!(MEMBERSHIP_SETTLEMENT_ENABLED && (membershipCoveredLabel(job) || (booking && membershipCoveredLabel(booking)))) && !job.combinedPayment && !cashConfirmLive && paymentRead === "ready" && (!payment || (payment.method === "cash" && ["failed","cancelled"].includes(payment.status))) && job.paymentStatus !== "paid" && job.status !== "CANCELLED" && (
           <Button
             label={UPI_RECORD_ENABLED ? "Record payment" : "Record cash payment"}
             disabled={quotePaymentHold}
@@ -686,7 +704,7 @@ export default function JobDetailScreen() {
             style={{ marginTop: spacing.xs }}
           />
         )}
-        {!cashConfirmLive && paymentRead === "ready" && payment &&
+        {!job.cashReconciliationId&&!cashConfirmLive && paymentRead === "ready" && payment &&
           payment.jobId === job.id &&
           payment.tenantId === job.tenantId &&
           job.paymentStatus !== "paid" &&
@@ -835,13 +853,14 @@ export default function JobDetailScreen() {
         <Button label="Confirm" disabled={staffAction === "admit" && !standbyBay} loading={advancing} onPress={() => void performStaffAction()} />
         <Button label="Cancel" variant="secondary" onPress={() => setStaffAction(null)} disabled={advancing} />
       </Section> : null}
-      {job.status === "STANDBY" ? <Section><Text style={{color: colors.textPrimary}}>Waiting since {new Date(job.standbyArrivedAt ?? job.createdAt).toLocaleString("en-IN", {timeZone: "Asia/Kolkata"})}. No bay or time reserved.</Text><Button label="Admit from standby" onPress={() => setStaffAction("admit")} /></Section> : null}
+      {!job.visitId&&job.status === "STANDBY" ? <Section><Text style={{color: colors.textPrimary}}>Waiting since {new Date(job.standbyArrivedAt ?? job.createdAt).toLocaleString("en-IN", {timeZone: "Asia/Kolkata"})}. No bay or time reserved.</Text><Button label="Admit from standby" onPress={() => setStaffAction("admit")} /></Section> : null}
+      {job.visitId&&!["DELIVERED","CANCELLED"].includes(job.status)?<Section><VisitBayControl job={job}/><VisitScheduleControl job={job}/></Section>:null}
       {job.status === "PENDING_VEHICLE" && job.bookingId ? <Button label="Arrived - standby" variant="secondary" disabled={Date.parse(job.scheduledAt) > Date.now()} onPress={() => setStaffAction("enqueue")} style={{marginBottom: spacing.lg}} /> : null}
-      {job.status === "QUALITY_CHECK" ? <Button label="Send back for rework" variant="ghost" onPress={() => setStaffAction("rework")} style={{marginBottom: spacing.lg}} /> : null}
+      {!job.visitBayPause&&job.status === "QUALITY_CHECK" ? <Button label="Send back for rework" variant="ghost" onPress={() => setStaffAction("rework")} style={{marginBottom: spacing.lg}} /> : null}
       {['IN_PROGRESS','QUALITY_CHECK','READY_FOR_DELIVERY','DELIVERED'].includes(job.status) ? <Section><JobWorkSession key={job.id} job={job}/></Section> : null}
       {ADMIN_APPROVAL_ENABLED && job ? <AdminRequestPanel targetType="job" targetId={job.id} tenantId={job.tenantId} studioId={job.studioId} /> : null}
       {advanceConfirm && job ? <Section>{job.status === "READY_FOR_DELIVERY" ? <DeliveryConfirmPane key={`${job.id}:${job.vehicleId}`} job={job} onDelivered={()=>setAdvanceConfirm(null)} onCancel={()=>setAdvanceConfirm(null)}/> : <><Text style={{color:colors.textPrimary}}>{advanceLabel}? This updates the studio floor and customer tracker.</Text><Button label={`Confirm ${advanceLabel.toLowerCase()}`} onPress={()=>void handleAdvance()} loading={advancing}/><Button label="Cancel" variant="secondary" disabled={advancing} onPress={()=>setAdvanceConfirm(null)}/></>}</Section> : null}
-      {job.status === "READY_FOR_DELIVERY" ? <Section><ReleaseCompletedBayPane key={`${job.id}:${job.status}:${job.bayReleasedAt??''}`} job={job}/></Section> : null}
+      {!job.visitId&&job.status === "READY_FOR_DELIVERY" ? <Section><ReleaseCompletedBayPane key={`${job.id}:${job.status}:${job.bayReleasedAt??''}`} job={job}/></Section> : null}
       {job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid" ? <Text style={{color: colors.textPrimary, marginBottom: spacing.md}}>{MEMBERSHIP_SETTLEMENT_ENABLED && booking?.membershipWashUsed && job.totalAmount === 0 ? "Settle the membership-covered visit before marking delivered." : "Collect and confirm full payment before marking delivered."}</Text> : null}
       {/* While a confirmation is open the original advance control stays
           hidden: only the confirmation's Confirm/Cancel may act - no second
@@ -850,7 +869,7 @@ export default function JobDetailScreen() {
         <>{quoteWorkHold?<View style={{marginBottom:spacing.sm}}><Text style={{color:colors.textSecondary}}>{bookingRead==='loading'?'Checking linked booking before work and payment.':!booking?'Linked booking unavailable. Retry before work or payment.':'Waiting for customer price approval before work and payment.'}</Text>{bookingRead!=='loading'&&!booking?<Button label="Retry linked booking" size="md" variant="secondary" onPress={()=>setBookingRetry(n=>n+1)}/>:null}</View>:null}<Button label={advanceLabel} variant={job.status === "READY_FOR_DELIVERY" ? "secondary" : "primary"} disabled={quoteWorkHold||(job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid")} onPress={() => (job.status === "READY_FOR_DELIVERY" ? setAdvanceConfirm({ route: id ?? "", jobId: job.id, status: job.status, epoch: advanceEpoch.current }) : void handleAdvance())} loading={advancing} style={{ marginBottom: spacing.lg }} /></>
       ) : null}
 
-      {job.status === "PENDING_VEHICLE" && job.bookingId ? (
+      {!job.visitId&&job.status === "PENDING_VEHICLE" && job.bookingId ? (
         <Section>
           <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>Reschedule booking</Text>
           <Text style={{ ...typography.caption, color: colors.textMuted }}>Late arrival? Move this booking to an upcoming slot before check-in. Same booking and job kept.</Text>
@@ -877,7 +896,7 @@ export default function JobDetailScreen() {
           : <Button label="Cancel walk-in" variant="secondary" onPress={()=>setCancelConfirm(true)} style={{marginBottom: spacing.lg}} />
       ) : null}
 
-      {compatibleBays.length > 0 && job.status !== "STANDBY" && job.status !== "DELIVERED" && job.status !== "CANCELLED" && (
+      {!job.visitId&&compatibleBays.length > 0 && job.status !== "STANDBY" && job.status !== "DELIVERED" && job.status !== "CANCELLED" && (
         <>
           <Text style={sectionTitle}>Reassign Bay</Text>
           {reassignPick?<Section><Text style={{color:colors.textPrimary}}>Move this job to {reassignPick.name}?</Text><Button label="Confirm bay change" loading={reassigning} onPress={()=>void handleReassignBay(reassignPick.id)}/><Button label="Keep current bay" variant="secondary" disabled={reassigning} onPress={()=>setReassignPick(null)}/></Section>:null}

@@ -1,3 +1,4 @@
+import {PickupLocation} from '../../../ui/PickupLocation';
 import {PaymentChoiceSummary} from "../../../ui/PaymentChoiceSummary";
 import{BookingTerms}from'../../../ui/BookingTerms';
 import { CombinedPaymentSheet } from "../../../ui/CombinedPaymentSheet";
@@ -232,17 +233,17 @@ export default function BookingConfirmScreen() {
     }
   }
 
-  async function locatePickup() {
+  async function locatePickup(selected?:{lat:number;lng:number}) {
     if (!pickupKind) return;
     const scope=scopeKey,gen=actionGeneration.current,kind=pickupKind;
     setLocating(true);
     setPickupQuote(null);
     setPickupQuoteError(null);
-    const p = await getDeviceLocation();
+    const p = selected??await getDeviceLocation();
     if(scopeRef.current!==scope||actionGeneration.current!==gen)return;
     if (!p) {
       setPickupWhere(null);
-      setPickupQuoteError("Location access is unavailable. Allow location access and try again, or continue without pickup/drop.");
+      setPickupQuoteError("Location access is unavailable. Choose on map, or continue without pickup/drop.");
       setLocating(false);
       return;
     }
@@ -477,8 +478,9 @@ export default function BookingConfirmScreen() {
                 error={pickupAddress.trim().length === 0 ? "Enter the pickup/drop address" : pickupAddress.trim().length < 8 ? "Enter the full address" : undefined}
               />
               <T role="caption" tone="secondary" style={{ marginTop: space.breath }}>Check your location to see the final pickup/drop fee.</T>
-              <Button label={pickupQuoteInfo ? "Check distance again" : "Check distance using my current location"} kind="quiet" busy={locating} onPress={() => void locatePickup()} />
-              <T role="caption" tone="secondary">This uses your current location, not the typed address. Use it only if you are at the pickup/drop address.</T>
+              <Button label={pickupQuoteInfo ? "Check distance again" : "Use current location"} kind="quiet" busy={locating} onPress={() => void locatePickup()} />
+              <PickupLocation key={scopeKey} value={pickupWhere} disabled={locating||booking||!!held} onSelect={p=>{actionGeneration.current++;void locatePickup(p)}}/>
+              <T role="caption" tone="secondary">{pickupQuoteInfo?"Selected location · Check the address matches":"Use current location or choose the address on the map"}</T>
               {pickupQuoteInfo ? <T role="caption" tone="secondary">{describePickupQuote(pickupQuoteInfo)}</T> : null}
               {pickupQuoteError ? <T role="caption" tone="secondary">{pickupQuoteError}</T> : null}
               {pickupKind !== "drop" && studioHours.status === "loading" ? (

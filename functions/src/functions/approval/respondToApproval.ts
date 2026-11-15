@@ -1,3 +1,5 @@
+import{assertConnectedVisitRuntime}from'../../lib/connected-visit-release.js';
+import {prepareApprovedExtraWork} from '../../lib/approved-extra-work.js';
 // Customer only. The sole state transition a customer can drive:
 // PENDING -> APPROVED or PENDING -> REJECTED, on their own approval only.
 // Approving increments ServiceJob.additionalWorkDelta/totalAmount — the
@@ -93,10 +95,10 @@ export const respondToApproval = onCall(
       // approval was still pending — there is nothing left to authorize.
       // Studio/admin can still resolve the orphaned request via cancelApproval;
       // the customer cannot approve/reject a decision that no longer applies.
-      if (job.status === "CANCELLED") {
+      if (job.status === "CANCELLED" || job.status === "DELIVERED") {
         throw new HttpsError(
           "failed-precondition",
-          "This job has been cancelled — the approval no longer applies.",
+          "This visit is closed. Approval no longer applies.",
         );
       }
 
@@ -150,6 +152,8 @@ export const respondToApproval = onCall(
           );
         }
 
+        if(job.settlementKind==='membership_covered'&&job.visitId)assertConnectedVisitRuntime();
+        const extraWork = await prepareApprovedExtraWork(tx, db, job, approval);
         if (binding) {
           if (
             !Number.isSafeInteger(approval.priceImpact) ||
@@ -172,10 +176,13 @@ export const respondToApproval = onCall(
           });
         }
         tx.update(jobRef, {
+          ...(["READY_FOR_DELIVERY","QUALITY_CHECK"].includes(job.status)?{status:"IN_PROGRESS",statusHistory:[...job.statusHistory,{status:"IN_PROGRESS",changedAt:nowIso,changedBy:user.uid,notes:null}]}:{}),
+          ...(job.settlementKind==='membership_covered'&&job.visitId&&approval.priceImpact>0?{paymentStatus:'unpaid'}:{}),
           additionalWorkDelta: job.additionalWorkDelta + approval.priceImpact,
           totalAmount: job.totalAmount + approval.priceImpact,
           updatedAt: nowIso,
         });
+        if(extraWork){tx.set(extraWork.ref,extraWork.snapshot);tx.create(extraWork.historyRef,extraWork.snapshot);}
         tx.update(approvalRef, {
           status: "approved",
           respondedAt: nowIso,

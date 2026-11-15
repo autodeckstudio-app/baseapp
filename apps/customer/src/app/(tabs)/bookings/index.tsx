@@ -1,3 +1,6 @@
+import {WalkinVisitEstimates} from '../../../ui/WalkinVisitEstimates';
+import {useSharedVisit} from '../../../hooks/useSharedVisit';
+import {visitProgress} from '@autodeck/core';
 import { cancellationErrorMessage } from "../../../lib/cancellation-error";
 import { metrics } from "../../../lib/metrics";
 import { bookingSections } from "../../../lib/booking-sections";
@@ -5,7 +8,7 @@ import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 // Bookings: what's coming first, then history.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useRouter, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {useVehiclePreference} from "../../../lib/active-vehicle";
 import { bookingSuggestions, dueSoonFor, lastServiceFor } from "../../../lib/booking-ideas";
 import { isBookingMissed, type Booking } from "@autodeck/core";
@@ -53,6 +56,7 @@ const STATUS: Record<Booking["status"], { label: string; tone: "accent" | "premi
 export default function BookingsScreen() {
   const { colors: ink } = useExperienceTheme();
   const router = useRouter();
+  const {estimateId}=useLocalSearchParams<{estimateId?:string}>();
   const auth = useAuth();
   const ownerKey=listOwnerKey(auth);const owner=auth.status==="ready"&&ownerKey?`${auth.claims.tenantId}:${auth.user.uid}:${ownerKey.key}`:null;const ownerRef=useRef(owner);ownerRef.current=owner;
   const [bookings, setBookings] = useState<Booking[] | null>(null);
@@ -85,6 +89,8 @@ export default function BookingsScreen() {
   }, [owner]);
 
   const liveJob = liveJobOf(jobs);
+  const sharedVisit=useSharedVisit(liveJob);
+  const sharedProgress=sharedVisit?.data?.status==='grouped'?visitProgress(sharedVisit.data):null;
   const liveJobId = liveJob?.id ?? null;
   useEffect(() => {
     setApprovals([]);
@@ -141,9 +147,9 @@ export default function BookingsScreen() {
 
   const seg = segPick ?? (liveJob || approvals.some((a) => a.status === "pending") ? "active" : "upcoming");
   segRef.current = seg;
-  const stage = liveJob ? jobStage(liveJob.status) : null;
+  const stage = liveJob ? liveJob.visitId?sharedProgress?{...jobStage(sharedProgress.status)!,headline:sharedProgress.headline,line:sharedProgress.line}:null:jobStage(liveJob.status) : null;
   const liveBooking = liveJob ? all.find((b) => b.id === (liveJob.bookingId ?? liveJob.id)) : undefined;
-  const readyText = liveBooking && stage && stage.index < 3 && readyIsAhead(liveBooking.estimatedEndDate, liveBooking.estimatedEndTime) ? `${formatDateShort(liveBooking.estimatedEndDate)}, ${liveBooking.estimatedEndTime}` : null;
+  const readyText = !liveJob?.visitId && liveBooking && stage && stage.index < 3 && readyIsAhead(liveBooking.estimatedEndDate, liveBooking.estimatedEndTime) ? `${formatDateShort(liveBooking.estimatedEndDate)}, ${liveBooking.estimatedEndTime}` : null;
   const pending = approvals.filter((a) => a.status === "pending");
   const todayIst = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
   const next = upcoming[0];
@@ -178,10 +184,12 @@ export default function BookingsScreen() {
       <View {...swipe.handlers} style={[{ gap: 20, minHeight: Math.max(winH - 220, 480) }, swipe.style]}>
       {error ? <Notice title="Can't load bookings" body="Check your connection and try again." action={<Button kind="quiet" icon="refresh" label="Try again" onPress={() => void load()} />} /> : null}
 
+      <WalkinVisitEstimates selectedId={typeof estimateId==="string"?estimateId:null} owner={owner} customerId={auth.customerDocId} vehicleLabel={id=>{const c=cars[id];return c?[c.make,c.model,c.registrationNumber].filter(Boolean).join(' '):'Car'}} onAccepted={()=>void load()}/>
       <TabPills tabs={[{ key: "active", label: "Active" }, { key: "upcoming", label: "Upcoming" }, { key: "past", label: "Past" }]} value={seg} onChange={setSegPick} />
 
       {seg === "active" && !liveJob && approvals.filter((a) => a.status === "pending").length === 0 ? <Notice title="Nothing active" body="When your car is in the studio, you can follow it here." /> : null}
 
+      {seg === "active" && liveJob?.visitId&&!stage?<Pane pad="inset"><T role="heading">{sharedVisit?.error?"Visit unavailable":"Checking visit…"}</T></Pane>:null}
       {seg === "active" && liveJob && stage ? (
         <Pane pad="inset">
           <View style={{ gap: metrics.innerGap }}>

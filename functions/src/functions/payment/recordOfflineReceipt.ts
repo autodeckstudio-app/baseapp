@@ -32,6 +32,7 @@ export async function recordOfflineReceiptInTx(db:Firestore,tx:Transaction,user:
   const [js,prior]=await Promise.all([tx.get(jobRef),tx.get(receiptRef)]);if(!js.exists)throw new HttpsError('not-found','Job not found.');const job=js.data() as ServiceJob & {offlineSettlement?:{appliedPaise:number;officeReturnDuePaise:number;receiptCount:number}};
   if(job.id!==data.jobId||job.tenantId!==user.claims.tenantId)throw new HttpsError('permission-denied','Job scope could not be verified.');assertStudio(user,job.studioId,'Job');
   if(prior.exists){const p=prior.data()!;if(p.jobId!==data.jobId||p.tenantId!==job.tenantId||p.studioId!==job.studioId||p.customerId!==job.customerId||p.receivedPaise!==data.receivedPaise||p.method!==data.method||p.reference!==data.reference)throw new HttpsError('already-exists','Receipt key belongs to a different receipt.');return{receiptId:receiptRef.id,balanceDuePaise:p.balanceDuePaise,officeReturnDuePaise:p.officeReturnDuePaise,alreadyRecorded:true};}
+  if(job.visitId)throw new HttpsError('failed-precondition','Use the current itemized visit receipt, not a separate job receipt.');
   const holdId=(job as ServiceJob & {cashReconciliationId?:string}).cashReconciliationId;
   let reconciledPayment:Payment|undefined;
   if(holdId){const hold=(await tx.get(db.collection('cashReconciliations').doc(holdId))).data();

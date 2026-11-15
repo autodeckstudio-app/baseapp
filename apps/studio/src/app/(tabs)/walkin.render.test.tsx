@@ -1,3 +1,5 @@
+vi.mock('expo-crypto',()=>({randomUUID:()=> '318c5ddc-de7c-4427-b36f-e4981ed97530'}));
+vi.mock('../../lib/visit-intake-service',()=>({prepareVisitIntake:async()=>{throw Error('not used')}}));
 // Walk-in intake render proof: after a FRESH staged registration the counter
 // code is issued and shown exactly once with the tell-the-customer copy; for
 // an existing record no code is issued or shown. Services, auth and router

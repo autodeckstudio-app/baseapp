@@ -12,7 +12,7 @@ export function LockJobWork({job,snapshot,onSaved}:{job:Job;snapshot:JobWorkCove
  const journal=scope?createWorkCommandJournal(scope,current):null;
  const[state,setState]=useState<{key:string|null;phase:'checking'|'ready'|'pending'|'blocked';pending:WorkRecordCommand|null}>({key:null,phase:'checking',pending:null});const[confirmed,setConfirmed]=useState(false),[busy,setBusy]=useState(false);const flight=useRef(false);
  useEffect(()=>{let alive=true;setState({key,phase:'checking',pending:null});setConfirmed(false);setBusy(false);if(journal)journal.restore().then(pending=>{if(alive&&current())setState({key,phase:pending?'pending':'ready',pending})}).catch(()=>{if(alive&&current())setState({key,phase:'blocked',pending:null})});return()=>{alive=false}},[key,snapshot.revision]);
- const ready=snapshot.status==='recorded'&&snapshot.workLock==='open'&&snapshot.revision!==null&&snapshot.items.length>0&&snapshot.items.every(i=>i.workStatus==='QC recorded');
+ const ready=snapshot.workReady!==false&&snapshot.status==='recorded'&&snapshot.workLock==='open'&&snapshot.revision!==null&&snapshot.items.length>0&&snapshot.items.every(i=>i.workStatus==='QC recorded');
  async function run(kind:'new'|'retry'|'check'){
   if(!journal||!current()||flight.current||kind==='new'&&(!ready||!confirmed))return;flight.current=true;setBusy(true);
   try{if(kind==='new'){const command:WorkRecordCommand={jobId:job.id,operationId:crypto.randomUUID(),expectedRevision:snapshot.revision!,action:'seal',confirmed:true};await journal.prepare(command);if(current())setState({key,phase:'pending',pending:command})}const receipt=kind==='check'?await journal.check():await journal.send();if(current()&&receipt){setState({key,phase:'checking',pending:null});onSaved()}}

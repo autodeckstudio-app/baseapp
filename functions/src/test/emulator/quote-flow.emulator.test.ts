@@ -29,7 +29,7 @@ import { getAvailability } from "../../functions/booking/getAvailability.js";
 import { createWalkinJob } from "../../functions/job/createWalkinJob.js";
 import { setBookingQuote } from "../../functions/booking/setBookingQuote.js";
 import { respondToBookingQuote } from "../../functions/booking/respondToBookingQuote.js";
-import { advanceJobStatus } from "../../functions/job/advanceJobStatus.js";
+import {stageFixture as advanceJobStatus} from './stage-fixture.js';
 
 const db = getFirestore();
 

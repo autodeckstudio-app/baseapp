@@ -7,7 +7,7 @@ import { resolve, join } from "node:path";
 import { tmpdir } from "node:os";
 import { initiatePayment } from "../../functions/payment/initiatePayment.js";
 import { recordManualPayment } from "../../functions/payment/recordManualPayment.js";
-import { advanceJobStatus } from "../../functions/job/advanceJobStatus.js";
+import {stageFixture as advanceJobStatus} from './stage-fixture.js';
 vi.mock("node:crypto", async (importOriginal) => ({
   ...(await importOriginal<typeof NodeCryptoModule>()),
   randomUUID: () => "00000000-0000-4000-8000-000000000001",
@@ -188,6 +188,19 @@ describe("noncovered zero functions baseline0d73f895 comparison", () => {
             join(evidenceDir, `noncovered-zero-${kind}-${error ? "error" : "success"}-current.json`),
             JSON.stringify(a, null, 2),
           );
+          // Reviewed command versions must increase even with the clock frozen.
+          // Assert this intentional delta precisely, then compare every old field.
+          if(kind === "delivery" && !error){
+            const current=(a.docs["jobs"] as any[])[0].data;
+            const prior=b.docs.jobs[0].data;
+            const advanced="2026-10-24T09:00:00.001Z";
+            expect(current.updatedAt).toBe(advanced);
+            expect(current.sealedAt).toBe(advanced);
+            expect(current.statusHistory[0].changedAt).toBe(advanced);
+            current.updatedAt=prior.updatedAt;
+            current.sealedAt=prior.sealedAt;
+            current.statusHistory[0].changedAt=prior.statusHistory[0].changedAt;
+          }
           expect(a).toEqual(b);
           console.log(
             "BASE VS CURRENT",

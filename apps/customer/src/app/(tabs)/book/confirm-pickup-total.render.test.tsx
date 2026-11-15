@@ -50,7 +50,7 @@ it('a quoted pickup fee rides inside the shown Total while Pay online now exclud
   let r: any;
   await act(async () => { r = create(<Page />); });
   await act(async () => { button(r, 'Pickup').props.onPress(); });
-  await act(async () => { button(r, 'Check distance using my current location').props.onPress(); await Promise.resolve(); await Promise.resolve(); });
+  await act(async () => { button(r, 'Use current location').props.onPress(); await Promise.resolve(); await Promise.resolve(); });
   expect(h.quote).toHaveBeenCalledWith({ kind: 'pickup', lat: 23.03, lng: 72.58 });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const total = r.root.findAllByType('SheetTotal').find((x: any) => x.props.label === 'Total');
@@ -67,3 +67,13 @@ it('a quoted pickup fee rides inside the shown Total while Pay online now exclud
 });
 
 it('booking-review transport draft survives remount without clearing its exact directed quote',async()=>{updatePickupDraft(draftScope,{kind:'both',address:'Reviewed sample address',where:{lat:23,lng:72},quote:{quoteId:'asymmetric',kind:'both',legs:[{leg:'pickup',km:4,feePaise:2500},{leg:'drop',km:5,feePaise:5000}],feePaise:7500,freeMeters:3000,expiresAt:new Date(Date.now()+1800000).toISOString()}});let r:any;await act(async()=>{r=create(<Page/>)});const total=r.root.findAllByType('SheetTotal').find((x:any)=>x.props.label==='Total');expect(total.props.value).toBe('17500');expect(button(r,'Both').props.accessibilityState.selected).toBe(true);await act(async()=>r.unmount());});
+
+it('a remotely selected pin quotes its exact point, not device coordinates or the typed address',async()=>{
+ const{PickupLocation}=await import('../../../ui/PickupLocation');let r:any;await act(async()=>{r=create(<Page/>)});await act(async()=>button(r,'Pickup').props.onPress());const map=r.root.findByType(PickupLocation);
+ await act(async()=>map.props.onSelect({lat:23.15,lng:72.71}));expect(h.quote).toHaveBeenLastCalledWith({kind:'pickup',lat:23.15,lng:72.71});
+ const{readPickupDraft}=await import('../../../lib/pickup-draft');expect(readPickupDraft(draftScope).where).toEqual({lat:23.15,lng:72.71});expect(readPickupDraft(draftScope).quote?.quoteId).toBe('q1');
+ const field=r.root.findAllByType('Field').find((n:any)=>n.props.label==='Address');await act(async()=>field.props.onChangeText('Different remote address'));expect(readPickupDraft(draftScope).quote).toBeNull();expect(readPickupDraft(draftScope).where).toBeNull();await act(async()=>r.unmount());
+});
+it('changing the selected leg during a remote quote discards its late response without a stale price',async()=>{
+ const{PickupLocation}=await import('../../../ui/PickupLocation');const{readPickupDraft}=await import('../../../lib/pickup-draft');let resolve:any;h.quote.mockImplementationOnce(()=>new Promise(r=>resolve=r));let r:any;await act(async()=>{r=create(<Page/>)});await act(async()=>button(r,'Pickup').props.onPress());let pending:any;await act(async()=>{pending=r.root.findByType(PickupLocation).props.onSelect({lat:23.15,lng:72.71})});await act(async()=>button(r,'Drop-off').props.onPress());await act(async()=>{resolve({quoteId:'stale',kind:'pickup',legs:[],feePaise:0,expiresAt:'2099-01-01T00:00:00Z'});await pending});expect(readPickupDraft(draftScope).kind).toBe('drop');expect(readPickupDraft(draftScope).quote).toBeNull();expect(readPickupDraft(draftScope).where).toBeNull();await act(async()=>r.unmount());
+});

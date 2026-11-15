@@ -1,4 +1,4 @@
-import{createHash}from'node:crypto';import type{Transaction,Firestore}from'firebase-admin/firestore';import{HttpsError}from'firebase-functions/v2/https';import{recordedWorkHandover,type WorkLedger,type ServiceJob}from'@autodeck/core';import{workSnapshotSchema}from'../functions/work/getJobWorkCoverage.js';
+import{createHash}from'node:crypto';import type{Transaction,Firestore}from'firebase-admin/firestore';import{HttpsError}from'firebase-functions/v2/https';import{recordedWorkHandover,type WorkLedger,type ServiceJob}from'@autodeck/core';import{workSnapshotSchema}from'./work-snapshot-schema.js';
 /** Called inside the delivery transaction. A client revision is a selector,
  * never authority for work, owner, target, price or warranty data. */
 export async function readRecordedHandover(tx:Transaction,db:Firestore,job:ServiceJob,revision:number){

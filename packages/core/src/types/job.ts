@@ -27,6 +27,10 @@ export interface ServiceJob {
   membershipWashUsed?: boolean;
   settlementKind?: "membership_covered";
   invoiceId?: string;
+  /** Consolidated unissued obligations, never a legacy job invoice ID. */
+  visitInvoiceId?: string;
+  /** Explicit staff-created physical visit grouping; never inferred by car/date. */
+  visitId?: string;
   id: string;
   tenantId: string;
   studioId: string;
@@ -38,6 +42,8 @@ export interface ServiceJob {
   serviceId: string;
   /** Set when the visit has more than one service: main service first, then the extras. Prices are paise snapshots. */
   lines?: Array<{ serviceId: string; name: string; price: number; durationMinutes: number }>;
+  /** Explicit unfinished-work pause for one physical shared-visit move. */
+  visitBayPause?:{at:string;by:string;fromBayId:string}|null;
   bayReleasedAt?: string;
   bayReleasedBy?: string;
   bayId: string; // empty while on standby
@@ -71,6 +77,8 @@ export interface ServiceJob {
   /** Actual receipt register totals. Excess is a separate manual office-return due,
    * never service revenue, store credit or a provider refund. Amounts in paise. */
   offlineSettlement?: { appliedPaise: number; officeReturnDuePaise: number; receiptCount: number };
+  /** Cash fact held separately from provider closure/allocation. Presence blocks new collection. */
+  cashReconciliationId?: string;
   paymentStatus: "unpaid" | "partial" | "paid" | "refunded";
   isWalkIn: boolean;
   createdAt: string;

@@ -17,3 +17,6 @@ describe("jobTimeline", () => {
     expect(Object.keys(t[0]!)).not.toContain("notes");
   });
 });
+
+it("delivered replaces the terminal pickup label and uses the actual handover time, without a fifth step",()=>{const steps=jobTimeline("DELIVERED",[h("READY_FOR_DELIVERY","10:00"),h("DELIVERED","11:30")]);expect(steps).toHaveLength(4);expect(steps[3]).toEqual({label:"Delivered",at:"2026-10-16T11:30:00Z",state:"done"});expect(steps.some(s=>s.label==="Ready for pickup")).toBe(false)});
+it("missing delivery history never borrows the earlier ready time as a handover",()=>{expect(jobTimeline("DELIVERED",[h("READY_FOR_DELIVERY","10:00")])[3]).toEqual({label:"Delivered",at:null,state:"done"})});

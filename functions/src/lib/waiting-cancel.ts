@@ -27,6 +27,7 @@ export async function requestWaitingCancel(db: Firestore, b: Booking, p: Payment
     const j = (js?.data()??linked?.docs[0]?.data()) as ServiceJob | undefined;
     const joblessAdvance=!!fresh&&!!pay&&fresh.advancePaymentId===pay.id&&pay.targetType==="booking"&&pay.jobId===null;
     if (!fresh || !pay || (!j&&!joblessAdvance) || fresh.tenantId !== user.claims.tenantId || fresh.customerId !== b.customerId || pay.tenantId !== fresh.tenantId || pay.customerId !== fresh.customerId || pay.bookingId !== fresh.id || (j&&(j.bookingId !== fresh.id || j.tenantId !== fresh.tenantId || j.customerId !== fresh.customerId)) || pay.studioId !== fresh.studioId || (j&&j.studioId !== fresh.studioId)) throw new HttpsError("permission-denied", "Cancellation identity mismatch.");
+    if (fresh.visitId || j?.visitId) throw new HttpsError("failed-precondition", "Review this shared visit before cancelling through the office payment flow.");
     if (!["PENDING", "CONFIRMED"].includes(fresh.status) || (j&&!["PENDING_VEHICLE", "STANDBY", "VEHICLE_RECEIVED"].includes(j.status))) throw new HttpsError("failed-precondition", "Booking can no longer wait for cancellation.");
     if (old.exists) {
       const prior = old.data() as CancelIntent;
@@ -78,6 +79,17 @@ export async function resolveWaitingCancel(tx: Transaction, db: Firestore, p: Pa
   }
   if (paid && !["pending", "processing", "completed"].includes(p.status)) return "amount_mismatch";
   if (!["PENDING", "CONFIRMED"].includes(b.status) || (j&&!["PENDING_VEHICLE", "STANDBY", "VEHICLE_RECEIVED"].includes(j.status))) return "amount_mismatch";
+  // A retained intent predating shared membership is not authority to cancel
+  // the shared car or reserve a refund. Record verified capture, retain the
+  // original work/slots and request an explicit current review.
+  if (b.visitId || j?.visitId) {
+    tx.update(db.collection("payments").doc(p.id), { status: "completed", razorpayPaymentId: ev.providerPaymentId, providerEventId: ev.providerEventId, completedAt: p.completedAt ?? now, updatedAt: now });
+    const next = { ...i, state: "needs_review" as const };
+    tx.update(iRef, { state: next.state, verifiedCapturePaymentId: p.id, verifiedCaptureAt: now });
+    tx.update(bRef, { cancelIntent: publicIntent(next), updatedAt: now });
+    tx.set(db.collection("staffAlerts").doc(`waiting_cancel_${b.id}`), alert(i, "shared_visit_cancel_capture_review", now));
+    return "completed";
+  }
   if(b.combinedPayment){
     let cp;try{cp=checkedCombinedPayment(b.combinedPayment,b.totalAmount);}catch{return 'amount_mismatch';}
     const advance=cp.choice==='advance20'&&b.advancePaymentId===p.id;

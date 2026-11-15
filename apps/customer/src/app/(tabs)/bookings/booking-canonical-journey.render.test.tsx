@@ -1,4 +1,4 @@
-vi.mock('react-native',async(load)=>({...await load<any>(),TextInput:(p:any)=>React.createElement('input',p)}));
+vi.mock('react-native',async(load)=>({...await load<any>(),AppState:{currentState:'active',addEventListener:()=>({remove:()=>{}})},TextInput:(p:any)=>React.createElement('input',p)}));
 vi.mock("@react-native-async-storage/async-storage", () => ({
   default: {
     getItem: async () => null,
@@ -367,7 +367,7 @@ it.each(lifecycleCases)("actual detail separates booking=%s payment=%s physical 
  await act(async()=>h.bookingCb({...lifecycleBooking,status:bookingStatus,paymentStatus,holdExpiresAt:new Date(Date.now()+600000).toISOString()}));
  await act(async()=>h.jobCb({...job,id:"matrix-job",bookingId:"matrix-b",studioId:"s",status:jobStatus,paymentStatus}));
  const closed=["CANCELLED","EXPIRED","COMPLETED"].includes(bookingStatus);
- const expected:Record<string,string>={PENDING_VEHICLE:"Waiting for your car",STANDBY:"Arrived - standby",VEHICLE_RECEIVED:"Car received",IN_PROGRESS:"Work in progress",QUALITY_CHECK:"Final checks",READY_FOR_DELIVERY:"Ready for pickup",DELIVERED:"Delivered"};
+ const expected:Record<string,string>={PENDING_VEHICLE:"Waiting for your car",STANDBY:"Arrived - standby",VEHICLE_RECEIVED:"Car received",IN_PROGRESS:"Work in progress",QUALITY_CHECK:"Final checks",READY_FOR_DELIVERY:"Ready status recorded",DELIVERED:"Delivered"};
  if(!closed)expect(text(r)).toContain(bookingStatus==="PENDING"&&jobStatus==="PENDING_VEHICLE"?"Car not checked in":expected[jobStatus]);
  if(jobStatus==="PENDING_VEHICLE") {expect(text(r)).not.toContain('"Car received"'); expect(text(r)).not.toContain('"Arrived - standby"');}
  if(closed)expect(text(r)).not.toContain('"Studio status"');
@@ -393,3 +393,5 @@ it('captures actual detail review states without integration effects',async()=>{
  const go=r.root.findAllByType(Button).find((x:any)=>x.props.label==='Continue online payment');await act(async()=>go.props.onPress());save(r,'returned');
  await act(async()=>h.bookingCb({...b,status:'EXPIRED'}));expect(text(r)).not.toContain('Expected ready');expect(text(r)).not.toContain('Payment was not completed');expect(text(r)).toContain('before booking or paying again');save(r,'expired');await act(async()=>h.bookingCb({...b,status:'CONFIRMED',paymentStatus:'partial'}));expect((text(r).match(/Expected ready/g)||[]).length).toBe(1);expect(text(r)).toContain('Bring it in at your booked time.');save(r,'confirmed');await act(async()=>r.unmount());
 });
+
+it('grouped direct reservation directs to studio without promising a single-service move',async()=>{__params.current={id:'group-reservation'};let r:any;await act(async()=>{r=create(<Detail/>)});const future=new Date(Date.now()+72*3600000).toISOString();await act(async()=>h.bookingCb({...job,id:'group-reservation',visitId:'v',status:'CONFIRMED',serviceId:'svc',rescheduleCount:0,scheduledAt:future,scheduledDate:future.slice(0,10),scheduledTime:'10:00',estimatedEndDate:future.slice(0,10),estimatedEndTime:'11:00',durationMinutes:60,payMode:'studio',notes:null,priceBreakdown:{total:250000,basePrice:250000,tax:0,addOns:[]}}));expect(r.root.findAllByType(Button).map((x:any)=>x.props.label)).toContain('Reschedule visit with studio');expect(r.root.findAllByType(Button).map((x:any)=>x.props.label)).not.toContain('Reschedule');await act(async()=>r.unmount())});

@@ -69,6 +69,8 @@ export function JobPaymentPanel({
 
   // Gate ON + covered + unsettled: the MembershipSettlement panel on this page is the
   // single tile for this state (status + one settle action); this panel stays out of the way.
+  if(job.visitId)return null;
+  if(job.cashReconciliationId && job.paymentStatus!=="paid")return <section className="ax-panel"><span className="ax-label">Payment</span><div role="status" className="ax-cash-warning">Cash receipt under review</div><p className="ax-note">Do not collect or share the online link.</p>{onRefreshPayment?<button type="button" className="ax-button" onClick={onRefreshPayment}>Refresh recorded payment status</button>:null}</section>;
   if(job.offlineSettlement && job.paymentStatus!=="paid")return <section className="ax-panel"><span className="ax-label">Offline receipt balance</span><p className="ax-note">Actual receipts already exist. Use the receipt register to record only new money actually received. Do not collect or record the full invoice total again.</p><div className="kv"><span>Balance due</span><span>{formatPaise(job.status==="CANCELLED"?0:Math.max(0,job.totalAmount-(job.combinedSettlement?.advanceCapturedPaise??0)-job.offlineSettlement.appliedPaise))}</span></div></section>;
   if (coveredSettlePanelVisible(job, booking)) return null;
 

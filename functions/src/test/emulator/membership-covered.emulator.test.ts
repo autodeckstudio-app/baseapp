@@ -4,7 +4,7 @@ import { settleMembershipCoveredJob } from "../../functions/job/settleMembership
 import { voidInvoice } from "../../functions/invoice/voidInvoice.js";
 import { recordManualPayment } from "../../functions/payment/recordManualPayment.js";
 import { initiatePayment } from "../../functions/payment/initiatePayment.js";
-import { advanceJobStatus } from "../../functions/job/advanceJobStatus.js";
+import {stageFixture as advanceJobStatus} from './stage-fixture.js';
 import { processProviderEvent } from "../../lib/razorpay-webhook.js";
 const db = getFirestore();
 let n = 0;

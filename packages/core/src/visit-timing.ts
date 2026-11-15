@@ -2,7 +2,7 @@ import type { JobStatus } from "./types/job.js";
 // One shared answer to "where is this visit against its planned time?", so Customer, Admin and Studio agree.
 // Pure and display only: it never closes, cancels, moves or messages anything. Existing missed-booking handling
 // (close-of-day auto-cancel) is unchanged; until it runs, a car that has not arrived keeps showing, never disappears.
-// Uses only scheduledAt, estimatedEndAt and status. No promise beyond the planned end.
+// Uses planned dates for timing and recorded status history for collection age. No invented deadline.
 
 export type VisitPhase =
   | "upcoming" // booked, car not due yet
@@ -10,7 +10,7 @@ export type VisitPhase =
   | "not_arrived" // booked, planned end passed, car never arrived (still open)
   | "running" // car arrived, within planned time
   | "overrun" // car arrived, past planned end
-  | "ready" // work done, waiting for pickup
+  | "ready" // ready status recorded; handover still open, work truth checked separately
   | "standby" // arrived, waiting for a bay: no reserved window to time against
   | "unknown" // still open but the stored times are unreadable: never shown as finished
   | "closed"; // delivered or cancelled: nothing to time
@@ -22,7 +22,7 @@ export interface VisitTiming {
   /** Short plain label, e.g. "In 2h 10m", "Due now", "Over planned end by 40 min". Empty when closed. */
   label: string;
   tone: VisitTone;
-  /** True when staff should look: due, not arrived, or overrun. */
+  /** True when staff should look: due, not arrived, overrun, or collection pending. */
   needsAttention: boolean;
   /** Within `soonMinutes` before the slot. Emphasis only. */
   soon: boolean;
@@ -50,8 +50,16 @@ export function formatSpan(minutes: number): string {
   return r > 0 ? `${h}h ${r}m` : `${h}h`;
 }
 
+/** A recorded status timestamp, never the planned end or an invented collection deadline. */
+export function recordedReadyAt(history: readonly {status:string; changedAt:string}[] | undefined, now=Date.now()): string | null {
+  const relevant = (history ?? []).filter(h => ['PENDING_VEHICLE','STANDBY','READY_FOR_DELIVERY','IN_PROGRESS','QUALITY_CHECK','VEHICLE_RECEIVED','DELIVERED','CANCELLED'].includes(h.status));
+  if (relevant.some(h => !Number.isFinite(Date.parse(h.changedAt)) || Date.parse(h.changedAt) > now)) return null;
+  const latest = [...relevant].sort((a,b) => Date.parse(a.changedAt)-Date.parse(b.changedAt)).at(-1);
+  return latest?.status === 'READY_FOR_DELIVERY' ? latest.changedAt : null;
+}
+
 export function visitTiming(
-  v: { status: JobStatus; scheduledAt: string; estimatedEndAt: string },
+  v: { status: JobStatus; scheduledAt: string; estimatedEndAt: string; statusHistory?:readonly {status:string;changedAt:string}[] },
   now: number = Date.now(),
   opts: VisitTimingOptions = {},
 ): VisitTiming {
@@ -60,7 +68,10 @@ export function visitTiming(
   if (v.status === "DELIVERED" || v.status === "CANCELLED") return { ...base, phase: "closed", label: "", tone: "neutral" };
   // Arrived and waiting for a bay: no window is reserved, so no countdown or lateness applies.
   if (v.status === "STANDBY") return { ...base, phase: "standby", label: "Arrived, waiting for a bay", tone: "accent" };
-  if (v.status === "READY_FOR_DELIVERY") return { ...base, phase: "ready", label: "Ready, waiting for pickup", tone: "success" };
+  if (v.status === "READY_FOR_DELIVERY") {
+    const at=recordedReadyAt(v.statusHistory,now),minutes=at?Math.floor((now-Date.parse(at))/60000):null;
+    return {...base,phase:"ready",label:minutes===null?"Collection pending · ready date needs review":`Collection pending · ready recorded ${formatSpan(minutes)} ago`,tone:"warning",needsAttention:true,minutes:minutes??0};
+  }
   const start = Date.parse(v.scheduledAt);
   const end = Date.parse(v.estimatedEndAt);
   if (!Number.isFinite(start) || !Number.isFinite(end)) return { ...base, phase: "unknown", label: "", tone: "neutral" };
@@ -107,7 +118,7 @@ export function customerTimingLine(t: Pick<VisitTiming, "phase" | "minutes" | "l
     case "not_arrived": return "Your slot has ended and your car has not been checked in";
     case "running": return `Planned end in ${formatSpan(t.minutes)}`;
     case "overrun": return `Taking longer than planned: the planned end passed ${formatSpan(t.minutes)} ago`;
-    case "ready": return "Ready for pickup";
+    case "ready": return "Collection pending · Confirm with the studio";
     case "standby": return "Your car has arrived and is waiting for a bay";
     case "unknown":
     case "closed": return "";

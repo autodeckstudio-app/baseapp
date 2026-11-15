@@ -22,7 +22,7 @@ export function saveHidden(ids: Set<string>): void {
 
 type N = { id: string; entityType?: string | null; readAt: string | null; createdAt: string };
 
-export const isProtected = (n: N): boolean => n.entityType === "Approval";
+export const isProtected = (n: N): boolean => ["Approval","VisitIntake"].includes(n.entityType??"");
 
 export function visibleNotifications<T extends N>(all: T[], hidden: Set<string>, now = Date.now()): T[] {
   const cutoff = now - TIDY_AFTER_DAYS * 86_400_000;

@@ -39,6 +39,8 @@ export interface Booking {
   invoiceId?: string;
   /** Public projection only. Operational cancellation details are server-only. */
   cancelIntent?: { state: "waiting" | "needs_review" | "resolved"; requestedAt: string };
+  /** Explicit staff-created physical visit grouping; never inferred by car/date. */
+  visitId?: string;
   id: string;
   // Set only for price-on-request services. requested -> quoted (studio sets price) -> approved (customer).
   quoteStatus?: QuoteStatus;
@@ -96,7 +98,7 @@ export interface Booking {
   //   value alone does not say which, so UI copy must stay mechanism-neutral.
   // processed = the provider reported this exact refund as processed (a provider status, NOT proof the money reached the bank).
   // failed = the provider refused it (legacy writer; no current backend writer).
-  refundStatus?: "reserved" | "requested" | "initiated" | "processed" | "failed";
+  refundStatus?: "none" | "awaiting_approval" | "approved" | "partially_returned" | "reserved" | "requested" | "initiated" | "processed" | "failed";
   refundProcessedAt?: string | null;
   refundId?: string | null;
   notes: string | null;

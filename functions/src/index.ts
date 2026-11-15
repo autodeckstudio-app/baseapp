@@ -246,3 +246,34 @@ export {getCombinedReturnReview,approveCombinedReturn,settleCombinedManualReturn
 export { getCashReconciliationReview, recordCashAlreadyReceived, reconcileCashAlreadyReceived } from './functions/payment/cashReconciliation.js';
 export { getVisitFeedback } from './functions/booking/getVisitFeedback.js';
 export {getPublicCatalogue}from'./functions/service/getPublicCatalogue.js';
+export {joinVisit} from './functions/visit/joinVisit.js';
+export {getMyVisit,getStaffVisit} from './functions/visit/getVisit.js';
+
+export {startVisitHandover} from './functions/visit/startVisitHandover.js';
+
+export {completeVisitHandover} from './functions/visit/completeVisitHandover.js';
+
+export {getVisitJoinOptions} from './functions/visit/getVisitJoinOptions.js';
+
+export {manageWalkinVisitIntake,getStaffWalkinVisitIntakes,prepareWalkinVisitIntake,offerWalkinVisitIntake,respondToWalkinVisitIntake,getMyWalkinVisitIntakes} from './functions/visit/walkinVisitIntake.js';
+
+export {releaseVisitBay,getVisitBayOptions,moveVisitBay} from './functions/visit/visitBay.js';
+export {getVisitScheduleReview,rescheduleVisit} from './functions/visit/visitSchedule.js';
+
+export {getMyVisitBill,getStaffVisitBill} from "./functions/visit/getVisitBill.js";
+export {prepareVisitBill} from './functions/visit/prepareVisitBill.js';
+export {cancelVisitService} from './functions/visit/cancelVisitService.js';
+
+export {recordVisitReceipt} from "./functions/visit/recordVisitReceipt.js";
+
+export {getVisitInvoice,listStaffVisitInvoices,getVisitInvoicePdfUrl} from "./functions/visit/getVisitInvoice.js";
+
+export {onVisitInvoiceCreatedPdf} from "./functions/invoice/onVisitInvoiceCreatedPdf.js";
+
+// Default-off connected-visit operations. Runtime gate is checked before reads/effects.
+export{getRetainedTransportList}from'./functions/visit/getRetainedTransportList.js';
+export{reviewRetainedTransport,executeRetainedTransport}from'./functions/visit/retainedTransportOperations.js';
+export{reviewVisitService,executeVisitService,reconcileVisitService}from'./functions/visit/visitServiceOperations.js';
+
+export{recordVisitCancellationCharge}from'./functions/visit/recordVisitCancellationCharge.js';
+export {getVisitSeparateInvoicePdf} from './functions/visit/getVisitSeparateInvoicePdf.js';

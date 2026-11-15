@@ -18,8 +18,10 @@ describe("pending online payment copy", () => {
   it("labels payment separately from verified physical visit state", () => {
     expect(detail).toContain("customerPaymentLabel(payment");
     expect(readFileSync("src/lib/existing-job-payment.ts", "utf8")).toContain("Online payment pending");
-    expect(detail).toContain('job && !bookingClosed && jobStage(job.status) && job.status !== "DELIVERED" && job.status !== "PENDING_VEHICLE"');
-    expect(detail).toContain('const showLiveVisit=!bookingClosed;');
+    expect(detail).not.toContain('label="Live"');
+    expect(detail).toContain('job && showLiveVisit && jobStage(job.status)');
+    expect(detail).toContain('const showLiveVisit=!bookingClosed||!!job?.visitId&&![');
+    expect(detail).toContain('["CANCELLED","EXPIRED"].includes(booking.status)');
     expect(detail).toContain('title="Slot held until"');
     expect(detail).toContain('detail="After verified payment."');
     expect(detail).not.toContain("until the payment goes through");

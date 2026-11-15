@@ -1,4 +1,10 @@
 export type AuditAction =
+  | "visit.bayReleased" | "visit.bayMoved"
+  | "visit.intakeCancelled" | "visit.intakePrepared" | "visit.intakeOffered" | "visit.intakeAccepted" | "visit.intakeDeclined"
+  | "visit.cancellationChargeReceiptRecorded" | "visit.receiptRecorded" | "visit.billPrepared" | "visit.serviceCancelled" | "visit.returnApproved"
+  | "visit.joined"
+  | "visit.handoverStarted"
+  | "visit.handoverUpdated"
   | "work.recorded" | "work.qcRecorded" | "work.sealed"
   | "service.catalogue_draft_saved"|"service.catalogue_draft_discarded" | "service.catalogue_draft_reviewed"
   | "payment.external_return_recorded"

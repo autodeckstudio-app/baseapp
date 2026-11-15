@@ -1,3 +1,5 @@
+import {useSharedVisit} from '../../hooks/useSharedVisit';
+import {visitProgress} from '@autodeck/core';
 import{useCataloguePublication}from'../../hooks/useCataloguePublication';
 import {useForegroundRefresh,useContentClock} from '../../hooks/useForegroundRefresh';
 import {withReadDeadline} from '../../lib/foreground-refresh';
@@ -104,6 +106,8 @@ export default function HomeScreen() {
   const owner = ready ? `${auth.claims.tenantId}:${auth.user.uid}:${ownerKey?.key ?? ""}` : null;
   const myCode = ready ? referralCodeFor(auth.user.uid) : null;
   const home = useCustomerHome(ownerKey ? ownerKey.key : null, ready ? auth.claims.tenantId : null, ready ? auth.user.displayName : null);
+  const sharedVisit=useSharedVisit(home.model?.liveJob);
+  const sharedProgress=sharedVisit?.data?.status==='grouped'?visitProgress(sharedVisit.data):null;
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState<StoryGroup | null>(null);
   const [seen, setSeen] = useState<Set<string>>(new Set());
@@ -230,7 +234,7 @@ export default function HomeScreen() {
     : m.dueInvoice
       ? { kicker: "Payment due", title: "View your bill", detail: "Review the issued invoice", onPress: () => router.push({ ...invoiceHref(m.dueInvoice!.id), params: { invoiceId: m.dueInvoice!.id, returnTo: "home" } }) }
     : m.liveJob
-      ? { kicker: "Live now", title: JOB_STAGE[m.liveJob.status] ?? "In the studio", detail: sinceLabel(m.liveJob.scheduledAt), ready: m.liveJob.estimatedEndAt && new Date(m.liveJob.estimatedEndAt).getTime() > Date.now() ? new Date(m.liveJob.estimatedEndAt).toLocaleString("en-IN", { weekday: "short", hour: "numeric", minute: "2-digit" }) : null, onPress: () => router.push(liveId ? { pathname: "/(tabs)/bookings/[id]", params: { id: liveId, returnTo: "home" } } : "/(tabs)/bookings") }
+      ? { kicker: "Live now", title: m.liveJob.visitId?(sharedProgress?.headline??(sharedVisit?.error?"Visit unavailable":"Checking visit…")):JOB_STAGE[m.liveJob.status] ?? "In the studio", detail: sharedProgress?.line??sinceLabel(m.liveJob.scheduledAt), ready: !m.liveJob.visitId&&m.liveJob.estimatedEndAt && new Date(m.liveJob.estimatedEndAt).getTime() > Date.now() ? new Date(m.liveJob.estimatedEndAt).toLocaleString("en-IN", { weekday: "short", hour: "numeric", minute: "2-digit" }) : null, onPress: () => router.push(liveId ? { pathname: "/(tabs)/bookings/[id]", params: { id: liveId, returnTo: "home" } } : "/(tabs)/bookings") }
       : m.upcomingBooking
         ? { kicker: "Next visit", title: `${formatDateShort(m.upcomingBooking.scheduledDate)} \u00b7 ${m.upcomingBooking.scheduledTime}`, detail: m.upcomingBooking.status === "PENDING" ? "Waiting for the studio to confirm" : "Confirmed", onPress: () => router.push(nextId ? { pathname: "/(tabs)/bookings/[id]", params: { id: nextId, returnTo: "home" } } : "/(tabs)/bookings") }
         : { kicker: copy.kicker, title: m.primaryAction.label, detail: copy.line, onPress: act, idle: true };
@@ -243,7 +247,7 @@ export default function HomeScreen() {
       <HomeView
         greeting={greetingFor(new Date(), m.customer.firstName)}
         initial={(m.customer.firstName ?? auth.user.displayName ?? "A").trim().charAt(0).toUpperCase() || "A"}
-        progress={m.liveJob ? LIVE_PROGRESS[m.liveJob.status] ?? 10 : null}
+        progress={m.liveJob ? m.liveJob.visitId?sharedProgress?LIVE_PROGRESS[sharedProgress.status]??10:null:LIVE_PROGRESS[m.liveJob.status]??10 : null}
         membership={m.membership && m.membership.status === "active" ? { title: `${Math.max(0, m.membership.washesTotal - m.membership.washesUsed)} washes`, detail: `left${m.membership.endDate ? `, until ${formatDateShort(m.membership.endDate)}` : ""}` } : null}
         studio={{ address: STUDIO_INFO.address.replace(", Gujarat", ""), hours: liveInfo?.operatingHours?.length?formatHours(liveInfo.operatingHours):"Opening hours unavailable", openText: openStatus(liveInfo?.operatingHours, liveInfo?.holidays,new Date(now),liveInfo?.timezone)?.text ?? null }}
         campaign={offerToCampaign(offers, (h) => router.push(h as never),now)}

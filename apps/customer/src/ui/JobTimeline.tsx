@@ -4,13 +4,14 @@ import { jobTimeline } from "./job-stage";
 import { metrics } from "../lib/metrics";
 import { raised } from "../lib/raised";
 
-const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+const clock = (iso: string) => new Date(iso).toLocaleString("en-IN", { timeZone:"Asia/Kolkata", day:"numeric",month:"short",hour: "numeric", minute: "2-digit" });
 
 /** Four steps, each with the time it began. No photos, no staff notes. */
-export function JobTimeline({ status, history }: { status: string; history: Array<{ status: string; changedAt: string }> }) {
+export function JobTimeline({ status, history,finalLabel }: { status: string; history: Array<{ status: string; changedAt: string }>;finalLabel?:string|undefined }) {
   const { name, colors } = useExperienceTheme();
   const r = raised(name);
   const steps = jobTimeline(status, history);
+  if(finalLabel)steps[3]={...steps[3]!,label:finalLabel,at:null};
   return (
     <View style={{ borderRadius: metrics.cardRadius, padding: metrics.cardPad, gap: 12, ...r.card }}>
       <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>Progress</Text>

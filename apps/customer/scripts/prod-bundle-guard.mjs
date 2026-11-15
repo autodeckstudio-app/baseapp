@@ -15,5 +15,7 @@ for (const f of walk(dist).filter((f) => /\.(js|html|map)$/.test(f) && !/\.map$/
 // Preview routes must not be in the exported route list.
 const routes = walk(dist).filter((f) => /preview[-.a-z]*\.html$/.test(f));
 for (const r of routes) { console.error(`FAIL preview route exported: ${r.replace(dist, "")}`); bad++; }
+// /assets is immutable: Expo must give every asset a content hash (density suffixes are valid).
+for(const f of walk(join(dist,'assets'))){if(!/\.[0-9a-f]{32}(?:@[0-9]+x)?\.[^/]+$/.test(f)){console.error(`FAIL unversioned immutable asset ${f.replace(dist,"")}`);bad++;}}
 if (bad) { console.error(`${bad} problem(s)`); process.exit(1); }
 console.log("prod-bundle-guard ok");

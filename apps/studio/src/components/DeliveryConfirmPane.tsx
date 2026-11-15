@@ -1,3 +1,6 @@
+import type { HandoverReview } from "../lib/visit-service";
+import {jobStageCommand} from "@autodeck/core";
+import type {VisitRead} from '@autodeck/core';
 import {ReviewNotice} from "./ReviewNotice";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
@@ -8,7 +11,7 @@ import{getStaffJobWorkCoverage}from"../lib/work-coverage-service";
 import type{JobWorkCoverage}from"@autodeck/core";
 import { DeliveryDeclarationPanel } from "./DeliveryDeclarationPanel";
 
-type FrozenContext = { jobId: string; vehicleId: string; customerId:string; tenantId: string; studioId: string; auth: StaffAuth | null };
+type FrozenContext = { visitId:string|null;updatedAt:string|null;jobId: string; vehicleId: string; customerId:string; tenantId: string; studioId: string; auth: StaffAuth | null };
 type InvalidReason = "verifying" | "job" | "stage" | "account" | null;
 
 const sameAuth = (a: StaffAuth | null, b: StaffAuth | null) =>
@@ -31,7 +34,7 @@ const affirmable = (a: StaffAuth | null, job: { tenantId: string; studioId: stri
  * synchronously at render time, so a prop or auth change invalidates the
  * open declaration in the SAME render - no effect needs to flush first. */
 const contextSig = (job: ServiceJob, auth: StaffAuth | null): string =>
-  [job.id, job.vehicleId, job.customerId, job.tenantId, job.studioId, job.status,
+  [job.id,job.visitId??"",job.updatedAt??"", job.vehicleId, job.customerId, job.tenantId, job.studioId, job.status,
    auth ? `${auth.uid}:${auth.role ?? "-"}:${auth.tenantId ?? "-"}:${auth.studioId ?? "-"}` : "signed-out"].join("|");
 
 /** The READY_FOR_DELIVERY -> DELIVERED confirm pane: the staff protection-work
@@ -65,6 +68,9 @@ export function DeliveryConfirmPane({ job, onDelivered, onCancel }: { job: Servi
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [integrityError, setIntegrityError] = useState(false);
+  const [visit,setVisit]=useState<VisitRead|null>(null);
+  const [visitReviewed,setVisitReviewed]=useState(false);
+  const handoverAttempt=useRef<HandoverReview|null>(null);
   const [work,setWork]=useState<JobWorkCoverage|null>(null);
   const [payload, setPayload] = useState<ProtectionWorkEvent[] | null>(null);
   const [pending, setPending] = useState(false);
@@ -101,7 +107,7 @@ export function DeliveryConfirmPane({ job, onDelivered, onCancel }: { job: Servi
   // delivery-capable role, tenant/studio scope matching THIS job. Signed-out
   // or wrong-scope operators never become a frozen valid context.
   if (frozen.current === null && authReady && affirmable(auth ?? null, job)) {
-    frozen.current = { jobId: job.id, vehicleId: job.vehicleId, customerId:job.customerId, tenantId: job.tenantId, studioId: job.studioId, auth: auth ?? null };
+    frozen.current = { visitId:job.visitId??null,updatedAt:job.updatedAt??null,jobId: job.id, vehicleId: job.vehicleId, customerId:job.customerId, tenantId: job.tenantId, studioId: job.studioId, auth: auth ?? null };
   }
 
   const f = frozen.current;
@@ -110,7 +116,7 @@ export function DeliveryConfirmPane({ job, onDelivered, onCancel }: { job: Servi
     : !affirmable(auth ?? null, job) ? "account"
     : reaffirmNeeded.current ? "account"
     : !f ? null
-    : (job.id !== f.jobId || job.vehicleId !== f.vehicleId || job.customerId!==f.customerId || job.tenantId !== f.tenantId || job.studioId !== f.studioId) ? "job"
+    : (job.id !== f.jobId || (job.visitId??null)!==f.visitId || (job.updatedAt??null)!==f.updatedAt || job.vehicleId !== f.vehicleId || job.customerId!==f.customerId || job.tenantId !== f.tenantId || job.studioId !== f.studioId) ? "job"
     : !sameAuth(auth ?? null, f.auth) ? "account"
     : job.status !== "READY_FOR_DELIVERY" ? "stage"
     : null;
@@ -120,14 +126,14 @@ export function DeliveryConfirmPane({ job, onDelivered, onCancel }: { job: Servi
     const gen = ++generation.current;
     const startSig = liveSigRef.current;
     const startGen = invalidGen.current; // synchronous invalidation must also void this load
-    setLoading(true); setLoadError(false); setIntegrityError(false);setWork(null);
+    setLoading(true); setLoadError(false); setIntegrityError(false);setWork(null);setVisit(null);setVisitReviewed(false);handoverAttempt.current=null;
     const superseded = () => gen !== generation.current || liveSigRef.current !== startSig || invalidGen.current !== startGen;
     try {
-      const [records,recorded] = await Promise.all([getCurrentProtections(ctx.vehicleId, ctx.tenantId),getStaffJobWorkCoverage(ctx.jobId)]);
+      const [records,recorded,shared] = await Promise.all([getCurrentProtections(ctx.vehicleId, ctx.tenantId),getStaffJobWorkCoverage(ctx.jobId),ctx.visitId?import('../lib/visit-service').then(m=>m.getVisit(ctx.jobId)):Promise.resolve(null)]);
       if (superseded()) return; // superseded, invalidated, or unmounted
       // Integrity: every record must belong to the car this pane is about.
       if (records.some((r) => r.vehicleId !== ctx.vehicleId)) { setIntegrityError(true); setProtections([]); return; }
-      setProtections(records);setWork(recorded);
+      setProtections(records);setWork(recorded);setVisit(shared);
     } catch {
       if (superseded()) return;
       setLoadError(true); setProtections([]);
@@ -164,7 +170,7 @@ export function DeliveryConfirmPane({ job, onDelivered, onCancel }: { job: Servi
       // initial-load lifecycle, and reload() re-arms it explicitly.
       generation.current += 1;
       if (invalid !== "verifying") setLoading(false);
-      setLoadError(false); setIntegrityError(false); setProtections([]); setPayload(null);setWork(null);
+      setLoadError(false); setIntegrityError(false); setProtections([]); setPayload(null);setWork(null);setVisit(null);setVisitReviewed(false);handoverAttempt.current=null;
       setPending(false); setSubmitError(null);
     }
   }, [invalid]);
@@ -173,7 +179,7 @@ export function DeliveryConfirmPane({ job, onDelivered, onCancel }: { job: Servi
     if (inFlight.current || !authReady) return; // never re-aim while a commit is in flight or the account is unverified
     if (!affirmable(auth ?? null, job)) return; // signed-out / wrong-scope operators cannot re-aim a declaration
     reaffirmNeeded.current = false; // explicit reaffirm under the current token epoch
-    frozen.current = { jobId: job.id, vehicleId: job.vehicleId, customerId:job.customerId, tenantId: job.tenantId, studioId: job.studioId, auth: auth ?? null };
+    frozen.current = { visitId:job.visitId??null,updatedAt:job.updatedAt??null,jobId: job.id, vehicleId: job.vehicleId, customerId:job.customerId, tenantId: job.tenantId, studioId: job.studioId, auth: auth ?? null };
     setPayload(null);
     setSubmitError(null);
     setPanelReset((k) => k + 1); // fresh panel: selections from before the reload do not survive
@@ -181,7 +187,8 @@ export function DeliveryConfirmPane({ job, onDelivered, onCancel }: { job: Servi
   }
 
   const recordedRevision=work?.jobId===f?.jobId&&work?.status==='recorded'&&work.workLock==='locked'&&work.handoverReady===true&&Number.isInteger(work.revision)&&(work.revision??0)>0?work.revision:null;
-  const declarationReady=recordedRevision!==null||work?.status==='not_recorded'&&payload!==null;
+  const visitReady=!f?.visitId||visit?.status==='grouped'&&visit.visitId===f.visitId&&['ready','handover_incomplete'].includes(visit.state)&&visitReviewed;
+  const declarationReady=visitReady&&(recordedRevision!==null||!f?.visitId&&work?.status==='not_recorded'&&payload!==null);
   async function confirm() {
     if (inFlight.current) return; // same-tick double press: the second press is ignored
     if (!contextValid || loading || loadError || integrityError || !declarationReady) return;
@@ -200,7 +207,20 @@ export function DeliveryConfirmPane({ job, onDelivered, onCancel }: { job: Servi
     // invalidation effect owns the reset.
     const stillCurrent = () => mounted.current && liveSigRef.current === startSig && invalidGen.current === startGen;
     try {
-      await advanceJobStatus(ctx.jobId, undefined, undefined, frozenRecordedRevision!==null?undefined:frozenPayload??undefined, frozenRecordedRevision??undefined);
+      let visitHandoverId:string|undefined;
+      if(ctx.visitId){
+       if(visit?.status!=='grouped'||visit.visitId!==ctx.visitId||!visitReviewed)throw new Error('Review every visit service.');
+       const api=await import('../lib/visit-service');
+       handoverAttempt.current??={visitId:visit.visitId,expectedRevision:visit.revision,operationId:crypto.randomUUID(),confirmed:true,members:visit.members.map(m=>({jobId:m.jobId,expectedUpdatedAt:m.updatedAt!,recordedWork:m.recordedWork??null})),...(visit.handover?{review:{priorManifestId:visit.handover.manifestId,members:visit.members.map(m=>({jobId:m.jobId,expectedUpdatedAt:m.updatedAt!,recordedWork:m.recordedWork??null}))}}:{})};
+       const result=await api.startVisitHandover(handoverAttempt.current);
+       if(!stillCurrent()){inFlight.current=false;return;}
+       visitHandoverId=result.manifestId;
+       const completion=await api.completeVisitHandover(visitHandoverId);
+       if(!stillCurrent()){inFlight.current=false;return;}
+       if(completion.status!=='complete')throw new Error(completion.error??'Handover incomplete. Reload remaining services.');
+       onDelivered();return;
+      }
+      await advanceJobStatus(ctx.jobId, undefined, undefined, frozenRecordedRevision!==null?undefined:frozenPayload??undefined, frozenRecordedRevision??undefined,visitHandoverId,jobStageCommand({status:"READY_FOR_DELIVERY",updatedAt:ctx.updatedAt!}));
       if (!stillCurrent()) { inFlight.current = false; return; }
       onDelivered(); // the pane closes; the lock intentionally stays held
     } catch (err) {
@@ -243,8 +263,9 @@ export function DeliveryConfirmPane({ job, onDelivered, onCancel }: { job: Servi
           <Button label="Reload records" variant="ghost" fullWidth={false} disabled={pending} onPress={reload} />
         </View>
       )}
+      {visit?.status==='grouped'?<View style={{gap:spacing.sm}}>{visit.members.map(m=><Text key={m.jobId} style={{color:colors.textPrimary}}>{m.lines.map(l=>l.name).join(' + ')} · {m.serviceStatus} · {m.paymentStatus}</Text>)}<Button label={visitReviewed?'All services reviewed':'Review all visit services'} variant="secondary" disabled={pending} onPress={()=>setVisitReviewed(v=>!v)}/></View>:null}
       {submitError ? <Text accessibilityRole="alert" style={{ ...typography.caption, color: colors.error }}>{submitError}</Text> : null}
-      <Button label="Confirm mark delivered" variant="secondary" disabled={!contextValid || loading || loadError || integrityError || !declarationReady || pending} loading={pending} onPress={() => void confirm()} />
+      <Button label={f?.visitId?"Confirm visit handover":"Confirm mark delivered"} variant="secondary" disabled={!contextValid || loading || loadError || integrityError || !declarationReady || pending} loading={pending} onPress={() => void confirm()} />
       <Button label="Cancel" variant="ghost" disabled={pending} onPress={onCancel} />
     </View>
   );

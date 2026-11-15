@@ -24,7 +24,7 @@ import type { StudioConfig, Service, Vehicle, Booking, Notification } from "@aut
 process.env["USE_PAYMENT_MOCK"] = "true";
 
 import { createBooking } from "../../functions/booking/createBooking.js";
-import { advanceJobStatus } from "../../functions/job/advanceJobStatus.js";
+import {stageFixture as advanceJobStatus} from './stage-fixture.js';
 import { initiatePayment } from "../../functions/payment/initiatePayment.js";
 import { confirmPaymentMock } from "../../functions/payment/confirmPaymentMock.js";
 import { createMembershipPlan } from "../../functions/membership/createMembershipPlan.js";

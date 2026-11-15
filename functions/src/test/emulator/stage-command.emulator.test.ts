@@ -1,0 +1,25 @@
+import {it,expect,beforeAll,afterAll,beforeEach} from 'vitest';
+import {initializeTestEnvironment,type RulesTestEnvironment} from '@firebase/rules-unit-testing';
+import {getFirestore} from 'firebase-admin/firestore';
+import {readFileSync} from 'node:fs';import {resolve} from 'node:path';
+import {jobStageCommand} from '@autodeck/core';
+import {advanceJobStatus} from '../../functions/job/advanceJobStatus.js';
+import {TEST_PROJECT_ID} from '../emulator-setup';
+const db=getFirestore();let env:RulesTestEnvironment;
+const request=(data:any,uid='stage-operator',studioId='s')=>({data,auth:{uid,token:{role:'studio',tenantId:'t',studioId}}} as any);
+const job=async()=> (await db.collection('jobs').doc('j').get()).data()!;
+const command=async(rework=false)=>({jobId:'j',...jobStageCommand(await job() as any,rework),...(rework?{rework:true}:{})});
+beforeAll(async()=>{env=await initializeTestEnvironment({projectId:TEST_PROJECT_ID,firestore:{host:'127.0.0.1',port:Number(process.env.FIRESTORE_EMULATOR_TEST_PORT),rules:readFileSync(resolve(__dirname,'../../../../firestore.rules'),'utf8')}})});afterAll(async()=>env.cleanup());
+beforeEach(async()=>{await env.clearFirestore();await db.collection('jobs').doc('j').set({id:'j',tenantId:'t',studioId:'s',customerId:'c',vehicleId:'v',serviceId:'wash',status:'IN_PROGRESS',statusHistory:[],updatedAt:'2026-11-14T10:00:00Z',bookingId:null,paymentStatus:'unpaid',totalAmount:10000});});
+it('missing command binding fails closed, one stage only, lost acknowledgement retries original receipt without another stage/history entry',async()=>{await expect(advanceJobStatus.run(request({jobId:'j'}))).rejects.toMatchObject({code:'invalid-argument'});const p=await command();const first=await advanceJobStatus.run(request(p));expect(first).toEqual({jobId:'j',previousStatus:'IN_PROGRESS',newStatus:'QUALITY_CHECK'});expect(await advanceJobStatus.run(request(p))).toEqual(first);expect(await job()).toMatchObject({status:'QUALITY_CHECK',statusHistory:[{status:'QUALITY_CHECK'}]});expect((await db.collection('jobStageCommands').get()).size).toBe(1);});
+it('another operator acting from same snapshot cannot advance the new stage',async()=>{const p=await command();const results=await Promise.allSettled([advanceJobStatus.run(request(p,'one')),advanceJobStatus.run(request(p,'two'))]);expect(results.filter(r=>r.status==='fulfilled')).toHaveLength(1);expect((await job()).statusHistory).toHaveLength(1);expect((await job()).status).toBe('QUALITY_CHECK');});
+it('retry after rework returns old outcome without re-advancing progress, while a new snapshot can explicitly send to QC',async()=>{const old=await command();await advanceJobStatus.run(request(old));await advanceJobStatus.run(request(await command(true)));expect((await job()).status).toBe('IN_PROGRESS');await advanceJobStatus.run(request(old));expect((await job()).status).toBe('IN_PROGRESS');expect((await job()).statusHistory).toHaveLength(2);await advanceJobStatus.run(request(await command()));expect((await job()).statusHistory).toHaveLength(3);});
+it('changed payload, newer version at the same stage, scope drift and another actor never inherit a receipt',async()=>{const p=await command();await advanceJobStatus.run(request(p));await expect(advanceJobStatus.run(request({...p,notes:'different'}))).rejects.toMatchObject({code:'already-exists'});await expect(advanceJobStatus.run(request(p,'other'))).rejects.toMatchObject({code:'failed-precondition'});await expect(advanceJobStatus.run(request(p,'stage-operator','other'))).rejects.toMatchObject({code:'permission-denied'});await db.collection('jobs').doc('j').update({status:'IN_PROGRESS',updatedAt:'new-version'});await expect(advanceJobStatus.run(request({...p,operationId:'new-operation-old-snapshot'}))).rejects.toMatchObject({code:'failed-precondition'});expect((await job()).statusHistory).toHaveLength(1);});
+it('lost delivery acknowledgement returns its committed outcome after the job is terminal with no second seal or history',async()=>{
+ await db.collection('jobs').doc('j').update({status:'READY_FOR_DELIVERY',paymentStatus:'paid',totalAmount:0,isWalkIn:true,additionalWorkDelta:0,priceBreakdown:{total:0,addOns:[]}});
+ await db.collection('vehicles').doc('v').set({id:'v',tenantId:'t',ownerId:'c',registrationNumber:'SYNTHETIC',make:'Test',model:'Car',year:2026,color:'White',photoUrl:null});
+ await db.collection('invoices').doc('i').set({id:'i',jobId:'j',tenantId:'t',status:'paid',total:0});
+ const p={...await command(),protectionWork:[]};const first=await advanceJobStatus.run(request(p));const sealed=await job();
+ expect(first).toEqual({jobId:'j',previousStatus:'READY_FOR_DELIVERY',newStatus:'DELIVERED'});
+ expect(await advanceJobStatus.run(request(p))).toEqual(first);expect(await job()).toEqual(sealed);expect(sealed.statusHistory).toHaveLength(1);
+});

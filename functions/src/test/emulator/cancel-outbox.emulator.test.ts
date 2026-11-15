@@ -429,7 +429,7 @@ describe("bounded overflow behavior", () => {
       paymentStatus: "unpaid", statusHistory: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     });
     await expect(runCancel(adminUser(), { bookingId, reason: "x reason", feeAction: "waive" }, "admin"))
-      .rejects.toThrow(/more than one job/);
+      .rejects.toThrow('Booking jobs need review before cancellation.');
     expect(((await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>).status).toBe("CONFIRMED");
     void jobId;
   });

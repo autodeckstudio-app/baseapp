@@ -1,0 +1,2 @@
+import type{SeparatePdf}from'./separate-invoice-pdf';
+export async function saveSeparateInvoicePdf(pdf:SeparatePdf,isCurrent:()=>boolean){if(!isCurrent())return;const bytes=Uint8Array.from(atob(pdf.base64),c=>c.charCodeAt(0)),url=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));try{if(!isCurrent())return;const a=document.createElement('a');a.href=url;a.download=pdf.invoiceNumber.replace(/[^A-Za-z0-9_-]/g,'_')+'.pdf';document.body.appendChild(a);a.click();a.remove();}finally{setTimeout(()=>URL.revokeObjectURL(url),60000)}}

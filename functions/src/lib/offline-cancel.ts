@@ -1,3 +1,4 @@
+import {checkVisitCancellation} from './visit-cancellation.js';
 import {HttpsError} from 'firebase-functions/v2/https';
 import {getFirestore} from 'firebase-admin/firestore';
 import type {Booking,ServiceJob} from '@autodeck/core';
@@ -20,6 +21,7 @@ export async function cancelOfflineVisit(user:AuthorizedUser,data:{bookingId:str
   const doc=jobs.docs[0]!,job=doc.data()as ServiceJob,settlement=job.offlineSettlement;
   if(job.id!==doc.id||job.bookingId!==b.id||job.totalAmount!==b.totalAmount||job.tenantId!==b.tenantId||job.studioId!==b.studioId||job.customerId!==b.customerId||!settlement||!['PENDING_VEHICLE','VEHICLE_RECEIVED','STANDBY'].includes(job.status))throw new HttpsError('failed-precondition','Work started or receipt scope needs review.');
   if(!Number.isSafeInteger(settlement.appliedPaise)||settlement.appliedPaise<=0||settlement.appliedPaise>job.totalAmount||!Number.isSafeInteger(settlement.officeReturnDuePaise)||settlement.officeReturnDuePaise<0)throw new HttpsError('failed-precondition','Receipt balance needs review.');
+  await checkVisitCancellation(tx,db,job);
   const [payments,receipts]=await Promise.all([tx.get(db.collection('payments').where('jobId','==',job.id).limit(2)),tx.get(db.collection('offlineReceipts').where('jobId','==',job.id).limit(101))]);
   const full=settlement.appliedPaise===job.totalAmount;
   if(receipts.size>100||receipts.size!==settlement.receiptCount||(!full&&(!payments.empty||job.paymentStatus!=="partial")))throw new HttpsError('failed-precondition','Existing payment or receipt history needs office review.');

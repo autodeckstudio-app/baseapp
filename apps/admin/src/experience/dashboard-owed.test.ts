@@ -28,3 +28,4 @@ describe("dashboard owed", () => {
     expect(html).toContain("may be incomplete"); expect(html).not.toContain("All clear");
   });
 });
+it('recorded ready cars remain actionable even when no payment or stale-work warning exists',()=>{const html=renderToStaticMarkup(createElement(DashboardView,{...base,floor:{...base.floor,ready:4}}));expect(html).toContain('4 cars have collection pending');expect(html).not.toContain('All clear');expect(html).not.toContain('overdue');});

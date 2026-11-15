@@ -240,7 +240,7 @@ const INVOICE_FILTERS: { value: InvoiceStatus | ""; label: string }[] = [
 ];
 
 export function InvoicesView(p: {
-  invoices: Invoice[];
+  invoices: (Pick<Invoice,"id"|"invoiceNumber"|"customerId"|"status"|"total"|"issuedAt">&{customerName?:string;shared?:boolean})[];
   names: Names;
   loading: boolean;
   error: string | null;
@@ -248,19 +248,20 @@ export function InvoicesView(p: {
   onStatus: (s: InvoiceStatus | "") => void;
   search: string;
   onSearch: (q: string) => void;
-  onOpen: (id: string) => void;
+  onOpen: (id: string,shared?:boolean) => void;
 }) {
   const q = p.search.trim().toLowerCase();
   const rows = p.invoices.filter((inv) => {
     if (p.status && inv.status !== p.status) return false;
     if (!q) return true;
-    return [inv.invoiceNumber, inv.id, inv.customerId, p.names[inv.customerId]].filter(Boolean).join(" ").toLowerCase().includes(q);
+    return [inv.invoiceNumber, inv.id, inv.customerId, inv.customerName, p.names[inv.customerId]].filter(Boolean).join(" ").toLowerCase().includes(q);
   });
-  const outstanding = p.invoices.filter((i) => i.status === "issued");
-  const outstandingSum = outstanding.reduce((s, i) => s + i.total, 0);
-  const cols: Column<Invoice>[] = [
+  // Issue status describes the original document, not its remaining debt.
+  const issued = p.invoices.filter((i) => i.status === "issued");
+  const issuedSum = issued.reduce((s, i) => s + i.total, 0);
+  const cols: Column<(typeof p.invoices)[number]>[] = [
     { key: "no", head: "Invoice", kind: "data", width: "minmax(0, 1.1fr)", cell: (i) => i.invoiceNumber || "Draft" },
-    { key: "who", head: "Customer", kind: "strong", width: "minmax(0, 1.6fr)", cell: (i) => p.names[i.customerId] ?? "Customer" },
+    { key: "who", head: "Customer", kind: "strong", width: "minmax(0, 1.6fr)", cell: (i) => i.customerName ?? p.names[i.customerId] ?? "Customer" },
     { key: "status", head: "Status", width: "110px", cell: (i) => <StatusBadge label={i.status} /> },
     { key: "issued", head: "Issued", kind: "muted", width: "150px", cell: (i) => formatDateTime(i.issuedAt) },
     { key: "total", head: "Total", kind: "data", align: "end", width: "120px", cell: (i) => formatPaise(i.total) },
@@ -273,7 +274,7 @@ export function InvoicesView(p: {
         eyebrow="Money"
         title="Invoices"
         kpis={[
-          { value: formatPaise(outstandingSum), label: `${outstanding.length} unpaid`, tone: outstanding.length ? "accent" : undefined },
+          { value: formatPaise(issuedSum), label: `${issued.length} issued` },
         ]}
       />
       <Toolbar count={{ shown: rows.length, total: p.invoices.length }}>
@@ -285,7 +286,7 @@ export function InvoicesView(p: {
         columns={cols}
         loading={p.loading}
         error={p.error}
-        onOpen={(i) => p.onOpen(i.id)}
+        onOpen={(i) => p.onOpen(i.id,i.shared)}
         listClassName="ax-list--invoices"
         empty={p.invoices.length ? { title: "Nothing matches these filters", body: "Clear the search or pick a different status." } : { title: "No invoices yet", body: "An invoice is created when a job is billed." }}
       />

@@ -80,6 +80,9 @@ export const createApproval = onCall({ region: "asia-south1" , enforceAppCheck: 
       );
     }
 
+    // A pending extra is not work consent, but the car is no longer ready
+    // to leave while its scope is awaiting a customer decision.
+    if(current.status==="READY_FOR_DELIVERY")tx.update(jobSnap.ref,{status:"QUALITY_CHECK",statusHistory:[...current.statusHistory,{status:"QUALITY_CHECK",changedAt:now,changedBy:user.uid,notes:null}],updatedAt:now});
     tx.set(ref, approval);
     writeAuditLog(tx, {
       action: "approval.created",

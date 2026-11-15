@@ -22,7 +22,7 @@ export function useVehiclePhotoUri(car: Car | null | undefined, nonce = 0): { ur
     setFailedKey(null);
     // The resolver's security checks stay untouched: a rejection only flips THIS
     // path/version to a truthful failure, never a retry loop or a bypass.
-    if (path) void resolveVehiclePhotoUrl(path, version).then((u) => { if (alive) setResolved({ key, uri: u }); }).catch(() => {
+    if (path) void resolveVehiclePhotoUrl(path, version, nonce>0).then((u) => { if (alive) setResolved({ key, uri: u }); }).catch(() => {
       if (typeof __DEV__ !== "undefined" && __DEV__) console.warn("CarThumb: saved photo could not be read", { path });
       if (alive) setFailedKey(key);
     });

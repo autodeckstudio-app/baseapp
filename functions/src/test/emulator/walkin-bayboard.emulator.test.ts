@@ -25,7 +25,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { createWalkinJob } from "../../functions/job/createWalkinJob.js";
 import { createVehicle } from "../../functions/vehicle/createVehicle.js";
 import { assignBay } from "../../functions/job/assignBay.js";
-import { advanceJobStatus } from "../../functions/job/advanceJobStatus.js";
+import {stageFixture as advanceJobStatus} from './stage-fixture.js';
 
 const db = getFirestore();
 

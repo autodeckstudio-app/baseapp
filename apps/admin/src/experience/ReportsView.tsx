@@ -3,6 +3,8 @@
 // Reports: the monthly Office view - revenue by method and day, expenses by
 // category, job throughput. Same server-side sources as Daily Close, so the
 // numbers always agree.
+import{VisitReturnTotals}from"../components/VisitReturnTotals";
+import{LOCAL_VISIT_MONEY_PREVIEW}from"../lib/backend-features";
 import { refundsOwedTotalText } from "../lib/refund-owed-copy";
 import type { OfficeReport } from "../lib/office-service";
 import { PageHead } from "./Office";
@@ -55,12 +57,13 @@ export function ReportsView(p: {
         eyebrow="Office"
         title="Reports"
         kpis={r ? [
-          { value: formatPaise(r.totalRevenuePaise), label: "Revenue" },
+          { value: formatPaise(r.totalRevenuePaise), label: LOCAL_VISIT_MONEY_PREVIEW?"Gross receipts":"Revenue" },
           { value: formatPaise(r.expensesPaise), label: "Expenses" },
-          { value: formatPaise(r.netPaise), label: "Net", tone: r.netPaise >= 0 ? "premium" : "accent" },
+          { value: formatPaise(r.netPaise), label: LOCAL_VISIT_MONEY_PREVIEW?"Receipts - expenses":"Net", tone: r.netPaise >= 0 ? "premium" : "accent" },
         ] : []}
       />
       {r && refundsOwedTotalText(r.refundsOwedPaise, r.refundsOwedCount, r.refundsOwedTruncated) ? <p className="ax-status-msg" data-testid="refunds-owed-total">{refundsOwedTotalText(r.refundsOwedPaise, r.refundsOwedCount, r.refundsOwedTruncated)}</p> : null}
+      {r&&LOCAL_VISIT_MONEY_PREVIEW?<VisitReturnTotals value={r.serviceReturns}/>:null}
       {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
 
       <div className="rp-month-wrap">

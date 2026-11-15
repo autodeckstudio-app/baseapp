@@ -76,10 +76,10 @@ export function BookingPanels({ booking, job, service, bayName, onError, compact
           {booking.rescheduleRequest.note ? <div className="kv"><span>Customer note</span><span>{booking.rescheduleRequest.note}</span></div> : null}
           {booking.rescheduleRequest.status === "pending" ? (
             <>
-              <p className="ax-note">Approving moves the booking to the requested time if a bay is free; the price and advance do not change. One request per booking.</p>
+              {job?.visitId?<span className="ax-note">Approve with all visit times checked</span>:<p className="ax-note">Approving moves the booking to the requested time if a bay is free; the price and advance do not change. One request per booking.</p>}
               <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center", flexWrap: "wrap" }}>
                 <input className="ax-input" placeholder="Note (optional)" value={decisionNote} onChange={(e) => setDecisionNote(e.target.value)} />
-                <button type="button" className="ax-button ax-button--primary" disabled={decisionBusy} onClick={() => void decide(true)}>Approve move</button>
+                {job?.visitId?<a className="ax-button ax-button--primary" href={`/jobs/${encodeURIComponent(job.id)}#visit-schedule`}>Review visit times</a>:<button type="button" className="ax-button ax-button--primary" disabled={decisionBusy} onClick={() => void decide(true)}>Approve move</button>}
                 <button type="button" className="ax-button" disabled={decisionBusy} onClick={() => void decide(false)}>Decline</button>
               </div>
             </>

@@ -1,3 +1,7 @@
+import{assertVisitMemberInvoice}from'../../lib/visit-invoice-settlement.js';
+import {createHash} from 'node:crypto';
+import {readVisitHandoverMember} from '../../lib/visit-handover.js';
+import {readVisitWorkReadiness} from "../../lib/visit-work-readiness.js";
 import {readRecordedHandover} from "../../lib/recorded-work-handover.js";
 import {hasReleasedBay} from "@autodeck/core";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
@@ -64,30 +68,10 @@ export const advanceJobStatus = onCall(
       );
     }
 
-    // Fast-fail pre-check (cheap, avoids entering a transaction for an
-    // obviously-terminal job) — NOT the authoritative check, since job.status
-    // is mutable/racy across concurrent calls. See the re-check inside the
-    // transaction below (Phase 5B P1-5 fix).
-    const preCheckTransitions = JOB_STATUS_TRANSITIONS[job.status] ?? [];
-    if (preCheckTransitions.length === 0) {
-      // A resubmitted delivery is the common lost-ack retry: reject it
-      // honestly (the committed outcome stands; refresh), never with a fake
-      // success and never a double apply. The in-transaction re-check below
-      // is the authoritative copy of this same rejection for the race case.
-      if (job.status === "DELIVERED") {
-        throw new HttpsError(
-          "failed-precondition",
-          "This job is already delivered - the recorded outcome, including its protection work declaration, stands as committed. Refresh the job instead of resubmitting the delivery.",
-        );
-      }
-      throw new HttpsError(
-        "failed-precondition",
-        `Job is in terminal status '${job.status}' and cannot be advanced.`,
-      );
-    }
-
-    const now = new Date().toISOString();
-
+    // Lost-ack retries must reach the durable receipt even after delivery.
+    const receiptId=createHash('sha256').update(JSON.stringify([job.tenantId,data.jobId,user.uid,data.operationId])).digest('hex');
+    const receiptRef=db.collection('jobStageCommands').doc(receiptId);
+    const fingerprint=createHash('sha256').update(JSON.stringify(data)).digest('hex');
     const result = await db.runTransaction(async (tx) => {
       // All reads before any writes. Re-read the job fresh INSIDE the
       // transaction (Phase 5B P1-5 fix) — this function previously computed
@@ -117,6 +101,20 @@ export const advanceJobStatus = onCall(
           "This job record is inconsistent - its identity cannot be confirmed. No changes were made.",
         );
       const jobId = freshJobSnap.id;
+      // Strictly increase the job version even when two legitimate transitions
+      // occur within the same millisecond or a transaction is retried.
+      const priorTime=Date.parse(freshJob.updatedAt);
+      const now=new Date(Math.max(Date.now(),Number.isFinite(priorTime)?priorTime+1:0)).toISOString();
+      assertTenant(user,freshJob.tenantId);
+      if(user.claims.role==='studio'&&user.claims.studioId!==freshJob.studioId)throw new HttpsError('permission-denied','Job belongs to a different studio.');
+      const prior=await tx.get(receiptRef);
+      if(prior.exists){
+        const receipt=prior.data()!;
+        if(receipt['fingerprint']!==fingerprint||receipt['actor']!==user.uid||receipt['jobId']!==jobId||receipt['tenantId']!==freshJob.tenantId)throw new HttpsError('already-exists','Stage command belongs to another action. Reload the job.');
+        return {previousStatus:receipt['previousStatus'] as ServiceJob['status'],newStatus:receipt['newStatus'] as ServiceJob['status']};
+      }
+      if(freshJob.status!==data.expectedStatus||freshJob.updatedAt!==data.expectedUpdatedAt)throw new HttpsError('failed-precondition','Job changed. Reload and review its current stage.');
+
 
       // Price-on-request bookings: no work starts until the customer approves the quote.
       if (
@@ -190,9 +188,19 @@ export const advanceJobStatus = onCall(
           `No forward transition available from status '${freshJob.status}'.`,
         );
       }
+      if(freshJob.visitId&&nextStatus==='VEHICLE_RECEIVED')throw new HttpsError('failed-precondition','Mark arrived, then admit the shared car with its service bays.');
+      if(freshJob.visitBayPause)throw new HttpsError('failed-precondition','Resume this service in a compatible bay before advancing work.');
+      // Ready/pickup is a whole-visit outcome, never completion of just one
+      // service. This checks the current approved scope and each line's QC in
+      // the same transaction; later approvals conflict and force a re-read.
+      if (nextStatus === "READY_FOR_DELIVERY" || nextStatus === "DELIVERED") {
+        const work = await readVisitWorkReadiness(tx, db, {...freshJob,id:jobId});
+        if (work && !work.ready) throw new HttpsError("failed-precondition",
+          work.reason === "approval_pending" ? "Customer approval pending" : "Check every service before pickup");
+      }
       // The performed-work declaration belongs ONLY to the delivery step: supplying it
       // on any other transition is a caller bug, never silently ignored.
-      if ((data.protectionWork !== undefined || data.recordedWorkRevision !== undefined) && nextStatus !== "DELIVERED") {
+      if ((data.protectionWork !== undefined || data.recordedWorkRevision !== undefined || data.visitHandoverId !== undefined) && nextStatus !== "DELIVERED") {
         throw new HttpsError(
           "failed-precondition",
           "A protection work declaration is only accepted when delivering the vehicle.",
@@ -317,6 +325,8 @@ export const advanceJobStatus = onCall(
       // bay assignment — doc07 §7.5).
       let warranty: ReturnType<typeof buildWarranty> = null;
       let protectionPlan: { outcomes: PlannedEvent[] } = { outcomes: [] };
+      const sharedHandover = nextStatus === "DELIVERED" ? await readVisitHandoverMember(tx,db,freshJob,data.visitHandoverId) : null;
+      if(sharedHandover && data.recordedWorkRevision!==sharedHandover.manifest["expected"][jobId].recordedWorkRevision)throw new HttpsError("failed-precondition","Use the checked shared work revision.");
       let performedEvents = data.protectionWork;
       const warrantyRef = db
         .collection(COLLECTIONS.warranties())
@@ -375,6 +385,7 @@ export const advanceJobStatus = onCall(
             "failed-precondition",
             "Collect and confirm full payment before delivering this vehicle.",
           );
+        if(freshJob.visitInvoiceId){await assertVisitMemberInvoice(tx,db,freshJob);}else{
         // Every delivered visit has a live (not void) invoice. Payment status alone is not enough: a void leaves the job marked paid.
         const invs = await tx.get(
           db
@@ -415,6 +426,7 @@ export const advanceJobStatus = onCall(
             "failed-precondition",
             "This visit has no invoice. Record the payment to issue one before delivering.",
           );
+        }
         // A job cannot be delivered while additional work is still awaiting
         // the customer's decision — Phase 3 requirement: prevent the studio
         // from treating unauthorized additional work as complete.
@@ -512,6 +524,8 @@ export const advanceJobStatus = onCall(
         }
       }
 
+      tx.create(receiptRef,{id:receiptId,jobId,tenantId:freshJob.tenantId,studioId:freshJob.studioId,actor:user.uid,fingerprint,previousStatus:freshJob.status,newStatus:nextStatus,createdAt:now});
+      if(sharedHandover){const outcomes={...sharedHandover.manifest["outcomes"],[jobId]:{status:"delivered",at:now,by:user.uid}};const expected=sharedHandover.manifest["expected"];tx.update(sharedHandover.ref,{outcomes,status:Object.keys(expected).every(id=>outcomes[id]?.status==="delivered")?"complete":"incomplete",updatedAt:now});}
       tx.update(db.collection(COLLECTIONS.jobs()).doc(data.jobId), {
         status: nextStatus,
         statusHistory: [...freshJob.statusHistory, newHistoryEntry],

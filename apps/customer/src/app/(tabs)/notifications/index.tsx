@@ -21,7 +21,7 @@ import { clearable, isProtected, loadHidden, saveHidden, visibleNotifications } 
 
 
 export const NOTIFICATIONS_LOAD_TIMEOUT_MS = 12_000;
-export const NOTIFICATION_ACTION: Record<string, string> = { Approval: "Review request", Booking: "View booking", Membership: "View membership", Invoice: "View invoice" };
+export const NOTIFICATION_ACTION: Record<string, string> = { VisitIntake: "Review visit", Approval: "Review request", Booking: "View booking", Membership: "View membership", Invoice: "View invoice" };
 
 function formatWhen(iso: string): string {
   const d = new Date(iso);
@@ -87,6 +87,7 @@ export default function NotificationsScreen() {
   async function handlePress(n: Notification) {
     if (!n.readAt) void markNotificationRead(n.id).catch(() => undefined);
 
+    if(n.entityType==="VisitIntake"&&n.entityId){router.push({pathname:"/(tabs)/bookings",params:{estimateId:n.entityId}});return;}
     if (n.entityType === "Booking" && n.entityId) {
       // Back from this booking returns here, to the same Notifications page.
       router.push({ pathname: "/(tabs)/bookings/[id]", params: { id: n.entityId, returnTo: "notifications" } });
@@ -155,7 +156,7 @@ export default function NotificationsScreen() {
                       <T role="caption" tone="secondary">{repairText(item.body)}</T>
                       <T role="caption" tone="tertiary">{formatWhen(item.createdAt)}</T>
                       {NOTIFICATION_ACTION[item.entityType ?? ""] ? (
-                        <Pressable accessibilityRole="button" accessibilityLabel={NOTIFICATION_ACTION[item.entityType ?? ""]} onPress={(e) => { e.stopPropagation?.(); void handlePress(item); }} style={({ pressed }) => ({ alignSelf: "flex-start", marginTop: 6, minHeight: 36, borderRadius: 9999, paddingHorizontal: 14, justifyContent: "center", backgroundColor: item.entityType === "Approval" ? "rgba(236,134,56,0.22)" : glassInner.backgroundColor, opacity: pressed ? 0.8 : 1 })}>
+                        <Pressable accessibilityRole="button" accessibilityLabel={NOTIFICATION_ACTION[item.entityType ?? ""]} onPress={(e) => { e.stopPropagation?.(); void handlePress(item); }} style={({ pressed }) => ({ alignSelf: "flex-start", marginTop: 6, minHeight: 36, borderRadius: 9999, paddingHorizontal: 14, justifyContent: "center", backgroundColor: ["Approval","VisitIntake"].includes(item.entityType??"") ? "rgba(236,134,56,0.22)" : glassInner.backgroundColor, opacity: pressed ? 0.8 : 1 })}>
                           <T role="caption" style={{ fontWeight: "700", color: colors.textPrimary }}>{NOTIFICATION_ACTION[item.entityType ?? ""]}</T>
                         </Pressable>
                       ) : null}
