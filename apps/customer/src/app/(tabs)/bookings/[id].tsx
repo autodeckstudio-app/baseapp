@@ -361,7 +361,7 @@ export default function BookingDetailScreen() {
   const showLiveVisit=!bookingClosed||!!job?.visitId&&!["CANCELLED","EXPIRED"].includes(booking.status);
   const unconfirmedPreArrival=booking.status==="PENDING"&&job?.status==="PENDING_VEHICLE";
   const combinedReturn=(booking as Booking&{combinedReturn?:{status:string;feePaise:number;refundPaise:number;entries:{method:string;returnPaise:number;returnedPaise:number}[]}}).combinedReturn;
-  const owedNotice = combinedReturn?null:manualRefundNotice(booking);
+  const owedNotice = combinedReturn||(booking as Booking & {visitServiceReturnId?:string}).visitServiceReturnId?null:manualRefundNotice(booking);
   const autoCancelled = booking.status === "CANCELLED" && booking.cancellationReason?.startsWith("Auto-cancelled:");
   const cancel = cancelState(booking, Date.now(), svc?.category);
   const cancelLifecycleOpen=!job||['PENDING_VEHICLE','STANDBY','VEHICLE_RECEIVED'].includes(job.status);
@@ -588,7 +588,7 @@ export default function BookingDetailScreen() {
       </View>
 
       {waitingCancel ? <Pane><Kicker>Cancellation requested</Kicker><Row title="Booking" detail="Not cancelled yet."/><Row title="Slot" detail="Held while payment is checked."/><Row title="Help" detail="Contact the studio." last/></Pane> : null}
-      {owedNotice ? <Notice title={owedNotice.title} body={owedNotice.body} /> : null}
+      {owedNotice ? <Pane pad="gap"><Kicker>{owedNotice.title}</Kicker><Row title="Return due" detail={rupees((booking as Booking & {manualRefundDuePaise:number}).manualRefundDuePaise)}/><Row title="Status" detail="Not recorded as returned"/><Row title="Next step" detail="Contact studio" last/></Pane> : null}
 
       {!noPaymentDue&&!waitingCancel && !awaitingLinkId && paymentIsCurrent && (!payment || payment.status === "failed" || payment.status === "cancelled") && booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt)) && !walkIn ? (
         <Pane><Kicker>Confirm your booking</Kicker>

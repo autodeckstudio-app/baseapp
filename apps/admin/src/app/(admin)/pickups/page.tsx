@@ -123,7 +123,7 @@ export default function PickupsPage() {
             <button key={t.id} type="button" aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>{RETAINED_TRANSPORT_PREVIEW&&t.id==="DONE"?"History":t.label} {visibleReady?pickupTabCount(counts,t.id):"-"}</button>
           ))}
         </div>
-        <p className="ax-pu-policy">First {PICKUP_FREE_ROAD_METERS/1000} road km free per leg, then ₹{PICKUP_ROAD_RATE_PER_KM_PAISE/100} per extra km. Preserve each request's quoted fee and check the bill before collecting. Missing road-distance checks need review.</p>
+        <div className="ax-pu-policy"><div>Road distance · {PICKUP_FREE_ROAD_METERS/1000} km free per leg · ₹{PICKUP_ROAD_RATE_PER_KM_PAISE/100}/extra km</div><div>Collection · Original quote kept · Check booking bill</div><div>Missing road-distance check · Review required</div></div>
       </div>
 
       {visibleReady&&(tab==="REQUESTED"||tab==="CONFIRMED")?<p className="ax-pu-hint" role="status">{counts[tab]} {RETAINED_TRANSPORT_PREVIEW?(counts[tab]===1?"journey":"journeys"):"ready to review"} · {tab==="REQUESTED"?counts.closeRequested:counts.closeConfirmed} need booking review</p>:null}

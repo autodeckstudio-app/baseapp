@@ -4,11 +4,11 @@ import { join } from "node:path";
 import { manualRefundNotice } from "./manual-refund-notice";
 describe("manual refund notice", () => {
   it("uses the owed server field, not the booking total", () => {
-    expect(manualRefundNotice({ status: "CANCELLED", manualRefundDuePaise: 90000 })).toEqual({ title: "Refund owed by the studio", body: "The studio owes you ₹900. It has not been recorded as returned. Contact the studio to arrange the return." });
+    expect(manualRefundNotice({ status: "CANCELLED", manualRefundDuePaise: 90000 })).toEqual({ title: "Refund owed by the studio", body: "Return due · ₹900 · Not recorded as returned · Contact studio" });
   });
   it("shows paid minus Rs100 for the late-window fixture", () => {
     const paid = 100000, policyFee = 10000;
-    expect(manualRefundNotice({ status: "CANCELLED", manualRefundDuePaise: paid - policyFee })?.body).toContain("₹900.");
+    expect(manualRefundNotice({ status: "CANCELLED", manualRefundDuePaise: paid - policyFee })?.body).toContain("₹900 ·");
   });
   it("rejects missing, zero, invalid, unsafe or non-cancelled input", () => {
     for (const v of [undefined, null, 0, -1, NaN, Infinity, 1.5, "90000", Number.MAX_SAFE_INTEGER + 1]) expect(manualRefundNotice({ status: "CANCELLED", manualRefundDuePaise: v })).toBeNull();

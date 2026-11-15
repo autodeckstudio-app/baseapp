@@ -596,7 +596,7 @@ export default function JobDetailScreen() {
         <Row label="Scheduled" value={job.status === "STANDBY" ? "Waiting - no slot reserved" : scheduledTime} />
         <Row label="Duration" value={durationLabel} />
         <Row label={job.visitId?"Service estimate":"Expected ready"} value={job.status === "STANDBY" ? "Set on admission" : estimatedEndTime} />
-        <Row label={job.visitId?"Service payment":"Payment"} value={membershipCoveredLabel(job) ?? (booking && job.totalAmount === 0 ? membershipCoveredLabel(booking) : null) ?? unifiedPaymentLabel} />
+        {!job.visitId?<Row label="Payment" value={membershipCoveredLabel(job) ?? (booking && job.totalAmount === 0 ? membershipCoveredLabel(booking) : null) ?? unifiedPaymentLabel} />:null}
       </Section>
 
       <VisitCharges view={sharedVisit.data} funding={visitFunding}/>
@@ -637,7 +637,7 @@ export default function JobDetailScreen() {
         </View>
       )}
 
-      <Text style={sectionTitle}>Job stage history</Text>
+      {job.statusHistory.length?<><Text style={sectionTitle}>Job stage history</Text>
       <Section>
         {job.statusHistory.map((entry, i) => (
           <View key={i} style={{ flexDirection: "row", justifyContent: "space-between" }}>
@@ -645,7 +645,7 @@ export default function JobDetailScreen() {
             <Text style={{ ...typography.caption, color: colors.textMuted }}>{formatTime(entry.changedAt)}</Text>
           </View>
         ))}
-      </Section>
+      </Section></>:null}
 
       <Text style={sectionTitle}>Photos and damage note (optional)</Text>
       <Section>
@@ -854,7 +854,7 @@ export default function JobDetailScreen() {
         <Button label="Cancel" variant="secondary" onPress={() => setStaffAction(null)} disabled={advancing} />
       </Section> : null}
       {!job.visitId&&job.status === "STANDBY" ? <Section><Text style={{color: colors.textPrimary}}>Waiting since {new Date(job.standbyArrivedAt ?? job.createdAt).toLocaleString("en-IN", {timeZone: "Asia/Kolkata"})}. No bay or time reserved.</Text><Button label="Admit from standby" onPress={() => setStaffAction("admit")} /></Section> : null}
-      {job.visitId?<Section><VisitBayControl job={job}/><VisitScheduleControl job={job}/></Section>:null}
+      {job.visitId&&!["DELIVERED","CANCELLED"].includes(job.status)?<Section><VisitBayControl job={job}/><VisitScheduleControl job={job}/></Section>:null}
       {job.status === "PENDING_VEHICLE" && job.bookingId ? <Button label="Arrived - standby" variant="secondary" disabled={Date.parse(job.scheduledAt) > Date.now()} onPress={() => setStaffAction("enqueue")} style={{marginBottom: spacing.lg}} /> : null}
       {!job.visitBayPause&&job.status === "QUALITY_CHECK" ? <Button label="Send back for rework" variant="ghost" onPress={() => setStaffAction("rework")} style={{marginBottom: spacing.lg}} /> : null}
       {['IN_PROGRESS','QUALITY_CHECK','READY_FOR_DELIVERY','DELIVERED'].includes(job.status) ? <Section><JobWorkSession key={job.id} job={job}/></Section> : null}

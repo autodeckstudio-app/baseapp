@@ -2,7 +2,7 @@
 export type AdminRequestTarget = "job" | "booking" | "pickup_request" | "none";
 export type AdminRequestInput = { targetType: AdminRequestTarget; targetId?: string; reason: string; amountPaise?: number };
 
-export const ADMIN_REQUEST_NOTE = "This asks the office to decide. It does not change any price or payment.";
+export const ADMIN_REQUEST_NOTE = "Office decision only · Price and payment unchanged";
 
 export function checkAdminRequest(i: AdminRequestInput): string | null {
   if (i.reason.trim().length < 5) return "Say what you need approved, in a few words.";
