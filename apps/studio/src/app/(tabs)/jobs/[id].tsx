@@ -596,7 +596,7 @@ export default function JobDetailScreen() {
         <Row label="Scheduled" value={job.status === "STANDBY" ? "Waiting - no slot reserved" : scheduledTime} />
         <Row label="Duration" value={durationLabel} />
         <Row label={job.visitId?"Service estimate":"Expected ready"} value={job.status === "STANDBY" ? "Set on admission" : estimatedEndTime} />
-        <Row label={job.visitId?"Service payment":"Payment"} value={membershipCoveredLabel(job) ?? (booking ? membershipCoveredLabel(booking) : null) ?? unifiedPaymentLabel} />
+        <Row label={job.visitId?"Service payment":"Payment"} value={membershipCoveredLabel(job) ?? (booking && job.totalAmount === 0 ? membershipCoveredLabel(booking) : null) ?? unifiedPaymentLabel} />
       </Section>
 
       <VisitCharges view={sharedVisit.data} funding={visitFunding}/>
@@ -671,7 +671,7 @@ export default function JobDetailScreen() {
       </Section> : null}
       <Text style={sectionTitle}>{job.visitId?"Service payment":"Payment"}</Text>
       <Section>
-        <Row label="Status" value={job.cashReconciliationId&&job.paymentStatus!=="paid"?"Cash receipt under review - do not collect again":membershipCoveredLabel(job) ?? (booking ? membershipCoveredLabel(booking) : null) ?? (paymentRead === "loading" ? "Checking payment status..." : paymentRead === "error" ? "Payment status unavailable" : unifiedPaymentLabel)} />
+        <Row label="Status" value={job.cashReconciliationId&&job.paymentStatus!=="paid"?"Cash receipt under review - do not collect again":membershipCoveredLabel(job) ?? (booking && job.totalAmount === 0 ? membershipCoveredLabel(booking) : null) ?? (paymentRead === "loading" ? "Checking payment status..." : paymentRead === "error" ? "Payment status unavailable" : unifiedPaymentLabel)} />
         {paymentRead === "error" && (
           <>
             <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>

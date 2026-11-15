@@ -37,8 +37,8 @@ export async function settleCapturedVisitPayment(db:Firestore,attemptId:string){
   if(head['status']!==undefined)return fail();
   const current=await readVisitBilling(tx,db,attempt.visitId,attempt.id);
   if(current.visit.activeHandoverId||current.review.reviewToken!==attempt.reviewToken||current.review.balancePaise!==attempt.amountPaise)return fail();
-  for(const a of planned.applications){const member=current.members.find(m=>m.job.id===a.jobId);if(!member||!['VEHICLE_RECEIVED','IN_PROGRESS','QUALITY_CHECK','READY_FOR_DELIVERY'].includes(member.job.status)||member.job.settlementKind||member.booking?.['membershipId']&&!current.membershipExtras.has(member.job.id)||member.booking?.['giftId'])return fail();}
-  if(current.membershipExtras.size)assertConnectedVisitRuntime();
+  for(const a of planned.applications){const member=current.members.find(m=>m.job.id===a.jobId);if(!member||!['VEHICLE_RECEIVED','IN_PROGRESS','QUALITY_CHECK','READY_FOR_DELIVERY'].includes(member.job.status)||member.job.settlementKind&&!current.coveredExtras.has(member.job.id)||member.booking?.['membershipId']&&!current.membershipExtras.has(member.job.id)&&!current.coveredExtras.has(member.job.id)||member.booking?.['giftId'])return fail();}
+  if(current.membershipExtras.size||current.coveredExtras.size)assertConnectedVisitRuntime();
   await assertCustomerNotErasing(tx,db,attempt.tenantId,attempt.customerId);
   const receiptRef=db.collection('visitOnlineReceipts').doc(planned.receipt.id),appRefs=planned.applications.map(a=>db.collection('visitOnlineApplications').doc(a.id));
   const[billDoc,priorReceipt,...priorApps]=await Promise.all([tx.get(db.collection('visitBills').doc(attempt.billId)),tx.get(receiptRef),...appRefs.map(ref=>tx.get(ref))]);
@@ -52,7 +52,8 @@ export async function settleCapturedVisitPayment(db:Firestore,attemptId:string){
   tx.create(receiptRef,planned.receipt);
   planned.applications.forEach((a,i)=>{tx.create(appRefs[i]!,a);const m=current.members.find(m=>m.job.id===a.jobId)!;
    tx.update(m.ref,{paymentStatus:'paid',visitInvoiceId:invoice.id,updatedAt:now});
-   if(m.job.bookingId)tx.update(db.collection('bookings').doc(m.job.bookingId),{paymentStatus:'paid',visitInvoiceId:invoice.id,updatedAt:now});
+   if(m.job.bookingId&&current.coveredExtras.has(m.job.id))tx.update(db.collection('bookings').doc(m.job.bookingId),{visitExtrasReceiptId:planned.receipt.id,updatedAt:now});
+   if(m.job.bookingId&&!current.coveredExtras.has(m.job.id))tx.update(db.collection('bookings').doc(m.job.bookingId),{paymentStatus:'paid',visitInvoiceId:invoice.id,updatedAt:now});
   });
   tx.create(prepared.invoiceRef,invoice);
   tx.update(headRef,{status:'settled',receiptId:planned.receipt.id,settledAt:now});

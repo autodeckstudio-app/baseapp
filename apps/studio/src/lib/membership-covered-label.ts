@@ -6,7 +6,7 @@ export function membershipCoveredLabel(v: {
   membershipWashUsed?: boolean;
   totalAmount?: number;
 }): string | null {
-  return v.settlementKind === "membership_covered"
+  return v.settlementKind === "membership_covered" && !(typeof v.totalAmount === "number" && v.totalAmount > 0)
     ? "Membership-covered"
     : v.membershipWashUsed && v.totalAmount === 0
       ? "Membership-covered, not yet settled"

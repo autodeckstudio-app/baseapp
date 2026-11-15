@@ -42,8 +42,8 @@ export const recordVisitReceipt=onCall({region:'asia-south1',enforceAppCheck:sho
   const prearrival=entries.some(e=>['PENDING_VEHICLE','STANDBY'].includes(current.members.find(m=>m.job.id===e.jobId)!.job.status));
   if(prearrival)assertConnectedVisitRuntime();
   for(const e of entries){const m=current.members.find(m=>m.job.id===e.jobId)!,line=current.review.lines.find(l=>l.jobId===e.jobId)!;
-   if(!['PENDING_VEHICLE','STANDBY','VEHICLE_RECEIVED','IN_PROGRESS','QUALITY_CHECK','READY_FOR_DELIVERY'].includes(m.job.status)||!final&&line.appliedPaise+e.appliedPaise>=line.amountPaise||m.job.settlementKind||m.booking?.['membershipId']&&!current.membershipExtras.has(m.job.id)||m.booking?.['giftId'])throw new HttpsError('failed-precondition','This service needs final invoice or benefit review. No receipt recorded.');
-   if(current.membershipExtras.has(m.job.id))assertConnectedVisitRuntime();
+   if(!['PENDING_VEHICLE','STANDBY','VEHICLE_RECEIVED','IN_PROGRESS','QUALITY_CHECK','READY_FOR_DELIVERY'].includes(m.job.status)||!final&&line.appliedPaise+e.appliedPaise>=line.amountPaise||m.job.settlementKind&&!current.coveredExtras.has(m.job.id)||m.booking?.['membershipId']&&!current.membershipExtras.has(m.job.id)&&!current.coveredExtras.has(m.job.id)||m.booking?.['giftId'])throw new HttpsError('failed-precondition','This service needs final invoice or benefit review. No receipt recorded.');
+   if(current.membershipExtras.has(m.job.id)||current.coveredExtras.has(m.job.id))assertConnectedVisitRuntime();
    if((m.job.offlineSettlement?.receiptCount??0)>=100)throw new HttpsError('failed-precondition','Receipt history needs office review.');
   }
   const applicationRefs=entries.map(e=>db.collection('offlineReceipts').doc(key+'_'+hash(e.jobId).slice(0,24)));for(const ref of applicationRefs)if((await tx.get(ref)).exists)throw new HttpsError('failed-precondition','Receipt application exists without its original receipt.');
@@ -54,7 +54,8 @@ export const recordVisitReceipt=onCall({region:'asia-south1',enforceAppCheck:sho
   entries.forEach((e,i)=>{const m=current.members.find(m=>m.job.id===e.jobId)!,line=current.review.lines.find(l=>l.jobId===e.jobId)!,old=m.job.offlineSettlement;
    tx.create(applicationRefs[i]!,{id:applicationRefs[i]!.id,visitReceiptId:key,visitId:d.visitId,billId:d.billId,tenantId:current.visit.tenantId,studioId:current.visit.studioId,customerId:current.visit.customerId,jobId:e.jobId,bookingId:m.job.bookingId,receivedPaise:e.appliedPaise,appliedPaise:e.appliedPaise,officeReturnDuePaise:0,balanceDuePaise:line.amountPaise-line.appliedPaise-e.appliedPaise,method:d.method,reference:d.reference,recordedBy:user.uid,createdAt:now});
    tx.update(m.ref,{offlineSettlement:{appliedPaise:(old?.appliedPaise??0)+e.appliedPaise,officeReturnDuePaise:0,receiptCount:(old?.receiptCount??0)+1},paymentStatus:final?'paid':'partial',...(prepared?{visitInvoiceId:prepared.invoice.id}:{}),updatedAt:now});
-   if(m.job.bookingId)tx.update(db.collection('bookings').doc(m.job.bookingId),{paymentStatus:final?'paid':'partial',...(prepared?{visitInvoiceId:prepared.invoice.id}:{}),updatedAt:now});
+   if(m.job.bookingId&&current.coveredExtras.has(m.job.id))tx.update(db.collection('bookings').doc(m.job.bookingId),{visitExtrasReceiptId:key,updatedAt:now});
+   if(m.job.bookingId&&!current.coveredExtras.has(m.job.id))tx.update(db.collection('bookings').doc(m.job.bookingId),{paymentStatus:final?'paid':'partial',...(prepared?{visitInvoiceId:prepared.invoice.id}:{}),updatedAt:now});
   });
   // Shared write serializes different member allocations as one receipt fact.
   tx.update(visitRef,{updatedAt:now,updatedBy:user.uid});
