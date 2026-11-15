@@ -48,3 +48,41 @@ units. Functions types pass; broader current-tree regression is still pending
 at this checkpoint. The known missing explicit staff-alert-label unit failure
 is not hidden or changed by this work. Actual routed visual review and owner
 preview remain required before live changes.
+
+## Current qualification and live baseline distinction
+
+At 7ff8679, all 299 billing-emulator cases, 273 connected/privacy/Accountant
+cases, 518 core cases, all five type checks and the Functions build passed.
+Full Functions units: 1881 passed, one skipped, one unchanged explicit staff
+alert-label failure. The source-fixture repairs are separate from recovered
+source. No deployment or provider-money activation occurred.
+
+Read-only live baseline on 15 November 2026, about 08:00-08:05 IST:
+- Admin > Money > Day close, https://admin.autodeck.in/daily-close
+- Admin > Money > Reports, https://admin.autodeck.in/reports
+Both displayed the existing owed-total-unavailable warning. Inspection of
+loaded view data found no read error and loading=false. Reports had its 16
+ordinary report fields but none of refundsOwedPaise, refundsOwedCount or
+refundsOwedTruncated. Day close live data likewise had only its ten ordinary
+money fields, without the three owed fields. This establishes missing fields
+at the displayed response boundary, not which deployed backend version caused
+the omission. It does not establish zero owed, a failed owed query, or malformed
+legacy records. The deployed backend version and original response payload were
+not independently recovered. Displayed gross revenue/net and expected drawer
+cash are baseline observations, not reconciled actual-return totals.
+
+The local contract distinguishes:
+- Missing/non-finite owed amount/count: unavailable warning, never assumed zero.
+- Successful finite aggregate with bad/capped legacy evidence: truncated=true,
+  valid subtotal retained and a separate incomplete-evidence warning.
+- Actual query failure: rejection, no fabricated zero or incomplete subtotal.
+The dedicated service-return ledger is a separate proof with stricter whole-
+report holds for missing, orphan or corrupted service-return evidence. Its
+manual due overlaps legacy owed; it must not be added to that total twice.
+
+Additional qualification: three pure legacy-read-state cases, five existing
+and extended Admin copy cases, and six real-Firestore legacy owed/report cases
+pass. The report-boundary case checks Daily Close, Office and Accountant with
+finite incomplete evidence. Only tests and this note changed; no screen/copy,
+backend behavior, live data or issued invoice changed. Actual routed combined
+before/after preview remains unfinished. Current screenshots are before only.

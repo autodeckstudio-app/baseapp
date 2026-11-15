@@ -54,6 +54,15 @@ describe("refunds owed aggregate", () => {
     await db.collection("bookings").doc("good1").set({ id: "good1", tenantId: "ro-t3", studioId: S, status: "CANCELLED", manualRefundDuePaise: 3000 });
     expect(await refundsOwed(db, "ro-t3", S)).toEqual({ owedPaise: 3000, count: 1, truncated: true });
   });
+  it("finite incomplete legacy evidence remains distinct on all report boundaries, without zeroing gross money", async () => {
+    const tenant="ro-incomplete-boundary", studio="ro-incomplete-studio";
+    await db.collection("studioConfig").doc(studio).set({tenantId:tenant});
+    for(const [id,due] of [["valid",3000],["bad",-1]] as const) await db.collection("bookings").doc(tenant+id).set({id:tenant+id,tenantId:tenant,studioId:studio,status:"CANCELLED",manualRefundDuePaise:due});
+    const auth={uid:"boundary-reader",token:{role:"admin",tenantId:tenant,studioId:null},rawToken:"x"};
+    const daily=await dayAggregates(tenant,studio,"2026-10-10"),office=await run(getOfficeReport,auth,{studioId:studio,month:"2026-10"}),accountant=await run(getAccountantMoney,{...auth,token:{...auth.token,role:"accountant"}},{studioId:studio,month:"2026-10"});
+    for(const r of [daily,office]) expect(r).toMatchObject({refundsOwedPaise:3000,refundsOwedCount:1,refundsOwedTruncated:true,totalRevenuePaise:0});
+    expect(accountant["refundsOwed"]).toEqual({paise:3000,count:1,truncated:true});expect(accountant["report"]).toMatchObject({totalReceiptsPaise:0});
+  });
   it("past the cap the result says truncated (total is a floor); at the cap it does not", async () => {
     const mk = async (tenant: string, n: number) => {
       for (let off = 0; off < n; off += 400) {
