@@ -658,3 +658,97 @@ it('dormant cancelled original payment is claimed against competing legacy manua
  expect((await ready.billing()).returnReviews[0]).toMatchObject({returnedPaise:120000,status:'returned'});
  await db.collection('paymentEvents').doc('refund_p').delete();await expect(ready.billing()).rejects.toThrow();
 });
+
+async function onlineReturnReady(){
+ const f=await manualReturnReady(true);await f.approve();const progress=await f.progress(),entry=progress.entries.find(e=>e.method==='razorpay_payment_link')!;
+ const api=await import('../../lib/visit-online-return.js'),command={visitId:'v',jobId:'wash',entryKey:entry.key,progressToken:progress.progressToken,reserved:true};
+ const{vi}=await import('vitest'),evidence={id:'rfnd_visit',paymentId:'pay_current',amountPaise:96000,currency:'INR',referenceId:'',status:'processed'};
+ const port={create:vi.fn(async(_input:any)=>({id:evidence.id})),fetch:vi.fn(async(_id:string):Promise<any>=>evidence),discover:vi.fn(async()=>({complete:true,refunds:[evidence]}))};
+ const reserve=async()=>{const r=await api.reserveVisitOnlineReturn(db,f.user,command);evidence.referenceId=r.request.id;return r;};
+ return{...f,...api,entry,command,evidence,port,reserve};
+}
+it('dormant online return reserves only its approved source and global capture share, with no actual returned amount or provider call',async()=>{
+ const f=await onlineReturnReady(),r=await f.reserve();expect(r).toMatchObject({alreadyReserved:false,request:{state:'reserved',amountPaise:96000,captureAmountPaise:288000,providerPaymentId:'pay_current',jobId:'wash'}});
+ expect(await f.reserve()).toMatchObject({alreadyReserved:true,request:{id:r.request.id}});expect(f.port.create).not.toHaveBeenCalled();
+ expect(await f.progress()).toMatchObject({returnedPaise:0,manualDuePaise:24000,onlineDuePaise:96000});expect((await db.collection('visitServiceOnlineReturns').get()).size).toBe(1);
+});
+it('dormant online return commits its first-submit state before one create and independently verifies exact processed evidence',async()=>{
+ const f=await onlineReturnReady(),r=await f.reserve(),invoice=(await db.collection('visitInvoices').get()).docs[0]!.data();
+ f.port.create.mockImplementation(async(input:any)=>{expect((await db.collection('visitServiceOnlineReturns').doc(r.request.id).get()).data()!.state).toBe('submitting');expect(input).toEqual({providerPaymentId:'pay_current',amountPaise:96000,currency:'INR',referenceId:r.request.id});return{id:f.evidence.id};});
+ expect(await f.qualifyVisitOnlineReturn(db,f.user,'v','wash',r.request.id,f.port)).toEqual({outcome:'returned'});
+ expect(await f.qualifyVisitOnlineReturn(db,f.user,'v','wash',r.request.id,f.port)).toEqual({outcome:'returned'});expect(f.port.create).toHaveBeenCalledTimes(1);expect(f.port.fetch).toHaveBeenCalledTimes(1);
+ expect(await f.progress()).toMatchObject({status:'partly_returned',returnedPaise:96000,manualDuePaise:24000,onlineDuePaise:0,accountingReviewNeeded:true});
+ expect((await db.collection('visitInvoices').get()).docs[0]!.data()).toEqual(invoice);expect((await db.collection('refundRequests').get()).empty).toBe(true);
+});
+it('dormant lost online refund response is discovery-only recovery, never a second create or released balance',async()=>{
+ const f=await onlineReturnReady(),r=await f.reserve();f.port.create.mockRejectedValueOnce(Error('Synthetic lost response'));
+ expect(await f.qualifyVisitOnlineReturn(db,f.user,'v','wash',r.request.id,f.port)).toEqual({outcome:'review_required'});
+ expect(await f.qualifyVisitOnlineReturn(db,f.user,'v','wash',r.request.id,f.port)).toEqual({outcome:'review_required'});expect(f.port.create).toHaveBeenCalledTimes(1);
+ expect(await f.reconcileVisitOnlineReturn(db,f.user,'v','wash',r.request.id,f.port)).toEqual({outcome:'returned'});expect(f.port.create).toHaveBeenCalledTimes(1);expect(f.port.discover).toHaveBeenCalledTimes(1);expect(f.port.fetch).toHaveBeenCalledTimes(1);
+});
+it.each([{status:'pending'},{status:'failed'},{amountPaise:96001},{paymentId:'pay_other'},{referenceId:'other'},{currency:'USD'}])('dormant online refund entity %j stays held and never reports returned or retries create',async patch=>{
+ const f=await onlineReturnReady(),r=await f.reserve();f.port.fetch.mockResolvedValue({...f.evidence,...patch});
+ expect(await f.qualifyVisitOnlineReturn(db,f.user,'v','wash',r.request.id,f.port)).toEqual({outcome:'review_required'});expect(await f.qualifyVisitOnlineReturn(db,f.user,'v','wash',r.request.id,f.port)).toEqual({outcome:'review_required'});
+ expect(f.port.create).toHaveBeenCalledTimes(1);expect(await f.progress()).toMatchObject({returnedPaise:0,onlineDuePaise:96000});expect((await db.collection('visitServiceOnlineReturns').doc(r.request.id).get()).data()!.state).toBe('review_required');
+});
+it.each(['empty','partial','multiple','wrong-source'])('dormant online refund discovery %s cannot release/recreate or mark money returned',async kind=>{
+ const f=await onlineReturnReady(),r=await f.reserve();f.port.create.mockRejectedValueOnce(Error('Synthetic lost response'));await f.qualifyVisitOnlineReturn(db,f.user,'v','wash',r.request.id,f.port);
+ f.port.discover.mockResolvedValue({complete:kind!=='partial',refunds:kind==='empty'?[]:kind==='multiple'?[f.evidence,{...f.evidence,id:'rfnd_second'}]:kind==='wrong-source'?[{...f.evidence,paymentId:'other'}]:[f.evidence]});
+ expect(await f.reconcileVisitOnlineReturn(db,f.user,'v','wash',r.request.id,f.port)).toEqual({outcome:'review_required'});expect(f.port.create).toHaveBeenCalledTimes(1);expect(f.port.fetch).not.toHaveBeenCalled();expect(await f.progress()).toMatchObject({returnedPaise:0,onlineDuePaise:96000});
+});
+it('dormant concurrent online reservations and runners preserve one request, one create and one capture claim',async()=>{
+ const f=await onlineReturnReady(),reservations=await Promise.all([f.reserve(),f.reserve()]);expect(reservations.map(r=>r.alreadyReserved).sort()).toEqual([false,true]);
+ const r=reservations[0]!,results=await Promise.all([f.qualifyVisitOnlineReturn(db,f.user,'v','wash',r.request.id,f.port),f.qualifyVisitOnlineReturn(db,f.user,'v','wash',r.request.id,f.port)]);
+ expect(results.some(r=>r.outcome==='returned')).toBe(true);expect(f.port.create).toHaveBeenCalledTimes(1);expect((await db.collection('visitServiceOnlineReturns').get()).size).toBe(1);expect((await db.collection('visitServiceProviderRefunds').get()).size).toBe(1);
+});
+it('dormant both service returns share one global original capture and never reserve the sibling amount twice',async()=>{
+ const f=await onlineReturnReady(),first=await f.reserve(),sibling=await cancelReadyReturn('interior');await sibling.cancel();
+ const{approveVisitServiceReturn}=await import('../../lib/visit-service-manual-return.js'),before=(await sibling.billing()).returnReviews.find(r=>r.jobId==='interior')!;
+ await approveVisitServiceReturn(db,f.user,{visitId:'v',jobId:'interior',progressToken:before.progressToken,note:'Admin reviewed sibling return',approved:true});
+ const next=(await sibling.billing()).returnReviews.find(r=>r.jobId==='interior')!,entry=next.entries.find(e=>e.method==='razorpay_payment_link')!;
+ const second=await f.reserveVisitOnlineReturn(db,f.user,{visitId:'v',jobId:'interior',entryKey:entry.key,progressToken:next.progressToken,reserved:true});expect(second.request).toMatchObject({amountPaise:192000,captureAmountPaise:288000,providerPaymentId:'pay_current'});
+ const guards=(await db.collection('visitServiceOnlineReturnCaptures').get()).docs;expect(guards).toHaveLength(1);expect(guards[0]!.data().claims.map((c:any)=>c.amountPaise).sort()).toEqual([192000,96000]);
+ expect(first.request.id).not.toBe(second.request.id);expect((await sibling.billing()).review.balancePaise).toBe(0);
+});
+it('dormant provider refund identity cannot be reused across two service returns',async()=>{
+ const f=await onlineReturnReady(),first=await f.reserve();await f.qualifyVisitOnlineReturn(db,f.user,'v','wash',first.request.id,f.port);
+ const sibling=await cancelReadyReturn('interior');await sibling.cancel();const{approveVisitServiceReturn}=await import('../../lib/visit-service-manual-return.js');let p=(await sibling.billing()).returnReviews.find(r=>r.jobId==='interior')!;
+ await approveVisitServiceReturn(db,f.user,{visitId:'v',jobId:'interior',progressToken:p.progressToken,note:'Admin reviewed sibling original',approved:true});p=(await sibling.billing()).returnReviews.find(r=>r.jobId==='interior')!;
+ const entry=p.entries.find(e=>e.method==='razorpay_payment_link')!,second=await f.reserveVisitOnlineReturn(db,f.user,{visitId:'v',jobId:'interior',entryKey:entry.key,progressToken:p.progressToken,reserved:true});
+ f.port.fetch.mockResolvedValue({...f.evidence,amountPaise:192000,referenceId:second.request.id});expect(await f.qualifyVisitOnlineReturn(db,f.user,'v','interior',second.request.id,f.port)).toEqual({outcome:'review_required'});
+ expect((await sibling.billing()).returnReviews.find(r=>r.jobId==='interior')).toMatchObject({returnedPaise:0,onlineDuePaise:192000});expect((await db.collection('visitServiceProviderRefunds').get()).size).toBe(1);
+});
+it('dormant actual manual handover can finish after online return without rewriting capture or invoice',async()=>{
+ const f=await onlineReturnReady(),r=await f.reserve();await f.qualifyVisitOnlineReturn(db,f.user,'v','wash',r.request.id,f.port);const p=await f.progress(),cash=p.entries.find(e=>e.method==='cash')!;
+ await f.recordVisitServiceManualReturn(db,f.user,{visitId:'v',jobId:'wash',entryKey:cash.key,progressToken:p.progressToken,note:'Actual remaining cash handed back',returned:true});expect(await f.progress()).toMatchObject({status:'returned',returnedPaise:120000,manualDuePaise:0,onlineDuePaise:0});
+});
+it('dormant online reservation needs separate approval, current token, original online source and Admin role',async()=>{
+ const f=await onlineReturnReady();for(const role of['customer','studio','accountant'])await expect(f.reserveVisitOnlineReturn(db,{...f.user,claims:{...f.user.claims,role}},f.command)).rejects.toMatchObject({code:'permission-denied'});
+ await expect(f.reserveVisitOnlineReturn(db,f.user,{...f.command,progressToken:'0'.repeat(64)})).rejects.toThrow();
+ await expect(f.reserveVisitOnlineReturn(db,f.user,{...f.command,reserved:false})).rejects.toMatchObject({code:'invalid-argument'});
+ const cash=(await f.progress()).entries.find(e=>e.method==='cash')!;await expect(f.reserveVisitOnlineReturn(db,f.user,{...f.command,entryKey:cash.key})).rejects.toThrow();expect((await db.collection('visitServiceOnlineReturns').get()).empty).toBe(true);
+});
+it.each(['capture-amount','capture-owner','claim-amount','request-amount','processed-without-identity'])('dormant online return %s corruption never fabricates returned money or a collectable sibling balance',async kind=>{
+ const f=await onlineReturnReady(),r=await f.reserve(),guard=(await db.collection('visitServiceOnlineReturnCaptures').get()).docs[0]!;
+ if(kind==='capture-amount')await guard.ref.update({captureAmountPaise:288001});
+ if(kind==='capture-owner')await guard.ref.update({customerId:'other'});
+ if(kind==='claim-amount')await guard.ref.update({claims:[{...guard.data().claims[0],amountPaise:96001}]});
+ if(kind==='request-amount')await db.collection('visitServiceOnlineReturns').doc(r.request.id).update({amountPaise:96001});
+ if(kind==='processed-without-identity')await db.collection('visitServiceOnlineReturns').doc(r.request.id).update({state:'returned',candidateId:f.evidence.id,evidence:f.evidence});
+ await expect(f.billing()).rejects.toThrow();expect(f.port.create).not.toHaveBeenCalled();
+});
+it('dormant pending online refund can later reconcile processed with the same reference, no second create',async()=>{
+ const f=await onlineReturnReady(),r=await f.reserve();f.port.fetch.mockResolvedValueOnce({...f.evidence,status:'pending'});
+ expect(await f.qualifyVisitOnlineReturn(db,f.user,'v','wash',r.request.id,f.port)).toEqual({outcome:'review_required'});
+ expect(await f.reconcileVisitOnlineReturn(db,f.user,'v','wash',r.request.id,f.port)).toEqual({outcome:'returned'});expect(f.port.create).toHaveBeenCalledTimes(1);expect(f.port.fetch).toHaveBeenCalledTimes(2);
+});
+it('dormant individual original provider payment uses its claimed legacy identity, not a fabricated shared application',async()=>{
+ await paid();await db.collection('payments').doc('p').update({method:'razorpay_payment_link',razorpayPaymentId:'pay_legacy'});
+ const f=await cancelReadyReturn();await f.cancel();const{approveVisitServiceReturn}=await import('../../lib/visit-service-manual-return.js');let p=(await f.billing()).returnReviews[0]!;
+ await approveVisitServiceReturn(db,f.user,{visitId:'v',jobId:'wash',progressToken:p.progressToken,note:'Admin reviewed original online capture',approved:true});p=(await f.billing()).returnReviews[0]!;
+ const api=await import('../../lib/visit-online-return.js'),e=p.entries[0]!,r=await api.reserveVisitOnlineReturn(db,f.user,{visitId:'v',jobId:'wash',entryKey:e.key,progressToken:p.progressToken,reserved:true});
+ expect(r.request).toMatchObject({paymentId:'p',originalReceiptId:null,captureAmountPaise:120000,amountPaise:120000,providerPaymentId:'pay_legacy'});
+ const evidence={id:'rfnd_legacy',paymentId:'pay_legacy',referenceId:r.request.id,amountPaise:120000,currency:'INR',status:'processed'};
+ expect(await api.qualifyVisitOnlineReturn(db,f.user,'v','wash',r.request.id,{create:async()=>({id:evidence.id}),fetch:async()=>evidence,discover:async()=>({complete:true,refunds:[evidence]})})).toEqual({outcome:'returned'});
+ expect((await f.billing()).returnReviews[0]).toMatchObject({returnedPaise:120000,status:'returned'});expect((await db.collection('payments').doc('p').get()).data()).toMatchObject({status:'completed',amount:120000,razorpayPaymentId:'pay_legacy'});
+});
