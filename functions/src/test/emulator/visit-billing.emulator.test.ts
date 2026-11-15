@@ -995,3 +995,41 @@ it('return reports do not revive refunded legacy payments, rewrite issued invoic
 it.each(['upi_manual','bank_transfer'])('return reports %s return never changes expected cash or original receipts',async method=>{
  const{r,b}=await receiptReady();await recordVisit(r,b,{method});const f=await cancelReadyReturn();await f.cancel();const{approveVisitServiceReturn,recordVisitServiceManualReturn}=await import('../../lib/visit-service-manual-return.js');let p=(await f.billing()).returnReviews[0]!;await approveVisitServiceReturn(db,f.user,{visitId:'v',jobId:'wash',progressToken:p.progressToken,note:'Admin reviewed manual source',approved:true});p=(await f.billing()).returnReviews[0]!;await recordVisitServiceManualReturn(db,f.user,{visitId:'v',jobId:'wash',entryKey:p.entries[0]!.key,progressToken:p.progressToken,note:'Actual original manual source return',returned:true});const reports=await returnReportReads();expect(reports.daily).toMatchObject({cashPaise:0,expectedCashPaise:0,totalRevenuePaise:72000,serviceReturns:{returnedPaise:24000,cashReturnedPaise:0,onlineReturnedPaise:0}});expect(reports.daily.serviceReturns?.[method==='upi_manual'?'upiReturnedPaise':'bankReturnedPaise']).toBe(24000);
 });
+
+async function refundProtocolReady(){
+ const f=await onlineReturnReady(),r=await f.reserve(),{RazorpayVisitRefundProtocol}=await import('../../lib/razorpay-visit-refund.js'),{vi}=await import('vitest');
+ const raw={id:'rfnd_protocol',entity:'refund',payment_id:'pay_current',amount:96000,currency:'INR',receipt:r.request.id,status:'processed'};
+ const http=vi.fn(async(cmd:any):Promise<any>=>{if(cmd.method==='POST'){expect((await db.collection('visitServiceOnlineReturns').doc(r.request.id).get()).data()!.state).toBe('submitting');return{status:200,body:raw};}return{status:200,body:cmd.path.includes('?')?{entity:'collection',count:1,items:[raw]}:raw};});
+ return{...f,r,raw,http,protocol:new RazorpayVisitRefundProtocol(http)};
+}
+it('refund protocol connected runner commits one exact submit then independent raw GET before actual ledger recognition',async()=>{
+ const f=await refundProtocolReady(),original=(await db.collection('visitInvoices').get()).docs[0]!.data();
+ expect(await f.qualifyVisitOnlineReturn(db,f.user,'v','wash',f.r.request.id,f.protocol)).toEqual({outcome:'returned'});
+ expect(f.http.mock.calls.map(([r])=>[r.method,r.path])).toEqual([['POST','/payments/pay_current/refund'],['GET','/refunds/rfnd_protocol']]);
+ expect(f.http.mock.calls[0]![0]).toMatchObject({headers:{'X-Refund-Idempotency':f.r.request.id},body:{amount:96000,speed:'normal',receipt:f.r.request.id}});
+ expect(await f.progress()).toMatchObject({returnedPaise:96000,manualDuePaise:24000,onlineDuePaise:0});
+ expect((await returnReportReads()).daily).toMatchObject({expectedCashPaise:72000,serviceReturns:{returnedPaise:96000,cashReturnedPaise:0,onlineReturnedPaise:96000}});
+ expect(await f.qualifyVisitOnlineReturn(db,f.user,'v','wash',f.r.request.id,f.protocol)).toEqual({outcome:'returned'});expect(f.http).toHaveBeenCalledTimes(2);expect((await db.collection('visitInvoices').get()).docs[0]!.data()).toEqual(original);
+});
+it.each([{status:'pending'},{status:'failed'},{payment_id:'pay_other'},{receipt:'wrong'},{amount:96001},{currency:undefined},{currency:'USD'},{entity:'payment'}])('refund protocol raw fetched %j stays owed despite candidate create success, never creates again',async patch=>{
+ const f=await refundProtocolReady();f.http.mockImplementation(async(cmd:any)=>({status:200,body:cmd.method==='POST'?f.raw:{...f.raw,...patch}}));
+ for(let i=0;i<2;i++)expect(await f.qualifyVisitOnlineReturn(db,f.user,'v','wash',f.r.request.id,f.protocol)).toEqual({outcome:'review_required'});
+ expect(f.http.mock.calls.filter(([r])=>r.method==='POST')).toHaveLength(1);expect(await f.progress()).toMatchObject({returnedPaise:0,onlineDuePaise:96000});expect((await db.collection('visitServiceProviderRefunds').get()).empty).toBe(true);
+});
+it('refund protocol lost create response recovers by bound list and independent GET without resubmitting',async()=>{
+ const f=await refundProtocolReady();f.http.mockRejectedValueOnce(Error('Synthetic lost provider response'));
+ expect(await f.qualifyVisitOnlineReturn(db,f.user,'v','wash',f.r.request.id,f.protocol)).toEqual({outcome:'review_required'});
+ expect(await f.reconcileVisitOnlineReturn(db,f.user,'v','wash',f.r.request.id,f.protocol)).toEqual({outcome:'returned'});
+ expect(f.http.mock.calls.map(([r])=>[r.method,r.path])).toEqual([['POST','/payments/pay_current/refund'],['GET','/payments/pay_current/refunds?count=100&skip=0'],['GET','/refunds/rfnd_protocol']]);expect(await f.progress()).toMatchObject({returnedPaise:96000,onlineDuePaise:0});
+});
+it.each(['empty','full-page','duplicate-reference','wrong-payment','pagination-hint','amount-conflict'])('refund protocol ambiguous discovery %s cannot return, release or resubmit',async kind=>{
+ const f=await refundProtocolReady();f.http.mockRejectedValueOnce(Error('Synthetic lost provider response'));await f.qualifyVisitOnlineReturn(db,f.user,'v','wash',f.r.request.id,f.protocol);
+ const items=kind==='empty'?[]:kind==='full-page'?Array.from({length:100},(_,i)=>({...f.raw,id:'rfnd_'+i})):kind==='duplicate-reference'?[f.raw,{...f.raw,id:'rfnd_second'}]:[{...f.raw,...(kind==='wrong-payment'?{payment_id:'pay_other'}:kind==='amount-conflict'?{amount:1}:{})}];
+ f.http.mockResolvedValue({status:200,body:{entity:'collection',count:items.length,items,...(kind==='pagination-hint'?{has_more:true}:{})}});
+ expect(await f.reconcileVisitOnlineReturn(db,f.user,'v','wash',f.r.request.id,f.protocol)).toEqual({outcome:'review_required'});expect(f.http.mock.calls.filter(([r])=>r.method==='POST')).toHaveLength(1);expect(f.http.mock.calls.some(([r])=>r.path==='/refunds/rfnd_protocol')).toBe(false);expect(await f.progress()).toMatchObject({returnedPaise:0,onlineDuePaise:96000});
+});
+it.each([409,429,500])('refund protocol HTTP %s create remains held with no automatic provider retry',async status=>{
+ const f=await refundProtocolReady();f.http.mockResolvedValue({status,body:{error:{description:'fixture'}}});
+ for(let i=0;i<2;i++)expect(await f.qualifyVisitOnlineReturn(db,f.user,'v','wash',f.r.request.id,f.protocol)).toEqual({outcome:'review_required'});
+ expect(f.http).toHaveBeenCalledTimes(1);expect(await f.progress()).toMatchObject({returnedPaise:0,onlineDuePaise:96000});
+});
