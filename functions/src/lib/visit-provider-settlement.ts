@@ -50,7 +50,7 @@ export async function settleCapturedVisitPayment(db:Firestore,attemptId:string){
   validateVisitOnlineReceiptProof({receipt:planned.receipt,applications:planned.applications,attempt,capture,event:originalEvent.data(),bill:billDoc.data(),invoice});
   const now=new Date().toISOString();
   tx.create(receiptRef,planned.receipt);
-  planned.applications.forEach((a,i)=>{tx.create(appRefs[i]!,a);const m=current.members.find(m=>m.job.id===a.jobId)!;
+  planned.applications.forEach((a,i)=>{tx.create(appRefs[i]!,a);const m=current.members.find(mEntry53=>mEntry53.job.id===a.jobId)!;
    tx.update(m.ref,{paymentStatus:'paid',visitInvoiceId:invoice.id,updatedAt:now});
    if(m.job.bookingId&&current.coveredExtras.has(m.job.id))tx.update(db.collection('bookings').doc(m.job.bookingId),{visitExtrasReceiptId:planned.receipt.id,updatedAt:now});
    if(m.job.bookingId&&!current.coveredExtras.has(m.job.id))tx.update(db.collection('bookings').doc(m.job.bookingId),{paymentStatus:'paid',visitInvoiceId:invoice.id,updatedAt:now});

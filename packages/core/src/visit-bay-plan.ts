@@ -30,5 +30,5 @@ export function planVisitBayMove(visit:SharedVisit,members:readonly VisitBayMemb
  // Refuse a move with no target service: a work-pause action cannot silently
  // park the car outside this capacity-checked flow.
  const attach=[...moving.map(m=>m.id),...(admit&&!moving.some(m=>m.id===admit.id)?[admit.id]:[])];if(!attach.length)return'invalid_target';
- return{sourceBayId:source.length===1?source[0]!:null,...(source.length>1?{reconciledBayIds:source}:{}),targetBayId:review.targetBayId,attachJobIds:attach,pauseJobIds:paused.map(m=>m.id),unchangedJobIds:members.filter(m=>!attach.includes(m.id)&&!paused.some(p=>p.id===m.id)).map(m=>m.id)};
+ return{sourceBayId:source.length===1?source[0]??null:null,...(source.length>1?{reconciledBayIds:source}:{}),targetBayId:review.targetBayId,attachJobIds:attach,pauseJobIds:paused.map(m=>m.id),unchangedJobIds:members.filter(m=>!attach.includes(m.id)&&!paused.some(p=>p.id===m.id)).map(m=>m.id)};
 }

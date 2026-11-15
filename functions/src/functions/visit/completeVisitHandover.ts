@@ -27,5 +27,5 @@ export const completeVisitHandover=onCall({region:'asia-south1',enforceAppCheck:
   try{await advanceJobStatus.run({...request,data:{jobId,...jobStageCommand({status:"READY_FOR_DELIVERY",updatedAt:initial["expected"][jobId].updatedAt}),recordedWorkRevision:initial['expected'][jobId].recordedWorkRevision,visitHandoverId:ref.id}});}
   catch(err){error=err instanceof HttpsError?err.message:'Handover stopped. Reload remaining services.';break;}
  }
- const current=await read();return{manifestId:ref.id,status:Object.keys(current['expected']).every(id=>current['outcomes'][id]?.status==='delivered')?'complete':'incomplete',outcomes:Object.fromEntries(Object.entries(current['outcomes']).map(([id,v])=>[id,{status:(v as any).status,at:(v as any).at}])),error};
+ const current=await read();return{manifestId:ref.id,status:Object.keys(current['expected']).every(idEntry30=>current['outcomes'][idEntry30]?.status==='delivered')?'complete':'incomplete',outcomes:Object.fromEntries(Object.entries(current['outcomes']).map(([idEntry30,v])=>[idEntry30,{status:(v as any).status,at:(v as any).at}])),error};
 });

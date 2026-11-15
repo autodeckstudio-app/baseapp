@@ -8,7 +8,7 @@ import{buildInvoice}from'./invoice-builder.js';
 import{snapshotVehicle}from'./job-invoice.js';
 import{resolveServiceName}from'./service-name.js';
 import{allocateInvoiceNumber}from'./invoice-counter.js';
-import{readVisitBilling}from'./visit-billing.js';
+import type{readVisitBilling}from'./visit-billing.js';
 /** A separate identity keeps legacy Invoice.visitId (job identity) intact.
  * Only unissued obligations enter this invoice; older issued originals are
  * referenced by the collection bill, never folded into new taxable revenue. */

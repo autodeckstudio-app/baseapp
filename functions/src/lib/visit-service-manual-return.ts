@@ -51,7 +51,7 @@ export async function recordVisitServiceManualReturn(db:Firestore,user:Authorize
  if(!parsed.success)throw new HttpsError('invalid-argument','Confirm the actual original-method handover.');const d=parsed.data;
  return db.runTransaction(async tx=>{
   if(localRetirement&&(await tx.get(localRetirement)).exists)return fail('Saved decision was retired. Review again.');
-  const{scope,progress,record}=await current(tx,db,user,d.visitId,d.jobId),e=progress.entries.find(e=>e.key===d.entryKey);
+  const{scope,progress,record}=await current(tx,db,user,d.visitId,d.jobId),e=progress.entries.find(eEntry54=>eEntry54.key===d.entryKey);
   if(!e||e.method==='razorpay_payment_link'||e.returnPaise<=0||progress.status==='awaiting_admin')return fail('A separate Admin approval and an original manual source are required.');
   const ref=db.collection('visitServiceManualReturns').doc('vmr_'+visitReturnHash([d.jobId,e.key])),prior=(await tx.get(ref)).data();
   if(prior){if(prior['returnedBy']!==user.uid||prior['note']!==d.note||prior['confirmedProgressToken']!==d.progressToken)return fail('Actual-return confirmation belongs to another decision.');return{alreadyRecorded:true,returnId:d.jobId,entryKey:e.key,amountPaise:e.returnPaise};}

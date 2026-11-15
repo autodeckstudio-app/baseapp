@@ -20,9 +20,9 @@ export function parseVisitRead(raw:unknown,jobId:string,self:boolean):VisitRead{
  });
  const ids=members.map(m=>m.jobId);
  if(new Set(ids).size!==ids.length||!ids.includes(jobId)||!(raw.transportJobId===null||ids.includes(raw.transportJobId))||!record(raw.bill)||!money(raw.bill.totalAmount)||!Array.isArray(raw.bill.items)||raw.bill.items.length!==ids.length)return fail();
- const items=raw.bill.items.map((b:unknown)=>{if(!record(b))return fail();const m=members.find(m=>m.jobId===b.jobId);if(!m||b.totalAmount!==m.totalAmount||b.paymentStatus!==m.paymentStatus||b.cancelled!==(m.status==='CANCELLED'))return fail();return{jobId:m.jobId,totalAmount:m.totalAmount,paymentStatus:m.paymentStatus,cancelled:b.cancelled};});
+ const items=raw.bill.items.map((b:unknown)=>{if(!record(b))return fail();const m=members.find(mEntry23=>mEntry23.jobId===b.jobId);if(!m||b.totalAmount!==m.totalAmount||b.paymentStatus!==m.paymentStatus||b.cancelled!==(m.status==='CANCELLED'))return fail();return{jobId:m.jobId,totalAmount:m.totalAmount,paymentStatus:m.paymentStatus,cancelled:b.cancelled};});
  if(new Set(items.map(i=>i.jobId)).size!==ids.length)return fail();
- const active=members.filter(m=>m.status!=='CANCELLED'),known=active.every(m=>m.totalAmount!==null),sum=known?active.reduce((n,m)=>n+m.totalAmount!,0):null;
+ const active=members.filter(m=>m.status!=='CANCELLED'),known=active.every(m=>m.totalAmount!==null),sum=known?active.reduce((n,m)=>n+(m.totalAmount??NaN),0):null;
  if(raw.bill.totalAmount!==(sum!==null&&Number.isSafeInteger(sum)?sum:null))return fail();
  if(raw.state==='ready'&&(!active.length||active.some(m=>m.status!=='READY_FOR_DELIVERY'||m.totalAmount===null||m.serviceStatus==='Check work'))||raw.state==='delivered'&&(!active.length||active.some(m=>m.status!=='DELIVERED'))||raw.state==='cancelled'&&active.length||raw.state==='expected'&&active.some(m=>m.status!=='PENDING_VEHICLE'))return fail();
  let handover:Extract<VisitRead,{status:'grouped'}>['handover']=null;

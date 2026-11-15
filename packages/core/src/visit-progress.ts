@@ -13,7 +13,7 @@ export function visitProgress(view:Extract<VisitRead,{status:'grouped'}>){
   // has reached that milestone. Never borrow one service's ready time.
   if(step==='READY_FOR_DELIVERY'&&!['ready','delivered'].includes(view.state)||step==='DELIVERED'&&view.state!=='delivered')continue;
   const dates=active.map(m=>m.history.filter(h=>h.status===step).map(h=>h.changedAt).sort().at(-1));
-  if(active.length&&dates.every((d):d is string=>!!d))history.push({status:step,changedAt:dates.sort().at(-1)!});
+  if(active.length&&dates.every((d):d is string=>!!d)){const changedAt=dates.sort().at(-1);if(changedAt)history.push({status:step,changedAt});}
  }
  return{status,history,headline:sharedVisitLabel(view.state),line:`${active.length} services · One visit`,services:view.members.map(m=>({id:m.jobId,name:m.lines.map(l=>l.name).join(' + '),status:m.serviceStatus})),finalLabel:view.state==='handover_incomplete'?'Handover incomplete':undefined};
 }

@@ -1,7 +1,7 @@
 import type { Firestore } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
 import { utcToLocalDate } from './schedule.js';
-import { validateVisitOnlineReceiptProof } from './visit-online-receipt.js';
+import type { validateVisitOnlineReceiptProof } from './visit-online-receipt.js';
 import { readVisitOnlineProof } from './visit-online-proof.js';
 
 const id = (value: unknown): value is string => typeof value === 'string' && /^[A-Za-z0-9_-]{1,120}$/.test(value);

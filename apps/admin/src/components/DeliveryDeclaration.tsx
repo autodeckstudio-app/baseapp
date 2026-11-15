@@ -1,3 +1,5 @@
+import type { HandoverReview } from "../lib/visit-service";
+import type { then } from "../lib/visit-service";
 "use client";
 import {jobStageCommand} from "@autodeck/core";
 import type {VisitRead} from '@autodeck/core';
@@ -72,7 +74,7 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
   const [integrityError, setIntegrityError] = useState(false);
   const [visit,setVisit]=useState<VisitRead|null>(null);
   const [visitReviewed,setVisitReviewed]=useState(false);
-  const handoverAttempt=useRef<import('../lib/visit-service').HandoverReview|null>(null);
+  const handoverAttempt=useRef<HandoverReview|null>(null);
   const[work,setWork]=useState<JobWorkCoverage|null>(null);
   const[useRecorded,setUseRecorded]=useState(false);
   const [draft, setDraft] = useState<DeclarationDraft>({ choice: null });
@@ -119,7 +121,7 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
     const startSig = liveSigRef.current;
     setLoading(true); setLoadError(false); setIntegrityError(false);setWork(null);setVisit(null);setVisitReviewed(false);handoverAttempt.current=null;setUseRecorded(false);
     try {
-      const [snap,recorded,shared] = await Promise.all([getDocs(query(collection(db, SUBCOLLECTIONS.vehicleProtections(ctx.vehicleId)), where("tenantId", "==", ctx.tenantId))),getStaffJobWorkCoverage(ctx.jobId),ctx.visitId?import('../lib/visit-service').then(m=>m.getVisit(ctx.jobId)):Promise.resolve(null)]);
+      const [snap,recorded,shared] = await Promise.all([getDocs(query(collection(db, SUBCOLLECTIONS.vehicleProtections(ctx.vehicleId)), where("tenantId", "==", ctx.tenantId))),getStaffJobWorkCoverage(ctx.jobId),ctx.visitId?then(m=>m.getVisit(ctx.jobId)):Promise.resolve(null)]);
       if (gen !== generation.current || liveSigRef.current !== startSig) return; // superseded, invalidated, or unmounted
       const records = snap.docs.map((d) => ({ ...d.data(), id: d.id }) as Protection);
       if (records.some((r) => r.vehicleId !== ctx.vehicleId)) { setIntegrityError(true); setProtections([]); return; }

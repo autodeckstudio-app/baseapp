@@ -1,3 +1,4 @@
+import type { ServiceJob } from "@autodeck/core";
 import {readVisitWorkReadiness} from '../../lib/visit-work-readiness.js';
 // Combined integration candidate, not deployed. Writes only new work
 // ledger + scoped receipt + audit. Never writes job/delivery/protection/
@@ -43,7 +44,7 @@ export const recordJobPerformedWork=onCall({region:'asia-south1',enforceAppCheck
   // serviceable simply because another booked line is being recorded now.
   for(const line of ledger.lines){if(line.source==='approved_extra'){if(!line.approvalId)throw conflict();const a=(await tx.get(db.collection('approvals').doc(line.approvalId))).data();if(!a||a['id']!==line.approvalId||a['status']!=='approved'||a['serviceId']!==line.serviceId||['tenantId','studioId','jobId','customerId','vehicleId'].some(k=>a[k]!==scope[k as keyof typeof scope]))throw conflict();}}
   const line=data.action==='seal'?null:ledger.lines.find(candidate=>candidate.id===data.lineId);if(data.action!=='seal'&&!line)throw conflict();const now=new Date().toISOString();
-  if(data.action==='seal'){const readiness=await readVisitWorkReadiness(tx,db,job as unknown as import('@autodeck/core').ServiceJob);if(!readiness?.ready)throw new HttpsError('failed-precondition','Check every service before locking work.');const issues=reviewPerformedWork(ledger,{scope,vehicleActive:true,terms:[],targets}).filter(issue=>!['terms_missing','terms_changed','removal_terms'].includes(issue.code));if(!snap||issues.length)throw new HttpsError('failed-precondition','Record and check every work item before locking work.');ledger.sealedAt=now;}else if(data.action==='record'){
+  if(data.action==='seal'){const readiness=await readVisitWorkReadiness(tx,db,job as unknown as ServiceJob);if(!readiness?.ready)throw new HttpsError('failed-precondition','Check every service before locking work.');const issues=reviewPerformedWork(ledger,{scope,vehicleActive:true,terms:[],targets}).filter(issue=>!['terms_missing','terms_changed','removal_terms'].includes(issue.code));if(!snap||issues.length)throw new HttpsError('failed-precondition','Record and check every work item before locking work.');ledger.sealedAt=now;}else if(data.action==='record'){
    if((line!.source==='approved_extra'?line!.approvalId:null)!==data.approvalId)throw conflict();const work=data.work;const detail=work.kind==='install'||work.kind==='replace'?work.product:null;
    // Targeted lifecycle work binds the EXACT Protection record the staff
    // member reviewed: same tenant, car and current customer, a cosmetic

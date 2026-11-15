@@ -25,7 +25,7 @@ async function current(tx:Transaction,db:Firestore,user:AuthorizedUser,visitId:s
 export async function reserveVisitOnlineReturn(db:Firestore,user:AuthorizedUser,raw:unknown){
  assertRole(user,'admin','superadmin');const parsed=schema.safeParse(raw);if(!parsed.success)throw new HttpsError('invalid-argument','Confirm the exact online return reservation.');const d=parsed.data;
  return db.runTransaction(async tx=>{
-  const{scope,progress}=await current(tx,db,user,d.visitId,d.jobId),e=progress.entries.find(e=>e.key===d.entryKey);
+  const{scope,progress}=await current(tx,db,user,d.visitId,d.jobId),e=progress.entries.find(eEntry28=>eEntry28.key===d.entryKey);
   if(!e||e.method!=='razorpay_payment_link'||e.returnPaise<=0||progress.status==='awaiting_admin')return fail();
   const requestId=visitOnlineReturnId(d.jobId,e.key),ref=db.collection('visitServiceOnlineReturns').doc(requestId),prior=(await tx.get(ref)).data()as VisitOnlineReturn|undefined;
   if(prior)return{request:await readVisitOnlineReturnClaim(tx,db,prior),alreadyReserved:true};
@@ -67,9 +67,9 @@ async function load(tx:Transaction,db:Firestore,user:AuthorizedUser,visitId:stri
 async function hold(db:Firestore,user:AuthorizedUser,visitId:string,jobId:string,requestId:string){
  return db.runTransaction(async tx=>{const{r}=await load(tx,db,user,visitId,jobId,requestId);if(r.state!=='returned'&&r.state!=='reserved')tx.update(db.collection('visitServiceOnlineReturns').doc(requestId),{state:'review_required',updatedAt:new Date().toISOString()});});
 }
-async function candidate(db:Firestore,user:AuthorizedUser,visitId:string,jobId:string,requestId:string,id:string){
- if(typeof id!=='string'||!/^[A-Za-z0-9_-]{1,120}$/.test(id))return fail();
- return db.runTransaction(async tx=>{const{r}=await load(tx,db,user,visitId,jobId,requestId);if(r.state==='reserved'||r.candidateId&&r.candidateId!==id)return fail();if(r.state!=='returned')tx.update(db.collection('visitServiceOnlineReturns').doc(requestId),{candidateId:id,updatedAt:new Date().toISOString()});return{...r,candidateId:id};});
+async function candidate(db:Firestore,user:AuthorizedUser,visitId:string,jobId:string,requestId:string,idEntry70:string){
+ if(typeof idEntry70!=='string'||!/^[A-Za-z0-9_-]{1,120}$/.test(idEntry70))return fail();
+ return db.runTransaction(async tx=>{const{r}=await load(tx,db,user,visitId,jobId,requestId);if(r.state==='reserved'||r.candidateId&&r.candidateId!==idEntry70)return fail();if(r.state!=='returned')tx.update(db.collection('visitServiceOnlineReturns').doc(requestId),{candidateId:idEntry70,updatedAt:new Date().toISOString()});return{...r,candidateId:idEntry70};});
 }
 async function complete(db:Firestore,user:AuthorizedUser,visitId:string,jobId:string,requestId:string,raw:unknown){
  return db.runTransaction(async tx=>{

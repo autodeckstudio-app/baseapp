@@ -88,7 +88,7 @@ export function validateVisitOnlineReceiptProof(proof: {
   const issued = parseVisitInvoiceRead(invoice);
   const unissued = attempt.review.lines.filter(line => !line.cancelled && line.amountPaise > line.appliedPaise);
   if (issued.components.length !== unissued.length || issued.components.some(component => {
-    const line = unissued.find(line => line.jobId === component.jobId);
+    const line = unissued.find(lineEntry91 => lineEntry91.jobId === component.jobId);
     return !line || component.amountPaise !== line.amountPaise;
   })) return fail();
   return { id: expected.receipt.id, recognisedAt: expected.receipt.recognisedAt, method: 'razorpay_payment_link' as const,

@@ -30,7 +30,7 @@ export function visitIntakeIssue(intake:VisitIntake):IntakeIssue|null{
  * quoted once separately; no duplicate fee or invented consolidated tender. */
 export function visitIntakeTotal(intake:VisitIntake):number|null{
  if(visitIntakeIssue(intake))return null;
- const total=intake.lines.reduce((sum,line)=>sum+line.price!.total,0);return Number.isSafeInteger(total)?total:null;
+ const total=intake.lines.reduce((sum,line)=>sum+(line.price?.total??NaN),0);return Number.isSafeInteger(total)?total:null;
 }
 export function checkIntakeReview(intake:VisitIntake,review:{revision:number;totalAmount:number;lineIds:readonly string[]},now:number):IntakeIssue|null{
  const issue=visitIntakeIssue(intake);if(issue)return issue;
@@ -46,7 +46,7 @@ export function parseVisitIntakeRead(value:unknown):VisitIntakeRead{
  const i=value as VisitIntakeRead;const fail=()=>{throw new Error('Estimate unavailable. Refresh before reviewing.');};
  if(!i||![i.id,i.customerId,i.vehicleId,i.studioId].every(text)||!Number.isSafeInteger(i.revision)||i.revision<1||!['draft','offered','accepted','declined','expired','cancelled'].includes(i.status)||i.expiresAt!==null&&(!text(i.expiresAt)||!Number.isFinite(Date.parse(i.expiresAt)))||i.visitId!==null&&!text(i.visitId)||!Array.isArray(i.lines)||i.lines.length<2||i.lines.length>20)return fail();
  if(new Set(i.lines.map(l=>l.id)).size!==i.lines.length||new Set(i.lines.map(l=>l.serviceId)).size!==i.lines.length||i.lines.some(l=>!l||![l.id,l.serviceId,l.name].every(text)||!Number.isSafeInteger(l.workingMinutes)||l.workingMinutes<1||!['fixed','quote'].includes(l.priceKind)||l.totalAmount!==null&&!money(l.totalAmount)))return fail();
- const known=i.lines.every(l=>l.totalAmount!==null),sum=known?i.lines.reduce((n,l)=>n+l.totalAmount!,0):null;
+ const known=i.lines.every(l=>l.totalAmount!==null),sum=known?i.lines.reduce((n,l)=>n+(l.totalAmount??NaN),0):null;
  if(i.totalAmount!==sum||sum!==null&&!money(sum)||i.status==='offered'&&(!known||i.expiresAt===null))return fail();return i;
 }
 
@@ -54,5 +54,5 @@ export type VisitIntakeCursor={id:string;createdAt:string};
 export function parseVisitIntakePage(value:unknown):{intakes:VisitIntakeRead[];nextCursor:VisitIntakeCursor|null}{
  const p=value as {intakes:unknown[];nextCursor:VisitIntakeCursor|null};
  if(!p||!Array.isArray(p.intakes)||p.intakes.length>20||p.nextCursor!==null&&(!p.nextCursor||typeof p.nextCursor.id!=='string'||!/^[A-Za-z0-9_-]{1,120}$/.test(p.nextCursor.id)||!Number.isFinite(Date.parse(p.nextCursor.createdAt))))throw Error('Estimates unavailable. Refresh before reviewing.');
- const intakes=p.intakes.map(parseVisitIntakeRead);if(new Set(intakes.map(i=>i.id)).size!==intakes.length||p.nextCursor!==null&&(intakes.length!==20||p.nextCursor.id!==intakes[19]!.id))throw Error('Estimate page changed. Refresh before reviewing.');return{intakes,nextCursor:p.nextCursor};
+ const intakes=p.intakes.map(parseVisitIntakeRead);if(new Set(intakes.map(i=>i.id)).size!==intakes.length||p.nextCursor!==null&&(intakes.length!==20||p.nextCursor.id!==intakes[19]?.id))throw Error('Estimate page changed. Refresh before reviewing.');return{intakes,nextCursor:p.nextCursor};
 }

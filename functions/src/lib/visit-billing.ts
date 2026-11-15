@@ -104,7 +104,7 @@ export async function readVisitBilling(tx:Transaction,db:Firestore,visitId:strin
      // child set, even when an individual job projection was changed with it.
      const siblings=await tx.get(db.collection('offlineReceipts').where('visitReceiptId','==',v['visitReceiptId']).limit(21));
      if(siblings.size!==parent['applications'].length)return fail('Visit receipt application set needs review.');
-     for(const sibling of siblings.docs){const s=sibling.data(),a=parent['applications'].find((a:any)=>a.applicationId===sibling.id),owner=members.find(m=>m.job.id===s['jobId']);
+     for(const sibling of siblings.docs){const s=sibling.data(),a=parent['applications'].find((aEntry107:any)=>aEntry107.applicationId===sibling.id),owner=members.find(m=>m.job.id===s['jobId']);
       if(!a||!owner||a.jobId!==s['jobId']||s['id']!==sibling.id||s['bookingId']!==owner.job.bookingId||a.appliedPaise!==s['receivedPaise']||a.appliedPaise!==s['appliedPaise']||s['officeReturnDuePaise']!==0||!money(s['balanceDuePaise'])||['tenantId','studioId','customerId','visitId','billId','method','reference','createdAt','recordedBy'].some(k=>s[k]!==parent[k]))return fail('Visit receipt sibling application needs review.');
      }
      verifiedReceiptIds.add(v['visitReceiptId']);
@@ -123,7 +123,7 @@ export async function readVisitBilling(tx:Transaction,db:Firestore,visitId:strin
    const ownChargeClaim=claim?.['kind']==='visit_cancellation_charge_owned'&&job.status==='CANCELLED'&&booking?.['visitCancellationChargeId']===job.id&&claim['chargeId']===job.id&&claim['jobId']===job.id&&claim['paymentId']===p.id&&claim['bookingId']===job.bookingId&&claim['tenantId']===job.tenantId&&claim['visitId']===visit.id;
    const ownReturnClaim=claim?.['kind']==='visit_service_return_owned'&&job.status==='CANCELLED'&&booking?.['visitServiceReturnId']===job.id&&
     claim['returnId']===job.id&&claim['jobId']===job.id&&claim['paymentId']===p.id&&claim['bookingId']===job.bookingId&&claim['tenantId']===job.tenantId&&claim['visitId']===visit.id;
-   if(marker.exists&&!ownReturnClaim&&!ownChargeClaim||refunds.size>20||refunds.docs.some(d=>d.data()['status']!=='failed'))return fail('An original payment return is unresolved.');
+   if(marker.exists&&!ownReturnClaim&&!ownChargeClaim||refunds.size>20||refunds.docs.some(dEntry126=>dEntry126.data()['status']!=='failed'))return fail('An original payment return is unresolved.');
    if(p.offlineReceiptSettlement){if(projection||p.amount!==actualReceipts||!receipts.size)return fail('Receipt settlement projection changed.');projection=p;continue;}
    if(fundingIds.has(p.id))return fail('One original payment cannot fund two services.');fundingIds.add(p.id);completed.set(p.id,p);applied+=p.amount;
   }

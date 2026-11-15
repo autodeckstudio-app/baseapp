@@ -33,7 +33,7 @@ export async function readVisitReturnProgress(tx:Transaction,db:Firestore,record
  if(onlineRows.size>121||!approval&&!onlineRows.empty)return fail();
  const onlineByKey=new Map<string,VisitOnlineReturn>();
  for(const doc of onlineRows.docs){
-  const r=doc.data()as VisitOnlineReturn,e=review.entries.find(e=>e.key===r.entryKey);
+  const r=doc.data()as VisitOnlineReturn,e=review.entries.find(eEntry36=>eEntry36.key===r.entryKey);
   if(!e||e.method!=='razorpay_payment_link'||e.returnPaise<=0||onlineByKey.has(e.key)||r.id!==doc.id||
     scope.some(k=>r[k]!==record[k])||r.returnId!==record['id']||r.reviewHash!==record['reviewHash']||
     r.approvalHash!==approval!['approvalHash']||r.providerPaymentId!==e.providerPaymentId||r.amountPaise!==e.returnPaise||

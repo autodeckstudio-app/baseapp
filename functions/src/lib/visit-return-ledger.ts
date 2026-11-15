@@ -53,7 +53,7 @@ export async function readVisitReturnLedger(db:Firestore,tenantId:string,studioI
   }
   const visits=new Map<string,Awaited<ReturnType<typeof readVisitBilling>>>(),obligations:VisitReturnObligation[]=[],events:VisitReturnEvent[]=[];
   for(const doc of roots.docs){const r=doc.data();let bill=visits.get(r['visitId']);if(!bill){bill=await readVisitBilling(tx,db,r['visitId']);visits.set(r['visitId'],bill);}
-   if(bill.visit.tenantId!==tenantId||bill.visit.studioId!==studioId)return fail();const p=bill.returnReviews.find(p=>p.jobId===doc.id);if(!p)return fail();
+   if(bill.visit.tenantId!==tenantId||bill.visit.studioId!==studioId)return fail();const p=bill.returnReviews.find(pEntry56=>pEntry56.jobId===doc.id);if(!p)return fail();
    const opaque='vrl_'+visitReturnHash([tenantId,studioId,doc.id]);
    obligations.push({id:opaque,status:p.status,paidPaise:p.paidPaise,retainedPaise:p.retainedPaise,returnPaise:p.returnPaise,returnedPaise:p.returnedPaise,manualDuePaise:p.manualDuePaise,onlineDuePaise:p.onlineDuePaise,accountingReviewNeeded:p.accountingReviewNeeded});
    let actual=0;

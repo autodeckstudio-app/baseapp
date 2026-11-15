@@ -1,3 +1,4 @@
+import type { ServiceJob } from "@autodeck/core";
 // Combined read-only integration candidate, not deployed.
 // A booked/paid/invoiced service is never promoted into performed work here.
 import{onCall,HttpsError}from'firebase-functions/v2/https';
@@ -62,7 +63,7 @@ async function read(request:any,self:boolean){
    targets.push(resolved);}
   const audience=self?'customer':user.claims.role==='studio'?'studio':'admin';
   const items=buildWorkCoverageView(snap.ledger as WorkLedger,{scope:currentScope,vehicleActive:true,terms,targets},evidence,snap.products,audience);
-  const visitWork=await readVisitWorkReadiness(tx,db,{...job,id:j.id} as unknown as import('@autodeck/core').ServiceJob);
+  const visitWork=await readVisitWorkReadiness(tx,db,{...job,id:j.id} as unknown as ServiceJob);
   return{status:'recorded' as const,jobId:j.id,workReady:visitWork?.ready??false,revision:snap.ledger.revision,workLock:snap.sourceJobHash?(snap.ledger.sealedAt?'locked' as const:'open' as const):'unknown' as const,items,handoverReady:visitWork?.ready===true&&items.every(i=>i.workStatus==='QC recorded')&&!!snap.sourceJobHash&&recordedWorkHandover(snap.ledger as WorkLedger,currentScope)!==null};
  });
 }

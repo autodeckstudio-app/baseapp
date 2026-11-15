@@ -24,7 +24,7 @@ export type VisitJoinProblem='scope_changed'|'terminal_member'|'already_joined'|
  * invoices. A conflict is for staff review, never an automatic adjustment. */
 export function visitJoinProblem(members:readonly VisitMember[],existingVisitId?:string):VisitJoinProblem|null{
  if(members.length<2||new Set(members.map(j=>j.id)).size!==members.length)return 'duplicate_member';
- const first=members[0]!;
+ const first=members[0];if(!first)return'duplicate_member';
  if(members.some(j=>(['tenantId','studioId','customerId','vehicleId'] as const).some(k=>j[k]!==first[k])))return 'scope_changed';
  if(members.some(j=>!['PENDING_VEHICLE','STANDBY','VEHICLE_RECEIVED','IN_PROGRESS','QUALITY_CHECK','READY_FOR_DELIVERY','DELIVERED','CANCELLED'].includes(j.status)))return 'scope_changed';
  if(members.some(j=>['DELIVERED','CANCELLED'].includes(j.status)))return 'terminal_member';

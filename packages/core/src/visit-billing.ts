@@ -18,7 +18,7 @@ export function allocateVisitReceipt(review:VisitCollectionReview,receivedPaise:
  const entries=active.map(l=>({jobId:l.jobId,amount:applied*l.due/total,remainder:applied*l.due%total}));
  const left=applied-entries.reduce((n,l)=>n+l.amount,BigInt(0));
  const ranked=[...entries].sort((a,b)=>a.remainder===b.remainder?(a.jobId<b.jobId?-1:a.jobId>b.jobId?1:0):a.remainder>b.remainder?-1:1);
- for(let i=0;i<Number(left);i++)ranked[i]!.amount++;
+ for(const row of ranked.slice(0,Number(left)))row.amount++;
  return{visitId:review.visitId,revision:review.revision,receivedPaise,appliedPaise:Number(applied),unappliedPaise:receivedPaise-Number(applied),balancePaise:Number(total-applied),entries:entries.map(l=>({jobId:l.jobId,appliedPaise:Number(l.amount)})).sort((a,b)=>a.jobId<b.jobId?-1:a.jobId>b.jobId?1:0)};
 }
 
