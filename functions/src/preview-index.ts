@@ -9,6 +9,8 @@ export{getVisitInvoice,listStaffVisitInvoices,getVisitInvoicePdfUrl}from'./funct
 export{getCustomerJobs}from'./functions/customer/getCustomerJobs.js';
 export{getPublicCatalogue}from'./functions/service/getPublicCatalogue.js';
 export{reviewRetainedTransport,executeRetainedTransport}from'./functions/visit/retainedTransportOperations.js';
-export{reviewVisitService,executeVisitService}from'./functions/visit/visitServiceOperations.js';
+export{reviewVisitService,executeVisitService,reconcileVisitService}from'./functions/visit/visitServiceOperations.js';
 export{getServiceCatalogue}from'./functions/service/getServiceCatalogue.js';
 export{getMyJobWorkCoverage,getStaffJobWorkCoverage}from'./functions/work/getJobWorkCoverage.js';
+
+export{getVisitScheduleReview,rescheduleVisit}from'./functions/visit/visitSchedule.js';

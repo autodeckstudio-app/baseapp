@@ -119,7 +119,10 @@ export default function JobDetailScreen() {
   const [customerName,setCustomerName] = useState<string|null>(null);
   const [serviceName,setServiceName] = useState<string|null>(null);
   const [requiredBayType, setRequiredBayType] = useState<string | null>(null);
-  const [config, setConfig] = useState<StudioConfig | null>(null);
+  const [configRaw, setConfig] = useState<StudioConfig | null>(null);const[configStudio,setConfigStudio]=useState<string|null>(null);const config=configStudio===job?.studioId?configRaw:null;
+  const[configRead,setConfigRead]=useState<'loading'|'ready'|'error'>('loading');
+  const currentConfigRead=configStudio===job?.studioId?configRead:'loading';
+  useEffect(()=>{let active=true;setConfig(null);setConfigStudio(job?.studioId??null);setConfigRead('loading');if(job?.studioId)void getStudioConfig(job.studioId).then(c=>{if(active){if(!c||c.tenantId!==job.tenantId||!Array.isArray(c.bays))throw Error('Studio bays unavailable');setConfig(c);setConfigRead('ready')}}).catch(()=>{if(active)setConfigRead('error')});return()=>{active=false}},[job?.studioId,job?.tenantId]);
   const [feedError,setFeedError] = useState<string|null>(null);
   const [attempt,setAttempt] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -175,9 +178,7 @@ export default function JobDetailScreen() {
           void getDoc(doc(db,COLLECTIONS.vehicles(),j.vehicleId)).then(s=>alive&&setVehicle(s.exists()?s.data() as Vehicle:null)).catch(()=>{if(alive)setVehicle(null)});
           void getDoc(doc(db,COLLECTIONS.customers(),j.customerId)).then(s=>alive&&setCustomerName((s.data() as Customer|undefined)?.name??null)).catch(()=>{if(alive)setCustomerName(null)});
           void getDoc(doc(db, COLLECTIONS.services(), j.serviceId)).then(s => { if(!alive)return;const data=s.data() as Service|undefined; setRequiredBayType(data?.requiredBayType??null);setServiceName(data?.name??null); }).catch(()=>{if(alive)setServiceName(null)});
-          if (!config) {
-            void getStudioConfig(j.studioId).then(c=>{if(alive)setConfig(c)});
-          }
+
         }
         setLoading(false);
       },
@@ -577,7 +578,7 @@ export default function JobDetailScreen() {
       ? `~${formatDuration(job.estimatedDurationMinutes)}`
       : `~${Math.round(job.estimatedDurationMinutes / 60)} hrs of service time`;
 
-  const compatibleBays = config?.bays.filter((b) => b.active && b.id !== job.bayId && b.bayType === requiredBayType) ?? [];
+  const compatibleBays = config?.bays?.filter((b) => b.active && b.id !== job.bayId && b.bayType === requiredBayType) ?? [];
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: "transparent" }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, width:"100%",maxWidth: 1040,alignSelf:"center" }}>
@@ -590,7 +591,7 @@ export default function JobDetailScreen() {
       <Section>
         {job.visitId?<Row label="Visit" value={sharedVisit.progress?.headline??(sharedVisit.error?"Visit unavailable":"Checking visit…")}/>:null}
         {sharedVisit.progress?.services.map(s=><Row key={s.id} label={s.name} value={s.status}/>)}
-        <Row label="Bay" value={job.status === "STANDBY" ? "No bay reserved" : config?.bays.find(b=>b.id===job.bayId)?.name??"Loading bay..."} />
+        <Row label="Bay" value={job.status === "STANDBY" ? "No bay reserved" : currentConfigRead==='loading'?"Checking bay…":currentConfigRead==='error'?"Bay unavailable":!job.bayId?"No bay assigned":config?.bays.find(b=>b.id===job.bayId)?.name??"Bay needs review"} />
         <Row label="Service" value={serviceName??"Loading service..."} />
         <Row label="Scheduled" value={job.status === "STANDBY" ? "Waiting - no slot reserved" : scheduledTime} />
         <Row label="Duration" value={durationLabel} />

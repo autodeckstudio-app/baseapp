@@ -1,4 +1,4 @@
-import type {Firestore,Transaction} from 'firebase-admin/firestore';
+import type {Firestore,Transaction,DocumentReference} from 'firebase-admin/firestore';
 import type {AuthorizedUser} from '@autodeck/auth';
 import {HttpsError} from 'firebase-functions/v2/https';
 import {z} from 'zod';
@@ -19,13 +19,14 @@ async function current(tx:Transaction,db:Firestore,user:AuthorizedUser,visitId:s
  const record=(await tx.get(db.collection('visitServiceReturns').doc(jobId))).data();if(!record)return fail();
  return{scope,progress,record};
 }
-/** DORMANT explicit Admin approval, never implicit from cancellation. No
- * callable imports this module, no provider request/reservation is created.
+/** Explicit Admin approval, never implicit from cancellation. Only local
+ * preview routing uses this writer; no provider request/reservation is created.
  * Online entries remain separately owed and unsubmitted. */
-export async function approveVisitServiceReturn(db:Firestore,user:AuthorizedUser,raw:unknown){
+export async function approveVisitServiceReturn(db:Firestore,user:AuthorizedUser,raw:unknown,localRetirement?:DocumentReference){
  assertRole(user,'admin','superadmin');const parsed=base.extend({approved:z.literal(true)}).strict().safeParse(raw);
  if(!parsed.success)throw new HttpsError('invalid-argument','Confirm this original-method return approval.');const d=parsed.data;
  return db.runTransaction(async tx=>{
+  if(localRetirement&&(await tx.get(localRetirement)).exists)return fail('Saved decision was retired. Review again.');
   const{scope,progress,record}=await current(tx,db,user,d.visitId,d.jobId),ref=db.collection('visitServiceReturnApprovals').doc(d.jobId),prior=(await tx.get(ref)).data();
   if(prior){if(prior['approvedBy']!==user.uid||prior['note']!==d.note||prior['approvedProgressToken']!==d.progressToken)return fail('An existing approval belongs to another exact decision.');return{alreadyApproved:true,returnId:d.jobId,returnedPaise:progress.returnedPaise};}
   if(progress.status!=='awaiting_admin'||progress.progressToken!==d.progressToken)return fail();
@@ -40,15 +41,16 @@ export async function approveVisitServiceReturn(db:Firestore,user:AuthorizedUser
   return{alreadyApproved:false,returnId:d.jobId,returnedPaise:0};
  });
 }
-/** DORMANT actual cash/manual-UPI/bank return confirmation after the separate
+/** Actual cash/manual-UPI/bank return confirmation after the separate
  * Admin approval. This records a confirmed external handover, never performs
  * that handover or claims an online capture was returned. Original captured
  * receipts/payments and issued invoices are immutable; tax/accounting remains
  * explicitly review-needed. Exact source entry and note bind retries. */
-export async function recordVisitServiceManualReturn(db:Firestore,user:AuthorizedUser,raw:unknown){
+export async function recordVisitServiceManualReturn(db:Firestore,user:AuthorizedUser,raw:unknown,localRetirement?:DocumentReference){
  assertRole(user,'admin','superadmin');const parsed=base.extend({entryKey:z.string().min(1).max(180),returned:z.literal(true)}).strict().safeParse(raw);
  if(!parsed.success)throw new HttpsError('invalid-argument','Confirm the actual original-method handover.');const d=parsed.data;
  return db.runTransaction(async tx=>{
+  if(localRetirement&&(await tx.get(localRetirement)).exists)return fail('Saved decision was retired. Review again.');
   const{scope,progress,record}=await current(tx,db,user,d.visitId,d.jobId),e=progress.entries.find(e=>e.key===d.entryKey);
   if(!e||e.method==='razorpay_payment_link'||e.returnPaise<=0||progress.status==='awaiting_admin')return fail('A separate Admin approval and an original manual source are required.');
   const ref=db.collection('visitServiceManualReturns').doc('vmr_'+visitReturnHash([d.jobId,e.key])),prior=(await tx.get(ref)).data();

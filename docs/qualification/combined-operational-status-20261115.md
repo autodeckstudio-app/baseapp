@@ -27,10 +27,10 @@ provider activation, real-money test or outreach is authorized.
 | Outcome | Present source/route | Current qualification and remaining limitation |
 |---|---|---|
 | Explicit shared visit and one transport anchor | carVisits membership; existing intake/join, visit readers and app adapters | Existing connected source/emulator/mounted baseline. Database/selector expansion remains parked; no automatic grouping. Not a new whole routed acceptance run. |
-| Per-service progress, work/QC/seal and shared handover | work and visit functions; Admin/Studio job controls | Source/mounted baseline plus actual underlying work/QC/seal/handover in the new drop fixture. Full mixed service/bay/schedule operational routed review is still missing. |
+| Per-service progress, work/QC/seal and shared handover | work and visit functions; Admin/Studio job controls | Source/mounted baseline plus actual underlying work/QC/seal/handover in the new drop fixture. Actual same-type whole-visit scheduling is now routed with checked bay/date/time and one durable receipt. Mixed-category physical bay/work qualification remains distinct and unfinished. |
 | Exact itemized bill and manual receipts | getStaffVisitBill, prepareVisitBill, recordVisitReceipt and existing VisitReceiptControl | Original invoices/receipts and approved proportional allocation remain protected. Received/work-state guard remains; this does not create a prearrival grouped collection route. |
 | Unfunded, nontransport service cancellation | cancelVisitService and existing VisitCancelControl | Exact review/journal/idempotence exist. Funded/transport/benefit cases deliberately do not fall through this route. Full latest combined money/return routed review still missing. |
-| Funded service cancellation and original-method return | private review/plan, cancelReviewedVisitService, approveVisitServiceReturn, recordVisitServiceManualReturn | Transaction-tested slices preserve siblings, invoice/payment identity and separate approval/actual return. These private actions are NOT connected to the current cancellation control. Requires operational routing/UI and combined proof, not new helper chains. |
+| Funded service cancellation and original-method return | private review/plan, cancelReviewedVisitService, approveVisitServiceReturn, recordVisitServiceManualReturn | Transaction-tested slices preserve siblings, invoice/payment identity and separate approval/actual return. Now connected to local Admin job control with exact transport choice, separate approval/actual manual return, fenced rejected-command recovery and Customer/Studio truth. Cash/manual UPI/bank/mixed paths have actual three-app proof. See funded-service-followup-20261115.md; live/provider activation remains held. |
 | Part-funded retained original charge | cancelPartialFundedRetainedVisitService and distinct retained invoice/access/report/PDF seams | Existing narrow zero-tax/unregistered/manual-source/fully-funded-trip/continuing-service slice only. Not general outstanding transport, final-fee, registered/taxed or online issuance. No deployed PDF/access endpoint for this new charge kind. |
 | Retained original physical transport after anchor service cancellation | real Admin/Studio Pickup routes and Customer booking route | Local authenticated read and confirmed action endpoints, strict demo/emulator/production deny. Completed all-three routed pickup, drop and unused-closure scenarios at320/390/1280. See provenance below. Production index unchanged. |
 | Online provider flow and original-method returns | local protocol/attempt/settlement/refund/ingress/reconciliation modules | Injected-provider transaction tests and existing privacy/reporting proofs only. No credentialed real factory, live route or provider activation. A local processed fixture is not a real returned payment. |
@@ -79,9 +79,7 @@ click, response-loss exact retry and removed/stale control references.
 
 ## Remaining work, not owner questions
 
-- Connect the funded/transport/benefit cancellation and original-method return
-  operations to actual staff review/confirmation controls, with customer truth,
-  reports and recovery. Do not approve or return money implicitly on cancellation.
+- Finish benefit cancellation/extras operational controls and latest whole-outcome reports. Funded/transport/manual original-method staff controls, customer truth and fenced recovery are now locally routed; online execution stays held. Do not approve or return money implicitly on cancellation.
 - Finish outstanding/unfunded retained-charge obligations, their collection and
   issuance. Preserve approved proportional funding and one physical charge.
 - Finish final policy-fee plus transport allocation/collection without waiving,
@@ -102,3 +100,7 @@ request approval for unbuilt paths or present dormant source as operational UI.
 ## Funded operational follow-up
 
 Nontransport original cash funded cancellation, separate approval and actual original-method return now run on the real local Admin job route, with Customer/Studio source-verified return rows and booking-update invalidation. See `funded-service-operations-20261115.md` for qualification and remaining conflict-recovery/manual-method/transport limitations. This narrows the missing operational gap, not a declaration that the whole cancellation/return lifecycle is complete. No production/provider/money action was taken.
+
+## Transport, recovery, noncash and reservation follow-up
+
+See `funded-service-followup-20261115.md`. Actual local transport choice, fenced definitive-rejection recovery, original manual UPI/bank and mixed cash/held-online paths now have three-app routed proof at 320/390/1280. Actual Studio whole-visit scheduling records a genuine schedule receipt and exact future bay/time reservations before cancellation. Source-backed Studio bay states replace indefinite loading; this is not a claim that the remaining mixed-category physical-work/bay paths have full routed qualification. No production action or extra owner decision.

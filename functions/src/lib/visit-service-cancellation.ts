@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from 'node:util';
-import type { Firestore } from 'firebase-admin/firestore';
+import type { Firestore,DocumentReference } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
 import type { AuthorizedUser } from '@autodeck/auth';
 import { z } from 'zod';
@@ -13,18 +13,19 @@ const schema = z.object({ visitId:id,jobId:id,operationId:z.string().uuid(),revi
   reason:z.string().min(3).max(500).refine(s=>s.trim()===s),reviewed:z.literal(true),transport:z.object({reviewToken:z.string().regex(/^[a-f0-9]{64}$/),unusedLegs:z.array(z.enum(['pickup','drop'])).max(2)}).strict().optional(),cancelled:z.literal(true) }).strict();
 const fail = (message='Service cancellation needs a fresh original-method review.'): never => { throw new HttpsError('failed-precondition',message); };
 
-/** DORMANT. No production route imports this writer. Records a reviewed service
+/** No production route imports this writer. Local preview is explicit. Records a reviewed service
  * cancellation and the original-method amount still awaiting Admin approval.
  * Never approves/queues/submits a refund, moves money, edits original payments,
  * receipts, invoices, siblings or physical transport. No benefit restore shortcut.
  * The current supported slice requires paid funding and a fully funded policy
  * fee; fee-due, benefit and transport-anchor decisions remain held. */
-export async function cancelReviewedVisitService(db:Firestore,user:AuthorizedUser,raw:unknown) {
+export async function cancelReviewedVisitService(db:Firestore,user:AuthorizedUser,raw:unknown,localRetirement?:DocumentReference) {
   assertRole(user,'admin','superadmin');
   const parsed=schema.safeParse(raw);if(!parsed.success)throw new HttpsError('invalid-argument','Confirm the exact saved service cancellation.');
   const {cancelled:_cancelled,...command}=parsed.data;
   const commandHash=visitReturnHash(command);
   return db.runTransaction(async tx=>{
+    if(localRetirement&&(await tx.get(localRetirement)).exists)return fail('Saved decision was retired. Review again.');
     const visitRef=db.collection('carVisits').doc(command.visitId),visit=(await tx.get(visitRef)).data();
     if(!visit||visit['id']!==command.visitId||visit['tenantId']!==user.claims.tenantId)throw new HttpsError('not-found','Visit unavailable.');
     await assertCustomerNotErasing(tx,db,visit['tenantId'],visit['customerId']);
