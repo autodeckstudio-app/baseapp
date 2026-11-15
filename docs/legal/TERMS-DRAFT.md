@@ -26,7 +26,7 @@ Not published. Not wired into the app. Have it reviewed by a lawyer before use.
 
 **12. Using the app.** Do not misuse the app, try to break it, or use it for anything unlawful. We may suspend an account that does.
 
-**13. Contact.** Call or WhatsApp +91 98986 79711, or write to autodeckstudio@gmail.com. [Owner to confirm the contact email to publish.]
+**13. Contact.** Call or WhatsApp +91 98986 79711.
 
 **14. Changes.** We may update these terms. The latest version is shown in the app.
 
