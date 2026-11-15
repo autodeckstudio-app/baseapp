@@ -38,3 +38,9 @@ The backend requires both explicit release intent and an exact project match in 
 6. One final combined candidate regression and owner review. Existing independent proofs remain evidence, not a substitute for that release boundary.
 
 These are retained scope, not owner-approved deferrals. Production wiring itself is no longer merely a missing local design after this checkpoint, but it stays OFF. No release readiness or live-completion claim follows.
+
+## Grouped prearrival manual collection connected
+
+The existing actual receipt workflow now accepts PENDING_VEHICLE/STANDBY confirmed bookings only when the coordinated runtime gate is active. Nothing marks arrival or starts work. All existing proportional allocation, exact prepared bill, source token, saved receipt retry, excess hold, benefit/quote/provider guard and original invoice proof remains. A new final receipt can issue the same one consolidated original before arrival; issued originals are not rewritten.
+
+Actual Admin job receipt controls recorded Rs720 as Rs240 wash + Rs480 interior, then Rs2,880 as the final receipt. All three routes show unchanged Awaiting car and independently Not started services. There are exactly two actual visitReceipts, one visitInvoice, no payments and no work records. Office/Accountant reports reconcile Rs3,600 and two actual events. This consumes actual routed controls, not seeded receipt/paid/stage progression. Captures at320/390/1280 are in autodeck-operational-prearrival. Decisive Admin320 review, Customer390 partial and Studio1280 funded pixels inspected. Two new emulator cases passed, including disabled release and unconfirmed booking refusal. Whole batch is still incomplete. No activation or production action.
