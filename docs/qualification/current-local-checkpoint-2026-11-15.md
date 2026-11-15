@@ -68,3 +68,24 @@ Existing revenue/net/drawer figures are baseline gross figures, not reconciled
 actual-return totals. No new UI or copy was applied. Actual routed320/390/1280
 before/after and the combined owner preview remain required before live changes.
 The private hosted r5 review was not revised or delivered in this run.
+
+## Follow-up checkpoint6960fd8
+
+Scoped ingress resolution and report holds are now locally qualified as described
+in visit-refund-ingress.md. Reports hold unresolved known scoped events, and
+resolution requires already committed independently fetched processed proof.
+Two-way source/event markers detect removed/moved rows and missing markers.
+Unknown/unscoped event attribution, credentialed HTTP transport/factory, actual
+HTTP routing/acknowledgement and provider reference-length acceptance remain
+unfinished activation blockers. No live provider call or deployment occurred.
+
+Current billing suite342/342passes:24ingress+19protocol cases,53prior ledger/online
+cases and246other exact names partitioned into five disjoint buckets. Collected
+all342names and checked set union/disjointness. The remaining bucket counts are
+44,46,45,56,55. Current connected/privacy/Accountant/legacy-owed286/286passes.
+Functions types/build pass. Full Functions units again1969pass,1skip,1same
+unchanged alert-label failure. App/core/source/mounted/five-type qualification
+above was run earlier in this same run, before the final Functions-only change;
+no app/core/UI source changed in the follow-up. Combined actual visual owner
+acceptance, partial retained-charge invoice and unused-leg physical closure are
+still unfinished. No new release authority is implied.

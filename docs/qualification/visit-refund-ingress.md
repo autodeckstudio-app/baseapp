@@ -78,3 +78,7 @@ Focused qualification:24ingress and19protocol emulator cases pass, including13
 new resolution/report-marker cases. Functions types pass. The prior329-case full
 qualification applies to d732917; broader regression of this follow-up slice is
 pending at this note. No actual provider or live data action occurred.
+
+Follow-up broad check on6960fd8:all342billing cases and286connected/privacy/
+Accountant/legacy-owed cases pass. Functions types/build pass; Functions units
+1969pass,1skip,1unchanged explicit staff-alert-label failure. No UI/copy change.
