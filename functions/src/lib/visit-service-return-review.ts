@@ -1,3 +1,5 @@
+import {visitReturnHash} from './visit-service-return-state.js';
+import {retainedTransportChargeBasis} from './visit-retained-transport-charge-basis.js';
 import {readRetainedTransportProof} from './visit-transport-retention-state.js';
 import {readVisitTransportReturnReview} from './visit-transport-return-review.js';
 import { createHash } from 'node:crypto';
@@ -14,14 +16,37 @@ const fail = (): never => { throw new HttpsError('failed-precondition','Original
  * each original source is considered; sibling applications remain untouched.
  * No provider call, invoice rewrite, reservation or automatic transport removal.
  * Existing benefit and transport decisions stay explicit blockers. */
-export async function readVisitServiceReturnReview(tx: Transaction, db: Firestore, visitId: string, jobId: string, nowMs: number, transportChoice?:{reviewToken:string;unusedLegs:('pickup'|'drop')[]}) {
+type TransportChoice={reviewToken:string;unusedLegs:('pickup'|'drop')[]};
+export async function readVisitServiceReturnReview(tx: Transaction, db: Firestore, visitId: string, jobId: string, nowMs: number, transportChoice?:TransportChoice) {
+ return readServiceReturnReview(tx,db,visitId,jobId,nowMs,transportChoice,false);
+}
+/** DORMANT read-only design candidate. Not accepted by the cancellation plan or
+ * writer. It exposes partial/unfunded retained charges for integration work,
+ * never enables cancellation, creates debt, approves returns or issues invoices.
+ * Parent execution must authenticate scope before calling this private reader. */
+export async function readVisitRetainedTransportChargeCandidate(tx:Transaction,db:Firestore,visitId:string,jobId:string,nowMs:number,transportChoice:TransportChoice){
+ const review=await readServiceReturnReview(tx,db,visitId,jobId,nowMs,transportChoice,true),t=review.transport;
+ if(!t)return fail();const scope=await readVisitBilling(tx,db,visitId),target=scope.members.find(m=>m.job.id===jobId);if(!target)return fail();
+ const basis=retainedTransportChargeBasis(target.job.priceBreakdown,t.review.retainedLegs),retainedFundingPaise=review.entries.reduce((n,e)=>n+e.retainedPaise,0);
+ // Final-service policy fee and retained journey remain separate obligations.
+ // Without a saved allocation policy for underfunded fee+trip, do not pretend
+ // their individual shares are known. Never borrow a sibling's applied money.
+ const funding=review.feePaise===0?{state:'exact_transport_only' as const,appliedPaise:retainedFundingPaise,duePaise:basis.amountPaise-retainedFundingPaise}:null;
+ if(basis.amountPaise!==review.transportRetainedPaise||funding&&funding.duePaise<0)return fail();
+ const candidate={kind:'visit_retained_transport_charge_candidate' as const,status:'review_only' as const,tenantId:scope.visit.tenantId,studioId:scope.visit.studioId,customerId:scope.visit.customerId,vehicleId:scope.visit.vehicleId,visitId,jobId,bookingId:target.job.bookingId,
+  sourceToken:scope.review.reviewToken,moneyToken:scope.moneyTokens.get(jobId)!,requestToken:t.review.requestToken,basis,originalInvoiceId:review.invoiceId,
+  issuance:review.invoiceId?'already_issued_original' as const:basis.amountPaise===0?'no_positive_charge' as const:'separate_retained_obligation_required' as const,
+  funding,policyFeePaise:review.feePaise,totalRetainedFundingPaise:retainedFundingPaise,totalRetainedDuePaise:review.feeDuePaise,returnReview:review};
+ return{...candidate,candidateToken:visitReturnHash(candidate)};
+}
+async function readServiceReturnReview(tx: Transaction, db: Firestore, visitId: string, jobId: string, nowMs: number, transportChoice:TransportChoice|undefined,partialTransportCandidateOnly:boolean) {
   const scope = await readVisitBilling(tx,db,visitId), target=scope.members.find(m=>m.job.id===jobId), line=scope.review.lines.find(l=>l.jobId===jobId);
   if (!target || !line || !target.booking || !Number.isFinite(nowMs) || scope.visit.activeHandoverId ||
     !['PENDING_VEHICLE','STANDBY','VEHICLE_RECEIVED'].includes(target.job.status) || ['CANCELLED','EXPIRED','COMPLETED'].includes(target.booking['status'])) return fail();
   if (target.booking['membershipId'] || target.booking['giftId'] || target.booking['membershipWashUsed']) return fail();
   const hasTransport=scope.visit.transportJobId===jobId||target.member.transportRequested||target.member.pickupFee>0||target.member.dropFee>0;
   const transport=transportChoice?await readVisitTransportReturnReview(tx,db,visitId,jobId,transportChoice.unusedLegs):null;
-  if(hasTransport&&!transport||!hasTransport&&transportChoice||transport&&(transport.reviewToken!==transportChoice!.reviewToken||transport.needsUnusedLegDecision||line.appliedPaise!==target.job.totalAmount))return fail();
+  if(hasTransport&&!transport||!hasTransport&&transportChoice||transport&&(transport.reviewToken!==transportChoice!.reviewToken||transport.needsUnusedLegDecision||!partialTransportCandidateOnly&&line.appliedPaise!==target.job.totalAmount))return fail();
   const originalRequest=transport?(await tx.get(db.collection('pickupRequests').doc(transport.requestId))).data()!:null;
   let categories=target.booking['cancelCategories']??[];
   if (!categories.length) { const svc=(await tx.get(db.collection('services').doc(target.job.serviceId))).data();categories=[String(svc?.['category']??'')]; }

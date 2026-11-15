@@ -67,3 +67,35 @@ before/after preview. None was generated or represented as ready here.
 Full Functions regression after this helper:1985pass,1skip,1same unchanged
 explicit staff-alert-label failure. Existing billing/connected emulator results
 are fromf401985/1bb842a, not rerun for this unimported arithmetic-only addition.
+
+## Source-grounded candidate review follow-up
+
+`readVisitRetainedTransportChargeCandidate` now derives the candidate from the
+current verified visit, original request, explicit unused-leg choice, original
+funding and issued history. It includes the exact original money/request/source
+tokens and charge basis. No record is saved. Already-issued originals select
+`already_issued_original`, never a new transport issue. In a transport-only
+retention (another service continues), the exact applied/due transport paise are
+shown without using any sibling funding. With a final-service policy fee too,
+individual fee-versus-trip funding stays unallocated/null; no unapproved
+priority is invented. The total retained funding and total still due remain
+explicit. Final cancellation still invokes the existing category/time window.
+
+The existing executable cancellation-review export retains its fully funded
+transport guard. The partial candidate uses an internal read-only branch, never
+an option a cancellation command can pass. A test feeds the candidate's review
+back to the saved executable plan and confirms rejection with no saved plan or
+cancellation. No return writer, billing proof or invoice invariant was relaxed.
+The private candidate reader has no callable/route, authentication or disclosure
+surface; a future caller must validate user/tenant ownership before reading it.
+It is not an approved receivable, invoice, cancellation or refund.
+
+Ten new emulator cases cover partial cash/manual UPI/bank, zero/underfunded,
+unused drop, already-issued duplicate hold, stale request, blocked executable
+plan and explicitly unallocated final-fee funding. All369billing cases pass:
+39focused plus330other exact unique names in seven disjoint batches48six times
+and42once. Combined passing-name union checked against collected names.
+Connected/privacy/Accountant/legacy-owed293cases pass on this tree. Functions
+types/build pass; full units1985pass,1skip,1same explicit staff-alert-label fail.
+No app/core/UI source changed. The remaining issued-charge/funding/own-staff/
+PDF/Accountant integration and partial-cancellation execution are not finished.

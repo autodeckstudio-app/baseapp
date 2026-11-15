@@ -111,3 +111,16 @@ A359th case now also completes actual final cancellation after the new closure
 in the free window, with zero fee and full final-service return. All17closure
 cases plus the existing owner-correction case pass together (18/18). This last
 follow-up changes tests/docs only, not production policy or implementation.
+
+## Retained-charge candidate qualification
+
+See visit-retained-charge-design.md. Pure exact original transport arithmetic
+and a source-grounded private read-only partial/unfunded candidate are now
+qualified, not a receivable, issued charge or execution approval. Existing
+transport cancellation guards and invoice invariants remain. No production
+candidate importer or UI change. Current369billing cases pass with complete
+unique-name union checked; connected/privacy/Accountant/legacy-owed293pass.
+Types/build pass; full Functions1985pass/1skip/1same alert-label fail. Distinct
+issued charge and receipt/read/PDF/Accountant integration are still unfinished,
+as are visible unused-leg closure, other remaining connected slices and owner
+actual-routed combined preview. Hosted r5/release/provider holds unchanged.
