@@ -1,3 +1,4 @@
+import{readVisitMembershipExtras}from'./visit-membership-extras.js';
 import{readVisitCancellationCharge}from'./visit-cancellation-charge.js';
 import{readCancelledGiftService}from'./visit-gift-cancellation.js';
 import {readCancelledCoveredService} from './visit-covered-cancellation.js';
@@ -48,12 +49,14 @@ export async function readVisitBilling(tx:Transaction,db:Firestore,visitId:strin
  const fundingIds=new Set<string>(),verifiedReceiptIds=new Set<string>();
  const benefitReviews:{jobId:string;benefit:'covered'|'gift';decision:'restore_wash'|'restore_original_gift'|'keep_refunded'|'keep_void';returnedPaise:number}[]=[];
  const chargeReviews:NonNullable<Awaited<ReturnType<typeof readVisitCancellationCharge>>>[]=[];
+ const membershipExtras=new Map<string,NonNullable<Awaited<ReturnType<typeof readVisitMembershipExtras>>>>();
  const moneyTokens=new Map<string,string>(),returnReviews:Awaited<ReturnType<typeof readCancelledVisitReturn>>[]=[];
  for(const {job,member,booking}of members){
   if(member.quotePending||member.paymentInFlight||member.cancellationPending||job.cashReconciliationId||job.paymentStatus==='refunded'||!money(job.totalAmount)||!money(job.additionalWorkDelta)||!job.priceBreakdown||job.priceBreakdown.currency!=='INR'||!money(job.priceBreakdown.total)||!money(job.priceBreakdown.tax)||job.priceBreakdown.total+job.additionalWorkDelta!==job.totalAmount)return fail('Service amount or payment needs review.');
   if(job.status!=='CANCELLED'&&((job as any).visitCancellationChargeId||booking?.['visitCancellationChargeId']))return fail('Cancellation charge status changed.');
   if(booking&&['CANCELLED','EXPIRED'].includes(booking['status'])&&job.status!=='CANCELLED')return fail('Booking status changed.');
   if(booking&&job.status!=='CANCELLED')await readConsultPaymentBinding(db,tx,job,booking);
+  const benefit=booking?.['membershipDiscountApplied']===true&&!job.settlementKind&&job.totalAmount>0?await readVisitMembershipExtras(tx,db,job,booking):null;if(benefit)membershipExtras.set(job.id,benefit);
   const approvals=await tx.get(db.collection('approvals').where('jobId','==',job.id).limit(101));
   if(approvals.size>100||approvals.docs.some(d=>d.data()['status']==='pending'))return fail('Review pending additional work before collecting.');
   let additions=0;for(const a of approvals.docs){const v=a.data();if(v['status']!=='approved')continue;if(v['id']!==a.id||(['tenantId','studioId','customerId','vehicleId']as const).some(k=>v[k]!==job[k])||!money(v['priceImpact']))return fail('Approved work binding changed.');additions+=v['priceImpact'];}
@@ -71,6 +74,7 @@ export async function readVisitBilling(tx:Transaction,db:Firestore,visitId:strin
    const vi=visitInvoice;
    if(!vi||vi['id']!==job.visitInvoiceId||vi['kind']!=='shared_visit_invoice'||vi['status']!=='issued'||vi['sharedVisitId']!==visit.id||(['tenantId','studioId','customerId','vehicleId']as const).some(k=>vi[k]!==job[k])||vi['currency']!=='INR'||!validId(vi['receiptId'])||typeof vi['invoiceNumber']!=='string'||!vi['invoiceNumber']||!Array.isArray(vi['components'])||!vi['components'].length||vi['components'].length>20||new Set(vi['components'].map((c:any)=>c.jobId)).size!==vi['components'].length||vi['components'].some((c:any)=>!visit.jobIds.includes(c.jobId)||!money(c.amountPaise)||!money(c.subtotalPaise)||!money(c.discountPaise)||!money(c.taxPaise)||!Number.isSafeInteger(c.roundOffPaise)||c.subtotalPaise-c.discountPaise+c.taxPaise+c.roundOffPaise!==c.amountPaise)||!['totalPaise','subtotalPaise','discountPaise','taxPaise'].every(k=>money(vi[k]))||!Number.isSafeInteger(vi['roundOffPaise'])||vi['components'].reduce((n:number,c:any)=>n+c.amountPaise,0)!==vi['totalPaise']||vi['components'].reduce((n:number,c:any)=>n+c.subtotalPaise,0)!==vi['subtotalPaise']||vi['components'].reduce((n:number,c:any)=>n+c.discountPaise,0)!==vi['discountPaise']||vi['components'].reduce((n:number,c:any)=>n+c.taxPaise,0)!==vi['taxPaise']||vi['components'].reduce((n:number,c:any)=>n+c.roundOffPaise,0)!==vi['roundOffPaise'])return fail('Consolidated invoice needs review.');
    visitComponent=vi['components'].find((c:any)=>c.jobId===job.id)??null;
+   if((visitComponent?.['membershipExtrasHash']??null)!==(benefit?visitReturnHash(benefit):null))return fail('Original membership invoice source changed.');
    if(!visitComponent||visitComponent['bookingId']!==job.bookingId||visitComponent['amountPaise']!==job.totalAmount)return fail('Consolidated invoice service changed.');
    const original=buildInvoice({invoiceId:'check',invoiceNumber:'Check original snapshot',tenantId:job.tenantId,studioId:job.studioId,jobId:job.id,bookingId:job.bookingId,customerId:job.customerId,vehicleId:job.vehicleId,priceBreakdown:job.priceBreakdown,paymentId:null,serviceName:visitComponent['lineItems']?.[0]?.serviceName??'',serviceId:job.serviceId,additionalWork:approvals.docs.filter(d=>d.data()['status']==='approved').map(d=>d.data()as any)});
    if(original.subtotal!==visitComponent['subtotalPaise']||original.discount!==visitComponent['discountPaise']||original.tax!==visitComponent['taxPaise']||(original.roundOffPaise??0)!==visitComponent['roundOffPaise']||original.taxRatePercent!==visitComponent['taxRatePercent']||original.taxDescription!==visitComponent['taxDescription']||!isDeepStrictEqual(original.lineItems,visitComponent['lineItems']))return fail('Consolidated invoice original snapshot changed.');
@@ -152,10 +156,10 @@ export async function readVisitBilling(tx:Transaction,db:Firestore,visitId:strin
    returnReviews.push(await readCancelledVisitReturn(tx,db,{visitId:visit.id,jobId:job.id,job,booking,originalPayments:paymentDocs.filter(d=>d.data()['status']==='completed').map(d=>({id:d.id,amount:d.data()['amount']})),appliedPaise:applied,invoiceId:inv?.id??job.visitInvoiceId??null,moneyToken}));
   }
   lines.push({jobId:job.id,bookingId:job.bookingId,name:job.lines?.map(l=>l.name).join(' + ')||'Service',amountPaise:job.totalAmount,appliedPaise:applied,cancelled:job.status==='CANCELLED',visitInvoiceId:job.visitInvoiceId??null,invoiceId:inv?.id??job.visitInvoiceId??null,invoiceNumber:inv?.invoiceNumber??visitInvoice?.['invoiceNumber']??null,taxPaise:inv?.tax??visitComponent?.['taxPaise']??(additions?null:job.priceBreakdown.tax),additionalPaise:additions});
-  sources.push({job,visitInvoice,booking:booking??null,approvals:approvals.docs.map(d=>({id:d.id,...d.data()})),payments:paymentDocs.map(d=>({id:d.id,...d.data()})),receipts:receipts.docs.map(d=>({id:d.id,...d.data()})),online:online.docs.map(d=>({id:d.id,...d.data()})),invoices:invoices.docs.map(d=>({id:d.id,...d.data()}))});
+  sources.push({job,membershipExtras:benefit,visitInvoice,booking:booking??null,approvals:approvals.docs.map(d=>({id:d.id,...d.data()})),payments:paymentDocs.map(d=>({id:d.id,...d.data()})),receipts:receipts.docs.map(d=>({id:d.id,...d.data()})),online:online.docs.map(d=>({id:d.id,...d.data()})),invoices:invoices.docs.map(d=>({id:d.id,...d.data()}))});
  }
  const active=lines.filter(l=>!l.cancelled),totalPaise=active.reduce((n,l)=>n+l.amountPaise,0),appliedPaise=active.reduce((n,l)=>n+l.appliedPaise,0);
  if(!money(totalPaise)||!money(appliedPaise)||appliedPaise>totalPaise)return fail();
  const reviewToken=createHash('sha256').update(JSON.stringify({visit,sources})).digest('hex');
- return{visit,members,moneyTokens,returnReviews,benefitReviews,chargeReviews,review:{visitId:visit.id,revision:visit.revision,reviewToken,currency:'INR' as const,sharedInvoices:[...sharedInvoices.values()],totalPaise,appliedPaise,balancePaise:totalPaise-appliedPaise,lines}};
+ return{visit,members,membershipExtras,moneyTokens,returnReviews,benefitReviews,chargeReviews,review:{visitId:visit.id,revision:visit.revision,reviewToken,currency:'INR' as const,sharedInvoices:[...sharedInvoices.values()],totalPaise,appliedPaise,balancePaise:totalPaise-appliedPaise,lines}};
 }

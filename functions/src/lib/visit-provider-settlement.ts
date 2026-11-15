@@ -1,3 +1,4 @@
+import{assertConnectedVisitRuntime}from'./connected-visit-release.js';
 import { createHash } from 'node:crypto';
 import { HttpsError } from 'firebase-functions/v2/https';
 import type { Firestore } from 'firebase-admin/firestore';
@@ -36,7 +37,8 @@ export async function settleCapturedVisitPayment(db:Firestore,attemptId:string){
   if(head['status']!==undefined)return fail();
   const current=await readVisitBilling(tx,db,attempt.visitId,attempt.id);
   if(current.visit.activeHandoverId||current.review.reviewToken!==attempt.reviewToken||current.review.balancePaise!==attempt.amountPaise)return fail();
-  for(const a of planned.applications){const member=current.members.find(m=>m.job.id===a.jobId);if(!member||!['VEHICLE_RECEIVED','IN_PROGRESS','QUALITY_CHECK','READY_FOR_DELIVERY'].includes(member.job.status)||member.job.settlementKind||member.booking?.['membershipId']||member.booking?.['giftId'])return fail();}
+  for(const a of planned.applications){const member=current.members.find(m=>m.job.id===a.jobId);if(!member||!['VEHICLE_RECEIVED','IN_PROGRESS','QUALITY_CHECK','READY_FOR_DELIVERY'].includes(member.job.status)||member.job.settlementKind||member.booking?.['membershipId']&&!current.membershipExtras.has(member.job.id)||member.booking?.['giftId'])return fail();}
+  if(current.membershipExtras.size)assertConnectedVisitRuntime();
   await assertCustomerNotErasing(tx,db,attempt.tenantId,attempt.customerId);
   const receiptRef=db.collection('visitOnlineReceipts').doc(planned.receipt.id),appRefs=planned.applications.map(a=>db.collection('visitOnlineApplications').doc(a.id));
   const[billDoc,priorReceipt,...priorApps]=await Promise.all([tx.get(db.collection('visitBills').doc(attempt.billId)),tx.get(receiptRef),...appRefs.map(ref=>tx.get(ref))]);

@@ -1,3 +1,5 @@
+import{visitReturnHash}from'./visit-service-return-state.js';
+import{assertConnectedVisitRuntime}from'./connected-visit-release.js';
 import type{Firestore,Transaction}from'firebase-admin/firestore';
 import type{Invoice,Customer,Vehicle}from'@autodeck/core';
 import{HttpsError}from'firebase-functions/v2/https';
@@ -17,15 +19,16 @@ export async function prepareVisitInvoice(tx:Transaction,db:Firestore,current:Aw
  if(typeof customer.name!=='string'||!customer.name.trim()||['registrationNumber','make','model','color'].some(k=>typeof (vehicle as any)[k]!=='string')||!Number.isSafeInteger(vehicle.year))throw new HttpsError('failed-precondition','Customer or vehicle invoice snapshot needs review.');
  const counter=(await tx.get(db.collection('invoiceCounters').doc(v.tenantId))).data();if(counter&&(counter['tenantId']!==v.tenantId||!Number.isSafeInteger(counter['year'])||!Number.isSafeInteger(counter['nextNumber'])||counter['nextNumber']<1||counter['nextNumber']>=Number.MAX_SAFE_INTEGER))throw new HttpsError('failed-precondition','Invoice number sequence needs office review.');
  const identity=issuer?.['tenantId']===v.tenantId?issuer['invoiceIssuer']:null;if(!identity||['tradeName','legalName','address','phone','email'].some(k=>typeof identity[k]!=='string'||!identity[k].trim())||typeof identity.gstRegistered!=='boolean'||identity.gstRegistered&&(!identity.gstin||typeof identity.gstin!=='string')||!identity.gstRegistered&&identity.gstin)throw new HttpsError('failed-precondition','Invoice issuer snapshot needs office review.');
- const components:{jobId:string;bookingId:string|null;amountPaise:number;subtotalPaise:number;discountPaise:number;taxPaise:number;roundOffPaise:number;taxRatePercent:number;taxDescription:string;lineItems:Invoice['lineItems']}[]=[];
+ const components:{membershipExtrasHash?:string;jobId:string;bookingId:string|null;amountPaise:number;subtotalPaise:number;discountPaise:number;taxPaise:number;roundOffPaise:number;taxRatePercent:number;taxDescription:string;lineItems:Invoice['lineItems']}[]=[];
  for(const m of current.members){const line=current.review.lines.find(l=>l.jobId===m.job.id)!;if(line.cancelled||line.invoiceId||m.job.totalAmount===0)continue;
-  if(m.job.settlementKind||m.booking?.['membershipId']||m.booking?.['giftId'])throw new HttpsError('failed-precondition','Keep the original benefit invoice through its settlement review.');
+  if(m.job.settlementKind||m.booking?.['membershipId']&&!current.membershipExtras.has(m.job.id)||m.booking?.['giftId'])throw new HttpsError('failed-precondition','Keep the original benefit invoice through its settlement review.');
+  if(current.membershipExtras.has(m.job.id))assertConnectedVisitRuntime();
   const approvals=await tx.get(db.collection('approvals').where('jobId','==',m.job.id).where('status','==','approved'));
   const serviceName=await resolveServiceName(db,tx,v.tenantId,m.job.serviceId);
   const part=buildInvoice({invoiceId:'component_'+m.job.id,invoiceNumber:'Component calculation only',tenantId:v.tenantId,studioId:v.studioId,jobId:m.job.id,bookingId:m.job.bookingId,customerId:v.customerId,vehicleId:v.vehicleId,priceBreakdown:m.job.priceBreakdown,paymentId:null,serviceName,serviceId:m.job.serviceId,additionalWork:approvals.docs.map(d=>d.data()as any)});
   const integers=[part.subtotal,part.discount,part.tax,part.total,part.roundOffPaise??0];
   if(integers.some(n=>!Number.isSafeInteger(n))||part.subtotal<0||part.discount<0||part.tax<0||part.total!==m.job.totalAmount||part.subtotal-part.discount+part.tax+(part.roundOffPaise??0)!==part.total||part.lineItems.some(l=>!Number.isSafeInteger(l.total)||!Number.isSafeInteger(l.unitPrice)||!Number.isSafeInteger(l.quantity)||l.quantity<=0||l.total<0||l.unitPrice<0||l.unitPrice*l.quantity!==l.total)||!Number.isFinite(part.taxRatePercent)||part.taxRatePercent<0)throw new HttpsError('failed-precondition','Original invoice price snapshot needs review.');
-  components.push({jobId:m.job.id,bookingId:m.job.bookingId,amountPaise:part.total,subtotalPaise:part.subtotal,discountPaise:part.discount,taxPaise:part.tax,roundOffPaise:part.roundOffPaise??0,taxRatePercent:part.taxRatePercent,taxDescription:part.taxDescription,lineItems:part.lineItems});
+  components.push({...(current.membershipExtras.has(m.job.id)?{membershipExtrasHash:visitReturnHash(current.membershipExtras.get(m.job.id)!)}:{}),jobId:m.job.id,bookingId:m.job.bookingId,amountPaise:part.total,subtotalPaise:part.subtotal,discountPaise:part.discount,taxPaise:part.tax,roundOffPaise:part.roundOffPaise??0,taxRatePercent:part.taxRatePercent,taxDescription:part.taxDescription,lineItems:part.lineItems});
  }
  if(!components.length)throw new HttpsError('failed-precondition','No unissued visit obligations remain.');
  const sum=(key:'amountPaise'|'subtotalPaise'|'discountPaise'|'taxPaise'|'roundOffPaise')=>components.reduce((n,c)=>n+c[key],0),totalPaise=sum('amountPaise'),subtotalPaise=sum('subtotalPaise'),discountPaise=sum('discountPaise'),taxPaise=sum('taxPaise'),roundOffPaise=sum('roundOffPaise');

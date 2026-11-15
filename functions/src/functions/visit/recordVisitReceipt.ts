@@ -42,7 +42,8 @@ export const recordVisitReceipt=onCall({region:'asia-south1',enforceAppCheck:sho
   const prearrival=entries.some(e=>['PENDING_VEHICLE','STANDBY'].includes(current.members.find(m=>m.job.id===e.jobId)!.job.status));
   if(prearrival)assertConnectedVisitRuntime();
   for(const e of entries){const m=current.members.find(m=>m.job.id===e.jobId)!,line=current.review.lines.find(l=>l.jobId===e.jobId)!;
-   if(!['PENDING_VEHICLE','STANDBY','VEHICLE_RECEIVED','IN_PROGRESS','QUALITY_CHECK','READY_FOR_DELIVERY'].includes(m.job.status)||!final&&line.appliedPaise+e.appliedPaise>=line.amountPaise||m.job.settlementKind||m.booking?.['membershipId']||m.booking?.['giftId'])throw new HttpsError('failed-precondition','This service needs final invoice or benefit review. No receipt recorded.');
+   if(!['PENDING_VEHICLE','STANDBY','VEHICLE_RECEIVED','IN_PROGRESS','QUALITY_CHECK','READY_FOR_DELIVERY'].includes(m.job.status)||!final&&line.appliedPaise+e.appliedPaise>=line.amountPaise||m.job.settlementKind||m.booking?.['membershipId']&&!current.membershipExtras.has(m.job.id)||m.booking?.['giftId'])throw new HttpsError('failed-precondition','This service needs final invoice or benefit review. No receipt recorded.');
+   if(current.membershipExtras.has(m.job.id))assertConnectedVisitRuntime();
    if((m.job.offlineSettlement?.receiptCount??0)>=100)throw new HttpsError('failed-precondition','Receipt history needs office review.');
   }
   const applicationRefs=entries.map(e=>db.collection('offlineReceipts').doc(key+'_'+hash(e.jobId).slice(0,24)));for(const ref of applicationRefs)if((await tx.get(ref)).exists)throw new HttpsError('failed-precondition','Receipt application exists without its original receipt.');

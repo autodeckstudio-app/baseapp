@@ -1,3 +1,4 @@
+import{assertConnectedVisitRuntime}from'./connected-visit-release.js';
 import type { PaymentLinkResult } from './payment-provider.js';
 import { assertVisitProviderCandidate, sameVisitProviderCandidate } from './visit-provider-recovery.js';
 import { createHash } from 'node:crypto';
@@ -61,7 +62,8 @@ export async function claimVisitProviderAttempt(db: Firestore, user: AuthorizedU
       bill['visitId'] !== command.visitId || bill['currency'] !== 'INR' || bill['sourceToken'] !== command.reviewToken ||
       bill['totalPaise'] !== current.review.totalPaise || bill['previouslyAppliedPaise'] !== current.review.appliedPaise || bill['payablePaise'] !== current.review.balancePaise ||
       !isDeepStrictEqual(bill['lines'], current.review.lines) || bHead?.['visitId'] !== command.visitId || bHead['tenantId'] !== current.visit.tenantId || bHead['billId'] !== command.billId || bHead['revision'] !== bill['revision']) return fail('Prepare the current whole-visit bill.');
-    if (current.members.some(m => m.job.status !== 'CANCELLED' && (m.job.settlementKind || m.booking?.['membershipId'] || m.booking?.['giftId']))) return fail('Benefit settlement needs review before online collection.');
+    if (current.members.some(m => m.job.status !== 'CANCELLED' && (m.job.settlementKind || m.booking?.['membershipId']&&!current.membershipExtras.has(m.job.id) || m.booking?.['giftId']))) return fail('Benefit settlement needs review before online collection.');
+    if(current.membershipExtras.size)assertConnectedVisitRuntime();
     const attempt = planVisitProviderClaim({ id: key, tenantId: current.visit.tenantId, studioId: current.visit.studioId, customerId: current.visit.customerId,
       billId: command.billId, reviewToken: command.reviewToken, review: current.review, expectedBalancePaise: current.review.balancePaise });
     const now = new Date().toISOString();
