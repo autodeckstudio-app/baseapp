@@ -1,5 +1,8 @@
-const visitCalls=vi.hoisted(()=>({get:vi.fn()}));
-vi.mock('../../../lib/visit-service',()=>({getVisit:(...a:any[])=>visitCalls.get(...a)}));
+const visitCalls=vi.hoisted(()=>({get:vi.fn(),bill:vi.fn(async(view:any)=>{
+ const{parseVisitBillRead}=await import('@autodeck/core');
+ return parseVisitBillRead({visitId:view.visitId,revision:view.revision,reviewToken:'a'.repeat(64),currency:'INR',totalPaise:view.bill.totalAmount,appliedPaise:0,balancePaise:view.bill.totalAmount,sharedInvoices:[],lines:view.members.map((m:any)=>({jobId:m.jobId,name:m.lines.map((l:any)=>l.name).join(' + '),amountPaise:m.totalAmount,appliedPaise:0,cancelled:m.status==='CANCELLED',invoiceNumber:null,visitInvoiceId:null,taxPaise:null}))},view);
+})}));
+vi.mock('../../../lib/visit-service',()=>({getVisit:(...a:any[])=>visitCalls.get(...a),getVisitBill:(view:any)=>visitCalls.bill(view)}));
 const workCalls=vi.hoisted(()=>({get:vi.fn(async(...args:any[]):Promise<any>=>({status:"not_recorded",jobId:args[0]}))}));
 vi.mock('../../../lib/work-coverage-service',()=>({getJobWorkCoverage:(...args:any[])=>workCalls.get(...args)}));
 vi.mock('../../../lib/auth-service',()=>({verifyMyCustomerDocId:async()=>h.auth.user.uid!=='other'}));
@@ -37,8 +40,9 @@ it('expired booking suppresses stale live/bring-your-car instructions and all pa
 
 it('actual grouped route keeps four timeline rows and the current shell without a single-service pickup promise',async()=>{
  h.auth={status:'ready',customerDocId:'c',user:{uid:'auth-different-from-c'},claims:{tenantId:'t'}};__params.current={id:'j'};
- const shared=(state:string,second:string)=>({status:'grouped',jobId:'j',visitId:'visit',revision:1,state,bill:{totalAmount:500000},members:[{jobId:'j',bookingId:'b',totalAmount:250000,status:'READY_FOR_DELIVERY',serviceStatus:'Work complete',lines:[{name:'Full detail wash'}],history:[]},{jobId:'ceramic',bookingId:'c',totalAmount:250000,status:second,serviceStatus:second==='IN_PROGRESS'?'In progress':'Work complete',lines:[{name:'Ceramic coating'}],history:[]}],handover:null});
+ const shared=(state:string,second:string)=>({status:'grouped',jobId:'j',visitId:'visit',revision:1,state,bill:{totalAmount:500000},members:[{jobId:'j',bookingId:'b',totalAmount:250000,paymentStatus:'unpaid',status:'READY_FOR_DELIVERY',serviceStatus:'Work complete',lines:[{name:'Full detail wash'}],history:[]},{jobId:'ceramic',bookingId:'c',totalAmount:250000,paymentStatus:'unpaid',status:second,serviceStatus:second==='IN_PROGRESS'?'In progress':'Work complete',lines:[{name:'Ceramic coating'}],history:[]}],handover:null});
  visitCalls.get.mockResolvedValue(shared('working','IN_PROGRESS'));let r:any;await act(async()=>{r=create(<Detail/>)});await act(async()=>h.bookingCb(null));await act(async()=>h.jobCb({...job,visitId:'visit',updatedAt:'one'}));await act(async()=>h.paymentCb(null));
+ expect(visitCalls.bill).toHaveBeenLastCalledWith(expect.objectContaining({visitId:'visit',revision:1}));expect(text(r)).toContain('Balance');expect(text(r)).not.toContain('Checking received amount');expect(text(r)).not.toContain('Bill needs review');
  expect(text(r)).toContain('2 services · One visit');expect(text(r)).toContain('Ceramic coating');expect(text(r)).not.toContain('Come by any time');expect(text(r)).not.toContain('Refresh');
  const timeline=r.root.findAll((n:any)=>n.props.accessibilityLabel?.startsWith('Car received')||n.props.accessibilityLabel?.startsWith('Work started')||n.props.accessibilityLabel?.startsWith('Final checks')||n.props.accessibilityLabel?.startsWith('Ready status recorded'));expect(timeline).toHaveLength(4);
  fixtureWrite('/tmp/ad-visit-route-proposed-tree.json',JSON.stringify(r.toJSON()));fixtureWrite('/tmp/ad-visit-route-proposed.css',(StyleSheet as any).getSheet().textContent);
