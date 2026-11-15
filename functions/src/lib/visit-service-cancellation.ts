@@ -10,7 +10,7 @@ import { readCurrentVisitServiceReturnPlan } from './visit-service-return-plan.j
 import { visitReturnHash } from './visit-service-return-state.js';
 const id = z.string().min(1).max(120).regex(/^[A-Za-z0-9_-]+$/);
 const schema = z.object({ visitId:id,jobId:id,operationId:z.string().uuid(),reviewToken:z.string().regex(/^[a-f0-9]{64}$/),
-  reason:z.string().min(3).max(500).refine(s=>s.trim()===s),reviewed:z.literal(true),cancelled:z.literal(true) }).strict();
+  reason:z.string().min(3).max(500).refine(s=>s.trim()===s),reviewed:z.literal(true),transport:z.object({reviewToken:z.string().regex(/^[a-f0-9]{64}$/),unusedLegs:z.array(z.enum(['pickup','drop'])).max(2)}).strict().optional(),cancelled:z.literal(true) }).strict();
 const fail = (message='Service cancellation needs a fresh original-method review.'): never => { throw new HttpsError('failed-precondition',message); };
 
 /** DORMANT. No production route imports this writer. Records a reviewed service
@@ -43,7 +43,7 @@ export async function cancelReviewedVisitService(db:Firestore,user:AuthorizedUse
     if(!job||!job['bookingId'])return fail();
     const bookingRef=db.collection('bookings').doc(job['bookingId']),booking=(await tx.get(bookingRef)).data();
     const pickup=await tx.get(db.collection('pickupRequests').doc(job['bookingId']));
-    if(!booking||booking['combinedReturn']||booking['visitServiceReturnId']||job['visitServiceReturnId']||pickup.exists)return fail();
+    if(!booking||booking['combinedReturn']||booking['visitServiceReturnId']||job['visitServiceReturnId']||pickup.exists&&!review.transport||review.transport&&!pickup.exists)return fail();
     const [jobPayments,bookingPayments]=await Promise.all([
       tx.get(db.collection('payments').where('jobId','==',command.jobId).limit(21)),
       tx.get(db.collection('payments').where('bookingId','==',job['bookingId']).limit(21)),
@@ -60,6 +60,12 @@ export async function cancelReviewedVisitService(db:Firestore,user:AuthorizedUse
       planId:plan.id,preparedBy:plan.preparedBy,commandHash,reviewHash:plan.reviewHash,
       reason:command.reason,cancelledBy:user.uid,cancelledAt:now,result,resultHash:visitReturnHash(result)};
     tx.create(returnRef,record);
+    if(review.transport)tx.create(db.collection('visitTransportRetentions').doc(plan.jobId),{
+      id:plan.jobId,kind:'visit_original_transport_retention',tenantId:plan.tenantId,studioId:plan.studioId,
+      customerId:plan.customerId,vehicleId:plan.vehicleId,visitId:plan.visitId,jobId:plan.jobId,bookingId:job['bookingId'],
+      planId:plan.id,reviewHash:plan.reviewHash,transportHash:visitReturnHash(review.transport),
+      retainedTransportPaise:review.transportRetainedPaise,createdAt:now,createdBy:user.uid,
+    });
     // Claim the legacy per-payment refund identity as well. Captured payments
     // stay immutable, but single-payment return endpoints must not return them
     // again outside this service's original-method approval and actual ledger.

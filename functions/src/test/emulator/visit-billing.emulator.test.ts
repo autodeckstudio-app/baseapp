@@ -752,3 +752,83 @@ it('dormant individual original provider payment uses its claimed legacy identit
  expect(await api.qualifyVisitOnlineReturn(db,f.user,'v','wash',r.request.id,{create:async()=>({id:evidence.id}),fetch:async()=>evidence,discover:async()=>({complete:true,refunds:[evidence]})})).toEqual({outcome:'returned'});
  expect((await f.billing()).returnReviews[0]).toMatchObject({returnedPaise:120000,status:'returned'});expect((await db.collection('payments').doc('p').get()).data()).toMatchObject({status:'completed',amount:120000,razorpayPaymentId:'pay_legacy'});
 });
+
+async function retainedTransportReady(unusedLegs:('pickup'|'drop')[]=[]){
+ const source=await transportReturnFixture();await db.collection('jobs').doc('interior').update({status:'VEHICLE_RECEIVED'});
+ const bill:any=await read(),prepared:any=await prepare(bill.reviewToken);await recordVisit(bill,prepared,{receivedPaise:385144});
+ const transport=await source.read(unusedLegs),{readVisitServiceReturnReview}=await import('../../lib/visit-service-return-review.js'),{prepareVisitServiceReturnPlan}=await import('../../lib/visit-service-return-plan.js'),{cancelReviewedVisitService}=await import('../../lib/visit-service-cancellation.js'),{readVisitBilling}=await import('../../lib/visit-billing.js'),{randomUUID}=await import('node:crypto');
+ const user={uid:'staff',claims:{role:'admin',tenantId:'t',studioId:'s'}}as any,choice={reviewToken:transport.reviewToken,unusedLegs};
+ const review=await db.runTransaction(tx=>readVisitServiceReturnReview(tx,db,'v','wash',Date.now(),choice)),command={visitId:'v',jobId:'wash',operationId:randomUUID(),reviewToken:review.reviewToken,reason:'One service cancelled, keep needed trip',reviewed:true,transport:choice};
+ const plan=await prepareVisitServiceReturnPlan(db,user,command);
+ return{...source,user,review,command,plan,cancel:()=>cancelReviewedVisitService(db,user,{...command,cancelled:true}),billing:()=>db.runTransaction(tx=>readVisitBilling(tx,db,'v'))};
+}
+it('dormant retained funded transport cancellation keeps one original request, exact fee and invoice while only service work is removed',async()=>{
+ const f=await retainedTransportReady(),request=(await db.collection('pickupRequests').doc('b_wash').get()).data(),invoice=(await db.collection('visitInvoices').get()).docs[0]!.data(),sibling=(await db.collection('jobs').doc('interior').get()).data();
+ expect(f.review).toMatchObject({feePaise:0,transportRetainedPaise:3544,paidPaise:145144,retainedPaise:3544,returnPaise:141600,feeDuePaise:0});
+ expect(await f.cancel()).toMatchObject({alreadyCancelled:false,retainedPaise:3544,returnReviewPaise:141600});
+ expect((await db.collection('pickupRequests').doc('b_wash').get()).data()).toEqual(request);expect((await db.collection('visitInvoices').get()).docs[0]!.data()).toEqual(invoice);expect((await db.collection('jobs').doc('interior').get()).data()).toEqual(sibling);
+ expect((await db.collection('carVisits').doc('v').get()).data()!.transportJobId).toBe('wash');expect((await db.collection('visitTransportRetentions').get()).size).toBe(1);
+ expect(await f.billing()).toMatchObject({returnReviews:[{jobId:'wash',retainedPaise:3544,returnPaise:141600,returnedPaise:0}],review:{totalPaise:240000,appliedPaise:240000,balancePaise:0}});
+ expect(await f.cancel()).toMatchObject({alreadyCancelled:true});expect((await db.collection('refundRequests').get()).empty).toBe(true);
+});
+it('dormant explicit unused drop enters Admin original-method review without pretending completed pickup is unused or changing the request',async()=>{
+ const f=await retainedTransportReady(['drop']);expect(f.review).toMatchObject({feePaise:0,transportRetainedPaise:1181,retainedPaise:1181,returnPaise:143963});await f.cancel();
+ expect((await db.collection('pickupRequests').doc('b_wash').get()).data()).toEqual(f.request);expect((await f.billing()).returnReviews[0]).toMatchObject({retainedPaise:1181,returnPaise:143963,returnedPaise:0});
+ const{progressRetainedVisitTransport}=await import('../../lib/visit-retained-transport-progress.js'),{randomUUID}=await import('node:crypto'),{visitReturnHash}=await import('../../lib/visit-service-return-state.js');
+ await expect(progressRetainedVisitTransport(db,f.user,{visitId:'v',jobId:'wash',operationId:randomUUID(),requestToken:visitReturnHash(f.request),leg:'drop',completed:true})).rejects.toThrow();
+});
+it.each(['fee','anchor','request-copy','retention','original-stamp'])('dormant retained transport %s drift fails closed without moving or recreating physical transport',async kind=>{
+ const f=await retainedTransportReady();await f.cancel();
+ if(kind==='fee')await db.collection('pickupRequests').doc('b_wash').update({feePaise:3004});
+ if(kind==='anchor')await db.collection('carVisits').doc('v').update({transportJobId:'interior'});
+ if(kind==='request-copy'){await db.collection('pickupRequests').doc('b_wash').delete();await db.collection('pickupRequests').doc('b_interior').set({...f.request,id:'b_interior',bookingId:'b_interior',jobId:'interior'});}
+ if(kind==='retention')await db.collection('visitTransportRetentions').doc('wash').update({retainedTransportPaise:1});
+ if(kind==='original-stamp')await db.collection('pickupRequests').doc('b_wash').update({pickupCompletedAt:null});
+ await expect(f.billing()).rejects.toThrow();expect((await db.collection('refundRequests').get()).empty).toBe(true);
+});
+it('dormant retained request progress cannot return the car before the surviving service full handover/payment/work checks',async()=>{
+ const f=await retainedTransportReady();await f.cancel();const{progressRetainedVisitTransport}=await import('../../lib/visit-retained-transport-progress.js'),{randomUUID}=await import('node:crypto'),{visitReturnHash}=await import('../../lib/visit-service-return-state.js');
+ await expect(progressRetainedVisitTransport(db,f.user,{visitId:'v',jobId:'wash',operationId:randomUUID(),requestToken:visitReturnHash(f.request),leg:'drop',completed:true})).rejects.toThrow('Finish every visit service');
+ expect((await db.collection('pickupRequests').doc('b_wash').get()).data()).toEqual(f.request);
+});
+it('dormant retained original drop remains usable after its booking cancellation through actual surviving-service work and handover',async()=>{
+ const f=await retainedTransportReady();await f.cancel();
+ const{recordJobPerformedWork}=await import('../../functions/work/recordJobPerformedWork.js'),{startVisitHandover}=await import('../../functions/visit/startVisitHandover.js'),{completeVisitHandover}=await import('../../functions/visit/completeVisitHandover.js'),{visitWorkReview}=await import('../../lib/visit-work-review.js'),{randomUUID}=await import('node:crypto');
+ await db.collection('jobs').doc('interior').update({status:'READY_FOR_DELIVERY',statusHistory:[],bayId:'',createdAt:new Date().toISOString(),scheduledAt:new Date().toISOString(),estimatedEndAt:new Date().toISOString(),estimatedEndDate:'2026-11-15',estimatedDurationMinutes:60,isWalkIn:false,assignedEmployeeId:null,sealedAt:null});
+ for(const step of[{expectedRevision:0,action:'record',lineId:'booked-0',approvalId:null,performed:true,work:{kind:'service'}},{expectedRevision:1,action:'qc',lineId:'booked-0',checked:true},{expectedRevision:2,action:'seal',confirmed:true}])await recordJobPerformedWork.run(request({jobId:'interior',operationId:randomUUID(),...step}));
+ const members=await Promise.all(['wash','interior'].map(async jobId=>({jobId,expectedUpdatedAt:(await db.collection('jobs').doc(jobId).get()).data()!.updatedAt,recordedWork:visitWorkReview((await db.collection('jobPerformedWork').doc(jobId).get()).data())})));
+ const manifest:any=await startVisitHandover.run(request({visitId:'v',expectedRevision:2,operationId:randomUUID(),confirmed:true,members}));
+ expect(await completeVisitHandover.run(request({manifestId:manifest.manifestId,confirmed:true}))).toMatchObject({status:'complete',error:null});
+ const{progressRetainedVisitTransport}=await import('../../lib/visit-retained-transport-progress.js'),{visitReturnHash}=await import('../../lib/visit-service-return-state.js'),command={visitId:'v',jobId:'wash',operationId:randomUUID(),requestToken:visitReturnHash(f.request),leg:'drop',completed:true};
+ expect(await progressRetainedVisitTransport(db,f.user,command)).toMatchObject({requestId:'b_wash',status:'DONE',alreadyCompleted:false});expect(await progressRetainedVisitTransport(db,f.user,command)).toMatchObject({alreadyCompleted:true});
+ expect((await db.collection('pickupRequests').get()).size).toBe(1);expect((await db.collection('pickupRequests').doc('b_wash').get()).data()).toMatchObject({status:'DONE',feePaise:3003,pickupCompletedAt:f.request.pickupCompletedAt,dropCompletedAt:expect.any(String)});
+ expect((await db.collection('jobs').doc('wash').get()).data()!.status).toBe('CANCELLED');expect((await db.collection('jobs').doc('interior').get()).data()!.status).toBe('DELIVERED');
+ expect(await f.billing()).toMatchObject({returnReviews:[{retainedPaise:3544,returnedPaise:0}],review:{balancePaise:0}});
+});
+it('dormant retained transport return approval and actual handover exclude the exact retained original trip amount',async()=>{
+ const f=await retainedTransportReady();await f.cancel();const{approveVisitServiceReturn,recordVisitServiceManualReturn}=await import('../../lib/visit-service-manual-return.js');let p=(await f.billing()).returnReviews[0]!;
+ await approveVisitServiceReturn(db,f.user,{visitId:'v',jobId:'wash',progressToken:p.progressToken,note:'Admin reviewed service-only return',approved:true});p=(await f.billing()).returnReviews[0]!;
+ await recordVisitServiceManualReturn(db,f.user,{visitId:'v',jobId:'wash',entryKey:p.entries[0]!.key,progressToken:p.progressToken,note:'Actual service-only cash returned',returned:true});
+ expect((await f.billing()).returnReviews[0]).toMatchObject({retainedPaise:3544,returnPaise:141600,returnedPaise:141600,status:'returned'});expect((await db.collection('pickupRequests').doc('b_wash').get()).data()).toEqual(f.request);
+});
+it('dormant transport cancellation does not invent a fee when a sibling continues or silently retain an unneeded future final leg',async()=>{
+ const source=await transportReturnFixture();await db.collection('jobs').doc('interior').update({status:'CANCELLED'});await db.collection('bookings').doc('b_interior').update({status:'CANCELLED'});
+ const bill:any=await read(),prepared:any=await prepare(bill.reviewToken);await recordVisit(bill,prepared,{receivedPaise:145144});
+ const{readVisitServiceReturnReview}=await import('../../lib/visit-service-return-review.js'),transport=await source.read();await expect(db.runTransaction(tx=>readVisitServiceReturnReview(tx,db,'v','wash',Date.now(),{reviewToken:transport.reviewToken,unusedLegs:[]}))).rejects.toThrow();
+ const unused=await source.read(['drop']),review=await db.runTransaction(tx=>readVisitServiceReturnReview(tx,db,'v','wash',Date.now(),{reviewToken:unused.reviewToken,unusedLegs:['drop']}));
+ expect(review).toMatchObject({feePaise:10000,transportRetainedPaise:1181,retainedPaise:11181,returnPaise:133963,feeDuePaise:0});
+});
+it('dormant retained transport preparation cannot execute after the leg, quote or original fee changes',async()=>{
+ const f=await retainedTransportReady();await db.collection('pickupRequests').doc('b_wash').update({dropCompletedAt:new Date().toISOString()});
+ await expect(f.cancel()).rejects.toThrow();expect((await db.collection('jobs').doc('wash').get()).data()!.status).toBe('VEHICLE_RECEIVED');expect((await db.collection('visitTransportRetentions').get()).empty).toBe(true);
+});
+it('dormant partially funded transport stays held instead of moving its unpaid original fee to the sibling',async()=>{
+ const source=await transportReturnFixture();await db.collection('jobs').doc('interior').update({status:'VEHICLE_RECEIVED'});const bill:any=await read(),prepared:any=await prepare(bill.reviewToken);await recordVisit(bill,prepared,{receivedPaise:72000});
+ const transport=await source.read(),{readVisitServiceReturnReview}=await import('../../lib/visit-service-return-review.js');
+ await expect(db.runTransaction(tx=>readVisitServiceReturnReview(tx,db,'v','wash',Date.now(),{reviewToken:transport.reviewToken,unusedLegs:[]}))).rejects.toThrow();expect((await db.collection('visitServiceReturns').get()).empty).toBe(true);
+});
+it('dormant later final sibling removal cannot strand an unfinished trip retained by an earlier cancelled anchor',async()=>{
+ const f=await retainedTransportReady();await f.cancel();const{readVisitServiceReturnReview}=await import('../../lib/visit-service-return-review.js');
+ await expect(db.runTransaction(tx=>readVisitServiceReturnReview(tx,db,'v','interior',Date.now()))).rejects.toThrow();
+ expect((await db.collection('jobs').doc('interior').get()).data()!.status).toBe('VEHICLE_RECEIVED');expect((await db.collection('pickupRequests').doc('b_wash').get()).data()).toEqual(f.request);
+});

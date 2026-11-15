@@ -1,4 +1,5 @@
 import { readVisitReturnProgress } from './visit-service-return-progress.js';
+import {readRetainedTransportProof} from './visit-transport-retention-state.js';
 import { createHash } from 'node:crypto';
 import { HttpsError } from 'firebase-functions/v2/https';
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
@@ -43,7 +44,7 @@ export async function readCancelledVisitReturn(tx: Transaction, db: Firestore, i
     b['membershipId'] || b['giftId'] || b['membershipWashUsed'] || b['combinedReturn']) return fail();
   if (!Array.isArray(review.entries) || !review.entries.length || review.entries.some((e: any) => e.returnedPaise !== 0 || e.requestId !== null) ||
     ![review.feePaise,review.paidPaise,review.retainedPaise,review.returnPaise].every(n => Number.isSafeInteger(n) && n >= 0) ||
-    review.paidPaise <= 0 || review.feeDuePaise !== 0 || review.retainedPaise !== review.feePaise ||
+    review.paidPaise <= 0 || review.feeDuePaise !== 0 || review.retainedPaise !== review.feePaise+(review.transportRetainedPaise??0) ||
     review.retainedPaise + review.returnPaise !== review.paidPaise ||
     review.entries.reduce((n: number,e: any) => n + e.capturedPaise,0) !== review.paidPaise) return fail();
   if (new Set(review.entries.map((e: any) => e.key)).size !== review.entries.length ||
@@ -66,6 +67,8 @@ export async function readCancelledVisitReturn(tx: Transaction, db: Firestore, i
       claim['paymentId']!==p.id||claim['returnId']!==record['id']||claim['tenantId']!==record['tenantId']||
       claim['jobId']!==record['jobId']||claim['visitId']!==record['visitId']||claim['bookingId']!==record['bookingId'])return fail();
   }
+  if(review.transport)await readRetainedTransportProof(tx,db,record,review);
+  else if((review.transportRetainedPaise??0)!==0)return fail();
   const progress=await readVisitReturnProgress(tx,db,record,review);
   if(b['refundStatus']!==progress.refundStatus||b['refundedPaise']!==progress.returnedPaise||b['manualRefundDuePaise']!==progress.manualDuePaise)return fail();
   return { id: record['id'] as string, jobId: input.jobId, status:progress.status,

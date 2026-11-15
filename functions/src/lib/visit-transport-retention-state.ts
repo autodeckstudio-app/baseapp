@@ -1,0 +1,30 @@
+import type {Firestore,Transaction} from 'firebase-admin/firestore';
+import {HttpsError} from 'firebase-functions/v2/https';
+import {visitReturnHash} from './visit-service-return-state.js';
+const fail=():never=>{throw new HttpsError('failed-precondition','Retained original transport needs Admin review.');};
+const mutable=new Set(['status','staffNote','updatedAt','pickupCompletedAt','dropCompletedAt']);
+const fixed=(v:Record<string,any>)=>Object.fromEntries(Object.entries(v).filter(([k])=>!mutable.has(k)));
+/** Exact original financial/request scope. Only forward physical progress can
+ * differ from the cancellation snapshot. No copied request or anchor transfer. */
+export async function readRetainedTransportProof(tx:Transaction,db:Firestore,record:Record<string,any>,review:Record<string,any>){
+ const t=review['transport'],snapshot=t?.originalRequest,r=t?.review;
+ if(!snapshot||!r||r.jobId!==record['jobId']||r.visitId!==record['visitId']||r.requestId!==record['bookingId']||
+   r.needsUnusedLegDecision||r.requestToken!==visitReturnHash(snapshot)||r.retainedTransportPaise!==review['transportRetainedPaise']||
+   !Array.isArray(r.retainedLegs)||!Array.isArray(r.proposedUnusedLegs)||!Array.isArray(r.completedLegs))return fail();
+ const proof=(await tx.get(db.collection('visitTransportRetentions').doc(record['jobId']))).data();
+ const current=(await tx.get(db.collection('pickupRequests').doc(record['bookingId']))).data();
+ const visit=(await tx.get(db.collection('carVisits').doc(record['visitId']))).data();
+ if(!proof||proof['id']!==record['jobId']||proof['kind']!=='visit_original_transport_retention'||
+   ['tenantId','studioId','customerId','vehicleId','visitId','jobId','bookingId','planId','reviewHash'].some(k=>proof[k]!==record[k])||
+   proof['transportHash']!==visitReturnHash(t)||proof['retainedTransportPaise']!==review['transportRetainedPaise']||
+   proof['createdBy']!==record['cancelledBy']||proof['createdAt']!==record['cancelledAt']||
+   !visit||visit['transportJobId']!==record['jobId']||!current||visitReturnHash(fixed(current))!==visitReturnHash(fixed(snapshot))||
+   !['REQUESTED','CONFIRMED','DONE'].includes(current['status'])||snapshot.status==='DONE'&&current['status']!=='DONE'||
+   snapshot.status==='CONFIRMED'&&current['status']==='REQUESTED')return fail();
+ for(const leg of ['pickup','drop']){
+  const before=snapshot[leg+'CompletedAt'],at=current[leg+'CompletedAt'];
+  if(before&&before!==at||at&&(!r.retainedLegs.includes(leg)||!Number.isFinite(Date.parse(at))))return fail();
+ }
+ if(current['status']==='DONE'&&r.proposedUnusedLegs.length)return fail();
+ return{proof,current,review:r};
+}

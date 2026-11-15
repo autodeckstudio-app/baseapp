@@ -14,6 +14,7 @@ const commandSchema = z.object({
   reviewToken: z.string().regex(/^[a-f0-9]{64}$/),
   reason: z.string().min(3).max(500).refine(s => s.trim() === s),
   reviewed: z.literal(true),
+  transport:z.object({reviewToken:z.string().regex(/^[a-f0-9]{64}$/),unusedLegs:z.array(z.enum(['pickup','drop'])).max(2)}).strict().optional(),
 }).strict();
 export type VisitServiceReturnPlanCommand = z.infer<typeof commandSchema>;
 type Review = Awaited<ReturnType<typeof readVisitServiceReturnReview>>;
@@ -62,7 +63,7 @@ export async function prepareVisitServiceReturnPlan(db: Firestore, user: Authori
     const visit = await scopeFor(tx, db, user, command.visitId);
     const ref = db.collection('visitServiceReturnPlans').doc(key), prior = await tx.get(ref);
     if (prior.exists) return { plan: storedPlan(prior.data(), user, command, visit), alreadyPrepared: true };
-    const review = await readVisitServiceReturnReview(tx, db, command.visitId, command.jobId, Date.now());
+    const review = await readVisitServiceReturnReview(tx, db, command.visitId, command.jobId, Date.now(),command.transport);
     if (review.reviewToken !== command.reviewToken) return fail('Service return changed. Review the original funding again.');
     await assertCustomerNotErasing(tx, db, visit['tenantId'], visit['customerId']);
     const plan: VisitServiceReturnPlan = {
@@ -85,7 +86,7 @@ export async function readCurrentVisitServiceReturnPlan(tx: Transaction, db: Fir
   const snap = await tx.get(db.collection('visitServiceReturnPlans').doc(keyFor(user, command.operationId)));
   const plan = storedPlan(snap.data(), user, command, visit);
   await assertCustomerNotErasing(tx, db, visit['tenantId'], visit['customerId']);
-  const current = await readVisitServiceReturnReview(tx, db, command.visitId, command.jobId, Date.now());
+  const current = await readVisitServiceReturnReview(tx, db, command.visitId, command.jobId, Date.now(),command.transport);
   if (!isDeepStrictEqual(current, plan.review)) return fail('Service return changed. Review the original funding again.');
   return plan;
 }
