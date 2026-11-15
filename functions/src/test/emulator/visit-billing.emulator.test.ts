@@ -832,3 +832,45 @@ it('dormant later final sibling removal cannot strand an unfinished trip retaine
  await expect(db.runTransaction(tx=>readVisitServiceReturnReview(tx,db,'v','interior',Date.now()))).rejects.toThrow();
  expect((await db.collection('jobs').doc('interior').get()).data()!.status).toBe('VEHICLE_RECEIVED');expect((await db.collection('pickupRequests').doc('b_wash').get()).data()).toEqual(f.request);
 });
+
+async function coveredCancelReady(){
+ const covered=await coveredVisitFixture(),{cancelVisitCoveredService}=await import('../../lib/visit-covered-cancellation.js'),{readVisitBilling}=await import('../../lib/visit-billing.js'),{randomUUID}=await import('node:crypto');
+ const current:any=await read(),user={uid:'staff',claims:{role:'admin',tenantId:'t',studioId:'s'}}as any,command={visitId:'v',jobId:'wash',operationId:randomUUID(),reviewToken:current.reviewToken,reason:'Covered service no longer needed',cancelled:true,restoreWash:true};
+ return{...covered,user,command,cancel:()=>cancelVisitCoveredService(db,user,command),billing:()=>db.runTransaction(tx=>readVisitBilling(tx,db,'v')),api:cancelVisitCoveredService};
+}
+it('dormant covered zero cancellation restores exactly one proven wash without money or rewriting the issued original',async()=>{
+ const f=await coveredCancelReady(),invoice=f.invoice,usage=(await db.collection('memberships').doc('covered_plan').collection('usage').doc('wash').get()).data(),sibling=(await db.collection('jobs').doc('interior').get()).data();
+ expect(await f.cancel()).toMatchObject({alreadyCancelled:false,restoredWashes:1,returnedPaise:0,revision:2});expect(await f.cancel()).toMatchObject({alreadyCancelled:true});
+ expect((await db.collection('memberships').doc('covered_plan').get()).data()).toMatchObject({washesUsed:0,status:'expired'});expect((await db.collection('memberships').doc('covered_plan').collection('usage').doc('wash').get()).data()).toEqual(usage);
+ expect((await db.collection('invoices').doc(f.settlement.invoiceId).get()).data()).toEqual(invoice);expect((await db.collection('jobs').doc('interior').get()).data()).toEqual(sibling);
+ expect((await f.billing()).review).toMatchObject({totalPaise:240000,appliedPaise:0,balancePaise:240000,lines:expect.arrayContaining([expect.objectContaining({jobId:'wash',cancelled:true,invoiceId:f.settlement.invoiceId})])});
+ for(const c of['refundRequests','payments','visitServiceReturns','visitServiceManualReturns'])expect((await db.collection(c).get()).empty).toBe(true);
+});
+it('dormant cancelled covered original remains visible while sibling receives its full real receipt and invoice',async()=>{
+ const f=await coveredCancelReady();await f.cancel();await db.collection('jobs').doc('interior').update({status:'VEHICLE_RECEIVED'});
+ const bill:any=await read(),prepared:any=await prepare(bill.reviewToken),receipt:any=await recordVisit(bill,prepared,{receivedPaise:240000});expect(receipt.entries).toEqual([{jobId:'interior',appliedPaise:240000}]);expect((await f.billing()).review.balancePaise).toBe(0);
+ expect((await db.collection('memberships').doc('covered_plan').get()).data()!.washesUsed).toBe(0);expect((await db.collection('invoices').doc(f.settlement.invoiceId).get()).data()).toEqual(f.invoice);
+});
+it('dormant simultaneous covered cancellations share one restore marker and cannot decrement twice',async()=>{
+ const f=await coveredCancelReady(),results=await Promise.all([f.cancel(),f.cancel()]);expect(results.map(r=>r.alreadyCancelled).sort()).toEqual([false,true]);expect((await db.collection('memberships').doc('covered_plan').get()).data()!.washesUsed).toBe(0);
+ expect((await db.collection('visitCoveredCancellations').get()).size).toBe(1);expect((await db.collection('memberships').doc('covered_plan').collection('visitCancellationRestores').get()).size).toBe(1);
+});
+it.each(['usage-missing','usage-changed','counter-empty','transport','work-started','stale-token'])('dormant covered cancellation refuses %s before a restore or partial transition',async kind=>{
+ const f=await coveredCancelReady();if(kind==='usage-missing')await db.collection('memberships').doc('covered_plan').collection('usage').doc('wash').delete();if(kind==='usage-changed')await db.collection('memberships').doc('covered_plan').collection('usage').doc('wash').update({valueRedeemed:1});
+ if(kind==='counter-empty')await db.collection('memberships').doc('covered_plan').update({washesUsed:0});if(kind==='transport')await db.collection('pickupRequests').doc('b_wash').set({id:'b_wash',tenantId:'t',studioId:'s',customerId:'c',bookingId:'b_wash',status:'DECLINED'});if(kind==='work-started')await db.collection('jobs').doc('wash').update({status:'IN_PROGRESS'});if(kind==='stale-token')await db.collection('jobs').doc('interior').update({updatedAt:'changed'});
+ await expect(f.cancel()).rejects.toThrow();expect((await db.collection('visitCoveredCancellations').get()).empty).toBe(true);expect((await db.collection('jobs').doc('wash').get()).data()!.status).not.toBe('CANCELLED');
+});
+it.each(['marker-missing','invoice-changed','usage-changed','booking-marker'])('dormant cancelled covered evidence %s never fabricates a paid sibling or revived benefit',async kind=>{
+ const f=await coveredCancelReady();await f.cancel();if(kind==='marker-missing')await db.collection('memberships').doc('covered_plan').collection('visitCancellationRestores').doc('wash').delete();if(kind==='invoice-changed')await db.collection('invoices').doc(f.settlement.invoiceId).update({invoiceNumber:'CHANGED'});if(kind==='usage-changed')await db.collection('memberships').doc('covered_plan').collection('usage').doc('wash').update({valueRedeemed:1});if(kind==='booking-marker')await db.collection('bookings').doc('b_wash').update({membershipWashUsed:true});await expect(f.billing()).rejects.toThrow();
+});
+it('dormant covered cancellation is Admin-only, exact-confirmed and cannot reuse a restore for another reason',async()=>{
+ const f=await coveredCancelReady();for(const role of['customer','studio','accountant'])await expect(f.api(db,{...f.user,claims:{...f.user.claims,role}},f.command)).rejects.toMatchObject({code:'permission-denied'});
+ await expect(f.api(db,f.user,{...f.command,restoreWash:false})).rejects.toMatchObject({code:'invalid-argument'});await f.cancel();await expect(f.api(db,f.user,{...f.command,reason:'Different cancellation'})).rejects.toThrow();
+});
+it('dormant covered final-service cancellation cannot silently waive its existing late fixed fee',async()=>{
+ const f=await coveredCancelReady();await db.collection('jobs').doc('interior').update({status:'CANCELLED'});await db.collection('bookings').doc('b_interior').update({status:'CANCELLED'});const current:any=await read();
+ await expect(f.api(db,f.user,{...f.command,reviewToken:current.reviewToken})).rejects.toThrow();expect((await db.collection('memberships').doc('covered_plan').get()).data()!.washesUsed).toBe(1);
+});
+it('dormant covered cancellation permits later legitimate membership usage without pretending its own restored wash was reconsumed',async()=>{
+ const f=await coveredCancelReady();await f.cancel();await db.collection('memberships').doc('covered_plan').update({washesUsed:1,status:'active'});expect((await f.billing()).review.balancePaise).toBe(240000);
+});
