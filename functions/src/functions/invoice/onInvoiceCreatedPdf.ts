@@ -1,8 +1,9 @@
+import{invoicePdfAfterCutover}from'../../lib/invoice-pdf-cutover.js';
 import{createHash}from'node:crypto';
 import {onDocumentCreated}from'firebase-functions/v2/firestore';import{getFirestore}from'firebase-admin/firestore';import{getStorage}from'firebase-admin/storage';import type{Invoice}from'@autodeck/core';import{renderInvoicePdf,InvoicePdfReview}from'../../lib/invoice-pdf.js';
 /** Inactive by default. No identity backfill, public token, overwrite or billing mutation. */
 export const onInvoiceCreatedPdf=onDocumentCreated({document:'invoices/{invoiceId}',region:'asia-south1',retry:true},async event=>{
- if(process.env['INVOICE_PDF_ENABLED']!=='true')return;
+ if(!invoicePdfAfterCutover(event.data?.createTime))return;
  const snap=event.data;if(!snap)return;const inv={...snap.data(),id:snap.id}as Invoice;if(!inv.tenantId||!['issued','paid'].includes(inv.status))return;
  let pdf:Buffer;try{pdf=await renderInvoicePdf(inv)}catch(e){if(!(e instanceof InvoicePdfReview))throw e;const reason=e.message;await snap.ref.update({pdfStatus:'needs_office_review',pdfError:reason});const id=`invoice_pdf_${inv.id}`;await getFirestore().collection('staffAlerts').doc(id).set({id,tenantId:inv.tenantId,studioId:inv.studioId,kind:'invoice_pdf_review',invoiceId:inv.id,reason,createdAt:new Date().toISOString()});return;}
  const digest=createHash('sha256').update(JSON.stringify(inv)).digest('hex');
