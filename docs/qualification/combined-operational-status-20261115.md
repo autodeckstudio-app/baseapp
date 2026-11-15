@@ -108,3 +108,7 @@ See `funded-service-followup-20261115.md`. Actual local transport choice, fenced
 ## Benefit follow-up
 
 Covered/gift cancellation is now connected locally through actual Admin review/confirm, exact-command reconciliation and source-verified three-app results. See benefit-operations-20261115.md for evidence, scope-label correction and limits. General benefit extras and the remaining whole-outcome paths above are still incomplete.
+
+## Physical work, shared handover and report follow-up
+
+Actual mixed-category controls now pass independent work/QC, explicit incompatible-bay pause/resume, original final receipt/invoice, locked work and one shared handover to both deliveries. A separate compatible-parallel same-bay move preserves both unfinished work records without pause or forced completion. Office/Accountant actual routes separately show gross receipts, actual original-method returns and held online returns without money mutations. Accountant activation is demo/emulator-only. See physical-work-reports-20261115.md for exact proof, regression and remaining whole-outcome work. Earlier mixed-category missing-proof qualification is narrowed by this result, not erased. Whole scope remains incomplete.

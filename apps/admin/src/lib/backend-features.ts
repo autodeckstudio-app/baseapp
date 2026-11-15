@@ -6,7 +6,8 @@ export const NO_SHOW_REVIEW_ENABLED = false;
 // settleMembershipCoveredJob
 export const MEMBERSHIP_SETTLEMENT_ENABLED = true;
 // getAccountantMoney
-export const ACCOUNTANT_MONEY_ENABLED = false;
+export const LOCAL_VISIT_MONEY_PREVIEW = process.env.NEXT_PUBLIC_RETAINED_TRANSPORT_PREVIEW==='true'&&process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.startsWith('demo-')===true&&process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR==='true';
+export const ACCOUNTANT_MONEY_ENABLED = LOCAL_VISIT_MONEY_PREVIEW;
 // requestAdminApproval / respondToAdminApproval / adminApprovalRequests (staff ask, office decides). Provisional contract, not deployed.
 export const ADMIN_APPROVAL_REVIEW_ENABLED = true;
 

@@ -1,9 +1,11 @@
 "use client";
+import type{VisitReturnTotalsRead}from'../components/VisitReturnTotals';
 
 import { httpsCallable } from "firebase/functions";
 import { functions } from "./firebase";
 
 export interface AccountantMoney {
+  serviceReturns?:VisitReturnTotalsRead;
   month: string;
   studioId: string;
   cap: number;

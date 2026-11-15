@@ -215,7 +215,7 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
 
   return (
     <div className="ax-delivery" style={{ display: "grid", gap: 8, minWidth: 0 }} key={reset}>
-      <p>Mark delivered? This updates the studio, admin and customer tracker.</p>
+      <p>{job.visitId?"Review whole-visit handover":"Mark delivered? This updates the studio, admin and customer tracker."}</p>
       {invalid === "verifying" ? (
         <p role="status">Verifying the signed-in account...</p>
       ) : invalid === "job" ? (
@@ -241,7 +241,7 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
         <p role="alert">The car's protection records failed an integrity check (a record does not belong to this car). Go back and reopen the job before delivering.</p>
       ) : (
         <>
-          {work?.status==='recorded'||work?.status==='needs_review'?<div style={{display:'grid',gap:10}}><strong>Recorded work</strong><p>{work.handoverReady&&work.workLock==='locked'?'Use the checked work record for this visit. No re-entry or new warranty confirmation.':'Finish recording, QC and locking this visit before handover. Missing details are not a no-work declaration.'}</p>{work.handoverReady&&work.workLock==='locked'?<div><button type="button" className="ax-button" disabled={dis||useRecorded} onClick={()=>setUseRecorded(true)}>{useRecorded?'Recorded work selected':'Use recorded work'}</button></div>:null}</div>:<fieldset disabled={dis} style={{ display: "grid", gap: 8, border: "none", padding: 0, margin: 0, minWidth: 0 }}>
+          {work?.status==='recorded'||work?.status==='needs_review'?<div style={{display:'grid',gap:10}}><strong>Recorded work</strong><p>{work.handoverReady&&work.workLock==='locked'?(job.visitId?'Checked work · QC · Locked. No new warranty confirmation.':'Use the checked work record for this visit. No re-entry or new warranty confirmation.'):'Finish recording, QC and locking this visit before handover. Missing details are not a no-work declaration.'}</p>{work.handoverReady&&work.workLock==='locked'?<div><button type="button" className="ax-button" disabled={dis||useRecorded} onClick={()=>setUseRecorded(true)}>{useRecorded?'Recorded work selected':'Use recorded work'}</button></div>:null}</div>:<fieldset disabled={dis} style={{ display: "grid", gap: 8, border: "none", padding: 0, margin: 0, minWidth: 0 }}>
             <legend className="ax-label">Protection work on this visit</legend>
             <p>Record exactly the protection work performed on this visit - this becomes the car's protection history. Choose "none" only if no protection work was done.</p>
             <div style={{ display: "flex", gap: 8 }}>

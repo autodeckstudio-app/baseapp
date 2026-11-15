@@ -152,6 +152,6 @@ export const getAccountantMoney = onCall({ region: "asia-south1" , enforceAppChe
     expenses: expDocs.slice(0, ACCOUNTANT_CAP).map(projectExpense),
     dayCloses,
     refundsOwed: { paise: owed.owedPaise, count: owed.count, truncated: owed.truncated },
-    notes: ["Receipts are actual money received, not net revenue. Offline receipt settlement projections are not counted twice. Excess office returns are shown separately. Refunds owed to customers are shown separately (open total, not for this month) and are not netted into receipts.", "No GSTIN or HSN is stored; this is not a tax-ready export."],
+    notes:["Actual receipts · Not net revenue","Settlement projections excluded","Excess returns stay separate","Customer returns not netted into receipts","Refunds owed · Current open total","Not a tax-ready export"],
   };
 });

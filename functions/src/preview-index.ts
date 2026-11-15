@@ -14,3 +14,15 @@ export{getServiceCatalogue}from'./functions/service/getServiceCatalogue.js';
 export{getMyJobWorkCoverage,getStaffJobWorkCoverage}from'./functions/work/getJobWorkCoverage.js';
 
 export{getVisitScheduleReview,rescheduleVisit}from'./functions/visit/visitSchedule.js';
+
+export{getVisitBayOptions,moveVisitBay,releaseVisitBay}from'./functions/visit/visitBay.js';
+export{advanceJobStatus}from'./functions/job/advanceJobStatus.js';
+export{recordJobPerformedWork,getWorkRecordReceipt}from'./functions/work/recordJobPerformedWork.js';
+export{prepareVisitBill}from'./functions/visit/prepareVisitBill.js';
+export{recordVisitReceipt}from'./functions/visit/recordVisitReceipt.js';
+export{startVisitHandover}from'./functions/visit/startVisitHandover.js';
+export{completeVisitHandover}from'./functions/visit/completeVisitHandover.js';
+export{getOfficeReport}from'./functions/office/getOfficeReport.js';
+export{getAccountantMoney}from'./functions/office/getAccountantMoney.js';
+export{getMyVisitReview}from'./functions/booking/submitReview.js';
+export{getVisitFeedback}from'./functions/booking/getVisitFeedback.js';

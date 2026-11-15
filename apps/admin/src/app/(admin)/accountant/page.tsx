@@ -1,10 +1,12 @@
 "use client";
 
 import { refundsOwedTotalText } from "../../../lib/refund-owed-copy";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { getAccountantMoney, type AccountantMoney } from "../../../lib/accountant-service";
-import { ACCOUNTANT_MONEY_ENABLED } from "../../../lib/backend-features";
+import{VisitReturnTotals}from"../../../components/VisitReturnTotals";
+import{useAdminAuth}from"../../../lib/auth-context";
+import { LOCAL_VISIT_MONEY_PREVIEW, ACCOUNTANT_MONEY_ENABLED } from "../../../lib/backend-features";
 import { formatDate, formatPaise } from "../../../lib/format";
 
 function kolkataMonth(): string {
@@ -18,18 +20,21 @@ function shiftMonth(m: string, delta: number): string {
 
 // Read-only Money for the accountant role. Every figure comes from the server projection (getAccountantMoney).
 export default function AccountantPage() {
+  const{claims}=useAdminAuth(),studioId=LOCAL_VISIT_MONEY_PREVIEW?claims?.studioId??null:FIRST_STUDIO_ID;
+  const generation=useRef(0);
   const [month, setMonth] = useState(kolkataMonth());
   const [data, setData] = useState<AccountantMoney | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    setLoading(true); setError(null);
-    try { setData(ACCOUNTANT_MONEY_ENABLED ? await getAccountantMoney(FIRST_STUDIO_ID, month) : null); }
-    catch (e) { setData(null); setError(e instanceof Error && e.message ? e.message : "Couldn't load Money."); }
-    finally { setLoading(false); }
-  }, [month]);
-  useEffect(() => { void load(); }, [load]);
+    const version=++generation.current;setLoading(true);setError(null);setData(null);
+    if(!studioId){setLoading(false);return;}
+    try{const result=ACCOUNTANT_MONEY_ENABLED ? await getAccountantMoney(studioId,month):null;if(version===generation.current){if(result&&(result.month!==month||result.studioId!==studioId))throw Error('Money scope needs review.');setData(result);}}
+    catch(e){if(version===generation.current){setData(null);setError(e instanceof Error&&e.message?e.message:"Couldn't load Money.");}}
+    finally{if(version===generation.current)setLoading(false);}
+  },[month,studioId]);
+  useEffect(()=>{void load();return()=>{generation.current++}},[load]);
 
   const trunc = data ? Object.entries(data.truncated).filter(([, v]) => v).map(([k]) => k) : [];
   return (
@@ -45,6 +50,7 @@ export default function AccountantPage() {
       {!ACCOUNTANT_MONEY_ENABLED ? <p className="ax-note">This view turns on when its backend is enabled.</p> : null}
       {loading ? <div className="ax-skel ax-skel--row" /> : !data ? null : (
         <>
+          {LOCAL_VISIT_MONEY_PREVIEW?<VisitReturnTotals value={data.serviceReturns}/>:null}
           <section className="ax-panel" aria-label="Notes">
             {data.notes.map((n) => <p key={n} className="ax-note">{n}</p>)}
             {trunc.length > 0 && <p className="ax-status-msg ax-status-msg--warn" role="alert">More than {data.cap} rows for: {trunc.join(", ")}. Totals are not shown because they would be incomplete.</p>}
@@ -54,19 +60,19 @@ export default function AccountantPage() {
             <span className="ax-label">Month summary</span>
             {data.report ? (
               <dl className="ax-kv">
-                <div className="kv"><dt>Receipts (cash held)</dt><dd>{formatPaise(data.report.totalReceiptsPaise)}</dd></div>
-                <div className="kv"><dt>Cash</dt><dd>{formatPaise(data.report.cashPaise)}</dd></div>
-                <div className="kv"><dt>UPI (manual)</dt><dd>{formatPaise(data.report.upiPaise)}</dd></div>
-                <div className="kv"><dt>Bank transfer</dt><dd>{formatPaise(data.report.bankTransferPaise)}</dd></div>
-                <div className="kv"><dt>Online (Razorpay)</dt><dd>{formatPaise(data.report.razorpayPaise)}</dd></div>
-                <div className="kv"><dt>Payments</dt><dd>{data.report.paymentCount}</dd></div>
+                <div className="kv"><dt>Gross receipts</dt><dd>{formatPaise(data.report.totalReceiptsPaise)}</dd></div>
+                <div className="kv"><dt>Cash received</dt><dd>{formatPaise(data.report.cashPaise)}</dd></div>
+                <div className="kv"><dt>Manual UPI received</dt><dd>{formatPaise(data.report.upiPaise)}</dd></div>
+                <div className="kv"><dt>Bank received</dt><dd>{formatPaise(data.report.bankTransferPaise)}</dd></div>
+                <div className="kv"><dt>Online received</dt><dd>{formatPaise(data.report.razorpayPaise)}</dd></div>
+                <div className="kv"><dt>Receipt sources</dt><dd>{data.report.paymentCount}</dd></div>
                 <div className="kv"><dt>Expenses</dt><dd>{formatPaise(data.report.expensesPaise)}</dd></div>
               </dl>
             ) : <p className="ax-note">Not shown: the data set is larger than the cap.</p>}
           </section>
           {data.offlineReceipts && <section className="ax-panel" aria-label="Actual offline receipts">
-            <span className="ax-label">Actual offline receipts</span><p className="ax-note">Actual money received and returned, separate from final invoice settlement projections. Excess is not service revenue.</p>
-            <div className="kv"><span>Received this month</span><span>{formatPaise(data.offlineReceivedPaise ?? 0)}</span></div><div className="kv"><span>Returned this month</span><span>{formatPaise(data.offlineReturnedPaise ?? 0)}</span></div>
+            <span className="ax-label">Actual offline receipts</span><p className="ax-note">Actual receipt applications · Not new receipts</p>
+            <div className="kv"><span>Received this month</span><span>{formatPaise(data.offlineReceivedPaise ?? 0)}</span></div><div className="kv"><span>Excess returned this month</span><span>{formatPaise(data.offlineReturnedPaise ?? 0)}</span></div>
             {data.offlineReceipts.map(r=><div className="kv" key={r.id}><span>{formatDate(r.createdAt)} - {r.method}</span><span>Received {formatPaise(r.receivedPaise)} / applied {formatPaise(r.appliedPaise)} / excess {formatPaise(r.officeReturnDuePaise)}</span></div>)}
             {(data.offlineReturns ?? []).map(r=><div className="kv" key={r.id}><span>{formatDate(r.createdAt)} - {r.method}</span><span>Returned {formatPaise(r.amountPaise)}</span></div>)}
           </section>}
@@ -76,7 +82,7 @@ export default function AccountantPage() {
               <tbody>{data.invoices.map((i) => <tr key={i.id}><td>{i.invoiceNumber}</td><td>{formatDate(i.issuedAt)}</td><td>{i.customerName ?? "-"}</td><td>{i.status}</td><td>{formatPaise(i.tax)} ({i.taxRatePercent===null?'Mixed':`${i.taxRatePercent}%`})</td><td>{formatPaise(i.total)}{i.roundOffPaise ? <small> (round off {formatPaise(i.roundOffPaise)})</small> : null}</td></tr>)}</tbody></table></div>
           </section>
           <section className="ax-panel" aria-label="Payments">
-            <span className="ax-label">Payments ({data.payments.length})</span>
+            <span className="ax-label">Original payments ({data.payments.length})</span>
             <div role="region" aria-label="Payment rows" tabIndex={0} style={{overflowX:"auto",maxWidth:"100%"}}><table className="ax-table"><thead><tr><th>Completed</th><th>Method</th><th>Amount</th><th>Refunded</th></tr></thead>
               <tbody>{data.payments.map((p) => <tr key={p.id}><td>{formatDate(p.completedAt)}</td><td>{p.method}{p.offlineReceiptSettlement ? " (settlement projection, not a new receipt)" : ""}</td><td>{formatPaise(p.amount)}</td><td>{p.refundAmount ? formatPaise(p.refundAmount) : "-"}</td></tr>)}</tbody></table></div>
           </section>
