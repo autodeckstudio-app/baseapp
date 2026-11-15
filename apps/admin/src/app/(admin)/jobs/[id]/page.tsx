@@ -1,4 +1,5 @@
 "use client";
+import{VisitOriginalMoneyControl}from"../../../../components/VisitOriginalMoneyControl";
 import{VisitCancelControl}from'../../../../components/VisitCancelControl';
 import{VisitReceiptControl}from'../../../../components/VisitReceiptControl';
 import{useVisitBill}from'../../../../lib/use-visit-bill';
@@ -192,7 +193,7 @@ export default function JobDetailPage() {
 
       {job.visitId&&sharedVisit.progress?<div className="ax-job-progress-label"><span>Visit · {sharedVisit.progress.headline}</span><span>{sharedVisit.progress.line}</span></div>:null}
       {job.visitId&&!sharedVisit.progress?<div role="status">{sharedVisit.error?"Visit unavailable":"Checking visit…"}</div>:<StageTrack current={sharedVisit.progress?.status??job.status} {...(job.visitId?{scope:"visit" as const}:{})} compact />}
-      <VisitCharges view={sharedVisit.data} funding={visitFunding}/>{job.visitId?<VisitReceiptControl key={JSON.stringify([user?.uid,claims?.tenantId,job.visitId])} visitId={job.visitId} view={sharedVisit.data} bill={visitFunding.bill} onRecorded={sharedVisit.refresh}/>:null}{job.visitId?<VisitCancelControl key={JSON.stringify([user?.uid,claims?.tenantId,job.visitId])+"cancel"} visitId={job.visitId} view={sharedVisit.data} bill={visitFunding.bill} onCancelled={()=>setAttempt(n=>n+1)}/>:null}
+      <VisitCharges view={sharedVisit.data} funding={visitFunding}/>{job.visitId?<VisitOriginalMoneyControl key={JSON.stringify([user?.uid,claims?.tenantId,job.visitId,job.id])} visitId={job.visitId} jobId={job.id} onChanged={()=>{sharedVisit.refresh();setAttempt(n=>n+1)}}/>:null}{job.visitId?<VisitReceiptControl key={JSON.stringify([user?.uid,claims?.tenantId,job.visitId])} visitId={job.visitId} view={sharedVisit.data} bill={visitFunding.bill} onRecorded={sharedVisit.refresh}/>:null}{job.visitId?<VisitCancelControl key={JSON.stringify([user?.uid,claims?.tenantId,job.visitId])+"cancel"} visitId={job.visitId} view={sharedVisit.data} bill={visitFunding.bill} onCancelled={()=>setAttempt(n=>n+1)}/>:null}
       <JobControls job={job} routeId={id} />
       <MembershipSettlement job={job} booking={booking ?? null} />
 

@@ -138,7 +138,7 @@ export default function BookingDetailScreen() {
   };
   const minuteNow = useMinuteNow();
   const [job, setJob] = useState<ServiceJob | null>(null);
-  const sharedVisit=useSharedVisit(job);
+  const sharedVisit=useSharedVisit(job,booking?.updatedAt);
   const visitFunding=useVisitBill(sharedVisit?.data);
   const groupedPaymentLabel=job?.visitId?(visitFundingLabel(sharedVisit?.data,visitFunding.bill,job.id,visitFunding.error)??'Checking visit bill'):null;
   const sharedProgress=sharedVisit?.data?.status==='grouped'?visitProgress(sharedVisit.data):null;
@@ -599,9 +599,9 @@ export default function BookingDetailScreen() {
       ) : null}
       {booking.status === "EXPIRED" ? <Pane><Kicker>Slot released</Kicker><Row title="Booking" detail="Expired. This slot is no longer held."/><Row title="Next step" detail={paymentRead!=="ready"||payment?.status==="pending"||awaitingLinkId?"Payment is not confirmed yet. Check payment status with the studio before booking or paying again.":"You can book again."} last/></Pane> : null}
       {combinedReturn?<Pane pad="gap"><Kicker>Original-method returns</Kicker><Row title="Return amount" detail={rupees(combinedReturn.refundPaise)}/>{combinedReturn.feePaise>0?<Row title="Fee retained" detail={rupees(combinedReturn.feePaise)}/>:null}<Row title="Status" detail={combinedReturn.status==="awaiting_admin"?"Awaiting Admin approval":combinedReturn.status==="returned"?"Returns recorded":"Returns still pending"}/>{combinedReturn.entries.some(e=>e.method==="cash"&&e.returnedPaise<e.returnPaise)?<Row title="Cash return" detail="Still owed. Not an automatic refund."/>:null}</Pane>:null}
-      {!combinedReturn&&(booking.refundStatus === "reserved" || booking.refundStatus === "requested") ? <Notice title="Refund requested" body="Your refund request is recorded. This page shows its status as it changes." /> : null}
-      {!combinedReturn&&booking.refundStatus === "initiated" ? <Notice title="Refund recorded" body="The studio has recorded your refund. Paid online? When it reaches you depends on your bank or payment provider." /> : null}
-      {!combinedReturn&&booking.refundStatus === "processed" ? <Notice title="Refund processed by Razorpay" body="Razorpay reports your refund as processed. When it reaches you depends on your bank or payment provider." /> : null}
+      {!combinedReturn&&!(booking as Booking&{visitServiceReturnId?:string}).visitServiceReturnId&&(booking.refundStatus === "reserved" || booking.refundStatus === "requested") ? <Notice title="Refund requested" body="Your refund request is recorded. This page shows its status as it changes." /> : null}
+      {!combinedReturn&&!(booking as Booking&{visitServiceReturnId?:string}).visitServiceReturnId&&booking.refundStatus === "initiated" ? <Notice title="Refund recorded" body="The studio has recorded your refund. Paid online? When it reaches you depends on your bank or payment provider." /> : null}
+      {!combinedReturn&&!(booking as Booking&{visitServiceReturnId?:string}).visitServiceReturnId&&booking.refundStatus === "processed" ? <Notice title="Refund processed by Razorpay" body="Razorpay reports your refund as processed. When it reaches you depends on your bank or payment provider." /> : null}
       {actionError === EXISTING_PAYMENT_PENDING && booking.status!=="EXPIRED" && (!paymentIsCurrent||!payment||payment.status==='pending'||payment.status==='processing') ? <Pane>
         <Kicker>Payment check</Kicker>
         <Row title="Status" detail="Payment is not confirmed yet." />

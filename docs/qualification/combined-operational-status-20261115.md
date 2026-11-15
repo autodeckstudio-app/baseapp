@@ -98,3 +98,7 @@ click, response-loss exact retry and removed/stale control references.
 No additional owner decision is established by this inventory. These missing
 pieces are engineering/qualification or existing release/provider holds. Do not
 request approval for unbuilt paths or present dormant source as operational UI.
+
+## Funded operational follow-up
+
+Nontransport original cash funded cancellation, separate approval and actual original-method return now run on the real local Admin job route, with Customer/Studio source-verified return rows and booking-update invalidation. See `funded-service-operations-20261115.md` for qualification and remaining conflict-recovery/manual-method/transport limitations. This narrows the missing operational gap, not a declaration that the whole cancellation/return lifecycle is complete. No production/provider/money action was taken.

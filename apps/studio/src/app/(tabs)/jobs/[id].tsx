@@ -105,14 +105,14 @@ export default function JobDetailScreen() {
   const [reslotPick, setReslotPick] = useState<ReslotOption | null>(null);
   const [reslotDone, setReslotDone] = useState(false);
   const [job, setJob] = useState<ServiceJob | null>(null);
-  const sharedVisit=useSharedVisit(job);
-  const visitFunding=useVisitBill(sharedVisit.data);
-  const groupedPaymentLabel=job?.visitId?(visitFundingLabel(sharedVisit.data,visitFunding.bill,job.id,visitFunding.error)??'Checking visit bill'):null;
   const [bookingSnap, setBookingSnap] = useState<{key:string;read:"ready"|"error";record:Booking|null}|null>(null);
   const [bookingRetry,setBookingRetry]=useState(0);
   const bookingKey=job?`${job.tenantId}|${job.id}|${job.bookingId??""}|${bookingRetry}`:"";
   const booking=bookingSnap?.key===bookingKey?bookingSnap.record:null;
   const bookingRead=bookingSnap?.key===bookingKey?bookingSnap.read:"loading";
+  const sharedVisit=useSharedVisit(job,booking?.updatedAt);
+  const visitFunding=useVisitBill(sharedVisit.data);
+  const groupedPaymentLabel=job?.visitId?(visitFundingLabel(sharedVisit.data,visitFunding.bill,job.id,visitFunding.error)??'Checking visit bill'):null;
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const [startingInspection, setStartingInspection] = useState(false);
   const [vehicle,setVehicle] = useState<Vehicle|null>(null);

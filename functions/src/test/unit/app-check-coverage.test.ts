@@ -57,6 +57,7 @@ function listTsFilesRecursive(dir: string): string[] {
 const ENFORCED = [
   "visit/getRetainedTransportList.ts",
   "visit/retainedTransportOperations.ts",
+  "visit/visitServiceOperations.ts",
   "visit/cancelVisitService.ts",
   "visit/getVisitBill.ts",
   "visit/getVisitInvoice.ts",

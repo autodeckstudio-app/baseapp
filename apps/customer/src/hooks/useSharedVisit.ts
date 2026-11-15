@@ -2,8 +2,8 @@ import {useForegroundRefresh} from './useForegroundRefresh';
 import {useEffect,useState} from 'react';
 import type {ServiceJob,VisitRead} from '@autodeck/core';
 import {useAuth} from './useAuth';
-export function useSharedVisit(job:ServiceJob|null|undefined){
- const auth=useAuth(),scope=job?.visitId&&auth.status==='ready'?JSON.stringify([auth.user.uid,auth.customerDocId,auth.claims,job.id,job.visitId,job.updatedAt]):null;
+export function useSharedVisit(job:ServiceJob|null|undefined,changeKey?:string){
+ const auth=useAuth(),scope=job?.visitId&&auth.status==='ready'?JSON.stringify([auth.user.uid,auth.customerDocId,auth.claims,job.id,job.visitId,job.updatedAt,changeKey]):null;
  const[tick,setTick]=useState(0);
  useForegroundRefresh(()=>setTick(n=>n+1),scope);
  const[state,setState]=useState<{scope:string|null;data:VisitRead|null;error:boolean}>({scope:null,data:null,error:false});
