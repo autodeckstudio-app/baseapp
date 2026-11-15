@@ -1,3 +1,4 @@
+import{readCancelledGiftService}from'./visit-gift-cancellation.js';
 import {readCancelledCoveredService} from './visit-covered-cancellation.js';
 import { visitReturnHash, readCancelledVisitReturn } from './visit-service-return-state.js';
 import{readCoveredLink,exactCoveredInvoice}from'./membership-covered.js';
@@ -44,6 +45,7 @@ export async function readVisitBilling(tx:Transaction,db:Firestore,visitId:strin
  const sharedInvoices=new Map<string,Record<string,any>>();
  const sources:unknown[]=[],lines:{jobId:string;bookingId:string|null;name:string;amountPaise:number;appliedPaise:number;cancelled:boolean;invoiceId:string|null;invoiceNumber:string|null;visitInvoiceId:string|null;taxPaise:number|null;additionalPaise:number}[]=[];
  const fundingIds=new Set<string>(),verifiedReceiptIds=new Set<string>();
+ const benefitReviews:{jobId:string;benefit:'covered'|'gift';decision:'restore_wash'|'restore_original_gift'|'keep_refunded'|'keep_void';returnedPaise:number}[]=[];
  const moneyTokens=new Map<string,string>(),returnReviews:Awaited<ReturnType<typeof readCancelledVisitReturn>>[]=[];
  for(const {job,member,booking}of members){
   if(member.quotePending||member.paymentInFlight||member.cancellationPending||job.cashReconciliationId||job.paymentStatus==='refunded'||!money(job.totalAmount)||!money(job.additionalWorkDelta)||!job.priceBreakdown||job.priceBreakdown.currency!=='INR'||!money(job.priceBreakdown.total)||!money(job.priceBreakdown.tax)||job.priceBreakdown.total+job.additionalWorkDelta!==job.totalAmount)return fail('Service amount or payment needs review.');
@@ -127,7 +129,7 @@ export async function readVisitBilling(tx:Transaction,db:Firestore,visitId:strin
   if(job.settlementKind==='membership_covered'){
    // Covered zero-price invoices remain visible but never become a cash due.
    if(job.totalAmount!==0||applied!==0||!inv||inv.settlementKind!=='membership_covered'||!inv.membershipId||inv.paymentId!==null||job.paymentStatus!=='paid')return fail('Covered service needs its original settlement review.');
-   if(job.status==='CANCELLED')await readCancelledCoveredService(tx,db,job,booking!,inv);
+   if(job.status==='CANCELLED'){await readCancelledCoveredService(tx,db,job,booking!,inv);benefitReviews.push({jobId:job.id,benefit:'covered',decision:'restore_wash',returnedPaise:0});}
    else {const covered=await readCoveredLink(db,tx,job);if(!exactCoveredInvoice(inv,job,covered.booking,covered.membershipId)||covered.booking.paymentStatus!=='paid')return fail('Covered service original linkage changed.');}
   }else if(job.paymentStatus!==expectedStatus)return fail('Payment projection does not match original funding.');
   if(inv&&job.settlementKind!=='membership_covered'){
@@ -138,6 +140,7 @@ export async function readVisitBilling(tx:Transaction,db:Firestore,visitId:strin
   }else if(applied===job.totalAmount&&job.totalAmount>0&&!visitInvoice)return fail('Settled service has no verified original invoice.');
   if(visitInvoice&&applied!==job.totalAmount)return fail('Consolidated invoice funding changed.');
   if(visitInvoice)sharedInvoices.set(visitInvoice['id'],{id:visitInvoice['id'],invoiceNumber:visitInvoice['invoiceNumber'],issuedAt:visitInvoice['issuedAt'],currency:'INR',totalPaise:visitInvoice['totalPaise'],subtotalPaise:visitInvoice['subtotalPaise'],discountPaise:visitInvoice['discountPaise'],taxPaise:visitInvoice['taxPaise'],roundOffPaise:visitInvoice['roundOffPaise'],customerSnapshot:visitInvoice['customerSnapshot'],vehicleSnapshot:visitInvoice['vehicleSnapshot'],...(visitInvoice['issuerSnapshot']?{issuerSnapshot:visitInvoice['issuerSnapshot']}:{}),components:visitInvoice['components']});
+  if(job.status==='CANCELLED'&&(job as any).visitGiftCancellationId){if(!booking)return fail();benefitReviews.push(await readCancelledGiftService(tx,db,job,booking));}
   const moneyToken=visitReturnHash({job:{id:job.id,tenantId:job.tenantId,studioId:job.studioId,customerId:job.customerId,vehicleId:job.vehicleId,bookingId:job.bookingId,serviceId:job.serviceId,totalAmount:job.totalAmount,priceBreakdown:job.priceBreakdown,additionalWorkDelta:job.additionalWorkDelta,paymentStatus:job.paymentStatus,invoiceId:job.invoiceId??null,visitInvoiceId:job.visitInvoiceId??null,offlineSettlement:job.offlineSettlement??null},onlineProofs,booking:booking?{totalAmount:booking['totalAmount'],priceBreakdown:booking['priceBreakdown']??null,combinedPayment:booking['combinedPayment']??null,advancePaymentId:booking['advancePaymentId']??null}:null,visitInvoice,approvals:approvals.docs.map(d=>({id:d.id,...d.data()})),payments:paymentDocs.map(d=>({id:d.id,...d.data()})),receipts:receipts.docs.map(d=>({id:d.id,...d.data()})),online:online.docs.map(d=>({id:d.id,...d.data()})),invoices:invoices.docs.map(d=>({id:d.id,...d.data()}))});
   moneyTokens.set(job.id,moneyToken);
   if(job.status==='CANCELLED'&&(applied>0||(job as typeof job & {visitServiceReturnId?:string}).visitServiceReturnId||booking?.['manualRefundDuePaise']||booking?.['refundStatus']&&booking['refundStatus']!=='none')){
@@ -150,5 +153,5 @@ export async function readVisitBilling(tx:Transaction,db:Firestore,visitId:strin
  const active=lines.filter(l=>!l.cancelled),totalPaise=active.reduce((n,l)=>n+l.amountPaise,0),appliedPaise=active.reduce((n,l)=>n+l.appliedPaise,0);
  if(!money(totalPaise)||!money(appliedPaise)||appliedPaise>totalPaise)return fail();
  const reviewToken=createHash('sha256').update(JSON.stringify({visit,sources})).digest('hex');
- return{visit,members,moneyTokens,returnReviews,review:{visitId:visit.id,revision:visit.revision,reviewToken,currency:'INR' as const,sharedInvoices:[...sharedInvoices.values()],totalPaise,appliedPaise,balancePaise:totalPaise-appliedPaise,lines}};
+ return{visit,members,moneyTokens,returnReviews,benefitReviews,review:{visitId:visit.id,revision:visit.revision,reviewToken,currency:'INR' as const,sharedInvoices:[...sharedInvoices.values()],totalPaise,appliedPaise,balancePaise:totalPaise-appliedPaise,lines}};
 }

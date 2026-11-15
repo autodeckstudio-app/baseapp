@@ -584,7 +584,7 @@ export default function JobDetailScreen() {
     <ScrollView style={{ flex: 1, backgroundColor: "transparent" }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, width:"100%",maxWidth: 1040,alignSelf:"center" }}>
       <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
         <View style={{gap:spacing.xs}}><Text style={{...typography.title,color:colors.textPrimary}}>{vehicle?.registrationNumber??"Vehicle details"}</Text><Text style={{...typography.body,color:colors.textMuted}}>{vehicle?`${vehicle.make} ${vehicle.model}`:"Loading vehicle..."}{customerName?` · ${customerName}`:""}</Text></View>
-      <StatusBadge label={job.visitId?visitReviewedServiceStage(sharedVisit.data,job.id,sharedVisit.error):statusLabel} tone={statusTone(job.status)} />
+      <StatusBadge label={job.visitId?'Service · '+visitReviewedServiceStage(sharedVisit.data,job.id,sharedVisit.error):statusLabel} tone={statusTone(job.status)} />
         {job.isWalkIn && <StatusBadge label="Walk-in" tone="accent" />}
       </View>
 
@@ -596,7 +596,7 @@ export default function JobDetailScreen() {
         <Row label="Scheduled" value={job.status === "STANDBY" ? "Waiting - no slot reserved" : scheduledTime} />
         <Row label="Duration" value={durationLabel} />
         <Row label={job.visitId?"Service estimate":"Expected ready"} value={job.status === "STANDBY" ? "Set on admission" : estimatedEndTime} />
-        <Row label="Payment" value={membershipCoveredLabel(job) ?? (booking ? membershipCoveredLabel(booking) : null) ?? unifiedPaymentLabel} />
+        <Row label={job.visitId?"Service payment":"Payment"} value={membershipCoveredLabel(job) ?? (booking ? membershipCoveredLabel(booking) : null) ?? unifiedPaymentLabel} />
       </Section>
 
       <VisitCharges view={sharedVisit.data} funding={visitFunding}/>
@@ -669,7 +669,7 @@ export default function JobDetailScreen() {
         <Text style={{color:colors.textPrimary}}>Membership-covered, not yet settled</Text>
         <Button label="Settle membership-covered visit" loading={paymentActionLoading} onPress={()=>{setPaymentActionLoading(true);setActionError(null);void httpsCallable(functions,"settleMembershipCoveredJob")({jobId:job.id}).catch(e=>setActionError(e instanceof Error?e.message:"Could not settle this visit.")).finally(()=>setPaymentActionLoading(false));}} />
       </Section> : null}
-      <Text style={sectionTitle}>Payment</Text>
+      <Text style={sectionTitle}>{job.visitId?"Service payment":"Payment"}</Text>
       <Section>
         <Row label="Status" value={job.cashReconciliationId&&job.paymentStatus!=="paid"?"Cash receipt under review - do not collect again":membershipCoveredLabel(job) ?? (booking ? membershipCoveredLabel(booking) : null) ?? (paymentRead === "loading" ? "Checking payment status..." : paymentRead === "error" ? "Payment status unavailable" : unifiedPaymentLabel)} />
         {paymentRead === "error" && (

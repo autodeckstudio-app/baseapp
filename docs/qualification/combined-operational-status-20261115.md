@@ -104,3 +104,7 @@ Nontransport original cash funded cancellation, separate approval and actual ori
 ## Transport, recovery, noncash and reservation follow-up
 
 See `funded-service-followup-20261115.md`. Actual local transport choice, fenced definitive-rejection recovery, original manual UPI/bank and mixed cash/held-online paths now have three-app routed proof at 320/390/1280. Actual Studio whole-visit scheduling records a genuine schedule receipt and exact future bay/time reservations before cancellation. Source-backed Studio bay states replace indefinite loading; this is not a claim that the remaining mixed-category physical-work/bay paths have full routed qualification. No production action or extra owner decision.
+
+## Benefit follow-up
+
+Covered/gift cancellation is now connected locally through actual Admin review/confirm, exact-command reconciliation and source-verified three-app results. See benefit-operations-20261115.md for evidence, scope-label correction and limits. General benefit extras and the remaining whole-outcome paths above are still incomplete.

@@ -30,7 +30,7 @@ async function read(request:any,self:boolean){
   // Project only own-service amounts and lifecycle. Private source, approval,
   // provider and operation evidence stays inside the verified billing reader.
   const returnReviews=billing.returnReviews.map(r=>({jobId:r.jobId,status:r.status,paidPaise:r.paidPaise,retainedPaise:r.retainedPaise,returnPaise:r.returnPaise,returnedPaise:r.returnedPaise,manualDuePaise:r.manualDuePaise,onlineDuePaise:r.onlineDuePaise,accountingReviewNeeded:r.accountingReviewNeeded}));
-  return{...billing.review,returnReviews,cancellation,allocation,collectionEnabled:false,cancellationEnabled:false};
+  return{...billing.review,returnReviews,benefitReviews:billing.benefitReviews,cancellation,allocation,collectionEnabled:false,cancellationEnabled:false};
  });
 }
 export const getMyVisitBill=onCall({region:'asia-south1',enforceAppCheck:shouldEnforceAppCheck()},r=>read(r,true));

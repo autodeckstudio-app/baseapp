@@ -1,4 +1,4 @@
-import type{Firestore,Transaction}from'firebase-admin/firestore';
+import type{Firestore,Transaction,DocumentReference}from'firebase-admin/firestore';
 import type{AuthorizedUser}from'@autodeck/auth';
 import{cancellationTerms,visitCancellationFee}from'@autodeck/core';
 import{HttpsError}from'firebase-functions/v2/https';
@@ -10,6 +10,7 @@ import{visitReturnHash}from'./visit-service-return-state.js';
 import{writeAuditLog}from'../middleware/audit.js';
 const fail=():never=>{throw new HttpsError('failed-precondition','Original gift redemption needs Admin review.');};
 const id=z.string().min(1).max(120).regex(/^[A-Za-z0-9_-]+$/),schema=z.object({visitId:id,jobId:id,reviewToken:z.string().regex(/^[a-f0-9]{64}$/),operationId:z.string().uuid(),reason:z.string().min(3).max(500).refine(s=>s.trim()===s),cancelled:z.literal(true),reviewedGift:z.literal(true)}).strict();
+const financial=(v:Record<string,any>)=>Object.fromEntries(Object.entries(v).filter(([k])=>!['status','statusHistory','updatedAt','visitGiftCancellationId','cancelledAt','cancelledBy','cancellationReason','cancellationFeePaise','cancellationFeeStatus'].includes(k)));
 /** DORMANT private read-only review. Buyer funding is evidence for restoring
  * the original gift, never the recipient's new receipt or a gift refund. */
 export async function readVisitGiftCancellationReview(tx:Transaction,db:Firestore,visitId:string,jobId:string){
@@ -44,9 +45,10 @@ export async function readVisitGiftCancellationReview(tx:Transaction,db:Firestor
 }
 /** DORMANT zero-recipient-money cancellation. No buyer refund, new cash
  * receipt, new expiry, different recipient or benefit substitution. */
-export async function cancelVisitGiftService(db:Firestore,user:AuthorizedUser,raw:unknown){
+export async function cancelVisitGiftService(db:Firestore,user:AuthorizedUser,raw:unknown,localRetirement?:DocumentReference){
  assertRole(user,'admin','superadmin');const parsed=schema.safeParse(raw);if(!parsed.success)throw new HttpsError('invalid-argument','Confirm the exact gift-service cancellation.');const d=parsed.data;
  return db.runTransaction(async tx=>{
+  if(localRetirement&&(await tx.get(localRetirement)).exists)return fail();
   const v=(await tx.get(db.collection('carVisits').doc(d.visitId))).data();if(!v||v['id']!==d.visitId||v['tenantId']!==user.claims.tenantId)throw new HttpsError('not-found','Visit unavailable.');
   await assertCustomerNotErasing(tx,db,v['tenantId'],v['customerId']);
   const ref=db.collection('visitGiftCancellations').doc(d.jobId),prior=(await tx.get(ref)).data();if(prior){if(prior['commandHash']!==visitReturnHash(d)||prior['cancelledBy']!==user.uid)return fail();return{...prior['result'],alreadyCancelled:true};}
@@ -54,7 +56,7 @@ export async function cancelVisitGiftService(db:Firestore,user:AuthorizedUser,ra
   const jobRef=db.collection('jobs').doc(d.jobId),job=(await tx.get(jobRef)).data()!,giftRef=db.collection('gifts').doc(review.giftId),gift=(await tx.get(giftRef)).data()!;
   const now=new Date().toISOString(),revision=v['revision']+1;if(!Number.isSafeInteger(revision))return fail();
   const result={visitId:d.visitId,jobId:d.jobId,giftId:review.giftId,decision:review.decision,restoredGift:review.decision==='restore_original_gift',returnedPaise:0,revision};
-  tx.create(ref,{id:d.jobId,kind:'visit_gift_cancellation',tenantId:v['tenantId'],studioId:v['studioId'],customerId:v['customerId'],vehicleId:v['vehicleId'],visitId:d.visitId,jobId:d.jobId,commandHash:visitReturnHash(d),review,reason:d.reason,cancelledBy:user.uid,cancelledAt:now,result});
+  tx.create(ref,{id:d.jobId,kind:'visit_gift_cancellation',tenantId:v['tenantId'],studioId:v['studioId'],customerId:v['customerId'],vehicleId:v['vehicleId'],visitId:d.visitId,jobId:d.jobId,commandHash:visitReturnHash(d),review,jobHash:visitReturnHash(financial(job)),bookingHash:visitReturnHash(financial((await tx.get(db.collection('bookings').doc(review.bookingId))).data()!)),reason:d.reason,cancelledBy:user.uid,cancelledAt:now,result});
   if(review.decision==='restore_original_gift')tx.update(giftRef,{status:'ACTIVE',redeemedBy:null,redeemedAt:null,bookingId:null});
   else if(review.decision==='keep_refunded'&&gift['status']!=='REFUNDED')tx.update(giftRef,{status:'REFUNDED',voidedAt:now,voidReason:'Original gift funding already returned'});
   tx.update(jobRef,{status:'CANCELLED',visitGiftCancellationId:d.jobId,statusHistory:[...(job['statusHistory']??[]),{status:'CANCELLED',changedAt:now,changedBy:user.uid,notes:d.reason}],updatedAt:now});
@@ -63,4 +65,11 @@ export async function cancelVisitGiftService(db:Firestore,user:AuthorizedUser,ra
   writeAuditLog(tx,{action:result.restoredGift?'gift.restored':'gift.restore_skipped',entityType:'Gift',entityId:review.giftId,user,studioId:v['studioId'],after:{jobId:d.jobId,decision:review.decision,returnedPaise:0}});
   return{...result,alreadyCancelled:false};
  });
+}
+
+/** Historical benefit decision, not a claim that a restored gift is still unused. */
+export async function readCancelledGiftService(tx:Transaction,db:Firestore,job:Record<string,any>,booking:Record<string,any>){
+ const r=(await tx.get(db.collection('visitGiftCancellations').doc(job['id']))).data();
+ if(!r||r['kind']!=='visit_gift_cancellation'||r['id']!==job['id']||['tenantId','studioId','customerId','vehicleId','visitId','jobId'].some(k=>r[k]!==job[k==='jobId'?'id':k])||job['status']!=='CANCELLED'||booking['status']!=='CANCELLED'||job['visitGiftCancellationId']!==job['id']||booking['visitGiftCancellationId']!==job['id']||r['jobHash']!==visitReturnHash(financial(job))||r['bookingHash']!==visitReturnHash(financial(booking))||r['review']?.bookingId!==job['bookingId']||r['review']?.giftId!==booking['giftId']||r['result']?.returnedPaise!==0||r['result']?.decision!==r['review']?.decision||!['restore_original_gift','keep_refunded','keep_void'].includes(r['result']?.decision)||booking['cancelledAt']!==r['cancelledAt']||booking['cancellationReason']!==r['reason']||booking['cancelledBy']!=='admin'||booking['cancellationFeePaise']!==0||booking['cancellationFeeStatus']!=='none')return fail();
+ return{jobId:job['id'] as string,benefit:'gift' as const,decision:r['result']['decision'] as 'restore_original_gift'|'keep_refunded'|'keep_void',returnedPaise:0};
 }

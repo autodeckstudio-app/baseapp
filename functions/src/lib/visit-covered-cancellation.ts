@@ -1,4 +1,4 @@
-import type{Firestore,Transaction}from'firebase-admin/firestore';
+import type{Firestore,Transaction,DocumentReference}from'firebase-admin/firestore';
 import type{AuthorizedUser}from'@autodeck/auth';
 import{cancellationTerms,visitCancellationFee,type ServiceJob}from'@autodeck/core';
 import{HttpsError}from'firebase-functions/v2/https';
@@ -14,38 +14,44 @@ const id=z.string().min(1).max(120).regex(/^[A-Za-z0-9_-]+$/),schema=z.object({v
 const ignored=new Set(['status','statusHistory','updatedAt','membershipWashUsed','visitCoveredCancellationId']);
 const financial=(v:Record<string,any>)=>Object.fromEntries(Object.entries(v).filter(([k])=>!ignored.has(k)&&!['cancelledAt','cancelledBy','cancellationReason','cancellationFeePaise','cancellationFeeStatus'].includes(k)));
 
-/** DORMANT exact covered-zero cancellation. Restores one proven consumed wash
- * once, never money, gift or pickup benefit. An expired membership stays expired.
- * The issued zero invoice and historical usage row remain immutable, with an
- * explicit separate cancellation marker, not deletion or a recreated usage. */
-export async function cancelVisitCoveredService(db:Firestore,user:AuthorizedUser,raw:unknown){
- assertRole(user,'admin','superadmin');const parsed=schema.safeParse(raw);if(!parsed.success)throw new HttpsError('invalid-argument','Confirm the exact covered-service cancellation and wash restore.');const d=parsed.data;
- return db.runTransaction(async tx=>{
-  const v=(await tx.get(db.collection('carVisits').doc(d.visitId))).data();if(!v||v['id']!==d.visitId||v['tenantId']!==user.claims.tenantId)throw new HttpsError('not-found','Visit unavailable.');
-  await assertCustomerNotErasing(tx,db,v['tenantId'],v['customerId']);
-  const ref=db.collection('visitCoveredCancellations').doc(d.jobId),prior=(await tx.get(ref)).data();
-  if(prior){if(prior['commandHash']!==visitReturnHash(d)||prior['cancelledBy']!==user.uid)return fail();return{...prior['result'],alreadyCancelled:true};}
-  const scope=await readVisitBilling(tx,db,d.visitId),target=scope.members.find(m=>m.job.id===d.jobId),line=scope.review.lines.find(l=>l.jobId===d.jobId);
-  if(scope.review.reviewToken!==d.reviewToken||scope.visit.activeHandoverId||!target?.booking||!line||
+export async function readVisitCoveredCancellationReview(tx:Transaction,db:Firestore,visitId:string,jobId:string){
+  const scope=await readVisitBilling(tx,db,visitId),target=scope.members.find(m=>m.job.id===jobId),line=scope.review.lines.find(l=>l.jobId===jobId);
+  if(scope.visit.activeHandoverId||!target?.booking||!line||
     !['PENDING_VEHICLE','STANDBY','VEHICLE_RECEIVED'].includes(target.job.status)||target.job.settlementKind!=='membership_covered'||
-    line.amountPaise!==0||line.appliedPaise!==0||!line.invoiceId||scope.visit.transportJobId===d.jobId||
+    line.amountPaise!==0||line.appliedPaise!==0||!line.invoiceId||scope.visit.transportJobId===jobId||
     target.member.transportRequested||target.member.pickupFee||target.member.dropFee||target.booking['combinedReturn']||target.booking['visitServiceReturnId'])return fail();
   let categories=target.booking['cancelCategories']??[];if(!categories.length){const service=(await tx.get(db.collection('services').doc(target.job.serviceId))).data();categories=[String(service?.['category']??'')];}
   const scheduledAtMs=Date.parse(target.booking['scheduledAt']);if(!Number.isFinite(scheduledAtMs))return fail();
-  const policy=cancellationTerms({categories,totalPaise:0,scheduledAtMs,nowMs:Date.now()}),fee=visitCancellationFee(scope.visit,scope.members.map(m=>m.member),d.jobId,policy.feePaise);
+  const policy=cancellationTerms({categories,totalPaise:0,scheduledAtMs,nowMs:Date.now()}),fee=visitCancellationFee(scope.visit,scope.members.map(m=>m.member),jobId,policy.feePaise);
   if(fee.feePaise>0)return fail();
   const linked=await readCoveredLink(db,tx,target.job),membershipRef=db.collection('memberships').doc(linked.membershipId),membership=(await tx.get(membershipRef)).data();
-  const usages=await tx.get(membershipRef.collection('usage').where('jobId','==',d.jobId).limit(3));
+  const usages=await tx.get(membershipRef.collection('usage').where('jobId','==',jobId).limit(3));
   const pickup=await tx.get(db.collection('pickupRequests').doc(linked.booking.id));
   const original=(await tx.get(db.collection('invoices').doc(line.invoiceId))).data();
   if(!membership||!Number.isSafeInteger(membership['washesUsed'])||membership['washesUsed']<1||usages.size!==1||pickup.exists||!original)return fail();
   const usage=usages.docs[0]!,u=usage.data();if(u['usageType']!=='wash'||u['bookingId']!==linked.booking.id||u['membershipId']!==linked.membershipId)return fail();
-  const priorMarker=await tx.get(membershipRef.collection('visitCancellationRestores').doc(d.jobId));if(priorMarker.exists)return fail();
+  const priorMarker=await tx.get(membershipRef.collection('visitCancellationRestores').doc(jobId));if(priorMarker.exists)return fail();
+  return{scope,target,line,linked,membershipRef,membership,usage,u,original,priorMarker};
+}
+
+/** DORMANT exact covered-zero cancellation. Restores one proven consumed wash
+ * once, never money, gift or pickup benefit. An expired membership stays expired.
+ * The issued zero invoice and historical usage row remain immutable, with an
+ * explicit separate cancellation marker, not deletion or a recreated usage. */
+export async function cancelVisitCoveredService(db:Firestore,user:AuthorizedUser,raw:unknown,localRetirement?:DocumentReference){
+ assertRole(user,'admin','superadmin');const parsed=schema.safeParse(raw);if(!parsed.success)throw new HttpsError('invalid-argument','Confirm the exact covered-service cancellation and wash restore.');const d=parsed.data;
+ return db.runTransaction(async tx=>{
+  if(localRetirement&&(await tx.get(localRetirement)).exists)return fail();
+  const v=(await tx.get(db.collection('carVisits').doc(d.visitId))).data();if(!v||v['id']!==d.visitId||v['tenantId']!==user.claims.tenantId)throw new HttpsError('not-found','Visit unavailable.');
+  await assertCustomerNotErasing(tx,db,v['tenantId'],v['customerId']);
+  const ref=db.collection('visitCoveredCancellations').doc(d.jobId),prior=(await tx.get(ref)).data();
+  if(prior){if(prior['commandHash']!==visitReturnHash(d)||prior['cancelledBy']!==user.uid)return fail();return{...prior['result'],alreadyCancelled:true};}
+  const{scope,target,line,linked,membershipRef,membership,usage,u,original,priorMarker}=await readVisitCoveredCancellationReview(tx,db,d.visitId,d.jobId);if(scope.review.reviewToken!==d.reviewToken)return fail();
   const now=new Date().toISOString(),revision=scope.visit.revision+1;if(!Number.isSafeInteger(revision))return fail();
   const result={visitId:d.visitId,jobId:d.jobId,membershipId:linked.membershipId,restoredWashes:1,invoiceId:line.invoiceId,revision,returnedPaise:0};
   const saved={id:d.jobId,kind:'visit_covered_cancellation',tenantId:scope.visit.tenantId,studioId:scope.visit.studioId,customerId:scope.visit.customerId,vehicleId:scope.visit.vehicleId,
     visitId:d.visitId,jobId:d.jobId,bookingId:linked.booking.id,membershipId:linked.membershipId,usageId:usage.id,usageHash:visitReturnHash(u),invoiceId:line.invoiceId,invoiceHash:visitReturnHash(original),
-    jobHash:visitReturnHash(financial(target.job)),bookingHash:visitReturnHash(financial(target.booking)),commandHash:visitReturnHash(d),reason:d.reason,cancelledBy:user.uid,cancelledAt:now,result};
+    jobHash:visitReturnHash(financial(target.job)),bookingHash:visitReturnHash(financial(target.booking!)),commandHash:visitReturnHash(d),reason:d.reason,cancelledBy:user.uid,cancelledAt:now,result};
   tx.create(ref,saved);tx.create(priorMarker.ref,{jobId:d.jobId,bookingId:linked.booking.id,usageId:usage.id,usageHash:saved.usageHash,tenantId:scope.visit.tenantId,customerId:scope.visit.customerId,restoredWashes:1,createdAt:now,createdBy:user.uid});
   tx.update(membershipRef,{washesUsed:membership['washesUsed']-1,updatedAt:now});
   tx.update(target.ref,{status:'CANCELLED',membershipWashUsed:false,visitCoveredCancellationId:d.jobId,statusHistory:[...(target.job.statusHistory??[]),{status:'CANCELLED',changedAt:now,changedBy:user.uid,notes:d.reason}],updatedAt:now});
