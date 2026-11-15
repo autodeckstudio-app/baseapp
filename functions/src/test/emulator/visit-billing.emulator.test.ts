@@ -582,3 +582,79 @@ it('dormant transport quote snapshot cannot be replaced with a new leg split whi
  await db.collection('jobs').doc('wash').update({transportSnapshot:snapshot});await db.collection('bookings').doc('b_wash').update({transportSnapshot:snapshot});await db.collection('pickupRequests').doc('b_wash').update({quoteId:'original_quote'});
  expect(await f.read()).toMatchObject({retainedTransportPaise:3544});await db.collection('pickupRequests').doc('b_wash').update({quoteId:'new_quote'});await expect(f.read()).rejects.toThrow();
 });
+
+async function manualReturnReady(mixed=false){
+ const{r,b}=await receiptReady();await recordVisit(r,b);
+ if(mixed){const next:any=await read(),bill:any=await prepare(next.reviewToken);await settleCurrentOnline(next,bill);}
+ const ready=await cancelReadyReturn();await ready.cancel();
+ const api=await import('../../lib/visit-service-manual-return.js');
+ const progress=async()=>(await ready.billing()).returnReviews.find(r=>r.jobId==='wash')!;
+ const approveCommand={visitId:'v',jobId:'wash',progressToken:(await progress()).progressToken,note:'Admin reviewed original methods',approved:true};
+ return{...ready,...api,progress,approveCommand,approve:()=>api.approveVisitServiceReturn(db,ready.user,approveCommand)};
+}
+it('dormant separate Admin return approval moves no money and cannot be confused with cancellation or actual manual return',async()=>{
+ const f=await manualReturnReady(),before=await f.progress();
+ const entry=before.entries.find(e=>e.method==='cash')!;
+ await expect(f.recordVisitServiceManualReturn(db,f.user,{visitId:'v',jobId:'wash',entryKey:entry.key,progressToken:before.progressToken,note:'Actual cash handed back',returned:true})).rejects.toThrow('separate Admin approval');
+ expect(await f.approve()).toMatchObject({alreadyApproved:false,returnedPaise:0});expect(await f.approve()).toMatchObject({alreadyApproved:true,returnedPaise:0});
+ expect(await f.progress()).toMatchObject({status:'approved',returnPaise:24000,returnedPaise:0,manualDuePaise:24000,onlineDuePaise:0});
+ expect((await db.collection('visitServiceManualReturns').get()).empty).toBe(true);expect((await db.collection('refundRequests').get()).empty).toBe(true);
+});
+it.each(['cash','upi_manual','bank_transfer'])('dormant actual %s return is source-bound after separate Admin approval with immutable receipt and sibling money',async method=>{
+ const{r,b}=await receiptReady();await recordVisit(r,b,{method});const ready=await cancelReadyReturn();await ready.cancel();
+ const {approveVisitServiceReturn,recordVisitServiceManualReturn}=await import('../../lib/visit-service-manual-return.js');
+ const progress=async()=>(await ready.billing()).returnReviews[0]!,before=await progress(),entry=before.entries[0]!;
+ const sibling=(await db.collection('jobs').doc('interior').get()).data(),receipts=(await db.collection('offlineReceipts').get()).docs.map(d=>d.data()),parent=(await db.collection('visitReceipts').get()).docs[0]!.data();
+ await approveVisitServiceReturn(db,ready.user,{visitId:'v',jobId:'wash',progressToken:before.progressToken,note:'Admin reviewed original return',approved:true});
+ const command={visitId:'v',jobId:'wash',entryKey:entry.key,progressToken:(await progress()).progressToken,note:'Actual original-method amount returned',returned:true};
+ expect(await recordVisitServiceManualReturn(db,ready.user,command)).toMatchObject({alreadyRecorded:false,amountPaise:24000});
+ expect(await recordVisitServiceManualReturn(db,ready.user,command)).toMatchObject({alreadyRecorded:true,amountPaise:24000});
+ expect(await progress()).toMatchObject({status:'returned',returnPaise:24000,returnedPaise:24000,manualDuePaise:0,onlineDuePaise:0,accountingReviewNeeded:true});
+ expect((await db.collection('bookings').doc('b_wash').get()).data()).toMatchObject({refundStatus:'processed',refundedPaise:24000,manualRefundDuePaise:0,returnAccountingReviewNeeded:true});
+ expect((await db.collection('jobs').doc('interior').get()).data()).toEqual(sibling);expect((await db.collection('offlineReceipts').get()).docs.map(d=>d.data())).toEqual(receipts);expect((await db.collection('visitReceipts').get()).docs[0]!.data()).toEqual(parent);
+ expect((await ready.billing()).review).toMatchObject({appliedPaise:48000,balancePaise:192000});expect((await db.collection('visitServiceManualReturns').get()).size).toBe(1);
+});
+it('dormant mixed manual return never reports the unsubmitted online share returned or queues a legacy provider refund',async()=>{
+ const f=await manualReturnReady(true),original=(await db.collection('visitInvoices').get()).docs[0]!.data();await f.approve();const p=await f.progress(),cash=p.entries.find(e=>e.method==='cash')!,online=p.entries.find(e=>e.method==='razorpay_payment_link')!;
+ expect(p).toMatchObject({returnedPaise:0,manualDuePaise:24000,onlineDuePaise:96000});
+ await expect(f.recordVisitServiceManualReturn(db,f.user,{visitId:'v',jobId:'wash',entryKey:online.key,progressToken:p.progressToken,note:'Cannot claim provider money',returned:true})).rejects.toThrow();
+ await f.recordVisitServiceManualReturn(db,f.user,{visitId:'v',jobId:'wash',entryKey:cash.key,progressToken:p.progressToken,note:'Original cash handover returned',returned:true});
+ expect(await f.progress()).toMatchObject({status:'partly_returned',returnedPaise:24000,manualDuePaise:0,onlineDuePaise:96000});
+ expect((await db.collection('visitInvoices').get()).docs[0]!.data()).toEqual(original);expect((await db.collection('refundRequests').get()).empty).toBe(true);expect((await db.collection('paymentEvents').get()).empty).toBe(true);
+});
+it('dormant concurrent actual manual confirmations record one handover fact, not double returned money',async()=>{
+ const f=await manualReturnReady();await f.approve();const p=await f.progress(),command={visitId:'v',jobId:'wash',entryKey:p.entries[0]!.key,progressToken:p.progressToken,note:'One actual cash handover',returned:true};
+ const results=await Promise.all([f.recordVisitServiceManualReturn(db,f.user,command),f.recordVisitServiceManualReturn(db,f.user,command)]);
+ expect(results.map(r=>r.alreadyRecorded).sort()).toEqual([false,true]);expect((await db.collection('visitServiceManualReturns').get()).size).toBe(1);expect(await f.progress()).toMatchObject({returnedPaise:24000});
+});
+it.each(['approval','actual-amount','actual-method','actual-source','projection'])('dormant return evidence %s corruption cannot create a false remaining balance',async kind=>{
+ const f=await manualReturnReady();await f.approve();const p=await f.progress();await f.recordVisitServiceManualReturn(db,f.user,{visitId:'v',jobId:'wash',entryKey:p.entries[0]!.key,progressToken:p.progressToken,note:'Actual returned original cash',returned:true});
+ const row=(await db.collection('visitServiceManualReturns').get()).docs[0]!;
+ if(kind==='approval')await db.collection('visitServiceReturnApprovals').doc('wash').update({returnPaise:1});
+ if(kind==='actual-amount')await row.ref.update({amountPaise:1});
+ if(kind==='actual-method')await row.ref.update({method:'upi_manual'});
+ if(kind==='actual-source')await row.ref.update({entryKey:'other'});
+ if(kind==='projection')await db.collection('bookings').doc('b_wash').update({refundedPaise:1});
+ await expect(f.billing()).rejects.toThrow();
+});
+it('dormant return approval and actual handover require exact token, explicit confirmation and Admin actor',async()=>{
+ const f=await manualReturnReady();for(const role of['customer','studio','accountant'])await expect(f.approveVisitServiceReturn(db,{...f.user,claims:{...f.user.claims,role}},f.approveCommand)).rejects.toMatchObject({code:'permission-denied'});
+ await expect(f.approveVisitServiceReturn(db,f.user,{...f.approveCommand,approved:false})).rejects.toMatchObject({code:'invalid-argument'});
+ await expect(f.approveVisitServiceReturn(db,f.user,{...f.approveCommand,progressToken:'0'.repeat(64)})).rejects.toThrow();
+ await f.approve();const p=await f.progress(),command={visitId:'v',jobId:'wash',entryKey:p.entries[0]!.key,progressToken:p.progressToken,note:'Actual cash returned',returned:true};
+ await expect(f.recordVisitServiceManualReturn(db,f.user,{...command,progressToken:'0'.repeat(64)})).rejects.toThrow();
+ await expect(f.recordVisitServiceManualReturn(db,f.user,{...command,returned:false})).rejects.toMatchObject({code:'invalid-argument'});
+ expect((await db.collection('visitServiceManualReturns').get()).empty).toBe(true);
+});
+it('dormant cancelled original payment is claimed against competing legacy manual and provider returns',async()=>{
+ await paid();const ready=await cancelReadyReturn();await ready.cancel();
+ expect((await db.collection('paymentEvents').doc('refund_p').get()).data()).toMatchObject({kind:'visit_service_return_owned',paymentId:'p',jobId:'wash',returnId:'wash'});
+ const{settleManualRefund}=await import('../../functions/payment/settleManualRefund.js');await expect(settleManualRefund.run(request({paymentId:'p',note:'Must not double return'}))).rejects.toThrow();
+ const{planReserveInTx}=await import('../../lib/refund-outbox.js');const payment=(await db.collection('payments').doc('p').get()).data();
+ expect(await db.runTransaction(tx=>planReserveInTx(tx,db,{payment:payment as any,amountPaise:120000,reason:'Must not reserve duplicate',createdBy:'staff'}))).toMatchObject({ok:false});
+ const before=(await ready.billing()).returnReviews[0]!;const{approveVisitServiceReturn,recordVisitServiceManualReturn}=await import('../../lib/visit-service-manual-return.js');
+ await approveVisitServiceReturn(db,ready.user,{visitId:'v',jobId:'wash',progressToken:before.progressToken,note:'Admin reviewed original payment',approved:true});
+ const current=(await ready.billing()).returnReviews[0]!;await recordVisitServiceManualReturn(db,ready.user,{visitId:'v',jobId:'wash',progressToken:current.progressToken,entryKey:current.entries[0]!.key,note:'Actual original cash returned',returned:true});
+ expect((await ready.billing()).returnReviews[0]).toMatchObject({returnedPaise:120000,status:'returned'});
+ await db.collection('paymentEvents').doc('refund_p').delete();await expect(ready.billing()).rejects.toThrow();
+});

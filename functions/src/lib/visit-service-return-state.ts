@@ -1,3 +1,4 @@
+import { readVisitReturnProgress } from './visit-service-return-progress.js';
 import { createHash } from 'node:crypto';
 import { HttpsError } from 'firebase-functions/v2/https';
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
@@ -12,7 +13,7 @@ const fail = (): never => { throw new HttpsError('failed-precondition', 'Cancell
  * approved refund, new funding or permission to rewrite an issued invoice. */
 export async function readCancelledVisitReturn(tx: Transaction, db: Firestore, input: {
   visitId: string; jobId: string; booking: Record<string, any>; job: Record<string, any>;
-  appliedPaise: number; invoiceId: string | null; moneyToken: string;
+  originalPayments:{id:string;amount:number}[];appliedPaise: number; invoiceId: string | null; moneyToken: string;
 }) {
   const { job, booking: b } = input;
   const record = (await tx.get(db.collection('visitServiceReturns').doc(input.jobId))).data();
@@ -39,8 +40,6 @@ export async function readCancelledVisitReturn(tx: Transaction, db: Firestore, i
     b['visitServiceReturnId'] !== record['id'] || b['cancelledAt'] !== record['cancelledAt'] || b['cancelledBy'] !== 'admin' ||
     b['cancellationReason'] !== command.reason || b['cancellationFeePaise'] !== review.feePaise ||
     b['cancellationFeeStatus'] !== (review.feePaise ? 'collected' : 'none') ||
-    b['refundStatus'] !== (review.returnPaise ? 'awaiting_approval' : 'none') || b['refundedPaise'] !== 0 ||
-    b['manualRefundDuePaise'] !== review.entries?.filter((e: any) => e.method !== 'razorpay_payment_link').reduce((n: number,e: any) => n + e.returnPaise,0) ||
     b['membershipId'] || b['giftId'] || b['membershipWashUsed'] || b['combinedReturn']) return fail();
   if (!Array.isArray(review.entries) || !review.entries.length || review.entries.some((e: any) => e.returnedPaise !== 0 || e.requestId !== null) ||
     ![review.feePaise,review.paidPaise,review.retainedPaise,review.returnPaise].every(n => Number.isSafeInteger(n) && n >= 0) ||
@@ -61,7 +60,15 @@ export async function readCancelledVisitReturn(tx: Transaction, db: Firestore, i
     feePaise:review.feePaise,retainedPaise:review.retainedPaise,returnReviewPaise:review.returnPaise,
     returnedPaise:0,returnStatus:'awaiting_admin' };
   if(visitReturnHash(result)!==record['resultHash'])return fail();
-  return { id: record['id'] as string, jobId: input.jobId, status: 'awaiting_admin' as const,
+  for(const p of input.originalPayments){
+    const claim=(await tx.get(db.collection('paymentEvents').doc('refund_'+p.id))).data();
+    if(!claim||claim['kind']!=='visit_service_return_owned'||claim['reviewHash']!==record['reviewHash']||
+      claim['paymentId']!==p.id||claim['returnId']!==record['id']||claim['tenantId']!==record['tenantId']||
+      claim['jobId']!==record['jobId']||claim['visitId']!==record['visitId']||claim['bookingId']!==record['bookingId'])return fail();
+  }
+  const progress=await readVisitReturnProgress(tx,db,record,review);
+  if(b['refundStatus']!==progress.refundStatus||b['refundedPaise']!==progress.returnedPaise||b['manualRefundDuePaise']!==progress.manualDuePaise)return fail();
+  return { id: record['id'] as string, jobId: input.jobId, status:progress.status,
     paidPaise: review.paidPaise as number, retainedPaise: review.retainedPaise as number,
-    returnPaise: review.returnPaise as number, returnedPaise: 0, invoiceId: input.invoiceId };
+    returnPaise: review.returnPaise as number, returnedPaise:progress.returnedPaise,manualDuePaise:progress.manualDuePaise,onlineDuePaise:progress.onlineDuePaise,progressToken:progress.progressToken,accountingReviewNeeded:progress.accountingReviewNeeded,entries:progress.entries,invoiceId: input.invoiceId };
 }

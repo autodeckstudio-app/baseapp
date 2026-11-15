@@ -106,7 +106,10 @@ export async function readVisitBilling(tx:Transaction,db:Firestore,visitId:strin
    if(['failed','cancelled'].includes(p.status)){if(p.razorpayPaymentId||p.refundAmount||p.overpayments?.length||p.externalReturnRecordId)return fail('Closed payment contains money to review.');continue;}
    if(!['razorpay_payment_link','cash','upi_manual','bank_transfer'].includes(p.method)||p.jobId===job.id&&p.targetType!=='job'||p.status!=='completed'||!money(p.amount)||p.amount<=0||p.refundAmount||p.externalReturnRecordId||p.overpayments?.length||p.invoiceReviewNeeded||p.orderAmbiguous||p.linkCreateLeaseId||p.method==='razorpay_payment_link'&&!p.razorpayPaymentId)return fail('Payment or original-method return needs review.');
    const[refunds,marker]=await Promise.all([tx.get(db.collection('refundRequests').where('paymentId','==',p.id).limit(21)),tx.get(db.collection('paymentEvents').doc('refund_'+p.id))]);
-   if(marker.exists||refunds.size>20||refunds.docs.some(d=>d.data()['status']!=='failed'))return fail('An original payment return is unresolved.');
+   const claim=marker.data();
+   const ownReturnClaim=claim?.['kind']==='visit_service_return_owned'&&job.status==='CANCELLED'&&booking?.['visitServiceReturnId']===job.id&&
+    claim['returnId']===job.id&&claim['jobId']===job.id&&claim['paymentId']===p.id&&claim['bookingId']===job.bookingId&&claim['tenantId']===job.tenantId&&claim['visitId']===visit.id;
+   if(marker.exists&&!ownReturnClaim||refunds.size>20||refunds.docs.some(d=>d.data()['status']!=='failed'))return fail('An original payment return is unresolved.');
    if(p.offlineReceiptSettlement){if(projection||p.amount!==actualReceipts||!receipts.size)return fail('Receipt settlement projection changed.');projection=p;continue;}
    if(fundingIds.has(p.id))return fail('One original payment cannot fund two services.');fundingIds.add(p.id);completed.set(p.id,p);applied+=p.amount;
   }
@@ -137,7 +140,7 @@ export async function readVisitBilling(tx:Transaction,db:Firestore,visitId:strin
   moneyTokens.set(job.id,moneyToken);
   if(job.status==='CANCELLED'&&(applied>0||(job as typeof job & {visitServiceReturnId?:string}).visitServiceReturnId||booking?.['manualRefundDuePaise']||booking?.['refundStatus']&&booking['refundStatus']!=='none')){
    if(!booking||!booking['visitServiceReturnId'])return fail('Cancelled service money needs original-method review.');
-   returnReviews.push(await readCancelledVisitReturn(tx,db,{visitId:visit.id,jobId:job.id,job,booking,appliedPaise:applied,invoiceId:inv?.id??job.visitInvoiceId??null,moneyToken}));
+   returnReviews.push(await readCancelledVisitReturn(tx,db,{visitId:visit.id,jobId:job.id,job,booking,originalPayments:paymentDocs.filter(d=>d.data()['status']==='completed').map(d=>({id:d.id,amount:d.data()['amount']})),appliedPaise:applied,invoiceId:inv?.id??job.visitInvoiceId??null,moneyToken}));
   }
   lines.push({jobId:job.id,bookingId:job.bookingId,name:job.lines?.map(l=>l.name).join(' + ')||'Service',amountPaise:job.totalAmount,appliedPaise:applied,cancelled:job.status==='CANCELLED',visitInvoiceId:job.visitInvoiceId??null,invoiceId:inv?.id??job.visitInvoiceId??null,invoiceNumber:inv?.invoiceNumber??visitInvoice?.['invoiceNumber']??null,taxPaise:inv?.tax??visitComponent?.['taxPaise']??(additions?null:job.priceBreakdown.tax),additionalPaise:additions});
   sources.push({job,visitInvoice,booking:booking??null,approvals:approvals.docs.map(d=>({id:d.id,...d.data()})),payments:paymentDocs.map(d=>({id:d.id,...d.data()})),receipts:receipts.docs.map(d=>({id:d.id,...d.data()})),online:online.docs.map(d=>({id:d.id,...d.data()})),invoices:invoices.docs.map(d=>({id:d.id,...d.data()}))});

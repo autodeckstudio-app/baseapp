@@ -44,6 +44,11 @@ export async function cancelReviewedVisitService(db:Firestore,user:AuthorizedUse
     const bookingRef=db.collection('bookings').doc(job['bookingId']),booking=(await tx.get(bookingRef)).data();
     const pickup=await tx.get(db.collection('pickupRequests').doc(job['bookingId']));
     if(!booking||booking['combinedReturn']||booking['visitServiceReturnId']||job['visitServiceReturnId']||pickup.exists)return fail();
+    const [jobPayments,bookingPayments]=await Promise.all([
+      tx.get(db.collection('payments').where('jobId','==',command.jobId).limit(21)),
+      tx.get(db.collection('payments').where('bookingId','==',job['bookingId']).limit(21)),
+    ]);
+    const originalPayments=[...new Map([...jobPayments.docs,...bookingPayments.docs].map(d=>[d.id,d])).values()].filter(d=>d.data()['status']==='completed');
     const now=new Date().toISOString(),revision=visit['revision']+1;
     if(!Number.isSafeInteger(revision))return fail();
     const result={visitId:command.visitId,jobId:command.jobId,revision,returnId:command.jobId,
@@ -55,6 +60,13 @@ export async function cancelReviewedVisitService(db:Firestore,user:AuthorizedUse
       planId:plan.id,preparedBy:plan.preparedBy,commandHash,reviewHash:plan.reviewHash,
       reason:command.reason,cancelledBy:user.uid,cancelledAt:now,result,resultHash:visitReturnHash(result)};
     tx.create(returnRef,record);
+    // Claim the legacy per-payment refund identity as well. Captured payments
+    // stay immutable, but single-payment return endpoints must not return them
+    // again outside this service's original-method approval and actual ledger.
+    for(const p of originalPayments)tx.create(db.collection('paymentEvents').doc('refund_'+p.id),{
+      kind:'visit_service_return_owned',paymentId:p.id,tenantId:plan.tenantId,visitId:plan.visitId,
+      jobId:plan.jobId,bookingId:job['bookingId'],returnId:record.id,reviewHash:plan.reviewHash,claimedAt:now,
+    });
     tx.update(jobRef,{status:'CANCELLED',visitServiceReturnId:record.id,
       statusHistory:[...(job['statusHistory']??[]),{status:'CANCELLED',changedAt:now,changedBy:user.uid,notes:command.reason}],updatedAt:now});
     tx.update(bookingRef,{status:'CANCELLED',visitServiceReturnId:record.id,cancelledAt:now,cancelledBy:'admin',
