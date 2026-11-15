@@ -47,3 +47,11 @@ Both report pages discard obsolete month/scope responses and clear old data on l
 Screenshots/text are in autodeck-operational-physical-mixed, autodeck-operational-physical-parallel, autodeck-operational-returns-reports. Existing telemetry callable is absent from the narrow preview and emits CORS console noise; lifecycle/report callables pass. No failure screenshots are included. Local runtime tokens are not saved in evidence.
 
 This is a connected operational checkpoint, not whole-outcome completion or approval. Unfunded retained obligations, final policy-fee plus trip allocation/collection, registered/taxed issuance, general benefit extras, further credential-free online qualification and final combined owner review remain. Existing policy and fiscal guards stay in place. No new owner decision is established here.
+
+## Invoice-count clarity correction
+
+The trailing plus beside INV-2026-00001 was the existing details expansion symbol, not a second invoice or issuance. Parent visual review correctly identified ambiguity. Customer/Studio now show explicit Show details/Hide details on the same control, with Visit invoices · 1 above it; Admin also counts the rendered shared originals. Actual route asserts exactly one expandable original and expands/collapses that original, showing both service lines Rs1,200 + Rs2,400 and total Rs3,600. Expanded header and totals are captured separately at320/390/1280 because native scroll containers do not turn into full-document screenshots. Source collection assertions still enforce one visitInvoice and one visitReceipt. The PDF control is visible; this particular route did not request a PDF and does not add PDF-delivery qualification.
+
+Studio zero-active-balance receipt copy now matches Admin: Active charges paid · Returns separate. It no longer implies all visit obligations have settled. Existing control and form gating stay unchanged.
+
+Correction validation: full Customer mounted581, Studio mounted160 and Admin mounted194 passed; final Studio affected controls8passed after receipt wording correction. Customer/Studio/Admin types passed; both native web exports and Admin optimized build passed. Final actual physical route passed with explicit one-invoice controls. Production Functions build restored. Evidence is in autodeck-operational-invoice-count; no production action.

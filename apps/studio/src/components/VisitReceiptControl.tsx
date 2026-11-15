@@ -33,7 +33,7 @@ export function VisitReceiptControl({visitId,view,bill,onRecorded}:{visitId:stri
  {!active?note(state.error?'Receipt recording held':'Checking saved receipt…'):state.pending?<>
  {row('Saved cash receipt',formatPaise(state.pending.receivedPaise))}{note('Do not collect or record again')}
  <Button label="Check saved receipt" variant="secondary" disabled={busy} onPress={retry}/>
- </>:bill?.balancePaise===0?note('Visit settled · No receipt due'):<>
+ </>:bill?.balancePaise===0?note('Active charges paid · Returns separate'):<>
  <Text style={{color:colors.textMuted}}>Cash counted (₹)</Text>
  <TextInput accessibilityLabel="Cash counted in rupees" style={inputStyle} keyboardType="decimal-pad" value={amount} editable={!busy} onChangeText={value=>{setAmount(value);change()}}/>
  <Text style={{color:colors.textMuted}}>Reference</Text>
