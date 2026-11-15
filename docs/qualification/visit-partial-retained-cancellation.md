@@ -88,3 +88,26 @@ customer/staff screen integration are not added. Visible unused-leg closure and
 the complete routed320/390/1280before/after owner preview remain unfinished.
 Other final-fee/benefit-extra connected slices still need their own qualification.
 No release or provider-money authority is implied. Hosted private r5 unchanged.
+
+## Explicit unused drop plus later final policy, tests-only follow-up
+
+Five new cases connect the same partial-funded compound operation to a saved
+unused drop and actual completed pickup. The issued retained charge contains
+only pickup1001paise, not the unused drop or cancelled service. Final sibling
+review is held before explicit closure, then can proceed after exact private
+closure and normal surviving-service settlement. Actual final cancellation in
+the late window retains its policy10000paise; actual cancellation eight hours
+before the short-service slot has fee zero and returns its full240000paise.
+The original pickup-only invoice, return amount and physical request remain
+unchanged. Request status remains CONFIRMED with original pickup stamp and no
+drop stamp; closure is a separate truthful fact, never fake DONE/DECLINED.
+
+Missing closure, missing issued charge or invented drop stamp holds billing,
+final review and finite Accountant report, leaving the sibling uncancelled.
+All43new/partial-compound/unused-closure selected cases pass, including these
+five additions. Functions types pass. This follow-up edits tests/docs only;
+production implementation is unchanged. Prior full390billing/300connected and
+1999unit qualification remains from12981ba. Collected suite now has395cases;
+the five additions pass, not a claim of a new full395-case rerun. Visible closure
+projection, broader funding/tax/online paths and combined actual routed owner
+preview still remain unfinished. No activation or policy authority added.
