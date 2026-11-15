@@ -169,7 +169,7 @@ export default function PickupsScreen() {
           <View style={{ backgroundColor: colors.surface, ...(wide ? floatCard(nightMaterial) : {}), borderRadius: 28, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, gap: spacing.sm }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, flexWrap: "wrap" }}>
               <Text style={{ ...typography.body, fontWeight: "700", color: colors.textPrimary }}>{KIND[r.kind] ?? r.kind}</Text>
-              <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: confirmed ? "rgba(120,200,140,.2)" : "rgba(236,134,56,.2)" }}>
+              <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: retained?.placement==='active' ? "rgba(236,134,56,.2)" : confirmed ? "rgba(120,200,140,.2)" : "rgba(236,134,56,.2)" }}>
                 <Text style={{ fontSize: 12, fontWeight: "600", color: retained ? colors.textPrimary : confirmed ? "#8fd6a0" : colors.accent }}>{retained?retainedTransportLabel(retained):history ? r.status === "DONE" ? "Done" : "Declined" : confirmed ? "Confirmed" : "New"}</Text>
               </View>
               {asked ? <Text style={{ ...typography.caption, color: colors.textMuted, marginLeft: "auto" }}>Asked for {asked}</Text> : null}

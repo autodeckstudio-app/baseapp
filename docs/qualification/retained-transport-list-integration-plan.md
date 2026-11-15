@@ -347,3 +347,47 @@ and benefit-extra paths remain unfinished engineering/qualification, not proven
 owner-only decisions. No new owner question is established. Existing source
 semantics and provider holds remain in force; do not ask for approval of unbuilt
 paths. The whole requested multi-service operational outcome is still open.
+
+## Follow-through: actual operations across all three routes
+
+Pending retained states in Studio now use the existing pending/amber palette,
+not the green confirmed palette. Actual320/390/1280pixels inspected for pending
+closure, Admin exact-amount confirmation and Studio drop confirmation. No shell
+or new paragraph was added. New mounted hook cases cover explicit review and
+choice, disabled action, duplicate click, exact response-loss retry, unmounted
+controls and stale review clearing. Both172Admin and158Studio mounted suites pass;
+Functions/Admin/Studio types pass as applicable, including the new test sources.
+
+Source-authentic drop seed now records surviving work/QC/seal and completes the
+actual shared handover before exposing the original retained drop. Studio
+Review journey > Dropped back > Confirm dropped back succeeded through real
+emulator Auth/Functions on the actual route. Admin and Customer open routes
+refreshed to Journey complete. The request kept its original pickup stamp/fee,
+only added actual drop completion and DONE, remained one request, and cancelled
+work stayed cancelled. Completed active/confirmation/closed captures at320/390/
+1280are in the separate operational-drop-final evidence directory.
+
+Actual Admin closure now also completes all three open routes at all3widths:
+Admin confirms the exact unused drop; original request remains unchanged;
+Admin/Studio History and Customer read Unused legs closed. Evidence is separate
+in operational-closure-final. The local emulator was failing to start multiple
+simultaneous function workers after source invalidation. Inspector/serial local
+runtime mode completed both whole3-app scenarios in about25-30seconds. This is
+harness configuration only, not a production serialization/performance change.
+Earlier timed-out operational runs remain failed attempts, superseded by these
+completed runs, not evidence of completion themselves.
+
+Post-summary affected emulator regression32/32passes: all12operational and20
+retained/closure cases, no unchanged full445claim. Full2012Functions unit result
+remains from before this test-seed/client-lifecycle follow-up; financial writers
+and callable semantics did not change. Normal production build restored.
+
+Unfinished pickup qualification has a concrete engineering prerequisite: the
+current grouped receipt writer requires vehicle-received/work states and cannot
+fund a new original retained journey while all services still await pickup.
+An attempted synthetic seed correctly failed that guard. No receipt/status
+shortcut or relaxed guard was kept. Before claiming routed prearrival pickup,
+use a genuinely supported original prepaid-booking source or finish the
+prearrival/underfunded transport-funding path. This is NOT a new owner-policy
+question or authority to infer receipt/funding. Broader outstanding transport,
+final-fee allocation and benefit-extra cases remain unfinished as stated above.
