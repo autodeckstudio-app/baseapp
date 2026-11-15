@@ -36,8 +36,8 @@ describe("public site guards", () => {
     for (const x of [t, pr]) expect(x).not.toMatch(/lawyer|Not published|DRAFT|Owner to confirm/i);
     expect(t).toContain("For cancellation, refund, pickup, warranty or membership terms, please contact AutoDeck before confirming your booking.");
     expect(t).not.toMatch(/include GST|4 hours|24 hours|Rs 100|20%|30 days|guaranteed/i);
-    expect(pr).toContain("Shalin Sheth");
-    expect(pr).toContain("autodeckstudio@gmail.com");
+    expect(pr).not.toMatch(/Shalin|proprietor/i);
+    for (const x of [t, pr, faq]) expect(x).not.toContain("autodeckstudio@gmail.com");
     expect(pr).toContain("We do not sell your data");
     expect(pr).toContain("Card and UPI details are handled by Razorpay. We do not store them.");
     expect(pr).toContain("your name and phone, which only the studio sees");

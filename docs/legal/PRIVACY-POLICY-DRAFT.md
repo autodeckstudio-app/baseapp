@@ -2,7 +2,7 @@
 
 Not published. Not wired into the app. Have it reviewed by a lawyer before use.
 
-**Who we are.** AutoDeck, a sole proprietorship of Shalin Sheth, Sunbeam Complex, Old Sharda Mandir Rd, Ellisbridge, Ahmedabad, Gujarat 380006. Phone and WhatsApp: +91 98986 79711. Email: autodeckstudio@gmail.com. [Owner to confirm the contact email to publish.]
+**Who we are.** AutoDeck, Sunbeam Complex, Old Sharda Mandir Rd, Ellisbridge, Ahmedabad, Gujarat 380006. Phone and WhatsApp: +91 98986 79711.
 
 **What we collect.**
 - Your Google account name and email, used to sign you in.
