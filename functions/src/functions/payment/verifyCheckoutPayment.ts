@@ -15,7 +15,7 @@ import { shouldEnforceAppCheck } from "../../lib/environment.js";
 // webhook uses (invoice, membership). The signed order_id|payment_id pair is proof
 // of payment, so activation does not depend on the webhook arriving. The webhook
 // stays as a backup: it finds the payment already completed and changes nothing.
-export const verifyCheckoutPayment = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_SECRET"] , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
+export const verifyCheckoutPayment = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"] , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   const data = validate(verifyCheckoutPaymentSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "payment.verify");

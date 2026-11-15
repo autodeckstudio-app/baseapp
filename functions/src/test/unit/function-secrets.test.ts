@@ -19,3 +19,13 @@ describe("function secret bindings", () => {
     for (const n of needs) it(`${f.slice(root.length + 1)} binds ${n}`, () => expect(bound).toContain(n));
   }
 });
+
+// Preserve the established live checkout deployment contract, even when the
+// signature verifier itself only reads KEY_SECRET. Removing KEY_ID from the
+// manifest would silently drop the existing binding on the next CLI deploy.
+it("verifyCheckoutPayment preserves both existing Razorpay secret bindings", () => {
+  const source = readFileSync(join(root, "payment/verifyCheckoutPayment.ts"), "utf8");
+  const declarations = /secrets:\s*\[([^\]]*)\]/.exec(source)?.[1] ?? "";
+  const names = [...declarations.matchAll(/"([A-Z0-9_]+)"/g)].map((match) => match[1]);
+  expect(names).toEqual(["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"]);
+});
