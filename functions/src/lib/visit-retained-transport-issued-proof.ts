@@ -14,6 +14,6 @@ export async function readRetainedTransportIssuedProof(tx:Transaction,db:Firesto
  if(visitReturnHash(raw['originalBreakdown'])!==visitReturnHash(originalBreakdown)||visitReturnHash(raw['basis'])!==visitReturnHash(basis)||raw['basis']['originalBreakdownHash']!==visitReturnHash(raw['originalBreakdown'])||
   visitReturnHash(raw['basis']['components'])!==visitReturnHash(review['transport']['review']['retainedLegs'].map((leg:string)=>({leg,...review['transport']['review']['components'][leg]})))||
   parsed.totalPaise!==review['transportRetainedPaise']+review['feePaise']||parsed.policyFeePaise!==review['feePaise']||review['feeDuePaise']!==0||review['retainedPaise']!==parsed.totalPaise||
-  review['entries'].some((e:any)=>!['cash','upi_manual','bank_transfer'].includes(e.method))||review['entries'].reduce((n:number,e:any)=>n+e.retainedPaise,0)!==parsed.totalPaise)return fail();
+  review['entries'].some((e:any)=>!['cash','upi_manual','bank_transfer','razorpay_payment_link'].includes(e.method))||review['entries'].reduce((n:number,e:any)=>n+e.retainedPaise,0)!==parsed.totalPaise)return fail();
  return{raw,invoice:parsed};
 }
