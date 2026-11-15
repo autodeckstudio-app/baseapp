@@ -28,7 +28,7 @@ export async function progressRetainedVisitTransport(db:Firestore,user:Authorize
   if(!member?.booking||!record||member.job.status!=='CANCELLED')return fail();
   const plan=(await tx.get(db.collection('visitServiceReturnPlans').doc(record['planId']))).data();if(!plan)return fail();
   const retained=await readRetainedTransportProof(tx,db,record,plan['review']),r=retained.current;
-  if(visitReturnHash(r)!==d.requestToken||r['status']!=='CONFIRMED'||!retained.review.retainedLegs.includes(d.leg)||retained.review.proposedUnusedLegs.includes(d.leg))return fail();
+  if(retained.closure||visitReturnHash(r)!==d.requestToken||r['status']!=='CONFIRMED'||!retained.review.retainedLegs.includes(d.leg)||retained.review.proposedUnusedLegs.includes(d.leg))return fail();
   const completedField=d.leg+'CompletedAt';if(r[completedField])return fail();
   const scope=await readVisitTransport(tx,db,member.booking as Booking);if(!scope)return fail();
   if(d.leg==='drop')await checkVisitDrop(tx,db,scope);

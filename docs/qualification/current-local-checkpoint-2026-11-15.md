@@ -89,3 +89,17 @@ above was run earlier in this same run, before the final Functions-only change;
 no app/core/UI source changed in the follow-up. Combined actual visual owner
 acceptance, partial retained-charge invoice and unused-leg physical closure are
 still unfinished. No new release authority is implied.
+
+## Follow-up explicit unused-leg closure
+
+See visit-unused-transport-closure.md. Local dormant Admin-only terminal proof
+now handles a saved unused leg after all retained legs actually completed,
+without fake request DONE/DECLINED or any original-request/money/invoice edit.
+Final-service cancellation recognizes the exact validated proof and still
+applies its existing fee. Missing reciprocal proof/marker or request drift holds.
+All358billing cases pass with unique full-name union checked in eight batches;
+connected/privacy/Accountant/legacy-owed293cases pass. Functions types/build pass;
+full Functions units1969pass,1skip,1same unchanged staff-alert-label failure.
+No app/core/UI sources changed. Legacy request-list projection is still missing,
+so unused-leg transport is NOT a finished visible workflow. All release, money
+and combined actual-routed before/after gates remain. Hosted r5 is unchanged.

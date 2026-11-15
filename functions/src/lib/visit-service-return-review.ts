@@ -1,3 +1,4 @@
+import {readRetainedTransportProof} from './visit-transport-retention-state.js';
 import {readVisitTransportReturnReview} from './visit-transport-return-review.js';
 import { createHash } from 'node:crypto';
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
@@ -33,8 +34,9 @@ export async function readVisitServiceReturnReview(tx: Transaction, db: Firestor
     const anchor=scope.members.find(m=>m.job.id===scope.visit.transportJobId);
     if(anchor?.job.status==='CANCELLED'){
       const retained=(await tx.get(db.collection('visitTransportRetentions').doc(anchor.job.id))).data();
-      if(retained){const request=(await tx.get(db.collection('pickupRequests').doc(retained['bookingId']))).data();
-        if(!request||request['status']!=='DONE')return fail();}
+      if(retained){const root=(await tx.get(db.collection('visitServiceReturns').doc(anchor.job.id))).data(),plan=root?(await tx.get(db.collection('visitServiceReturnPlans').doc(root['planId']))).data():null;
+        if(!root||!plan)return fail();const transportProof=await readRetainedTransportProof(tx,db,root,plan['review']);
+        if(transportProof.physicalState==='open')return fail();}
     }
   }
   const [payments,receipts,online] = await Promise.all([

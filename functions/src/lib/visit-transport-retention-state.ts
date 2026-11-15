@@ -14,6 +14,7 @@ export async function readRetainedTransportProof(tx:Transaction,db:Firestore,rec
  const proof=(await tx.get(db.collection('visitTransportRetentions').doc(record['jobId']))).data();
  const current=(await tx.get(db.collection('pickupRequests').doc(record['bookingId']))).data();
  const visit=(await tx.get(db.collection('carVisits').doc(record['visitId']))).data();
+ const closure=(await tx.get(db.collection('visitTransportClosures').doc(record['jobId']))).data();
  if(!proof||proof['id']!==record['jobId']||proof['kind']!=='visit_original_transport_retention'||
    ['tenantId','studioId','customerId','vehicleId','visitId','jobId','bookingId','planId','reviewHash'].some(k=>proof[k]!==record[k])||
    proof['transportHash']!==visitReturnHash(t)||proof['retainedTransportPaise']!==review['transportRetainedPaise']||
@@ -25,6 +26,15 @@ export async function readRetainedTransportProof(tx:Transaction,db:Firestore,rec
   const before=snapshot[leg+'CompletedAt'],at=current[leg+'CompletedAt'];
   if(before&&before!==at||at&&(!r.retainedLegs.includes(leg)||!Number.isFinite(Date.parse(at))))return fail();
  }
- if(current['status']==='DONE'&&r.proposedUnusedLegs.length)return fail();
- return{proof,current,review:r};
+ if(current['status']==='DONE'&&(r.proposedUnusedLegs.length||r.retainedLegs.some((l:string)=>!current[l+'CompletedAt'])))return fail();
+ if(closure||proof['closureId']!==undefined){
+  if(!closure||proof['closureId']!==record['jobId']||closure['id']!==record['jobId']||closure['kind']!=='visit_explicit_unused_transport_closure'||
+   closure['status']!=='closed_unused'||['tenantId','studioId','customerId','vehicleId','visitId','jobId','bookingId','planId','reviewHash'].some(k=>closure[k]!==record[k])||
+   closure['transportHash']!==proof['transportHash']||closure['requestHash']!==visitReturnHash(current)||closure['retainedTransportPaise']!==r.retainedTransportPaise||
+   visitReturnHash(closure['unusedLegs'])!==visitReturnHash(r.proposedUnusedLegs)||visitReturnHash(closure['retainedLegs'])!==visitReturnHash(r.retainedLegs)||
+   !r.proposedUnusedLegs.length||r.proposedUnusedLegs.some((l:string)=>!!current[l+'CompletedAt'])||r.retainedLegs.some((l:string)=>!current[l+'CompletedAt'])||
+   typeof closure['closedBy']!=='string'||!closure['closedBy']||!Number.isFinite(Date.parse(closure['closedAt']))||
+   closure['recordHash']!==visitReturnHash({...closure,recordHash:undefined}))return fail();
+ }
+ return{proof,current,review:r,closure:closure??null,physicalState:closure?'closed_unused' as const:current['status']==='DONE'?'completed' as const:'open' as const};
 }
