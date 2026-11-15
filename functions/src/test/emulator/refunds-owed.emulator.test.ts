@@ -44,7 +44,7 @@ describe("refunds owed aggregate", () => {
     const r = await run(getAccountantMoney, { uid: "u", token: { role: "accountant", tenantId: T, studioId: null }, rawToken: "x" }, { studioId: S, month: "2026-10" });
     expect(r["refundsOwed"]).toEqual({ paise: 20000, count: 2, truncated: false });
     expect(r["report"]).toMatchObject({ totalReceiptsPaise: 20000 });
-    expect(JSON.stringify(r["notes"])).toContain("Refunds owed to customers are shown separately");
+    expect(r["notes"]).toEqual(expect.arrayContaining(["Customer returns not netted into receipts", "Refunds owed · Current open total"]));
     expect(JSON.stringify(r)).not.toContain("rob1"); // no booking ids or customer data leave through this block
   });
   it("invalid owed amounts never silently understate: valid ones still counted, result flagged incomplete", async () => {
