@@ -222,17 +222,17 @@ describe("Customer booking reschedule", () => {
 
   it("rejects a wash reschedule inside the 4h cutoff (item 6 wash rule)", async () => {
     const booking = await makeBooking(customerId, service, vehicle);
-    // The seeded service is a wash (category "washing"): the adopted rule is
-    // one free move up to 4 hours before start. Force the booking inside 4h.
-    const soon = new Date(Date.now() + 3 * 3600000);
-    await db.collection("bookings").doc(booking.id).update({ scheduledAt: soon.toISOString() });
-
-    await expect(
-      rescheduleBooking.run({
-        data: { bookingId: booking.id, newDate: nextDate(), newTime: "12:00", idempotencyKey: uid("idem") },
-        auth: customerAuth(customerId),
-      } as never),
-    ).rejects.toThrow(/within 4 hours/);
+    // Keep the valid 10am appointment. Moving it to real-now+3h can put it
+    // after closing in evening CI runs, where the separate missed rule applies.
+    const clock = vi.spyOn(Date, "now").mockReturnValue(Date.parse(booking.scheduledAt) - 3 * 3600000);
+    try {
+      await expect(
+        rescheduleBooking.run({
+          data: { bookingId: booking.id, newDate: nextDate(), newTime: "12:00", idempotencyKey: uid("idem") },
+          auth: customerAuth(customerId),
+        } as never),
+      ).rejects.toThrow(/within 4 hours/);
+    } finally { clock.mockRestore(); }
   });
 
   it("allows a wash reschedule 12 hours ahead (inside old 24h window, outside new 4h cutoff)", async () => {
