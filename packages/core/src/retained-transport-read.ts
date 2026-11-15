@@ -28,3 +28,13 @@ export function parseRetainedTransportBatch(raw:unknown,requestIds:readonly stri
  }
  return{rows};
 }
+
+export type RetainedTransportList={batch:RetainedTransportBatch;bookings:{requestId:string;status:string}[]};
+/** Same transaction's minimal booking status. No private booking/finance fields. */
+export function parseRetainedTransportList(raw:unknown,ids:readonly string[]):RetainedTransportList{
+ if(!object(raw)||!exact(raw,['batch','bookings'])||!Array.isArray(raw.bookings)||raw.bookings.length!==ids.length)return fail();
+ const batch=parseRetainedTransportBatch(raw.batch,ids),bookings=raw.bookings.map((b:unknown,i:number)=>{
+  if(!object(b)||!exact(b,['requestId','status'])||b.requestId!==ids[i]||!['PENDING','CONFIRMED','ACTIVE','COMPLETED','CANCELLED','EXPIRED'].includes(b.status))return fail();
+  return{requestId:b.requestId as string,status:b.status as string};
+ });return{batch,bookings};
+}

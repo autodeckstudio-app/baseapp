@@ -8,6 +8,8 @@ import { doneLegLines, outstandingLegNote } from "../../../lib/pickup-leg-displa
 import { listenToBookings, BOOKINGS_LIST_LIMIT } from "../../../lib/bookings-service";
 import { pickupRowState, pickupCounts, pickupTabCount } from "../../../lib/pickup-booking-state";
 import {PICKUP_FREE_ROAD_METERS,PICKUP_ROAD_RATE_PER_KM_PAISE}from"@autodeck/core";
+import {RETAINED_TRANSPORT_PREVIEW,useRetainedTransportPreview}from'../../../lib/use-retained-transport-preview';
+import{retainedTransportLabel}from'@autodeck/core';
 import { StatusBadge } from "../../../components/StatusBadge";
 
 type Status = PickupRequestRow["status"];
@@ -30,7 +32,7 @@ function formatAgreed(iso: string): string {
 }
 
 export default function PickupsPage() {
-  const { claims } = useAdminAuth();
+  const { claims, user } = useAdminAuth();
   const [rows, setRows] = useState<PickupRequestRow[] | null>(null);
   const [tab, setTab] = useState<Tab>("REQUESTED");
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -39,27 +41,36 @@ export default function PickupsPage() {
   const [fees, setFees] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rowsScope,setRowsScope]=useState("");
+  const scope=JSON.stringify([user?.uid,claims?.role,claims?.tenantId,claims?.studioId]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!claims) return;
-    setLoadError(null);
-    return listenToPickupRequests(claims.tenantId, setRows, () => { setLoadError("Couldn't load pickup requests."); setRows([]); });
-  }, [claims]);
+    setLoadError(null);setRows(null);setRowsScope("");let active=true;
+    const stop=listenToPickupRequests(claims.tenantId, value=>{if(active){setRows(value);setRowsScope(scope)}}, () => { if(active){setLoadError("Couldn't load pickup requests."); setRows(null);setRowsScope("");} });return()=>{active=false;stop()};
+  }, [claims,scope]);
 
   // Booking status per request, so a request for a cancelled booking is flagged instead of looking approvable.
   const [bookingStatus, setBookingStatus] = useState<Record<string, string> | null>(null);
   useEffect(() => {
-    if (!claims) return;
+    if (!claims || RETAINED_TRANSPORT_PREVIEW) return;
     return listenToBookings(claims.tenantId, (bs) => setBookingStatus(Object.fromEntries(bs.map((b) => [b.id, b.status]))), () => setBookingStatus(null));
   }, [claims]);
 
-  const counts = useMemo(() => pickupCounts(rows ?? [], bookingStatus, BOOKINGS_LIST_LIMIT), [rows, bookingStatus]);
+  const verified=useRetainedTransportPreview(claims&&user?JSON.stringify([user.uid,claims.role,claims.tenantId,claims.studioId]):null,rowsScope===scope?rows?.map(r=>r.id)??null:null);
+  const physical=new Map(verified.status==='ready'?verified.data.batch.rows.filter(r=>r.kind==='retained').map(r=>[r.requestId,r.physical]):[]);
+  const exactBookings=RETAINED_TRANSPORT_PREVIEW?(verified.status==='ready'?Object.fromEntries(verified.data.bookings.map(b=>[b.requestId,b.status])):null):bookingStatus;
+  const visibleReady=!RETAINED_TRANSPORT_PREVIEW||rowsScope===scope&&verified.status==='ready';
+  const displayStatus=(r:PickupRequestRow):Status=>physical.get(r.id)?.placement==='history'?'DONE':r.status;
+  const counts = pickupCounts(visibleReady?(rows??[]).filter(r=>!physical.has(r.id)):[],exactBookings,RETAINED_TRANSPORT_PREVIEW?Number.MAX_SAFE_INTEGER:BOOKINGS_LIST_LIMIT);
+  if(RETAINED_TRANSPORT_PREVIEW&&visibleReady)for(const r of rows??[]){const p=physical.get(r.id);if(p){counts.ALL++;counts[p.placement==='history'?'DONE':r.status]++;}}
+
   const needsClosure = counts.closeRequested + counts.closeConfirmed;
-  const shown = (rows ?? []).filter((r) => tab === "ALL" || r.status === tab);
+  const shown = visibleReady?(rows ?? []).filter((r) => tab === 'ALL' || displayStatus(r) === tab):[];
 
   async function act(r: PickupRequestRow, status: Status) {
-    if (busy) return;
+    if (busy || RETAINED_TRANSPORT_PREVIEW && (!visibleReady || physical.has(r.id))) return;
     setBusy(r.id); setError(null);
     try {
       const agreed: { agreedPickupAt?: string; agreedDropAt?: string } = {};
@@ -98,9 +109,9 @@ export default function PickupsPage() {
           <h1>Pickup and drop</h1>
         </div>
         <div className="ax-kpis" aria-label="At a glance">
-          <div><span className="ax-kpi-v ax-kpi-v--accent">{pickupTabCount(counts,"REQUESTED")}</span><span className="ax-label">Waiting</span></div>
-          <div><span className="ax-kpi-v">{pickupTabCount(counts,"CONFIRMED")}</span><span className="ax-label">Approved</span></div>
-          <div><span className="ax-kpi-v ax-kpi-v--premium">{counts.DONE}</span><span className="ax-label">Done</span></div>
+          <div><span className="ax-kpi-v ax-kpi-v--accent">{visibleReady?pickupTabCount(counts,"REQUESTED"):"-"}</span><span className="ax-label">Waiting</span></div>
+          <div><span className="ax-kpi-v">{visibleReady?pickupTabCount(counts,"CONFIRMED"):"-"}</span><span className="ax-label">Approved</span></div>
+          <div><span className="ax-kpi-v ax-kpi-v--premium">{visibleReady?counts.DONE:"-"}</span><span className="ax-label">{RETAINED_TRANSPORT_PREVIEW?"History":"Done"}</span></div>
           {needsClosure > 0 ? <div><span className="ax-kpi-v">{needsClosure}</span><span className="ax-label">Needs closure</span></div> : null}
         </div>
       </header>
@@ -108,52 +119,53 @@ export default function PickupsPage() {
       <div className="ax-toolbar">
         <div className="ax-seg" role="group" aria-label="Show">
           {TABS.map((t) => (
-            <button key={t.id} type="button" aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>{t.label} {pickupTabCount(counts,t.id)}</button>
+            <button key={t.id} type="button" aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>{RETAINED_TRANSPORT_PREVIEW&&t.id==="DONE"?"History":t.label} {visibleReady?pickupTabCount(counts,t.id):"-"}</button>
           ))}
         </div>
         <p className="ax-pu-policy">First {PICKUP_FREE_ROAD_METERS/1000} road km free per leg, then ₹{PICKUP_ROAD_RATE_PER_KM_PAISE/100} per extra km. Preserve each request's quoted fee and check the bill before collecting. Missing road-distance checks need review.</p>
       </div>
 
-      {tab==="REQUESTED"||tab==="CONFIRMED"?<p className="ax-pu-hint" role="status">{counts[tab]} ready to review · {tab==="REQUESTED"?counts.closeRequested:counts.closeConfirmed} need booking review</p>:null}
+      {visibleReady&&(tab==="REQUESTED"||tab==="CONFIRMED")?<p className="ax-pu-hint" role="status">{counts[tab]} {RETAINED_TRANSPORT_PREVIEW?(counts[tab]===1?"journey":"journeys"):"ready to review"} · {tab==="REQUESTED"?counts.closeRequested:counts.closeConfirmed} need booking review</p>:null}
       {loadError ? <p role="alert" className="ax-pu-error">{loadError}</p> : null}
       {error ? <p role="alert" className="ax-pu-error">{error}</p> : null}
 
-      {rows === null ? (
+      {RETAINED_TRANSPORT_PREVIEW && verified.status==="unavailable" ? <div className="ax-panel" role="alert">Requests unavailable</div> : rows === null || !visibleReady ? (
         <div className="ax-panel" role="status">Loading requests...</div>
       ) : shown.length === 0 ? (
         <div className="ax-empty"><p className="ax-title">{tab === "REQUESTED" ? "Nothing waiting" : "No requests here"}</p><p>{tab === "REQUESTED" ? "New pickup and drop requests from customers show up here." : "Try another tab."}</p></div>
       ) : (
         <div className="ax-pu-grid">
           {shown.map((r) => {
-            const open = r.status === "REQUESTED" || r.status === "CONFIRMED";
-            const bookingNote = open ? pickupRowState(r, r.bookingId, bookingStatus, BOOKINGS_LIST_LIMIT) : { actionable: true, note: null };
-            const blocked = !bookingNote.actionable;
+            const retained=physical.get(r.id);
+            const open = !retained && (r.status === "REQUESTED" || r.status === "CONFIRMED");
+            const bookingNote = open ? pickupRowState(r, r.bookingId, exactBookings, RETAINED_TRANSPORT_PREVIEW?Number.MAX_SAFE_INTEGER:BOOKINGS_LIST_LIMIT) : { actionable: true, note: null };
+            const blocked = !!retained || !bookingNote.actionable;
             const askedPickup = r.requestedPickupTime || r.preferredTime;
             const asked: [string, string][] = [];
             if (r.kind !== "drop" && askedPickup) asked.push([r.kind === "both" ? "Pickup" : "Time", askedPickup]);
             if (r.kind !== "pickup" && r.requestedDropTime) asked.push([r.kind === "both" ? "Drop" : "Time", r.requestedDropTime]);
             if (typeof r.feePaise === "number") {
               const billing = r.feePaise > 0 && (r.status === "CONFIRMED" || r.status === "DONE") ? (r.feeBilled ? ", added to the bill" : ", NOT on the bill (already invoiced or paid): review collection before proceeding") : "";
-              asked.push(["Fee", `${r.feePaise === 0 ? "Free" : `Rs ${r.feePaise / 100}`}${typeof r.distanceKm === "number" ? ` (${r.distanceKm} km)` : ""}${billing}`]);
+              asked.push([retained?"Original quote":"Fee", `${r.feePaise === 0 ? "Free" : `Rs ${r.feePaise / 100}`}${typeof r.distanceKm === "number" ? ` (${r.distanceKm} km)` : ""}${retained?"":billing}`]);
             }
             else asked.push(["Fee", "No location shared: confirm distance by phone"]);
             const agreed: [string, string][] = [];
-            if (r.status !== "REQUESTED" && r.agreedPickupAt) agreed.push(["Pickup", formatAgreed(r.agreedPickupAt)]);
-            if (r.status !== "REQUESTED" && r.agreedDropAt) agreed.push(["Drop", formatAgreed(r.agreedDropAt)]);
+            if (r.status !== "REQUESTED" && !retained?.unusedLegs.includes("pickup") && r.agreedPickupAt) agreed.push(["Pickup", formatAgreed(r.agreedPickupAt)]);
+            if (r.status !== "REQUESTED" && !retained?.unusedLegs.includes("drop") && r.agreedDropAt) agreed.push(["Drop", formatAgreed(r.agreedDropAt)]);
             const legLines = doneLegLines(r, formatAgreed);
-            const legNote = outstandingLegNote(r);
+            const legNote = retained?null:outstandingLegNote(r);
             return (
               <section key={r.id} className="ax-panel ax-pu-card">
                 <div className="ax-pu-top">
                   <h2>{KIND[r.kind]}</h2>
-                  <StatusBadge label={blocked?"Needs booking review":STATUS_LABEL[r.status]} />
+                  <StatusBadge label={retained?retainedTransportLabel(retained):blocked?"Needs booking review":STATUS_LABEL[r.status]} />
                 </div>
                 <p className="ax-pu-addr">{r.address}</p>
 
                 {asked.length > 0 || agreed.length > 0 ? (
                   <dl className="ax-pu-facts">
                     {asked.length > 0 ? (
-                      <div><dt>Customer asked</dt>{asked.map(([k, v]) => <dd key={k}>{asked.length > 1 ? <span>{k}</span> : null}{v}</dd>)}</div>
+                      <div><dt>Customer asked</dt>{asked.map(([k, v]) => <dd key={k}>{asked.length > 1 || retained ? <span>{k}</span> : null}{v}</dd>)}</div>
                     ) : null}
                     {agreed.length > 0 ? (
                       <div><dt>Agreed</dt>{agreed.map(([k, v]) => <dd key={k}>{agreed.length > 1 ? <span>{k}</span> : null}{v}</dd>)}</div>
@@ -161,7 +173,7 @@ export default function PickupsPage() {
                   </dl>
                 ) : null}
 
-                {r.status === "REQUESTED" ? (
+                {!retained && r.status === "REQUESTED" ? (
                   <div className="ax-pu-form">
                     <p className="ax-pu-hint">Call the customer, agree the time, then enter it here.</p>
                     <div className="ax-pu-times">

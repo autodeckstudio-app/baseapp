@@ -6,7 +6,7 @@ const id=z.string().regex(/^[A-Za-z0-9_-]{1,120}$/),schema=z.object({requestIds:
  * Caller list must itself be scoped. Revalidates every supplied request before
  * private source retrieval, then returns verified retention or explicit legacy
  * disposition. No callable, direct rules, UI/listener or action authority. */
-export async function readScopedRetainedTransportBatch(db:Firestore,user:AuthorizedUser,raw:unknown){
+export async function readScopedRetainedTransportList(db:Firestore,user:AuthorizedUser,raw:unknown){
  assertRole(user,'customer','studio','admin','superadmin');const parsed=schema.safeParse(raw);if(!parsed.success)throw new HttpsError('invalid-argument','Choose at most20 exact journey rows.');const ids=parsed.data.requestIds;if(new Set(ids).size!==ids.length)return fail();
  return db.runTransaction(async tx=>{
   const scoped=[];
@@ -32,6 +32,9 @@ export async function readScopedRetainedTransportBatch(db:Firestore,user:Authori
     if(physical.requestId!==requestId||physical.jobId!==jobId)return fail();rows.push({requestId,kind:'retained' as const,physical});
    }else rows.push({requestId,kind:'legacy' as const});
   }
-  return parseRetainedTransportBatch({rows},ids);
+  return {batch:parseRetainedTransportBatch({rows},ids),bookings:scoped.map(({requestId,b})=>({requestId,status:typeof b['status']==='string'?b['status']:''}))};
  });
 }
+
+/** Original exact physical contract, preserved for existing callers. */
+export async function readScopedRetainedTransportBatch(db:Firestore,user:AuthorizedUser,raw:unknown){return(await readScopedRetainedTransportList(db,user,raw)).batch;}

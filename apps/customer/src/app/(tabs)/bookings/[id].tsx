@@ -1,3 +1,4 @@
+import{RETAINED_TRANSPORT_PREVIEW}from'../../../lib/use-retained-transport-preview';
 import{useVisitBill}from'../../../lib/use-visit-bill';
 import{visitFundingLabel}from'@autodeck/core';
 import{VisitCharges}from'../../../ui/VisitCharges';
@@ -660,7 +661,7 @@ export default function BookingDetailScreen() {
         })()
       ) : null}
 
-      {!isMock && !walkIn && booking.status !== "CANCELLED" && booking.status !== "EXPIRED" ? <PickupCard bookingId={booking.id} combinedPayment={Boolean(booking.combinedPayment)} /> : null}
+      {!isMock && !walkIn && (RETAINED_TRANSPORT_PREVIEW||booking.status !== "CANCELLED" && booking.status !== "EXPIRED") ? <PickupCard transportScope={authB.status==="ready"?JSON.stringify([authB.user.uid,authB.claims.role,authB.claims.tenantId,authB.claims.studioId]):null} bookingId={booking.id} combinedPayment={Boolean(booking.combinedPayment)} /> : null}
 
       {isBookingLateToday(booking) ? <Notice title="Your booking is still valid today" body="Your slot has passed, but you can still come today during studio hours. If not checked in by close (7 pm Sunday, 9 pm other days), the booking auto-cancels." /> : null}
       {autoCancelled ? (

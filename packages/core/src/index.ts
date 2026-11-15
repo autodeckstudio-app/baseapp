@@ -99,3 +99,5 @@ export * from "./visit-invoice-read";
 export * from './retained-transport-watch';
 
 export * from './retained-transport-read';
+export * from './complete-retained-transport-watch.js';
+export * from './retained-transport-presentation.js';

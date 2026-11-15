@@ -1,6 +1,7 @@
+"use client";
 import {jobStageCommand} from "@autodeck/core";
 import type {VisitRead} from '@autodeck/core';
-"use client";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";

@@ -1,0 +1,3 @@
+import{initializeApp}from'firebase-admin/app';import{getFirestore}from'firebase-admin/firestore';import{readFileSync}from'node:fs';import{closeUnusedVisitTransport}from'../../lib/visit-unused-transport-closure.js';
+if(!process.env['GCLOUD_PROJECT']?.startsWith('demo-')||!process.env['FIRESTORE_EMULATOR_HOST'])throw Error('Local only');initializeApp({projectId:process.env['GCLOUD_PROJECT']});
+void (async()=>{await closeUnusedVisitTransport(getFirestore(),{uid:'staff',claims:{role:'admin',tenantId:'t',studioId:'s'}}as any,JSON.parse(readFileSync('/tmp/ad-routed-preview-close.json','utf8')));console.log('Local closure committed');})().catch(error=>{console.error(error);process.exitCode=1});

@@ -200,3 +200,63 @@ consumption and routed owner before/after still remain to connect. The real
 validator replaces only the injected test validator, not the missing network
 route. All deployment/provider-money/UI-copy and broader funding/tax/online/
 final-fee holds remain; hosted review unchanged and undelivered.
+
+## Coordinated local routed slice (2026-11-15, review not accepted)
+
+The actual Customer card/booking route, Admin pickups page and Studio pickups
+route now consume a demo-project/emulator-only authenticated preview callable.
+A separate read-only preview entrypoint exports it; production index is unchanged.
+The route returns exact batch physical allowlists plus minimal booking statuses
+from one transaction. Every discovered identity is chunked at20; aggregate ready
+and counts require ALL chunks. Existing scoped request snapshots are uncapped,
+not a new server-paginated list. More than20 is not silently truncated. Initial
+asynchronous request/booking snapshots must all settle before a network read,
+preventing a startup request storm found during actual routed qualification.
+All source subscriptions still precede reads; invalidation clears ready data.
+
+Actual Firebase Auth-issued emulator tokens, Admin session-cookie exchange,
+Firestore listeners and Functions HTTP transport were used on the real routes.
+23 requests proved20+3 server reads, Admin All23 and truthful counts. Explicit
+unused closure on the unchanged original request refreshed all three open apps:
+active Needs closure became history Unused legs closed, without DONE/drop stamp.
+Retained rows expose no legacy confirm/decline/DONE action. Deleting private
+issued proof and invalidating scoped booking produced unavailable in all three,
+with Admin dash counts, not partial/empty green. This failure proof completed in
+an earlier run of the same physical transport slice.
+
+Actual routed1280/390/320 shell, active/closed and lower-scroll screenshots are
+under /downloads/autodeck-routed-retained, transferred separately as evidence.
+Existing shells/components/layout remain. Proposed short labels only include
+History, Needs closure, Unused legs closed, Original quote, See booking bill and
+unavailable states. Existing distance/policy/refund prose is unchanged legacy
+copy, NOT newly approved prose or an exception to the owner's no-paragraph gate.
+
+Parent caught a Payment/Checking payment status row beside definite refund owed.
+This was NOT accepted as transient. The preview-only read entry omitted the
+already-used getCustomerJobs callable, and the synthetic jobs lacked createdAt,
+so the real customer job read could not resolve. Added that existing read export
+and source-authentic fixture fields before cancellation. New routed run explicitly
+awaited Cancelled · Review returns, with grouped visit charges and actual offline
+receipts. No production payment copy/policy was changed to hide this. Lower-scroll
+pixels now show See booking bill fully above the navigation. The updated run
+captured all active/closed widths but exceeded the120-second harness limit during
+the separate final unavailable replay; it does NOT supersede the earlier completed
+failure proof or count as a wholly completed final harness run. An upper payment
+row pixel plus a shorter final end-to-end rerun remain acceptance work.
+
+Qualification: core567; existing source Customer1137/Admin327/Studio146;
+full mounted Customer579/Admin168/Studio154 pass, including actual-screen
+retained placement/action/unavailable tests.44selected source/closure/batch cases
+passed before the last synthetic metadata/read-export adjustment, plus the seed
+reran successfully afterward. No full current433billing run claimed. Five types
+passed before that final test-only metadata/read-export adjustment; Functions
+rechecked at custody. Both Expo exports and actual optimized Admin build passed.
+Admin build exposed a preexisting misplaced use-client directive in
+DeliveryDeclaration; moved to the first line, no UI/copy change. Normal Functions
+production build restored after local preview, preserving production entrypoint.
+Known Functions unit alert-label failure and earlier full414/300qualification
+remain distinguished. No rules change, deployment, provider activation, payment,
+historical cleanup, invoice rewrite or broader funding/tax/online/final-fee grant.
+
+This is an integrated reviewable retained-transport slice, NOT combined owner
+acceptance or completion of the multi-service outcome. Preserve all wider holds.
