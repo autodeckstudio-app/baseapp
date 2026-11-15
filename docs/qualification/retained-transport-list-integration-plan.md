@@ -260,3 +260,50 @@ historical cleanup, invoice rewrite or broader funding/tax/online/final-fee gran
 
 This is an integrated reviewable retained-transport slice, NOT combined owner
 acceptance or completion of the multi-service outcome. Preserve all wider holds.
+
+## Settled complete routed qualification and full current regression
+
+Follow-through completed the bounded end-to-end real-route harness twice after
+settling Customer job/payment reads. The final run explicitly awaited Customer
+Cancelled · Review returns, then all three booking-only unused-closure refreshes,
+Admin All23 and all-three unavailable after original issued proof deletion plus
+scoped invalidation.390px was the bounded rerun; prior320/1280 active/closed
+screens remain separate evidence, not mislabeled as the latest full run. Quick
+failure screenshot names now carry the actual390px width. Upper settled payment
+and lower transport tail pixels were inspected directly: no indefinite Checking
+payment status, no hidden lower payment line, no fabricated drop completion.
+
+Full current billing433/433 passes in11disjoint batches, name-set equality
+against all433collected cases proved no omissions/duplicates. Final auth-order
+hardening reran all6local-route cases successfully. Connected/privacy/Accountant/
+legacy-owed327/327 plus original membership-covered/noncovered-zero24/24 pass
+(351total across14files, not a relabel of the old300). This caught the preview
+callable's initial environment rejection preceding the accountant deny; now
+standard authentication/role rejection precedes the local-environment guard.
+
+Full Functions2000pass/1skip/1same explicit staff-alert-label failure after the
+new callable was wired to standard env-gated App Check and classified. Five new
+production-export/demo/actual-target boundary checks and192App Check checks also
+pass197/197. This is not a claim of an additional full2005run. Five type checks
+and normal production Functions build pass. Production index unchanged, preview
+bundle restored away after every final run. Core567/source1137/327/146 and full
+mounted579/168/154 remain qualified as stated above; no new app edits since.
+The harness accepts restored generated exports under /tmp, cleans its config
+and all child services, and uses sample emulator identities only. No processes
+or ongoing polling remain. Latest source code is ready for custody and parent
+review, not release. The earlier paragraph describing interrupted final harness
+is superseded by this completed bounded run, not silently erased.
+
+Remaining combined outcome: this is read-only retained-transport consumption for
+the currently supported source slices, not operational retained-leg/closure UI,
+not general partially/unfunded retained charges, online/taxed/registered issuance
+or final-fee+trip allocation, and not all benefit-extra/provider flows. Needed
+future drop still stays active but legacy mutation buttons remain unavailable.
+No shell redesign, new prose paragraph, actual payment/refund/provider operation,
+production regrouping or deployment was authorized/performed. Owner's full
+combined before/after review and approval remain outstanding through parent.
+
+Final closeout reran the full Functions unit suite INCLUDING the5boundary checks:
+2005pass/1skip/1unchanged shared_visit_cancel_capture_review alert-label failure.
+This supersedes the preceding explicit no-full2005claim. Normal Functions build
+was restored again afterward. Source tree clean at the recorded custody commit.
