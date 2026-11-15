@@ -124,3 +124,18 @@ Types/build pass; full Functions1985pass/1skip/1same alert-label fail. Distinct
 issued charge and receipt/read/PDF/Accountant integration are still unfinished,
 as are visible unused-leg closure, other remaining connected slices and owner
 actual-routed combined preview. Hosted r5/release/provider holds unchanged.
+
+## Compound partial-funded retained charge
+
+See visit-partial-retained-cancellation.md. A narrow dormant manual-source,
+zero-fee/continuing-service, zero-tax/unregistered-issuer operation now atomically
+cancels the service and creates exact original-method review, original physical
+retention and distinct issued retained invoice. Scoped own/staff reads validate
+original funding; finite reports reconcile markers without new money/revenue.
+General cancellation guards remain. All390billing and300connected/privacy/
+Accountant/legacy-owed cases pass; Functions types/build pass; units1999pass,
+1skip,1same unchanged explicit alert-label failure. The actual committed fixture
+PDF was rendered and visually inspected, not treated as real invoice or owner
+acceptance. Broader partial/unfunded/tax/online/fee slices and production/visible
+integration remain unfinished. Hosted review and all release/provider/UI gates
+unchanged. No app/core/UI source was edited.

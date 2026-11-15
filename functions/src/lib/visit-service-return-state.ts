@@ -1,3 +1,4 @@
+import {readRetainedTransportIssuedProof} from './visit-retained-transport-issued-proof.js';
 import { readVisitReturnProgress } from './visit-service-return-progress.js';
 import {readRetainedTransportProof} from './visit-transport-retention-state.js';
 import { createHash } from 'node:crypto';
@@ -69,6 +70,7 @@ export async function readCancelledVisitReturn(tx: Transaction, db: Firestore, i
   }
   if(review.transport)await readRetainedTransportProof(tx,db,record,review);
   else if((review.transportRetainedPaise??0)!==0)return fail();
+  await readRetainedTransportIssuedProof(tx,db,record,review,job['priceBreakdown']);
   const progress=await readVisitReturnProgress(tx,db,record,review);
   if(b['refundStatus']!==progress.refundStatus||b['refundedPaise']!==progress.returnedPaise||b['manualRefundDuePaise']!==progress.manualDuePaise)return fail();
   return { id: record['id'] as string, jobId: input.jobId, status:progress.status,

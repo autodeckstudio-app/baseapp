@@ -22,7 +22,7 @@ export async function readVisitReturnLedger(db:Firestore,tenantId:string,studioI
  if(!id(tenantId)||!id(studioId))return fail();
  return db.runTransaction(async tx=>{
   const scope=(name:string)=>db.collection(name).where('tenantId','==',tenantId).where('studioId','==',studioId);
-  const [roots,approvals,manual,online,bookings,jobs,identities,ingress]=await Promise.all([
+  const [roots,approvals,manual,online,bookings,jobs,identities,ingress,retainedInvoices]=await Promise.all([
    ...['visitServiceReturns','visitServiceReturnApprovals','visitServiceManualReturns','visitServiceOnlineReturns'].map(name=>tx.get(scope(name).limit(VISIT_RETURN_LEDGER_CAP+1))),
    tx.get(scope('bookings').where('status','==','CANCELLED').limit(VISIT_RETURN_LEDGER_CAP+1)),
    tx.get(scope('jobs').where('status','==','CANCELLED').limit(VISIT_RETURN_LEDGER_CAP+1)),
@@ -30,15 +30,20 @@ export async function readVisitReturnLedger(db:Firestore,tenantId:string,studioI
    // rather than inferring a studio or ignoring a lost processed return.
    tx.get(db.collection('visitServiceProviderRefunds').where('tenantId','==',tenantId).limit(VISIT_RETURN_LEDGER_CAP+1)),
    tx.get(scope('visitRefundIngress').limit(VISIT_RETURN_LEDGER_CAP+1)),
+   tx.get(scope('visitRetainedTransportInvoices').limit(VISIT_RETURN_LEDGER_CAP+1)),
   ]);
-  if(!roots||!approvals||!manual||!online||!bookings||!jobs||!identities||!ingress)return fail();
-  if([roots,approvals,manual,online,bookings,jobs,identities,ingress].some(s=>s.size>VISIT_RETURN_LEDGER_CAP))throw new HttpsError('resource-exhausted','Service return history exceeds the report cap. No partial money total returned.');
+  if(!roots||!approvals||!manual||!online||!bookings||!jobs||!identities||!ingress||!retainedInvoices)return fail();
+  if([roots,approvals,manual,online,bookings,jobs,identities,ingress,retainedInvoices].some(s=>s.size>VISIT_RETURN_LEDGER_CAP))throw new HttpsError('resource-exhausted','Service return history exceeds the report cap. No partial money total returned.');
   const originals=new Map(roots.docs.map(d=>[d.id,d.data()]));
   for(const doc of roots.docs){const r=doc.data();if(r['id']!==doc.id||r['jobId']!==doc.id||!id(r['visitId'])||!id(r['bookingId']))return fail();}
   for(const doc of approvals.docs)if(!originals.has(doc.id))return fail();
   for(const doc of [...manual.docs,...online.docs])if(!originals.has(doc.data()['returnId']))return fail();
   for(const doc of [...bookings.docs,...jobs.docs]){const marker=doc.data()['visitServiceReturnId'];if(marker!==undefined&&(!id(marker)||!originals.has(marker)))return fail();}
   for(const doc of roots.docs){const r=doc.data();if(!jobs.docs.some(d=>d.id===r['jobId']&&d.data()['visitServiceReturnId']===doc.id)||!bookings.docs.some(d=>d.id===r['bookingId']&&d.data()['visitServiceReturnId']===doc.id))return fail();}
+  // Distinct retained invoices document retained original funding only. They
+  // add no receipt/revenue here. Reconcile both directions before any totals.
+  for(const doc of retainedInvoices.docs){const i=doc.data(),root=originals.get(i['jobId']);if(!root||i['id']!==doc.id||root['retainedTransportInvoiceId']!==doc.id)return fail();}
+  for(const doc of roots.docs){const marker=doc.data()['retainedTransportInvoiceId'];if(marker!==undefined&&!retainedInvoices.docs.some(i=>i.id===marker&&i.data()['jobId']===doc.id))return fail();}
   const scopedIdentity=new Map<string,Record<string,any>>();
   for(const doc of identities.docs){const r=doc.data();if(!id(r['requestId']))return fail();const request=(await tx.get(db.collection('visitServiceOnlineReturns').doc(r['requestId']))).data();
    if(!request||request['tenantId']!==tenantId||request['state']!=='returned')return fail();
