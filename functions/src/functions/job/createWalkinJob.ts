@@ -1,0 +1,220 @@
+import {hasReleasedBay} from "@autodeck/core";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { getFirestore } from "firebase-admin/firestore";
+import type { Service, StudioConfig, ServiceJob, Vehicle, Customer, Booking } from "@autodeck/core";
+import { jobHoldsBay } from "@autodeck/core";
+import { COLLECTIONS } from "@autodeck/database";
+import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
+import { validate } from "../../middleware/validate.js";
+import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { createWalkinJobSchema } from "../../schemas/job.js";
+import {
+  buildOccupiedInterval,
+  hasConflict,
+  type OccupiedInterval,
+} from "../../lib/availability.js";
+import { utcToLocalDate, utcToLocalTime, addDays, computeScheduleEnd } from "../../lib/schedule.js";
+import { calculatePrice, taxFor } from "../../lib/pricing.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
+
+export const createWalkinJob = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
+  const user = extractUser(request);
+  assertRole(user, "studio", "admin", "superadmin");
+  const data = validate(createWalkinJobSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "job.walkinCreate");
+
+  const db = getFirestore();
+  const now = new Date();
+  const nowIso = now.toISOString();
+
+  // Studio users are scoped to their own studio — matches the same check
+  // already enforced on advanceJobStatus/assignBay/createApproval.
+  if (user.claims.role === "studio" && user.claims.studioId !== data.studioId) {
+    throw new HttpsError("permission-denied", "Cannot create a walk-in job for a different studio.");
+  }
+
+  const [serviceSnap, configSnap, vehicleSnap, customerSnap] = await Promise.all([
+    db.collection(COLLECTIONS.services()).doc(data.serviceId).get(),
+    db.collection(COLLECTIONS.studioConfig()).doc(data.studioId).get(),
+    db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId).get(),
+    db.collection(COLLECTIONS.customers()).doc(data.customerId).get(),
+  ]);
+
+  if (!serviceSnap.exists) throw new HttpsError("not-found", "Service not found.");
+  if (!configSnap.exists) throw new HttpsError("not-found", "Studio not found.");
+  if (!vehicleSnap.exists) throw new HttpsError("not-found", "Vehicle not found.");
+  if (!customerSnap.exists) throw new HttpsError("not-found", "Customer not found.");
+
+  const service = serviceSnap.data() as Service;
+  const config = configSnap.data() as StudioConfig;
+  const vehicle = vehicleSnap.data() as Vehicle;
+  const customer = customerSnap.data() as Customer;
+
+  assertTenant(user, service.tenantId);
+  assertTenant(user, config.tenantId);
+  assertTenant(user, vehicle.tenantId);
+  assertTenant(user, customer.tenantId);
+  if (vehicle.ownerId !== data.customerId) {
+    throw new HttpsError("failed-precondition", "Vehicle does not belong to the given customer.");
+  }
+
+  if (!service.active || service.catalogueEntryKind==='enquiry') {
+    throw new HttpsError("failed-precondition", "Service is not currently available.");
+  }
+
+  // Verify the requested bay exists, is active, and matches the service's required type
+  const bay = config.bays.find((b) => b.id === data.bayId);
+  if (!bay) throw new HttpsError("not-found", "Bay not found in studio configuration.");
+  if (!bay.active) throw new HttpsError("failed-precondition", "Bay is not active.");
+  if (bay.bayType !== service.requiredBayType) {
+    throw new HttpsError(
+      "failed-precondition",
+      `Bay type '${bay.bayType}' is not compatible with service requiring '${service.requiredBayType}'.`,
+    );
+  }
+
+  // Server-authoritative price snapshot — same pricing engine used by createBooking.
+  // Resolved once, at creation, from (service, vehicleCategory); immutable thereafter.
+  const priceBreakdown = calculatePrice({
+    basePrice: service.basePrice,
+    serviceCategory: service.category,
+    vehicleCategory: data.vehicleCategory,
+    vehicleCategoryPricing: service.vehicleCategoryPricing,
+    ...taxFor(config),
+    currency: config.currency,
+  });
+
+  const scheduledDate = utcToLocalDate(now, config.timezone);
+  // Authoritative, multi-day-aware completion instant — walk-ins aren't
+  // restricted to short services, so this must use the same calculation as
+  // createBooking/rescheduleBooking (single source of truth). Buffer-free —
+  // matches ServiceJob.estimatedEndAt's contract.
+  const estimatedEndAt = computeScheduleEnd(
+    now,
+    service.estimatedDurationMinutes,
+    config.operatingHours,
+    config.holidays,
+    config.timezone,
+  );
+  const estimatedEndDate = utcToLocalDate(estimatedEndAt, config.timezone);
+  const jobRef = db.collection(COLLECTIONS.jobs()).doc();
+  const quoteBookingRef=service.priceOnRequest?db.collection(COLLECTIONS.bookings()).doc():null;
+
+  await db.runTransaction(async (tx) => {
+    const currentVehicleSnap=await tx.get(db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId));
+    if(!currentVehicleSnap.exists)throw new HttpsError("not-found","Vehicle not found.");
+    const currentVehicle=currentVehicleSnap.data() as Vehicle;
+    if(currentVehicle.tenantId!==user.claims.tenantId || currentVehicle.ownerId!==data.customerId)throw new HttpsError("permission-denied","Vehicle does not belong to this customer.");
+    if(currentVehicle.deletedAt)throw new HttpsError("failed-precondition","Restore this car before starting a visit.");
+
+    // Deterministic-document touch for the bay we're about to occupy — see
+    // COLLECTIONS.bayLocks' doc comment for why this exists and its HONEST,
+    // tested limitation (measurably reduces but does NOT fully eliminate the
+    // bay race). Same pattern as createBooking.ts (Phase 5B fix — this file
+    // previously had no mitigation at all for the identical race).
+    const bayLockRef = db
+      .collection(COLLECTIONS.bayLocks())
+      .doc(`${user.claims.tenantId}__${data.studioId}__${data.bayId}`);
+    await tx.get(bayLockRef);
+
+    // Transactional bay check, two honest layers on ONE status-based query
+    // (no scheduledDate window — a job that started weeks ago and was never
+    // closed still physically holds its bay, and a date range around today
+    // would miss it):
+    //  1. Physical presence: any ACTIVE-status job on the bay holds it until
+    //     delivered/cancelled, regardless of its scheduled interval.
+    //  2. Reservations: a PENDING_VEHICLE booking whose slot still holds
+    //     (jobHoldsBay) keeps its scheduled-interval conflict check, so a
+    //     walk-in is not admitted over a car expected now/soon.
+    const activeJobsSnap = await tx.get(
+      db
+        .collection(COLLECTIONS.jobs())
+        .where("studioId", "==", data.studioId)
+        .where("bayId", "==", data.bayId)
+        .where("status", "in", ["PENDING_VEHICLE", "VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"]),
+    );
+
+    const bayJobs = activeJobsSnap.docs.map((d) => ({ ...(d.data() as ServiceJob), id: d.id })).filter(j=>!hasReleasedBay(j));
+    const holder = bayJobs.find((j) => ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"].includes(j.status));
+    if (holder) {
+      throw new HttpsError(
+        "resource-exhausted",
+        `Bay is still occupied by job ${holder.id} (${holder.status}). Close that job or select a different bay.`,
+      );
+    }
+    const occupied: OccupiedInterval[] = [];
+    for (const job of bayJobs) {
+      // A booked car that never came and whose slot has ended no longer holds the bay.
+      if (job.status === "PENDING_VEHICLE" && jobHoldsBay(job, now.getTime())) {
+        occupied.push(buildOccupiedInterval(job.scheduledAt, job.estimatedEndAt));
+      }
+    }
+
+    if (hasConflict(now, estimatedEndAt, occupied)) {
+      throw new HttpsError(
+        "resource-exhausted",
+        "Bay is currently occupied. Please select a different bay.",
+      );
+    }
+
+    const walkinJob: ServiceJob = {
+      id: jobRef.id,
+      tenantId: user.claims.tenantId,
+      studioId: data.studioId,
+      bookingId: quoteBookingRef?.id??null,
+      customerId: data.customerId,
+      vehicleId: data.vehicleId,
+      serviceId: data.serviceId,
+      bayId: data.bayId,
+      assignedEmployeeId: user.uid,
+      status: "VEHICLE_RECEIVED",
+      statusHistory: [
+        {
+          status: "VEHICLE_RECEIVED",
+          changedAt: nowIso,
+          changedBy: user.uid,
+          notes: data.notes ?? null,
+        },
+      ],
+      scheduledAt: nowIso,
+      scheduledDate,
+      estimatedEndAt: estimatedEndAt.toISOString(),
+      estimatedEndDate,
+      estimatedDurationMinutes: service.estimatedDurationMinutes,
+      studioNotes: data.notes ?? null,
+      additionalWorkDelta: 0,
+      priceBreakdown,
+      totalAmount: priceBreakdown.total,
+      paymentStatus: "unpaid",
+      isWalkIn: true,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      sealedAt: null,
+    };
+
+    if(quoteBookingRef){const b:Booking={id:quoteBookingRef.id,tenantId:user.claims.tenantId,studioId:data.studioId,customerId:data.customerId,vehicleId:data.vehicleId,serviceId:data.serviceId,vehicleCategory:data.vehicleCategory,scheduledAt:nowIso,scheduledDate,scheduledTime:utcToLocalTime(now,config.timezone),estimatedEndAt:estimatedEndAt.toISOString(),estimatedEndDate,estimatedEndTime:utcToLocalTime(estimatedEndAt,config.timezone),durationMinutes:service.estimatedDurationMinutes,bayId:data.bayId,assignedEmployeeId:user.uid,status:'ACTIVE',priceOnRequest:true,quoteStatus:'requested',priceBreakdown,totalAmount:priceBreakdown.total,membershipId:null,membershipDiscountApplied:false,membershipWashUsed:false,paymentStatus:'unpaid',payMode:'studio',holdExpiresAt:null,notes:data.notes??null,idempotencyKey:'walkin-'+jobRef.id,rescheduleCount:0,confirmedAt:nowIso,cancelledAt:null,cancellationReason:null,createdAt:nowIso,updatedAt:nowIso};tx.set(quoteBookingRef,b);}
+    tx.set(jobRef, walkinJob);
+    // Write the bay lock read above — forces Firestore to detect a conflict
+    // and retry a genuinely concurrent second caller racing for this bay.
+    tx.set(bayLockRef, { lastAssignedAt: nowIso });
+    writeAuditLog(tx, {
+      action: "job.walkin_created",
+      entityType: "ServiceJob",
+      entityId: jobRef.id,
+      user,
+      studioId: data.studioId,
+      after: {
+        id: jobRef.id,
+        bayId: data.bayId,
+        serviceId: data.serviceId,
+        vehicleId: data.vehicleId,
+        customerId: data.customerId,
+        totalAmount: priceBreakdown.total,
+      },
+    });
+  }, { maxAttempts: 10 });
+
+  const created = await db.collection(COLLECTIONS.jobs()).doc(jobRef.id).get();
+  return { job: created.data() as ServiceJob };
+});

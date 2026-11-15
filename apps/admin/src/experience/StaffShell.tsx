@@ -1,0 +1,197 @@
+"use client";
+
+// Presentational staff shell: glass sidebar on the studio ground. Holds no
+// auth state; the (admin) layout decides who may see what and passes it in.
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { PushAlertsButton } from "./PushAlertsButton";
+import Link from "next/link";
+import { Icon } from "./Icon";
+import { LOGO_HORIZONTAL_SVG, LOGO_MARK_SVG, LOGO_HORIZONTAL_ON_DARK_SVG, LOGO_MARK_ON_DARK_SVG, logoDataUri } from "@autodeck/ui/theme";
+import { Ambient } from "./Ambient";
+import "./shell.css";
+import "./float.css";
+import "./orizon.css";
+import "./canvas.css";
+import "./shell-v2.css";
+import "./polish.css";
+import "./actions.css";
+
+export const STUDIO_LINKS = [
+  { href: "/bookings", label: "Bookings" },
+  { href: "/jobs", label: "Jobs" },
+  { href: "/attendance", label: "Attendance" },
+] as const;
+
+export const OFFICE_LINKS = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/customers", label: "Customers" },
+  { href: "/vehicles", label: "Vehicles" },
+  { href: "/payments", label: "Payments" },
+  { href: "/invoices", label: "Invoices" },
+  { href: "/papers", label: "Papers" },
+  { href: "/expenses", label: "Expenses" },
+  { href: "/daily-close", label: "Daily Close" },
+  { href: "/inventory", label: "Inventory" },
+  { href: "/reports", label: "Reports" },
+  { href: "/memberships", label: "Memberships" },
+  { href: "/services", label: "Services" },
+  { href: "/staff", label: "Team" },
+  { href: "/studio", label: "Studio" },
+  { href: "/audit", label: "Audit log" },
+  { href: "/stories", label: "Stories" },
+  { href: "/offers", label: "Offers" },
+  { href: "/cars", label: "Cars for sale" },
+] as const;
+
+import { SECTIONS, GROUPS, MORE_LINKS } from "./nav";
+
+const LINK_ICON: Record<string, string> = { "/services": "services", "/inventory": "tools", "/stories": "star", "/offers": "star", "/cars": "car", "/pickups": "car", "/staff": "users", "/studio": "pin", "/papers": "shield", "/audit": "search" };
+
+const RAIL_ICON: Record<string, string> = {
+  "/dashboard": "home", "/bookings": "calendar", "/pickups": "pickup", "/jobs": "wrench", "/attendance": "check-in",
+  "/customers": "users", "/vehicles": "garage", "/memberships": "membership",
+  "/payments": "payments", "/invoices": "invoice", "/expenses": "check-out", "/daily-close": "check", "/reports": "inspect",
+  "/services": "services", "/inventory": "tools", "/stories": "star", "/cars": "car",
+  "/staff": "profile", "/studio": "pin", "/papers": "shield", "/audit": "search",
+};
+
+const ROLE_LABEL: Record<string, string> = {
+  admin: "Owner",
+  studio: "Studio",
+  superadmin: "Platform",
+};
+
+function isActive(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export interface StaffShellProps {
+  pathname: string;
+  office: boolean;
+  role: string;
+  who: string;
+  home: string;
+  onSignOut: () => void;
+  children?: ReactNode;
+}
+
+export function StaffShell({ pathname, office, role, who, home, onSignOut, children }: StaffShellProps) {
+  const link = (l: { href: string; label: string }) => (
+    <Link
+      key={l.href}
+      href={l.href}
+      className="ax-nav-link"
+      title={l.label}
+      aria-label={l.label}
+      aria-current={isActive(pathname, l.href) ? "page" : undefined}
+    >
+      <Icon name={(RAIL_ICON[l.href] ?? "dot") as never} size={22} uid="-rail" />
+      <span className="ax-nav-text">{l.label}</span>
+    </Link>
+  );
+
+  const [moreOpen, setMoreOpen] = useState(false);
+  const sheet = useRef<HTMLDivElement>(null);
+  // The menu sheet closes as soon as a page is chosen (the route changes).
+  useEffect(() => { setMoreOpen(false); }, [pathname]);
+  useEffect(() => {
+    if (!moreOpen) return;
+    const previous = document.activeElement as HTMLElement | null;
+    sheet.current?.querySelector<HTMLElement>("button,a")?.focus();
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {setMoreOpen(false);return;}
+      if (e.key !== "Tab") return;
+      const controls = Array.from(sheet.current?.querySelectorAll<HTMLElement>("a,button") ?? []);
+      const first=controls[0],last=controls[controls.length-1];
+      if (e.shiftKey && document.activeElement===first) {e.preventDefault();last?.focus();}
+      else if (!e.shiftKey && document.activeElement===last) {e.preventDefault();first?.focus();}
+    };
+    document.addEventListener("keydown",key);
+    return () => {document.removeEventListener("keydown",key);previous?.focus();};
+  },[moreOpen]);
+  const groups = GROUPS.filter((g) => office || !g.office);
+  const activeGroup = groups.find((g) => g.links.some((l) => isActive(pathname, l.href)));
+  const moreActive = !activeGroup && MORE_LINKS.some((l) => isActive(pathname, l.href));
+  const sections = SECTIONS.map((sec) => ({ ...sec, links: sec.links.filter((l) => office || !l.office) })).filter((sec) => sec.links.length > 0);
+  const activeSection = sections.find((sec) => sec.links.some((l) => isActive(pathname, l.href)));
+  const moreSections = sections;
+
+  return (
+    <div className="ax-shell">
+      <Ambient>
+        <div className="ax-shell-frame" data-hero={pathname === "/dashboard" ? "on" : undefined}>
+          {pathname === "/dashboard" ? <div className="ax-herobg" aria-hidden="true" /> : null}
+          <Link href={home} className="ax-corner ax-corner--l" aria-label="AutoDeck home">
+            <img className="ax-lg ax-lg--full ax-lg-l" src={logoDataUri(LOGO_HORIZONTAL_SVG)} alt="AutoDeck" />
+            <img className="ax-lg ax-lg--full ax-lg-d" src={logoDataUri(LOGO_HORIZONTAL_ON_DARK_SVG)} alt="" aria-hidden="true" />
+            <img className="ax-lg ax-lg--mark ax-lg-l" src={logoDataUri(LOGO_MARK_SVG)} alt="" aria-hidden="true" />
+            <img className="ax-lg ax-lg--mark ax-lg-d" src={logoDataUri(LOGO_MARK_ON_DARK_SVG)} alt="" aria-hidden="true" />
+          </Link>
+          <div className="ax-corner ax-corner--r">
+            <PushAlertsButton />
+            <span className="ax-avatar" title={`${who} - ${ROLE_LABEL[role] ?? role}`} aria-label={`${who}, ${ROLE_LABEL[role] ?? role}`}>{(who.trim()[0] ?? "A").toUpperCase()}</span>
+            <button type="button" className="ax-corner-out" title="Sign out" aria-label="Sign out" onClick={onSignOut}>
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              <span className="ax-corner-out-t">Sign out</span>
+            </button>
+          </div>
+          <aside className="ax-side" aria-label="Main navigation">
+            <div className="ax-side-scroll">
+            {sections.map((sec, i) => (
+              <nav key={sec.key} className="ax-nav-group" aria-label={sec.label} data-tier={sec.group === "Daily" ? "1" : sec.group === "Grow" ? "2" : "3"} data-first={i === 0 || sections[i - 1]!.group !== sec.group ? "1" : undefined}>
+                <Link href={sec.links[0]!.href} className="ax-nav-link" title={sec.label} aria-label={sec.label} aria-current={activeSection?.key === sec.key ? "page" : undefined}>
+                  <Icon name={sec.icon as never} size={22} uid="-rail" />
+                  <span className="ax-nav-text">{sec.label}</span>
+                </Link>
+              </nav>
+            ))}
+            </div>
+          </aside>
+          <main className="ax-main">
+            {activeSection && activeSection.links.length > 1 ? (
+              <nav className="ax-subtabs" aria-label={activeSection.label}>
+                {activeSection.links.map((l) => (
+                  <Link key={l.href} href={l.href} className="ax-subtab" aria-current={isActive(pathname, l.href) ? "page" : undefined}>{l.label}</Link>
+                ))}
+              </nav>
+            ) : null}
+            {children}
+          </main>
+          <nav className="ax-tabbar" aria-label="Main">
+            {groups.map((g) => (
+              <Link key={g.key} href={g.links[0]!.href} className="ax-tab" aria-label={g.label} title={g.label} aria-current={activeGroup?.key === g.key ? "page" : undefined}>
+                <Icon name={g.icon} size={24} />
+                <span>{g.label}</span>
+              </Link>
+            ))}
+            <button type="button" className="ax-tab" aria-label="Menu" title="Menu" aria-current={moreActive || moreOpen ? "page" : undefined} onClick={() => setMoreOpen((v) => !v)}>
+              <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
+              <span>Menu</span>
+            </button>
+          </nav>
+          {moreOpen ? (
+            <div className="ax-sheet-back" onClick={() => setMoreOpen(false)}>
+              <div ref={sheet} className="ax-sheet" role="dialog" aria-modal="true" aria-label="Menu" onClick={(e) => e.stopPropagation()}>
+                <button type="button" className="ax-button" style={{alignSelf:"flex-end"}} onClick={() => setMoreOpen(false)}>Close</button>
+                {moreSections.map((sec) => (
+                  <div key={sec.key}>
+                    <p className="ax-label">{sec.label}</p>
+                    <div className="ax-sheet-grid">
+                      {sec.links.map((l) => (
+                        <Link key={l.href} href={l.href} className="ax-sheet-link" aria-current={isActive(pathname, l.href) ? "page" : undefined}><Icon name={(RAIL_ICON[l.href] ?? LINK_ICON[l.href] ?? "dot") as never} size={18} /><span>{l.label}</span></Link>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <div className="ax-sheet-foot">
+                  <span>{who} · {ROLE_LABEL[role] ?? role}</span>
+                  <button type="button" className="ax-button" onClick={onSignOut}>Sign out</button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </Ambient>
+    </div>
+  );
+}

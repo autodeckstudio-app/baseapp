@@ -1,0 +1,5 @@
+import{describe,it,expect,vi}from'vitest';
+// Asset paths are literal requires in the real RN module. Node tests inspect their exact mapping text.
+import{readFileSync,existsSync}from'node:fs';import{resolve}from'node:path';
+const code=readFileSync(resolve('src/lib/imagery.ts'),'utf8');
+describe('exact branded product asset routing',()=>{it('has explicit Koch product names and exact assets, no year-to-SKU inference',()=>{for(const [name,key]of [['ceramic allround c0.02','allround-c002'],['ceramic body cb0.01','body-cb001'],['ceramic rims cr0.01','rims-cr001'],['ceramic neo c0.03','neo-c003']]){expect(code).toContain('"'+name+'"');expect(existsSync(resolve('assets/imagery/brands/koch-chemie-ceramic-'+key+'.png'))).toBe(true);}expect(code).toContain('if (b === "koch-chemie")');expect(code).not.toMatch(/fireball[\s\S]{0,150}BOTTLES/i);});it('has exact Overlay asset but does not assign generic add-on coatings a bottle',()=>{expect(code).toContain('kovalent-overlay.png');expect(code).toContain('b === "kovalent"');});});

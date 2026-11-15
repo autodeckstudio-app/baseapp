@@ -1,0 +1,810 @@
+import type * as FsT from "fs";
+import type * as PathT from "path";
+import {describe,it,expect} from "vitest";
+import {readFileSync} from "node:fs";
+import {resolve} from "node:path";
+const read=(p:string)=>readFileSync(resolve(".",p),"utf8");
+describe("unified product design contract",()=>{
+  it("keeps user-uploaded service photos untreated",()=>{
+    expect(read("src/ui/ServicePhoto.tsx")).not.toContain("filter:");
+  });
+  it("labels shared input controls and preserves minimum back target",()=>{
+    const source=read("src/ui/kit.tsx");expect(source).toContain("accessibilityLabel={label}");expect(read("src/ui/AppBar.tsx")).toMatch(/accessibilityLabel="Back"[^\n]*width: 46, height: 46/);
+  });
+  it("does not send or upload before the staged sell review",()=>{
+    const source=read("src/app/(tabs)/cars/sell.tsx");expect(source).toContain("step===2 ? <Button");expect(source).toContain("if (busy) return");expect(source).toContain("validateSellStep(f, step, photos.length)");expect(read("src/lib/sell-validation.ts")).toContain("if (!photoCount)");
+  });
+  it("makes critical booking load failures retryable without false rollback claims",()=>{
+    const booking=read("src/app/(tabs)/book/[serviceId].tsx");expect(booking).toContain('setSelectedCategory(normalizeSegment(selectedVehicle?.category))');expect(booking).toContain('label="Retry"');expect(booking).toContain('<ServiceTimePicker');expect(booking).toContain('initialDate={selectedDate}');expect(booking).toContain('onDayChange={date=>{setSelectedDate(date);setPickedSlot(null)}}');expect(booking).toContain('onPick={slot=>{setPickedSlot(slot);setSizeError(null)}}');const picker=read('src/ui/ServiceTimePicker.tsx');expect(picker).toContain('s.date===active');expect(picker).toContain('onDayChange?.(date)');expect(picker).toContain('onPick(s)');
+    const confirm=read("src/app/(tabs)/book/confirm.tsx");expect(confirm).not.toContain("Nothing was booked");expect(confirm).toContain("Check your bookings first - if it reached the studio");expect(confirm).toContain("if(booking || !service || !vehicle || !breakdown)");
+  });
+  it("recovers missing-link reports and membership screens without endless loaders",()=>{
+    expect(read("src/app/(tabs)/bookings/inspection.tsx")).toContain("setInspection(null)");
+    expect(read("src/app/(tabs)/membership/purchase.tsx")).toContain("Plan unavailable");
+    expect(read("src/app/(tabs)/membership/purchase.tsx")).toContain("!plan || purchasing");
+    expect(read("src/app/(tabs)/garage/[id].tsx")).toContain("Car records unavailable");
+  });
+  it("keeps car filtering available during search and normalizes legacy fuel values",()=>{
+    const source=read("src/ui/CarsHub.tsx");expect(source).not.toContain("searching ?");expect(source).toContain('filterCars(all ?? []');expect(source).toContain('label="Car body type"');expect(source).toContain('label="Sort cars"');expect(source).toContain('Clear all');
+  });
+  it("removes inactive tab controls from the accessibility and keyboard tree",()=>{
+    expect(read("src/ui/kit.tsx")).toContain("if (!focused) return null");
+  });
+  it("waits for the core home feeds before claiming all clear",()=>{
+    const source=read("src/hooks/useCustomerHome.ts");expect(source).toContain("settled.size === 6");expect(source).toContain("vehicles === null || !coreReady");expect(source).toContain('failFor("memberships")');
+  });
+  it("does not choose unrelated images for vehicle fallbacks",()=>{
+    // Vehicle fallbacks resolve to the pixel-verified portrait imports, never a
+    // scene alias (heroAlt/heroHome) or a service photo. The full banned-alias
+    // list lives in lib/category-imagery.test.ts.
+    const source=read("src/lib/imagery.ts");expect(source).toContain("suv: vehicleSuv");expect(source).toContain("luxury: vehicleLuxury");expect(source).not.toContain("suv: heroAlt");expect(source).not.toContain("ALL_POOL");
+  });
+});
+describe("garage detail presentation contract",()=>{
+  it("labels the car documents section Documents, never Papers",()=>{
+    const source=read("src/app/(tabs)/garage/[id].tsx");
+    expect(source).toContain("<Kicker>Documents</Kicker>");
+    expect(source).not.toContain("<Kicker>Papers</Kicker>");
+  });
+  it("renders service history as compact rows, not the timeline rail, on both screens",()=>{
+    const detail=read("src/app/(tabs)/garage/[id].tsx");
+    const full=read("src/app/(tabs)/garage/history.tsx");
+    expect(detail).toContain("HistoryVisitRow");
+    expect(full).toContain("HistoryVisitRow");
+    expect(detail).not.toMatch(/<CareTimeline[^>]*title="Service history"/);
+    expect(read("src/ui/HistoryVisitRow.tsx")).not.toContain("borderRadius: 9999, marginTop: 6");
+  });
+  it("keeps the combo chevron vertically centered as a trailing slot, not a bottom-row chip",()=>{
+    const combos=read("src/ui/CombosSection.tsx");
+    expect(combos).toContain("trailing=");
+    expect(combos).not.toContain('chip=');
+    expect(read("src/ui/VisitCard.tsx")).toContain("price || chip ?");
+  });
+  it("spells out days in the garage due chip so no lone d wraps",()=>{
+    const due=read("src/lib/garage-due.ts");
+    expect(due).toContain("due in ${days} day");
+    expect(due).not.toContain("${days} d`");
+  });
+});
+describe("home and car imagery guardrails",()=>{
+  it("never claims a car health score without data and never shows a stock car as the customer's car",()=>{
+    const home=read("src/ui/HomeView.tsx");
+    expect(home).not.toContain("Car health");
+    expect(home).not.toContain("Excellent");
+    expect(home).not.toContain("vehicleImagery");
+    expect(read("src/ui/CarThumb.tsx")).not.toContain("vehicleImagery");
+  });
+  it("keeps one lead card and no pasted-in services modules on Home",()=>{
+    const home=read("src/ui/HomeView.tsx");
+    expect(read("src/ui/HomeScene.tsx")).toContain('testID="home-state-dock"');
+    expect(home).not.toContain("Popular services");
+    expect(home).not.toContain("From the studio");
+  });
+});
+import {readdirSync,statSync} from "node:fs";
+const walk=(d:string):string[]=>readdirSync(resolve(".",d)).flatMap((n)=>{const p=d+"/"+n;return statSync(resolve(".",p)).isDirectory()?walk(p):p.endsWith(".tsx")?[p]:[]});
+describe("one design system and one place for everything",()=>{
+  it("uses only the shared corner radii (12, 16, 24, pill) plus tiny bars and circles",()=>{
+    const ok=new Set([0,1,2,4,5,6,7,8,10,12,16,24,28,9999]);
+    const bad:string[]=[];
+    for(const f of [...walk("src/app"),...walk("src/ui")]){
+      for(const m of read(f).matchAll(/borderRadius: (\d+)/g)){const n=Number(m[1]);if(!ok.has(n)&&n<34)bad.push(f+" "+n)}
+    }
+    expect(bad).toEqual([]);
+  });
+  it("opens every tab page with the shared PageHeader and the shared section title",()=>{
+    for(const f of ["bookings/index","membership/index","notifications/index"]) expect(read(`src/app/(tabs)/${f}.tsx`)).toContain("<PageHeader");
+    expect(read("src/app/(tabs)/bookings/index.tsx")).not.toContain("fontSize: 19");
+  });
+  it("keeps one entry point per destination",()=>{
+    const profile=read("src/app/(tabs)/profile.tsx");
+    expect(profile).not.toContain('label: "My cars"');
+    expect(profile).not.toContain('t("Notifications")');
+    expect(profile).not.toContain('t("Membership")');
+    const home=read("src/ui/HomeView.tsx");
+    expect(home).not.toContain("MenuDrawer");
+    expect(home).not.toContain("ContactSheet");
+    const studio=read("src/app/(tabs)/studio.tsx");
+    expect(studio).not.toContain("Change service");
+    expect(studio).not.toContain("ROWS");
+    expect(read("src/app/(tabs)/garage/index.tsx")).not.toContain("Service history and invoices");
+  });
+  it("keeps the bottom nav compact",()=>{
+    const bar=read("src/ui/RaisedTabBar.tsx");
+    expect(bar).toContain("maxWidth: 360");
+    expect(bar).toContain("size={26}");
+    expect(bar).toContain("onNavCompact");
+    expect(bar).not.toContain("<Text");
+  });
+  it("puts Home in the centre with the AD monogram and Services beside it",()=>{
+    const bar=read("src/ui/RaisedTabBar.tsx");
+    expect(bar).toContain('route.name === "index"');
+    const lay=read("src/app/(tabs)/_layout.tsx");
+    const order=["bookings","catalogue","index","garage","profile"].map((n)=>lay.indexOf('<Tabs.Screen name="'+n+'"'));
+    expect(order.every((v)=>v>=0)).toBe(true);
+    expect([...order].sort((a,b)=>a-b)).toEqual(order);
+  });
+});
+import {metrics,SCALE} from "../lib/metrics";
+describe("sizes come from one rulebook",()=>{
+  it("keeps every shared size on the scale",()=>{
+    for(const [k,v] of Object.entries(metrics)) expect([k,(SCALE as readonly number[]).includes(v as number)]).toEqual([k,true]);
+  });
+  it("uses the same section gap on Home and in Screen",()=>{
+    expect(read("src/ui/HomeScene.tsx")).toContain("paddingBottom: 26");
+    expect(read("src/ui/kit.tsx")).toContain("calc(${bottomClearance}px + env(safe-area-inset-bottom))");
+  });
+  it("does not leave a tall empty car panel when there is no photo",()=>{
+    const home=read("src/ui/CarChips.tsx");expect(home).toContain("const framed = !!car.vehicle?.photoUrl");expect(home).toContain("{framed ? <View");expect(home).toContain("Add a photo from the car page");expect(home).not.toContain("NO PHOTO YET");
+  });
+});
+describe("surfaces share one radius and one padding",()=>{
+  it("card and sheet surfaces are 24 and wells 16, nothing is tilted",()=>{
+    const r=read("src/lib/raised.ts");
+    expect(r).not.toContain("borderRadius: 26");expect(r).not.toContain("borderRadius: 30");expect(r).not.toContain("borderRadius: 18");
+    expect(read("src/ui/ProfileHero.tsx")).not.toContain("rotate");
+    expect(read("src/ui/kit.tsx")).toContain('<BaseGlass pad={pad}');
+  });
+});
+it("keeps the Home lead card on the shared card padding",()=>{expect(read("src/ui/HomeView.tsx")).not.toContain("padding: 18")});
+it("never shows a made-up health status on car detail",()=>{expect(read("src/ui/CarOverview.tsx")).not.toMatch(/Health/);expect(read("src/app/(tabs)/garage/[id].tsx")).not.toContain("health=")});
+it("takes hero heights from metrics on car and booking detail",()=>{expect(read("src/app/(tabs)/garage/[id].tsx")).toContain("metrics");expect(read("src/app/(tabs)/bookings/[id].tsx")).toContain("metrics.heroCompact")});
+it("uses the card padding rule on list cards",()=>{for(const f of ["bookings/index","membership/index","garage/index"])expect(read(`src/app/(tabs)/${f}.tsx`)).toContain("padding: metrics.cardPad")});
+it("shows the price total on the booking confirm screen",()=>{const s=read("src/app/(tabs)/book/confirm.tsx");expect(s).toContain("breakdown.total");expect(s).toContain("breakdown.tax")});
+it("keeps the service price bar on the card edges, hides empty story circles, and names walk-in visits",()=>{
+    const svc=read("src/app/(tabs)/catalogue/[id].tsx");expect(svc).toContain('{focused&&showBar?<Button style=');expect(svc).not.toContain('<ServiceVisitFacts nextAction=');expect(svc.indexOf('{focused&&showBar?<Button')).toBeGreaterThan(svc.indexOf('<ServicePrice'));expect(svc).toContain('showContactAndTip={false}');expect(svc).not.toContain('<ServiceActionBar');expect(svc).not.toContain('bottom: 92');expect(svc).not.toContain('setBarH');expect(svc).not.toContain('<ServiceVisitFacts');expect(svc).not.toContain('Estimated service time:');
+    expect(read("src/ui/StoryCircles.tsx")).toContain("if (shown.length === 0) return null;"); // no groups, no row; a group without a photo shows its initial
+    expect(read("src/app/(tabs)/bookings/index.tsx")).toContain("visitTitle(nameOf(");expect(read("src/app/(tabs)/bookings/index.tsx")).not.toContain('?? "Service"');
+  });
+it("keeps Home glass to three blur surfaces, hides the campaign slot without real content",async()=>{
+  const {hasCampaign,MAX_BLUR_SURFACES}=await import("../lib/campaign");
+  expect(MAX_BLUR_SURFACES).toBe(3);
+  expect(hasCampaign(null)).toBe(false);expect(hasCampaign({headline:"",imageUrl:"x",onPress:()=>undefined})).toBe(false);expect(hasCampaign({headline:"Real",imageUrl:"",onPress:()=>undefined})).toBe(false);expect(hasCampaign({headline:"Real",imageUrl:"/a.jpg",onPress:()=>undefined})).toBe(true);
+  const home=read("src/ui/HomeView.tsx");expect((home.match(/glassPane\(\)/g)??[]).length).toBeLessThanOrEqual(3);expect(home).not.toMatch(/\u2014/);
+  const idx=read("src/app/(tabs)/index.tsx");expect(idx).toContain("campaign={offerToCampaign(");expect(idx).not.toMatch(/campaign=\{\{/);
+});
+it("every journey element has a reason: no None status rows, a call route when online cancel is closed, a next step after pay at the studio",()=>{
+  expect(read("src/ui/CarOverview.tsx")).not.toContain('"None"');
+  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).not.toContain('icon="call"');expect(b).not.toContain('icon="directions"');expect(b).toContain('title="Next step"');expect(b).toContain('"Pay at the studio."');
+});
+it("audit batch: no spinner price labels, no icon placeholders over titles, labelled remove, headline on You, action on every notification",()=>{
+  expect(read("src/app/(tabs)/catalogue/index.tsx")).not.toContain("Checking price");
+  expect(read("src/ui/GarageCard.tsx")).toContain(">Remove<");expect(read("src/ui/GarageCard.tsx")).not.toContain('name="close"');
+  expect(read("src/app/(tabs)/profile.tsx")).toContain('<Screen appBar="You">'); // the common header is the only title (no second "Your account")
+  expect(read("src/app/(tabs)/notifications/index.tsx")).toContain("NOTIFICATION_ACTION");
+  const home=read("src/ui/HomeView.tsx");expect(home).toContain("isCompactCarRow");expect(home).not.toContain("{car ? car.title : p.greeting}");
+  expect(read("src/ui/kit.tsx")).toContain("calc(${bottomClearance}px + env(safe-area-inset-bottom))");
+});
+
+describe("booking flow guardrails", () => {
+  const rd = (p: string) => read("src/" + p);
+  it("list prices never fall back to the unadjusted base price once the car size is known", () => {
+    const vs = rd("lib/vehicle-size.ts");
+    expect(vs).toMatch(/export function servicePriceText/);
+    expect(vs).toMatch(/t === undefined \? null/);
+    expect(rd("app/(tabs)/catalogue/index.tsx")).not.toMatch(/priceLabel\(/);
+    expect(rd("app/(tabs)/index.tsx")).toMatch(/servicePriceText\(/);
+    expect(rd("app/(tabs)/index.tsx")).not.toMatch(/priceLabel\(/);
+  });
+  it("calculateServicePrice feeds the shared total cache the lists read", () => {
+    expect(rd("lib/catalogue-service.ts")).toMatch(/priceCache\.set\(/);
+  });
+  it("no timezone suffix in booking times", () => {
+    for (const f of ["app/(tabs)/book/confirm.tsx", "app/(tabs)/bookings/[id].tsx", "app/(tabs)/bookings/reschedule.tsx"]) {
+      expect(rd(f)).not.toMatch(/ IST[`"<. ]/);
+    }
+  });
+  it("Book shows times from a warm cache and no plain-text calendar wait", () => {
+    expect(rd("app/(tabs)/book/[serviceId].tsx")).toMatch(/peekAvailability\(/);
+    expect(rd("app/(tabs)/book/[serviceId].tsx")).not.toMatch(/Checking the studio/);
+  });
+  it("the booking car card has no photo placeholder when the car has no photo", () => {
+    expect(rd("app/(tabs)/book/[serviceId].tsx")).toMatch(/selectedVehicle\.photoUrl\?<CarThumb/);
+  });
+  it("GST is one switch and no screen prints GST or a tax row unless it is on", () => {
+    expect(read("packages/core/src/constants.ts".replace(/^/, "../../"))).toMatch(/export const GST_ENABLED = false/);
+    expect(rd("app/(tabs)/catalogue/[id].tsx")).not.toContain("incl. GST");
+    expect(rd("app/(tabs)/catalogue/index.tsx")).not.toContain("incl. GST");
+    for (const f of ["ui/ServicePrice.tsx", "app/(tabs)/book/confirm.tsx", "app/(tabs)/bookings/[id].tsx", "app/(tabs)/bookings/invoice.tsx"]) {
+      expect(rd(f)).toMatch(/(?:\.tax > 0|\.tax\?\?0\) > 0)/);
+      expect(rd(f)).not.toMatch(/[^_]incl\. GST[^"]/);
+    }
+  });
+  it("book, quote and walk-in pricing all go through taxFor so the shown, booked and paid amounts agree", () => {
+    for (const f of ["booking/createBooking.ts", "job/createWalkinJob.ts", "booking/setBookingQuote.ts", "service/calculatePrice.ts"]) {
+      expect(read("../../functions/src/functions/" + f)).toMatch(/taxFor\(/);
+    }
+  });
+});
+
+describe("Book shows the price and time picker early", () => {
+  it("price in the header, short photo, so times sit above the fold", () => {
+    const b = read("src/app/(tabs)/book/[serviceId].tsx");
+    expect(b).toMatch(/total !== null \? <T role="bodyStrong" tone="accent">\{rupees\(total\)/);
+    expect(b).toMatch(/aspect=\{3\}/);
+  });
+});
+
+it("Garage last service and the service reminder count delivered visits only", () => {
+  expect(read("src/app/(tabs)/garage/[id].tsx")).toMatch(/mostRecentJob = lastFinishedJob\(jobs\)/);
+});
+
+describe("Home hero stage", () => {
+  it("a single car is the hero on black with the orange glow, and its height comes from metrics", () => {
+    const h = read("src/ui/HeroStage.tsx");
+    expect(h).toContain("metrics.heroStage");
+    expect(h).toMatch(/radial-gradient/);
+    expect(h).not.toMatch(/\u2014/);
+    expect(read("src/ui/HomeScene.tsx")).toContain('testID="home-personal-stage"'); // merged Home: compact car chip, HeroStage kept for other uses
+  });
+  it("Home keeps orange to small highlights: no orange kicker or orange text links", () => {
+    const home = read("src/ui/HomeView.tsx");
+    expect(home).not.toMatch(/colors\.accentStrong, fontSize: 14, fontWeight: "600"/);
+    expect(home).not.toMatch(/<Icon name=\{icon\} color="#EC8638"/);
+  });
+});
+
+describe("one confirm button", () => {
+  it("the Review step has one full-width confirm button with a busy state, no slide and no tap-here link, and no duplicate bottom back button", () => {
+    const c = read("src/app/(tabs)/book/confirm.tsx");
+    expect(c).not.toMatch(/SlideToConfirm/);
+    expect(c).not.toMatch(/Or tap here/);
+    expect(c).not.toMatch(/& confirm/);
+    expect(c).toMatch(/Pay \$\{rupees\(combinedReview\.payment\.payNowPaise\)\} now/);
+    expect(c).toMatch(/Confirm booking/);
+    expect(c).toContain("busy={booking} disabled={booking||combinedMode&&(!combinedReview||!combinedNoPayment&&!combinedChoice)}");
+    expect(c).not.toContain('label="Go back"');
+    expect(c).toMatch(/payMode:/);
+    expect(c).toMatch(/bookingPayOutcomeMessage/);
+  });
+});
+
+describe("garage cards", () => {
+  it("never reuse one photo: garage services use an icon tile", () => {
+    const src = read("src/ui/ServicePhoto.tsx");
+    expect(src).toContain('service.category === "garage"');
+    expect(src).toContain("garageIconFor");
+  });
+});
+
+describe("home cars", () => {
+  it("shows each car once: no tripled looping list", () => {
+    expect(read("src/ui/HomeView.tsx")).not.toContain("[...cars, ...cars, ...cars]");
+  });
+  it("light surfaces are warm and flat: no white offset highlights", () => {
+    const src = read("src/lib/raised.ts");
+    expect(src).not.toContain("-8px -8px 20px rgba(255,255,255,0.95)");
+    expect(src).toContain("#FFFFFF");
+  });
+});
+
+describe("home menu", () => {
+  it("the avatar opens the side drawer", () => {
+    expect(read("src/ui/HomeView.tsx")).toContain("SideDrawer");
+    expect(read("src/app/(tabs)/index.tsx")).toContain("drawer={buildDrawerItems(");
+  });
+});
+
+describe("services filters", () => {
+  it("Services has one home/family/brand/product journey; no 3D car or competing goal flow", () => {
+    const src = read("src/app/(tabs)/catalogue/index.tsx");
+    expect(src).toContain("routePath(params, all)");
+    expect(src).toContain("<FilterPills");
+    expect(read("src/app/(tabs)/garage/index.tsx")).toContain("<FilterPills");
+    expect(src).not.toMatch(/What does your car need/);
+    expect(src).not.toMatch(/ZoneCar|GOALS|zonesOf/);
+    expect(src).toMatch(/<Screen\s+(?:scrollIdentity=\{JSON.stringify\(path\)\}\s+)?appBar=/);
+    expect(read("src/ui/ServicesExplorer.tsx")).toContain("serviceHomeImages[h.key]");
+  });
+  it("unmapped types keep an icon rather than unrelated stock; newly generated matching service subjects are allowed", () => {
+    const src = read("src/lib/imagery.ts");
+    const block = src.slice(src.indexOf("const TYPE_TOPIC"), src.indexOf("export function typePhoto"));
+    for (const k of ["periodic-x"]) expect(block).not.toMatch(new RegExp(`(^|[ ,{])"?${k}"?:`));
+  });
+});
+
+describe("service photos", () => {
+  it("every photo pool has distinct files so neighbouring cards differ", () => {
+    const src = read("src/lib/imagery.ts");
+    const pools = src.slice(src.indexOf("const POOLS"), src.indexOf("/** Pick the Nth"));
+    for (const line of pools.split("\n").filter((l) => l.includes("require("))) {
+      const files = [...line.matchAll(/imagery\/([\w/.-]+\.jpg)/g)].map((m) => m[1]);
+      expect(files.length).toBeGreaterThanOrEqual(3);
+      expect(new Set(files).size).toBe(files.length);
+    }
+  });
+});
+
+describe("catalogue loading", () => {
+  it("shares one catalogue request and paints the saved copy first", () => {
+    expect(read("src/lib/catalogue-service.ts")).toContain("TTL_MS");
+    expect(read("src/app/(tabs)/catalogue/index.tsx")).toContain("peekCatalogue()");
+  });
+});
+
+describe("garage switcher (concept C)", () => {
+  it("has an All chip, one chip per car, the due chip, and one Book button; removal lives in car detail only", () => {
+    const g = read("src/app/(tabs)/garage/index.tsx");
+    expect(g).toContain('label: "All"');
+    expect(g).toContain("dueChip(");
+    expect(g.split("<GarageActions ").length - 1).toBe(1); expect(read("src/ui/GarageActions.tsx").split('label="Book a service"').length - 1).toBe(1);
+    expect(g).not.toContain("GarageCard");
+    expect(g).toContain("glassPane(");
+  });
+});
+
+describe("provenance", () => {
+  it("does not attribute web-researched facts to the owner", () => {
+    expect(read("src/lib/catalogue-service.ts")).not.toContain("Per Meet");
+    expect(read("src/lib/warranty-labels.ts")).toContain("WARRANTY-CLAIMS.md");
+  });
+});
+
+describe("shared header", () => {
+  it("every tab screen uses the same app bar", () => {
+    for (const f of ["garage/index", "bookings/index", "catalogue/index", "profile"]) {
+      expect(read(`src/app/(tabs)/${f}.tsx`)).toContain("appBar=");
+    }
+  });
+});
+
+describe("bookings page", () => {
+  it("holds booking content only: no Explore tiles", () => {
+    expect(read("src/app/(tabs)/bookings/index.tsx")).not.toContain("Explore");
+  });
+});
+
+describe("actionable notifications", () => {
+  it("each notification action is a real button; money decisions stay on the confirm screen", () => {
+    const n = read("src/app/(tabs)/notifications/index.tsx");
+    expect(n).toContain("accessibilityLabel={NOTIFICATION_ACTION[item.entityType");
+    expect(n).not.toContain("respondToApproval");
+  });
+});
+
+describe("one icon set", () => {
+  it("drawer, app bar, home bell, top picks and notifications draw the thin-line set", () => {
+    for (const f of ["src/ui/SideDrawer.tsx", "src/ui/AppBar.tsx", "src/ui/HomeView.tsx", "src/app/(tabs)/notifications/index.tsx"]) {
+      expect(read(f)).toContain("NavIcon");
+    }
+  });
+  it("top services cards carry the approved category photo", () => {
+    expect(read("src/ui/HomeScene.tsx")).toContain("source={serviceImagery.ceramic}");
+  });
+  it("night surfaces use one charcoal card colour", () => {
+    expect(read("src/lib/raised.ts")).toContain('material(mode,"surface")');
+  });
+});
+
+describe("home car cards", () => {
+  it("show the car name and number plate only, no stray icons", () => {
+    const h = read("src/ui/HomeView.tsx");
+    expect(h).not.toContain('<Icon name="car"');
+    expect(h).not.toContain("Care map</Text>");
+    expect(read("src/ui/HeroStage.tsx")).toContain("<Plate value={car.plate} />");
+  });
+});
+
+describe("membership wash", () => {
+  it("sends the plan id the server expects, never a price", () => {
+    expect(read("src/lib/membership-wash.ts")).toContain("export const MEMBERSHIP_WASH_LIVE = true");
+    const c = read("src/app/(tabs)/book/confirm.tsx");
+    expect(c).toContain("MEMBERSHIP_WASH_LIVE && !giftCode && wash && wash.ok");
+    expect(c).toContain("...(washOn && washOffer ? { membershipId: washOffer.membershipId } : {})");
+    expect(c).not.toContain("useMembershipWash");
+  });
+});
+
+describe("referral wording", () => {
+  it("every Bring a friend button uses the one share message", () => {
+    for (const f of ["src/app/(tabs)/gifts.tsx"]) {
+      const s = read(f);
+      expect(s).toContain("referralSubtitle(referralCode)");
+      expect(s).not.toContain("Book on https://app.autodeck.in");
+    }
+  });
+});
+
+describe("one tile size everywhere", () => {
+  it("PhotoCard has a single aspect and no size variants", () => {
+    const h = read("src/ui/HomeView.tsx");
+    expect(h).toContain("export const TILE_ASPECT = 1.4");
+    expect(h).not.toContain("compact?: boolean");
+    expect((h.match(/aspectRatio: TILE_ASPECT/g) ?? []).length).toBe(1);
+  });
+  it("Services and Home Top services use PhotoCard and TILE_GAP", () => {
+    expect(read("src/app/(tabs)/catalogue/index.tsx")).toContain("<ServicesExplorer");
+    expect(read("src/ui/ServicesExplorer.tsx")).toContain("<ServicePackageCard");
+    expect(read("src/ui/HomeScene.tsx")).toContain("p.onService(s.service, s.key)");
+  });
+});
+
+describe("nav order and drawer", () => {
+  it("tabs are Bookings, Services, Home (centre), Garage, You, in that order", () => {
+    const s = read("src/app/(tabs)/_layout.tsx");
+    const order = ["bookings", "catalogue", "index", "garage", "profile"].map((n) => s.indexOf(`<Tabs.Screen name="${n}"`));
+    expect(order.every((i) => i > 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+  it("Home has one entry point per thing: no service grid, reminders list, friend row or drawer copies", () => {
+    const h = read("src/ui/HomeView.tsx");
+    for (const dup of ['"Top services"', 'Heading title="Reminders"', 'title="Bring a friend"', 'Your car needs</Text>', '>Last time</Text>']) expect(h).not.toContain(dup);
+    expect(h).toContain("pickIdleNudge(");
+    const idx = read("src/app/(tabs)/index.tsx");
+    for (const key of ["membership", "notifications", "studio", "help"]) expect(idx).not.toContain(`{ key: "${key}", label:`);
+  });
+  it("Day hero: the car name gets a light pill when a photo sits under it", () => {
+    const h = read("src/ui/HeroStage.tsx");
+    expect(h).toContain("titleNeedsPill(day, !!car.hasPhoto)");
+    expect(h).toContain("export const titleNeedsPill = (day: boolean, hasPhoto: boolean): boolean => day && hasPhoto;");
+  });
+  it("no back button on a tab root: tab names never appear in the back bar's SUB_ROOTS", () => {
+    const kit = read("src/lib/back-nav.ts");
+    const m = kit.match(/const SUB_ROOTS: Record<string, string> = \{([^}]*)\}/);
+    expect(m).not.toBeNull();
+    for (const tab of ["index", "bookings", "catalogue", "garage", "profile"]) expect(m![1]).not.toMatch(new RegExp(`\\b${tab}:`));
+  });
+  it("one header on every screen: Screen renders AppBar itself, Back lives inside it, no separate back bar", () => {
+    const kit = read("src/ui/kit.tsx");
+    expect(kit).not.toContain("function BackBar");
+    expect(kit).toContain("<AppBar title={bar.title} onBack={bar.back} />");
+    expect(read("src/ui/AppBar.tsx")).toContain("onBack");
+    for (const t of ["bookings", "catalogue", "garage", "profile", "membership", "notifications", "studio", "help", "cars", "book", "approvals", "invoice"]) expect(kit).toMatch(new RegExp(`\\b${t}: "`));
+  });
+  it("booking detail hero always has a title, even when the service record is gone", () => {
+    expect(read("src/app/(tabs)/bookings/[id].tsx")).toContain('svc?.name ?? "Your visit"');
+  });
+  it("plan page never claims a discount the plan does not have", () => {
+    expect(read("src/app/(tabs)/membership/purchase.tsx")).toContain('plan.discountPercent > 0 ? "Non-wash services receive the discount');
+  });
+  it("pickupRequests rule lets a customer listen to a request that does not exist yet", () => {
+    const rules = require("node:fs").readFileSync("../../firestore.rules", "utf8");
+    const block = rules.slice(rules.indexOf("match /pickupRequests/"));
+    expect(block.slice(0, 600)).toContain("resource == null");
+  });
+  it("Services levels step back through the one header, not a second back link", () => {
+    const c = read("src/app/(tabs)/catalogue/index.tsx");
+    expect(c).not.toContain("\u2039 {label}");
+    expect(c).toContain("router.canGoBack() ? router.back() : navigate(parentPath(path), true) : undefined}");
+    expect(read("src/ui/GarageCard.tsx")).toContain("minHeight: 44");
+  });
+  it("a plan wash is labelled as a wash and its expiry date is human readable", () => {
+    expect(read("src/app/(tabs)/bookings/[id].tsx")).toContain('booking.membershipWashUsed ? "Wash from your plan"');
+    expect(read("src/app/(tabs)/book/confirm.tsx")).not.toContain("plan valid until ${washOffer.expiresOn}");
+  });
+  it("garage card title stays readable in Day (pill, dark ink) as on the Home hero", () => {
+    expect(read("src/ui/GarageCard.tsx")).toContain('mode === "light" ? "#1D1B26" : "#FFFFFF"');
+  });
+  it("the drawer does not repeat anything already in the nav", () => {
+    for (const f of ["src/ui/AppBar.tsx", "src/app/(tabs)/index.tsx"]) {
+      const s = read(f);
+      for (const k of ["garage", "bookings", "services", "profile"]) expect(s).not.toContain(`key: "${k}", label`);
+    }
+  });
+  it("the centre button uses the official monogram paths, unchanged", () => {
+    const m = read("src/ui/AdMonogram.tsx");
+    expect(m).toContain("M1447,666 L1953,666 A500,500 0 0 1 1953,1666");
+    expect(m).toContain("M756,1494 L995,1500 L1072,1662 L612,1662 Z");
+  });
+});
+
+describe("referral code stays dark", () => {
+  it("the Have a code field and the sent code are both gated by REFERRAL_LIVE", () => {
+    const c = read("src/app/(tabs)/book/confirm.tsx");
+    expect(c).toContain("{REFERRAL_LIVE ? (");
+    expect(c).toContain("referralCodeToSend(friendCode");
+    expect(read("src/lib/referral.ts")).toContain("export const REFERRAL_LIVE = false");
+  });
+});
+
+describe("care map is gone", () => {
+  it("has no Care map code, route or label in the customer app", () => {
+    const { execSync } = require("node:child_process");
+    const hits = execSync(`grep -rniE "care ?map|CareMap|Car3D" src --include=*.ts --include=*.tsx -l || true`, { cwd: resolve(__dirname, "../..") }).toString().split("\n").filter((f: string) => f && !f.endsWith("design-contract.test.ts") && !f.endsWith("bookings-view.test.ts"));
+    expect(hits).toEqual([]);
+  });
+});
+
+it("lists every stock image in the imagery register",()=>{
+  const fs=require("fs") as typeof FsT;const path=require("path") as typeof PathT;
+  const dir=path.join(__dirname,"../../assets/imagery/stock");
+  const reg=fs.readFileSync(path.join(__dirname,"../../assets/imagery/REGISTER.md"),"utf8");
+  const missing=fs.readdirSync(dir).filter(f=>/\.(jpe?g|png|webp)$/i.test(f)).filter(f=>!reg.includes(f));
+  expect(missing).toEqual([]);
+});
+
+it("profile settings sit in glass panes (concept A), Help once, no repeated tab links",()=>{
+  const p=read("src/app/(tabs)/profile.tsx");
+  expect(p).toContain("<Kicker>Appearance</Kicker>");expect(p).toContain("<LicenceSection");expect(readFileSync(resolve(".", "src/ui/LicenceSection.tsx"), "utf8")).toContain('title="Driving licence"');
+  expect((p.match(/glassPane\(light\)/g)??[]).length).toBeGreaterThanOrEqual(2);
+  expect(p.split('title="Help & contact"').length-1).toBe(1);
+});
+
+it("car overview shows a concrete Next due, not vague count tiles or a one-row details card",()=>{
+  const o=read("src/ui/CarOverview.tsx");
+  expect(o).toContain('title="Next due"');
+  expect(o).not.toContain('title="Car details"');
+  expect(o).not.toMatch(/label="Protection"|label="Warranty"/);
+});
+
+import { homeCars } from "../lib/cars-home";
+describe("Cars entry points (owner: buy and sell must be reachable)", () => {
+  const l = (o: Record<string, unknown>) => ({ id: "x", status: "live", source: "customer", photoUrls: ["u"], ...o }) as never;
+  it("Home lists ALL live listings that have a photo, studio first, never a single card", () => {
+    expect(homeCars([l({ id: "a" }), l({ id: "b", source: "studio" }), l({ id: "c" })]).map((x) => x.id)).toEqual(["b", "a", "c"]);
+    expect(homeCars([l({ photoUrls: [] }), l({ status: "pending" })])).toEqual([]);
+    expect(homeCars(null)).toEqual([]);
+    const card = read("src/ui/CarsCard.tsx");
+    expect(card).toContain("<ScrollView horizontal");
+    expect(card).toContain("cars.map(");
+    expect(card).toContain("Cars for sale");
+  });
+  it("Home drawer and Home card both link to Cars and Cars sell, and the Cars page has one Sell button", () => {
+    const idx = read("src/app/(tabs)/index.tsx");
+    expect(read("src/lib/drawer-items.ts")).toContain('label: "Buy & Sell"');
+    expect(idx).toContain("carsList={homeCars(carListings)}");
+    const cars = read("src/ui/CarsHub.tsx");
+    expect(cars.match(/label="List your car"/g)?.length).toBe(1);
+    expect(cars).toContain("<TabSwitch");
+    expect(cars).toContain('accessibilityLabel={t === "buy" ? "Buy a car" : "Sell your car"}');
+    expect(read("src/app/(tabs)/cars/index.tsx")).toContain('params.tab === "sell"');
+  });
+});
+
+describe("Cars pages follow the common design rules", () => {
+  const pages = ["src/app/(tabs)/cars/index.tsx", "src/app/(tabs)/cars/sell.tsx", "src/app/(tabs)/cars/[id].tsx"];
+  it("no second title block: the one header names the screen", () => {
+    expect(read("src/ui/CarsHub.tsx")).toContain('{ appBar: "Cars" }');
+    expect(read(pages[1]!)).toContain('<Screen appBar="Sell your car">');
+    for (const p of pages.slice(1)) expect(read(p)).not.toMatch(/<Screen\s+(top|header)=/);
+  });
+  it("only the allowed radii and no fixed dark-only surfaces", () => {
+    for (const p of pages) {
+      const s = read(p);
+      expect(s).not.toMatch(/borderRadius:\s*(999|20|2)\b/);
+      expect(s).not.toMatch(/#151517|#202023|#373735|#353538|#454548/);
+    }
+  });
+  it("car cards use the shared glass surface", () => {
+    expect(read("src/ui/CarsHub.tsx")).toContain("glassPane(day)");
+  });
+});
+
+describe("one time format", () => {
+  it("customer times never print a leading zero hour (11:00 am vs 01:00 pm)", () => {
+    for (const p of ["src/ui/PickupCard.tsx", "src/app/(tabs)/bookings/[id].tsx", "src/app/(tabs)/bookings/reschedule.tsx"]) expect(read(p)).not.toMatch(/hour:\s*"2-digit"[^}]*hour12:\s*true|hour:\s*"2-digit",\s*\n\s*minute:\s*"2-digit",\s*\n\s*hour12/);
+  });
+});
+
+describe("form controls follow the theme", () => {
+  it("SelectField and DateField read Day/Night, no fixed dark box", () => {
+    const s = read("src/ui/inputs.tsx");
+    expect(s).toContain("const day=useExperienceTheme().name==='light'");
+    expect(s).toContain("controlFor(day)");
+    expect(s).not.toContain("#202023");
+    expect(s).not.toContain("borderRadius:14");
+  });
+});
+
+describe("sell confirmation copy", () => {
+  it("points to the section that exists on the Cars page", () => {
+    expect(read("src/app/(tabs)/cars/sell.tsx")).toContain("Your cars for sale on the Cars page");
+    expect(read("src/ui/CarsHub.tsx")).toContain("Your cars for sale");
+  });
+});
+
+describe("car lists wait for the sign-in to load", () => {
+  it("getCarListings awaits authStateReady before choosing the public or signed-in list", () => {
+    const s = read("src/lib/carsale-service.ts");
+    expect(s.indexOf("await auth.authStateReady()")).toBeGreaterThan(0);
+    expect(s.indexOf("await auth.authStateReady()")).toBeLessThan(s.indexOf("if (!auth.currentUser)"));
+  });
+});
+
+import { DAY_ATMOSPHERE } from "@autodeck/ui/theme";
+describe("one Day background across the apps", () => {
+  it("customer Day ground is the shared atmosphere, studio applies it, Home photo dissolves into it", () => {
+    expect(read("src/lib/raised.ts")).toContain('canvas: "#FFFFFF"');
+    expect(read("src/lib/raised.ts")).toContain("groundImage: night ? nightGround : DAY_ATMOSPHERE");
+    expect(read("../studio/src/app/_layout.tsx")).toContain("rs.backgroundImage = DAY_ATMOSPHERE");
+    const h = read("src/ui/HomeBackdrop.tsx");
+    expect(h).toContain("maskImage");
+    expect(h).not.toContain("#F3F2EF");
+  });
+  it("the atmosphere is warm off-white with only a faint orange glow", () => {
+    expect(DAY_ATMOSPHERE).toContain("#FFFFFF");
+    expect((DAY_ATMOSPHERE.match(/rgba\(255,178,122/g) ?? []).length).toBe(1);
+    expect(DAY_ATMOSPHERE).not.toMatch(/#EC8638|236,134,56/);
+  });
+});
+
+describe("car detail and add car (batch 1)", () => {
+  it("car detail has Upcoming, History and Documents tabs and no duplicate booking CTA; add car has RC and photo upload", () => {
+    const d = read("src/app/(tabs)/garage/[id].tsx");
+    // Approved 3-tab redesign supersedes the earlier no-tabs contract (mockup 00-tabs-final;
+    // Gauri "looks nice" 2 Nov 14:44; Meet "Accept gauris changes" 16:25).
+    expect(d).toContain("TabPills");
+    expect(d).toContain('key: "upcoming"');
+    expect(d).toContain('key: "history"');
+    expect(d).toContain('key: "documents"');
+    expect(d).not.toContain('label="Book maintenance"');
+    expect((d.match(/label="Book a service"/g) ?? []).length).toBe(0); // Booking remains in Services.
+    expect(d).toContain("<Kicker>Documents</Kicker>"); // one consolidated Documents list (expiry timeline folded in)
+    const a = read("src/app/(tabs)/garage/add.tsx");
+    expect(a).not.toContain("uploadVehicleRc"); // round7 point 3 (adopted requirement): RC upload moved to Add Document only
+    expect(a).toContain("uploadVehiclePhoto");
+  });
+});
+
+describe("service detail (batch 2)", () => {
+  it("is one page: no Overview/Includes tabs, scope once via ServiceScope, no Questions block", () => {
+    const d = read("src/app/(tabs)/catalogue/[id].tsx");
+    expect(d).not.toContain("TabPills");
+    expect(d).not.toContain('label: "Overview"');
+    expect(d).not.toContain('label: "Reviews"');
+    expect(d).toContain("reviews.count > 0");
+    expect((d.match(/<ServiceScope /g) ?? []).length).toBe(2);
+    expect(d).toContain('placement="description"');
+    expect(d).toContain('placement="details"');
+    expect(d).not.toContain('placement="combined"');
+    expect((d.match(/H\("Questions"/g) ?? []).length).toBe(0); // questions list removed; one Ask-the-studio row in the scope card instead
+    expect(d).not.toContain("FAQS");
+    expect(d).toContain("careTip="); // exactly one care tip shown, inside the scope card
+    const scope = read("src/ui/ServiceScope.tsx");
+    expect(scope).not.toContain("Before you book");
+    expect(scope).toContain("What's included");
+    expect((scope.match(/Ask the studio/g) ?? []).length).toBe(4); // the single ask row, plus the empty-scope fallback body and action
+    expect(scope).not.toContain("Ask about this service"); // the duplicate ask box is gone
+  });
+});
+
+it("confirm booking shows the total once", () => {
+  expect(read("src/app/(tabs)/book/confirm.tsx")).not.toContain('<SheetLine small label="Total"');
+});
+
+describe("booking detail (batch 3)", () => {
+  it("shows the car photo and current booking status without a timeless Live badge, with one payment card", () => {
+    const d = read("src/app/(tabs)/bookings/[id].tsx");
+    expect(d).toContain("<CarThumb");
+    expect(d).not.toContain('label="Live"');
+    expect(d).not.toContain("<Kicker>Payment</Kicker>");
+    expect(d.split('label="Invoice"').length - 1).toBe(1);
+  });
+});
+
+it("invoice web view leads with a Total card and offers Download PDF and Share only", () => {
+  const i = read("src/app/(tabs)/bookings/invoice.tsx");
+  expect(i).toContain('label="Download PDF"');
+  expect(i).toContain('label="Share"');
+  expect(i).not.toContain('label="Save as PDF"');
+});
+
+describe("club (batch 4)", () => {
+  it("hub has one wash button and one usage link; plan detail and purchase are one screen", () => {
+    const h = read("src/app/(tabs)/membership/index.tsx");
+    expect(h).toContain('label="Book a wash with my plan"');
+    expect(h).toContain('label="Usage and history"');
+    expect(h).not.toContain('label="History" kind');
+    expect(h).toContain("membership/purchase");
+    expect(read("src/app/(tabs)/membership/[planId].tsx")).toContain("Redirect");
+  });
+});
+
+it("notifications has All, Bookings, Papers and Club chips", () => {
+  const n = read("src/app/(tabs)/notifications/index.tsx");
+  for (const k of ["All", "Bookings", "Papers", "Club"]) expect(n).toContain(`label: "${k}"`);
+});
+
+it("car for sale detail has Call studio and I am interested", () => {
+  const c = read("src/app/(tabs)/cars/[id].tsx");
+  expect(c).toContain('label="Call studio"');
+  expect(c).toContain('"I am interested"');
+});
+
+describe("home header blends into the page (PWA and web)", () => {
+  it("backdrop is one fixed layer from the top edge with a long fade mask in both themes, no negative-offset band", () => {
+    const b = read("src/ui/HomeBackdrop.tsx");
+    expect(b).toContain('position: "fixed"');
+    expect(b).toContain("top: 0");
+    expect(b).toContain("maskImage: BACKDROP_FADE");
+    expect(b).toContain("transparent 100%");
+    expect(b).not.toContain("top: -140");
+    expect(b).not.toContain("hero-studio");
+    expect(b).not.toContain("backgroundSize: \"cover\"");
+    expect(b).toContain("radial-gradient");
+  });
+});
+
+describe("Home live state",()=>{
+ it("uses source status and optional ready time in one dock, no invented stages",()=>{const h=read("src/ui/HomeScene.tsx");expect(h).toContain('event?.title');expect(h).toContain('event?.ready');expect(h).toContain('Ready by {event.ready}');expect(h).not.toContain('LIVE_STEPS')});
+});
+
+describe("orange stays a small highlight (60-30-10)",()=>{
+  it("accent text is limited to small roles",()=>{
+    expect(read("src/lib/accent.ts")).toContain('["label", "caption"]');
+    expect(read("src/ui/kit.tsx")).toContain("ACCENT_TEXT_ROLES");
+  });
+  it("price pills on photos are white, not orange",()=>{
+    expect(read("src/ui/HomeView.tsx")).not.toContain('color: "#F59A4E", fontSize: 10');
+  });
+  it("avatar and progress are not orange",()=>{
+    expect(read("src/ui/AppBar.tsx")).not.toMatch(/accentStrong[^\n]*initial/);
+    for(const f of ["LiveJobCard.tsx","JobTimeline.tsx"]) expect(read("src/ui/"+f)).not.toContain("#EC8638");
+  });
+});
+describe("inactive tab icons are one ink",()=>{
+  it("tab bar passes mono for inactive icons",()=>{
+    expect(read("../../packages/ui/src/native/PillTabBar.tsx")).toContain("mono={!focused}");
+  });
+});
+
+describe("visit history rows: compact date block, subtle status badge and a small invoice link",()=>{
+  it("date-block rows with a gold status badge; no full-width invoice button",()=>{
+    const car=read("src/app/(tabs)/garage/[id].tsx"), hist=read("src/app/(tabs)/garage/history.tsx"), tl=read("src/ui/CareTimeline.tsx");
+    expect(car).toContain("<LinkAction label={`View invoice");
+    expect(hist).toContain("<LinkAction label={`View invoice");
+    expect(car+hist).not.toMatch(/<Button label=\{`View invoice/);
+    expect(read("src/ui/HistoryVisitRow.tsx")).toContain('tone="premium"');
+    expect(tl).toContain("it.soon ? <Chip");
+    expect(read("src/ui/kit.tsx")).toContain("export function LinkAction");
+  });
+});
+
+describe("Home scene hierarchy",()=>{
+ it("one personal stage precedes visual services, exact Club heading and compact showroom",()=>{const h=read("src/ui/HomeScene.tsx");expect(h.indexOf('<HomeOriginalTop')).toBeLessThan(h.indexOf('home-personal-stage'));expect(h.indexOf('home-state-dock')).toBeLessThan(h.indexOf('home-service-triad'));expect(read('src/ui/HomeOriginalTop.tsx')).toContain('All under one roof.');expect(read('src/ui/HomeClub.tsx')).toContain('>Make care a habit</Text>');expect(h).not.toContain('<KenBurns');});
+});
+
+describe("Home ambient light is brand orange at low opacity",()=>{
+  it("uses 236,134,56 glows, none above 0.2 alpha",()=>{
+    const b=read("src/ui/HomeBackdrop.tsx");
+    const alphas=[...b.matchAll(/rgba\(236,134,56,([0-9.]+)\)/g)].map((m)=>Number(m[1]));
+    expect(alphas.length).toBeGreaterThanOrEqual(4);
+    expect(Math.max(...alphas)).toBeLessThanOrEqual(0.2);
+  });
+});
+
+describe("no studio photo behind app pages; the page light is the orange lamp glow",()=>{
+  it("float theme, admin float.css and orizon.css carry no hero-studio photo (login screens keep theirs)",()=>{
+    for (const f of ["../../packages/ui/src/theme/float.ts","../admin/src/experience/float.css","../admin/src/experience/orizon.css"]) expect(read(f)).not.toContain("hero-studio");
+    expect(read("../../packages/ui/src/theme/float.ts")).toContain("export const LAMP_GLOW");
+  });
+});
+
+it("gift-covered zero-total detail says no payment needed rather than offering payment (also actual route tested)",()=>{
+  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain("Boolean(booking.giftId) && booking.priceBreakdown.total === 0");expect(b).toContain("Included with your gift - no payment needed");expect(b).toContain("const canPay = !job?.cashReconciliationId&&!noPaymentDue");
+  const c=read("src/app/(tabs)/book/confirm.tsx");expect(c).toContain("gift:Boolean(giftCode)");expect(read("src/lib/booking-confirm-copy.ts")).toContain("Your gift covers the selected wash.");expect(c).not.toContain("Price may vary based on final work.");
+});
+
+describe("row press targets never nest interactive elements", () => {
+  it("kit Row renders trailing actions and the chevron as siblings of the row pressable, never children", () => {
+    const kit = read("src/ui/kit.tsx");
+    const rowStart = kit.indexOf("export function Row(");
+    const rowEnd = kit.indexOf("export function", rowStart + 10);
+    const row = kit.slice(rowStart, rowEnd);
+    // The row's own Pressable must close before trailing content renders, so a
+    // trailing IconAction (edit/delete) is never a DOM descendant of the row's
+    // press target (invalid nested <button> on web).
+    expect(row.indexOf("</Pressable>")).toBeGreaterThan(-1);
+    expect(row.indexOf("{trailing}")).toBeGreaterThan(row.indexOf("</Pressable>"));
+    expect(row).toContain("Never nest interactive elements");
+  });
+  it("IconAction buttons stop being nested inside other pressables on the papers row", () => {
+    const detail = read("src/app/(tabs)/garage/[id].tsx");
+    // Papers rows pass edit/delete IconActions via the trailing slot, which the
+    // Row contract above keeps outside the row pressable.
+    expect(detail).toContain("trailing={PAPER_EDIT_ENABLED ?");
+  });
+  it("document delete and save copy stays truthful (293311c acceptance)", () => {
+    const detail = read("src/app/(tabs)/garage/[id].tsx");
+    // Availability, never a physical-purge promise: record deletion is immediate,
+    // photo-byte deletion is best-effort with a cleanup sweep.
+    expect(detail).toContain("The document and its photo will no longer be available in the garage. Your car and bookings are not affected.");
+    expect(detail).not.toContain("This removes the document and its photo");
+    // A photo-only failure after a committed save names the photo failure.
+    expect(detail).toContain('"Photo did not upload"');
+    // Staged document photo readiness says when the upload happens.
+    expect(detail).toContain("Photo selected - it uploads when you save.");
+  });
+});
+
+it('pre-submit booking copy never claims a confirmed slot before the booking action',()=>{const c=read("src/app/(tabs)/book/confirm.tsx");expect(c).not.toContain('Your slot is confirmed.');expect(c).not.toContain('Your slot is confirmed now.');expect(c).toContain('Confirm your slot below. Pay when you collect your car.');});

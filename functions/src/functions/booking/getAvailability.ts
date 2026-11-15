@@ -1,0 +1,137 @@
+import {acceptedServiceQuote} from "../../lib/accepted-service-quote.js";
+import type {QuoteJourney} from "@autodeck/core";
+import {hasReleasedBay} from "@autodeck/core";
+import { customerHasPriority } from "../../lib/priority-access.js";
+import { heldStartTimes, isPriorityHeld } from "../../lib/priority-hold.js";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { getFirestore } from "firebase-admin/firestore";
+import type { Service, StudioConfig, ServiceJob } from "@autodeck/core";
+import { MAX_SERVICE_SPAN_DAYS } from "@autodeck/core";
+import { extrasProblem } from "../../lib/booking-lines.js";
+import { COLLECTIONS } from "@autodeck/database";
+import { extractUser } from "../../middleware/auth.js";
+import { validate } from "../../middleware/validate.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { getAvailabilitySchema } from "../../schemas/booking.js";
+import {
+  computeAvailability,
+  buildOccupiedInterval,
+  type OccupiedInterval,
+} from "../../lib/availability.js";
+import { addDays } from "../../lib/schedule.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
+
+const MAX_RETURNED_SLOTS = 60;
+
+export const getAvailability = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
+  const user = extractUser(request);
+  const data = validate(getAvailabilitySchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "read.availability");
+
+  const db = getFirestore();
+  const lookAheadDays = data.lookAheadDays ?? 14;
+
+  // Fetch service
+  const serviceSnap = await db.collection(COLLECTIONS.services()).doc(data.serviceId).get();
+  if (!serviceSnap.exists) throw new HttpsError("not-found", "Service not found.");
+  const service = serviceSnap.data() as Service;
+  if (service.tenantId !== user.claims.tenantId) {
+    throw new HttpsError("permission-denied", "Cross-tenant access denied.");
+  }
+  if (!service.active || service.catalogueEntryKind==='enquiry') {
+    throw new HttpsError("failed-precondition", "Service is not currently available.");
+  }
+
+  // Extra services in the same visit lengthen the slot. Same rules as createBooking; the price is not needed here.
+  let visitMinutes = service.estimatedDurationMinutes;
+  if(data.quoteJourneyId){if(data.extraServiceIds?.length)throw new HttpsError("failed-precondition","Accepted quote covers its exact work only.");const cid=await requireCustomerDocId(db,COLLECTIONS.customers(),user.claims.tenantId,user.uid);const q=(await db.collection("serviceQuoteJourneys").doc(data.quoteJourneyId).get()).data() as QuoteJourney|undefined;const offer=acceptedServiceQuote(q,{tenantId:user.claims.tenantId,customerId:cid,studioId:data.studioId,serviceId:data.serviceId,vehicleId:q?.scope.vehicleId??"",revision:data.quoteRevision??0,termsVersion:data.quoteTermsVersion??""});if((service.productKey??null)!==q!.scope.productKey||!!q!.requestedReference&&service.name!==q!.scope.coverage)throw new HttpsError('failed-precondition','The selected offering changed. Ask the studio to review the quote.');visitMinutes=offer.workingMinutes;}else if(data.quoteRevision||data.quoteTermsVersion)throw new HttpsError("invalid-argument","Quote reference required.");
+  if (data.extraServiceIds?.length) {
+    const extraSnaps = await Promise.all(data.extraServiceIds.map((id) => db.collection(COLLECTIONS.services()).doc(id).get()));
+    if (extraSnaps.some((x) => !x.exists)) throw new HttpsError("not-found", "Service not found.");
+    const extras = extraSnaps.map((x) => ({ ...(x.data() as Service), id: x.id }));
+    if (extras.some((e) => e.tenantId !== user.claims.tenantId)) throw new HttpsError("permission-denied", "Cross-tenant access denied.");
+    const problem = extrasProblem({ ...service, id: serviceSnap.id }, extras, { gift: false });
+    if (problem) throw new HttpsError("failed-precondition", problem);
+    visitMinutes = extras.reduce((m, e) => m + e.estimatedDurationMinutes, visitMinutes);
+  }
+
+  // Fetch studio config
+  const configSnap = await db.collection(COLLECTIONS.studioConfig()).doc(data.studioId).get();
+  if (!configSnap.exists) throw new HttpsError("not-found", "Studio not found.");
+  const config = configSnap.data() as StudioConfig;
+  if (config.tenantId !== user.claims.tenantId) {
+    throw new HttpsError("permission-denied", "Cross-tenant access denied.");
+  }
+
+  // Collect all compatible bays
+  const compatibleBays = config.bays.filter(
+    (b) => b.active && b.bayType === service.requiredBayType,
+  );
+  if (compatibleBays.length === 0) {
+    return { slots: [] };
+  }
+
+  // Build the date range to query jobs for. The lower bound is widened
+  // backward by MAX_SERVICE_SPAN_DAYS so that multi-day jobs which STARTED
+  // before data.startDate but are still running (occupying the bay) through
+  // the requested window are still found — a same-day-only query would
+  // silently miss them (Phase 5 — multi-day booking).
+  const queryStartDate = addDays(data.startDate, -MAX_SERVICE_SPAN_DAYS);
+  const endDate = addDays(data.startDate, lookAheadDays);
+
+  // Query all non-cancelled/delivered jobs for compatible bays in the date range
+  const occupiedByBay = new Map<string, OccupiedInterval[]>();
+
+  await Promise.all(
+    compatibleBays.map(async (bay) => {
+      const jobsSnap = await db
+        .collection(COLLECTIONS.jobs())
+        .where("studioId", "==", data.studioId)
+        .where("bayId", "==", bay.id)
+        .where("scheduledDate", ">=", queryStartDate)
+        .where("scheduledDate", "<=", endDate)
+        .get();
+
+      const intervals: OccupiedInterval[] = [];
+      for (const doc of jobsSnap.docs) {
+        const job = doc.data() as ServiceJob;
+        if (hasReleasedBay(job)||job.status === "CANCELLED" || job.status === "DELIVERED") continue;
+        intervals.push(buildOccupiedInterval(job.scheduledAt, job.estimatedEndAt));
+      }
+      occupiedByBay.set(bay.id, intervals);
+    }),
+  );
+
+  const slots = computeAvailability({
+    startDate: data.startDate,
+    lookAheadDays,
+    serviceDurationMinutes: visitMinutes,
+    requiredBayType: service.requiredBayType,
+    bays: config.bays,
+    operatingHours: config.operatingHours,
+    holidays: config.holidays,
+    timezone: config.timezone,
+    occupiedByBay,
+  });
+
+  // Held start times are hidden from customers without a priority slot until the hold ends (18:00 the evening before).
+  let visible = slots;
+  if (user.claims.role === "customer") {
+    const now = new Date();
+    const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
+    const mine = await customerHasPriority(db, customerDocId, now, config.timezone);
+    if (!mine) {
+      const heldByDate = new Map<string, string[]>();
+      visible = slots.filter((s) => {
+        let held = heldByDate.get(s.date);
+        if (!held) {
+          held = heldStartTimes({ date: s.date, serviceDurationMinutes: visitMinutes, operatingHours: config.operatingHours, holidays: config.holidays, timezone: config.timezone });
+          heldByDate.set(s.date, held);
+        }
+        return !isPriorityHeld({ date: s.date, startTime: s.startTime, held, now, timezone: config.timezone });
+      });
+    }
+  }
+  return { slots: visible.slice(0, MAX_RETURNED_SLOTS) };
+});

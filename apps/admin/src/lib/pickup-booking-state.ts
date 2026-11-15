@@ -1,0 +1,46 @@
+import { pickupEligibility, type PickupEligibilityInput } from "@autodeck/core";
+
+/**
+ * Admin view of a pickup request vs its booking, using the same matrix as Studio.
+ * `bookings` is the tenant booking feed (capped at feedCap): a booking missing from a
+ * full feed is unknown, not proof that it does not exist, so it is treated as actionable.
+ */
+export function pickupRowState(
+  r: PickupEligibilityInput,
+  bookingId: string,
+  bookings: Record<string, string> | null,
+  feedCap: number,
+): { actionable: boolean; note: string | null } {
+  if (bookings === null) return { actionable: true, note: null };
+  const status = bookings[bookingId];
+  if (status === undefined && Object.keys(bookings).length >= feedCap) return { actionable: true, note: null };
+  return pickupEligibility(r, status ?? null);
+}
+
+export type PickupCounts = {
+  REQUESTED: number; CONFIRMED: number; DONE: number; DECLINED: number; ALL: number;
+  /** Open requests whose booking no longer allows action, by their own status. */
+  closeRequested: number; closeConfirmed: number;
+};
+
+/** REQUESTED/CONFIRMED count only actionable requests; stale open ones are counted by their own status. Rows stay listed. */
+export function pickupCounts(
+  rows: (PickupEligibilityInput & { bookingId: string })[],
+  bookings: Record<string, string> | null,
+  feedCap: number,
+): PickupCounts {
+  const c: PickupCounts = { REQUESTED: 0, CONFIRMED: 0, DONE: 0, DECLINED: 0, ALL: 0, closeRequested: 0, closeConfirmed: 0 };
+  for (const r of rows) {
+    c.ALL += 1;
+    const open = r.status === "REQUESTED" || r.status === "CONFIRMED";
+    if (open && !pickupRowState(r, r.bookingId, bookings, feedCap).actionable) {
+      if (r.status === "REQUESTED") c.closeRequested += 1; else c.closeConfirmed += 1;
+      continue;
+    }
+    c[r.status as "REQUESTED" | "CONFIRMED" | "DONE" | "DECLINED"] += 1;
+  }
+  return c;
+}
+
+/** Tabs count every displayed row. Eligibility remains a separate, explicit fact. */
+export function pickupTabCount(counts:PickupCounts,status:keyof Pick<PickupCounts,'REQUESTED'|'CONFIRMED'|'DONE'|'DECLINED'|'ALL'>){return counts[status]+(status==='REQUESTED'?counts.closeRequested:status==='CONFIRMED'?counts.closeConfirmed:0);}

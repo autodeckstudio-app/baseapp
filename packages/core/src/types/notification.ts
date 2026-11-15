@@ -1,0 +1,49 @@
+// Customer-facing notification record. Written exclusively by the
+// onAuditLogCreated trigger (functions/src/functions/notification/) â the
+// AuditLog is the sole authoritative event source (Phase 2C architecture
+// audit). No client ever writes this collection.
+export type NotificationType =
+  | "booking_confirmed"
+  | "booking_cancelled"
+  | "booking_rescheduled"
+  | "booking_missed"
+  | "vehicle_received"
+  | "quality_check"
+  | "vehicle_delivered"
+  | "job_started"
+  | "job_completed"
+  | "payment_successful"
+  | "payment_failed"
+  | "invoice_issued"
+  | "membership_activated"
+  | "membership_expired"
+  | "approval_requested"
+  | "approval_approved"
+  | "approval_rejected"
+  | "pickup_confirmed"
+  | "pickup_declined"
+  | "winback"
+  | "expiry_reminder"
+  | "booking_reminder"
+  | "job_message"
+  | "job_message_staff";
+
+// Entities the customer app can navigate to from a notification. Job/Payment
+// source events are resolved down to their owning Booking at write time
+// (the customer app has no standalone job or payment detail screen).
+export type NotificationEntityType = "VisitIntake" | "Booking" | "Invoice" | "Membership" | "Gift" | "Approval" | "Job";
+
+export interface Notification {
+  id: string; // == auditLogId â deterministic idempotency key (see spec)
+  tenantId: string;
+  userId: string; // recipient â Firebase Auth uid (customerId)
+  auditLogId: string; // source event; doubles as this doc's idempotency key
+  type: NotificationType;
+  title: string;
+  body: string;
+  entityType: NotificationEntityType | null;
+  entityId: string | null;
+  createdAt: string;
+  readAt: string | null;
+}
+

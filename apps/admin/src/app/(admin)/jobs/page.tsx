@@ -1,0 +1,219 @@
+"use client";
+import { parseSavedJobsView, JOBS_VIEW_KEY, type SavedJobsView } from "../../../lib/jobs-view-state";
+import { useMinuteNow } from "@autodeck/ui/clock";
+import { membershipCoveredLabel, visitTiming, hasTimingLabel } from "@autodeck/core";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import type { ServiceJob, JobStatus } from "@autodeck/core";
+import { useAdminAuth } from "../../../lib/auth-context";
+import { getStudioConfig } from "../../../lib/studio-service";
+import { bayLabel } from "../../../lib/bay-label";
+import { BoundedJobsNotice } from "../../../components/BoundedJobsNotice";
+import { listenToJobs } from "../../../lib/jobs-service";
+import { StatusBadge } from "../../../components/StatusBadge";
+import { formatPaise, formatDateTime } from "../../../lib/format";
+import { JobBoard, type BoardJob } from "../../../experience/JobBoard";
+import { statusLabel } from "../../../lib/status-label";
+import { useLabels } from "../../../lib/use-labels";
+import { COLLECTIONS } from "@autodeck/database";
+import type { Customer, Vehicle, Service } from "@autodeck/core";
+
+const STATUSES: JobStatus[] = ["STANDBY", "PENDING_VEHICLE", "VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY", "DELIVERED", "CANCELLED"];
+
+function todayIST(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+}
+
+export default function JobsPage() {
+  const { claims } = useAdminAuth();
+  const router = useRouter();
+  const [jobs, setJobs] = useState<ServiceJob[]>([]);
+  const minuteNow = useMinuteNow();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [boundedNote, setBoundedNote] = useState<string | null>(null);
+
+  // Board/List, day and source filters are kept for this tab, so Back from a job returns to the same view.
+  const saved = (): SavedJobsView => (typeof window === "undefined" ? {} : (() => { try { return parseSavedJobsView(window.sessionStorage.getItem(JOBS_VIEW_KEY)); } catch { return {}; } })());
+  const [status, setStatus] = useState<JobStatus | "">(() => saved().status ?? "");
+  const [when, setWhen] = useState<"" | "today" | "upcoming">(() => saved().when ?? "today");
+  const [view, setView] = useState<"board" | "list">(() => saved().view ?? "board");
+  const [source, setSource] = useState<"" | "booking" | "walkin">(() => saved().source ?? "");
+  useEffect(() => {
+    try { window.sessionStorage.setItem(JOBS_VIEW_KEY, JSON.stringify({ status, when, view, source })); } catch { /* storage unavailable: view just resets */ }
+  }, [status, when, view, source]);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    if (!claims) return undefined;
+    setLoading(true);
+    return listenToJobs(
+      claims.tenantId,
+      (data) => {
+        setJobs(data);
+        setLoading(false);
+      },
+      (err) => {
+        setError(err.message);
+        setLoading(false);
+      },
+      setBoundedNote,
+    );
+  }, [claims]);
+
+  const [bays, setBays] = useState<Array<{ id: string; name: string }>>([]);
+  const studioKey = Array.from(new Set(jobs.map((j) => j.studioId))).sort().join(",");
+  useEffect(() => {
+    if (!studioKey) return;
+    let live = true;
+    void Promise.all(studioKey.split(",").map((id) => getStudioConfig(id).catch(() => null))).then((cfgs) => {
+      if (live) setBays(cfgs.flatMap((c) => c?.bays ?? []));
+    });
+    return () => { live = false; };
+  }, [studioKey]);
+
+  const customerNames = useLabels(COLLECTIONS.customers(), jobs.map((j) => j.customerId), (d) => (d as Customer).name);
+  const vehicleRegs = useLabels(COLLECTIONS.vehicles(), jobs.map((j) => j.vehicleId), (d) => (d as Vehicle).registrationNumber);
+  const serviceNames = useLabels(COLLECTIONS.services(), jobs.map((j) => j.serviceId), (d) => (d as Service).name);
+
+  const today = todayIST();
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return jobs.filter((j) => {
+      if (status && j.status !== status) return false;
+      // "Today" means active today, not merely started today - a multi-day
+      // job (e.g. a PPF service) started on an earlier date is still active
+      // on every day through its estimatedEndDate. A car still in the studio
+      // past its estimate stays on today's floor until delivered.
+      const carriedOver = j.scheduledDate <= today && j.status !== "DELIVERED" && j.status !== "CANCELLED";
+      if (when === "today" && !(carriedOver || (j.scheduledDate <= today && j.estimatedEndDate >= today))) return false;
+      if (when === "upcoming" && j.scheduledDate <= today) return false;
+      if (source === "booking" && j.isWalkIn) return false;
+      if (source === "walkin" && !j.isWalkIn) return false;
+      if (q) {
+        const haystack = [j.id, j.customerId, j.vehicleId, customerNames[j.customerId], vehicleRegs[j.vehicleId]]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [jobs, status, when, source, search, today, customerNames, vehicleRegs]);
+
+  if (error) return <p className="error">{error}</p>;
+
+  if (loading) return <div className="ax-panel" role="status">Loading the studio floor...</div>;
+  const activeToday = jobs.filter((j) => j.scheduledDate <= today && j.estimatedEndDate >= today);
+  // Every started job counts, whatever day it was booked for: an older unfinished job is still in the studio.
+  const inStudio = jobs.filter((j) => ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK"].includes(j.status)).length;
+  const ready = jobs.filter((j) => j.status === "READY_FOR_DELIVERY").length;
+  const awaiting = activeToday.filter((j) => j.status === "PENDING_VEHICLE").length;
+
+  const timingOf = (j: ServiceJob) => { const t = visitTiming(j, minuteNow); return !hasTimingLabel(t) || j.status === "STANDBY" ? undefined : { label: t.label, tone: t.tone, attention: t.needsAttention }; };
+  const toBoard = (j: ServiceJob): BoardJob => ({
+    timing: timingOf(j),
+    id: j.id,
+    status: j.status,
+    plate: vehicleRegs[j.vehicleId] ?? "-",
+    customer: customerNames[j.customerId] ?? "Customer",
+    service: serviceNames[j.serviceId] ?? "Service",
+    bay: j.status !== "STANDBY" ? bayLabel(j.bayId, bays) : undefined,
+    when: j.status === "STANDBY" ? `Waiting since ${formatDateTime(j.standbyArrivedAt ?? j.createdAt)}` : formatDateTime(j.scheduledAt),
+    walkIn: j.isWalkIn,
+    payment: membershipCoveredLabel(j) ?? j.paymentStatus,
+  });
+  const open = (id: string) => router.push(`/jobs/${id}`);
+
+  return (
+    <div className="ax-page">
+      <BoundedJobsNotice note={boundedNote} />
+      <header className="ax-page-head">
+        <div>
+          <p className="ax-label">Studio floor</p>
+          <h1>Jobs</h1>
+        </div>
+        <div className="ax-kpis" aria-label="Today at a glance">
+          <div><span className="ax-kpi-v">{awaiting}</span><span className="ax-label">Arriving today</span></div>
+          <div><span className="ax-kpi-v ax-kpi-v--accent">{inStudio}</span><span className="ax-label">In the studio</span></div>
+          <div><span className="ax-kpi-v ax-kpi-v--premium">{ready}</span><span className="ax-label">Ready for pickup</span></div>
+        </div>
+      </header>
+
+      {jobs.some(j=>j.status==="STANDBY") && <section className="ax-panel" aria-label="Standby waiting queue">
+        <h2>Arrived - standby</h2><p className="ax-note">Waiting in arrival order - no bay or time reserved. Admit the next car into an available compatible bay.</p>
+        {jobs.filter(j => j.status === "STANDBY").sort((a,b) => (a.standbyArrivedAt ?? a.createdAt).localeCompare(b.standbyArrivedAt ?? b.createdAt) || a.id.localeCompare(b.id)).map((j,i) => <button key={j.id} className="ax-button" onClick={() => open(j.id)}>{i+1}. {vehicleRegs[j.vehicleId] ?? "Vehicle"} - {serviceNames[j.serviceId] ?? "Service"} - waiting since {formatDateTime(j.standbyArrivedAt ?? j.createdAt)}</button>)}
+        {!jobs.some(j => j.status === "STANDBY") ? <p>No cars waiting.</p> : null}
+      </section>}
+      <div className="ax-toolbar">
+        <div className="ax-seg" role="group" aria-label="View">
+          <button type="button" aria-pressed={view === "board"} onClick={() => setView("board")}>Board</button>
+          <button type="button" aria-pressed={view === "list"} onClick={() => setView("list")}>List</button>
+        </div>
+        <div className="ax-seg" role="group" aria-label="Date">
+          <button type="button" aria-pressed={when === "today"} onClick={() => setWhen("today")}>Today</button>
+          <button type="button" aria-pressed={when === "upcoming"} onClick={() => setWhen("upcoming")}>Upcoming</button>
+          <button type="button" aria-pressed={when === ""} onClick={() => setWhen("")}>All</button>
+        </div>
+        <select aria-label="Source" value={source} onChange={(e) => setSource(e.target.value as typeof source)}>
+          <option value="">Bookings and walk-ins</option>
+          <option value="booking">Bookings only</option>
+          <option value="walkin">Walk-ins only</option>
+        </select>
+        {view === "list" && (
+          <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value as JobStatus | "")}>
+            <option value="">All statuses</option>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>{statusLabel(s)}</option>
+            ))}
+          </select>
+        )}
+        <input className="ax-search" type="search" aria-label="Search" placeholder="Search plate, customer or job" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <span className="ax-count">{filtered.length} of {jobs.length}</span>
+      </div>
+
+      {loading ? (
+        <JobBoard jobs={[]} loading onOpen={open} />
+      ) : jobs.length === 0 ? (
+        <div className="ax-empty">
+          <p className="ax-title">No jobs yet</p>
+          <p>Jobs appear here as bookings are confirmed and walk-ins are checked in.</p>
+        </div>
+      ) : view === "board" ? (
+        <JobBoard jobs={filtered.map(toBoard)} onOpen={open} />
+      ) : filtered.length === 0 ? (
+        <div className="ax-empty"><p className="ax-title">No matches</p><p>Try another date, source or search.</p></div>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>Scheduled</th>
+              <th>Status</th>
+              <th>Vehicle</th>
+              <th>Customer</th>
+              <th>Service</th>
+              <th>Bay</th>
+              <th>Payment</th>
+              <th style={{ textAlign: "right" }}>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((j) => (
+              <tr key={j.id} className="row-link" tabIndex={0} role="link" aria-label={`Open job for ${vehicleRegs[j.vehicleId] ?? "vehicle"}`} onKeyDown={e=>{if(e.key==="Enter")open(j.id);}} onClick={() => open(j.id)}>
+                <td>{formatDateTime(j.scheduledAt)}{j.isWalkIn ? <span className="ax-muted"> · Walk-in</span> : null}</td>
+                <td><StatusBadge label={j.status} />{timingOf(j) ? <div className={`ax-jc-timing ax-jc-timing--${timingOf(j)!.tone}`} data-attention={timingOf(j)!.attention ? "true" : "false"}>{timingOf(j)!.label}</div> : null}</td>
+                <td className="ax-data">{vehicleRegs[j.vehicleId] ?? "-"}</td>
+                <td>{customerNames[j.customerId] ?? "-"}</td>
+                <td>{serviceNames[j.serviceId] ?? "-"}</td>
+                <td>{bayLabel(j.bayId, bays) ?? ""}</td>
+                <td><StatusBadge label={membershipCoveredLabel(j) ?? j.paymentStatus} /></td>
+                <td className="ax-data" style={{ textAlign: "right" }}>{formatPaise(j.totalAmount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}

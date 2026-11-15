@@ -1,0 +1,149 @@
+import type { InvoiceIssuer } from "../invoice-issuer.js";
+import type { VehicleSnapshot } from "./customer.js";
+export type PaymentMethod = "razorpay_payment_link" | "cash" | "upi_manual" | "bank_transfer";
+
+// doc06 statuses + "cancelled" (required by booking lifecycle; flagged in architecture)
+// "processing" is intermediate Razorpay state between pending and completed
+export type PaymentStatus =
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  // Some captured money returned, the rest retained (e.g. no-show charge).
+  | "partially_refunded"
+  | "refunded";
+
+export type InvoiceStatus = "draft" | "issued" | "paid" | "void";
+
+// "booking" is the pay-at-studio ADVANCE (basket item 4, owner-adopted policy
+// 2 Nov 2026). No such record can exist while ADVANCE_PAYMENT_ENABLED is
+// false; readers compare with === and fall through safely.
+export type PaymentTargetType = "job" | "membership" | "gift" | "booking";
+
+export interface Payment {
+  combinedBasis?:{version:2;totalPaise:number;advancePaymentId:string|null;advanceCapturedPaise:number;balanceDuePaise:number};
+  /** Final invoice settlement projection only. Actual collections are in offlineReceipts. */
+  offlineReceiptSettlement?: boolean;
+  id: string;
+  tenantId: string;
+  studioId: string | null; // null for membership purchases — not studio-scoped
+  targetType: PaymentTargetType;
+  jobId: string | null; // set when targetType === "job"
+  bookingId: string | null;
+  membershipId: string | null; // set when targetType === "membership"
+  giftId?: string | null; // set when targetType === "gift"
+  customerId: string;
+  // Amount is ALWAYS taken from booking.totalAmount — never from client request
+  amount: number; // paise
+  currency: string; // "INR"
+  method: PaymentMethod;
+  status: PaymentStatus;
+  // Provider references (null for cash/manual)
+  paymentUrl?: string | null; // hosted checkout link for razorpay_payment_link payments
+  razorpayPaymentLinkId: string | null;
+  razorpayPaymentId: string | null;
+  razorpayOrderId: string | null;
+  /** Append-only history of SUPERSEDED provider link/order ids (advance
+   *  flow, reviewer G2): a replaced link's ids move here, never vanish, so
+   *  a late capture on an old link still resolves to this payment. */
+  priorLinkIds?: string[];
+  priorOrderIds?: string[];
+  /** DISTINCT captures after settlement (reviewer G3 + main 2 Nov R-series):
+   *  APPEND-ONLY history of every extra capture's identity and amount for
+   *  the office refund review - events are history, operational review
+   *  needs ALL identities, so a later extra capture never overwrites an
+   *  earlier one. The original razorpayPaymentId is never touched. */
+  overpayments?: Array<{ providerPaymentId: string; amount: number | null; currency: string | null; at: string }>;
+  /** Exclusive advance-link create lease (reviewer R1): set in the claim
+   *  transaction BEFORE any provider create, cleared by the binding patch.
+   *  A held lease blocks any second create; a lease left behind by a crash
+   *  (with orderAmbiguous stuck true) fails CLOSED to manual review. */
+  linkCreateLeaseId?: string | null;
+  // Set when the provider may have created an order but the response was lost.
+  // While true, checkout order creation fails closed until reconciled with the provider.
+  orderAmbiguous?: boolean | null;
+  /** Aggregate owner-attested offline return. Provider refund fields stay unchanged.
+   * No per-payment allocation is implied. Blocks further provider refunds. */
+  externalReturnRecordId?: string | null;
+  // Refund tracking (set when a refund is issued)
+  razorpayRefundId: string | null;
+  refundAmount: number | null; // paise; null until refund initiated
+  // Manual payment
+  manualReference: string | null; // UPI ref, cash receipt #
+  recordedBy: string | null; // employeeId for manual payments
+  // Linked invoice (set when invoice is generated on payment completion)
+  invoiceId: string | null;
+  // Idempotency key for webhook/event deduplication
+  providerEventId: string | null;
+  // Timestamps
+  completedAt: string | null;
+  failedAt: string | null;
+  cancelledAt: string | null;
+  refundedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Invoice {
+  roundOffPaise?: number; // subtotal - discount + tax + roundOffPaise = total
+  paymentAllocation?:{advancePaymentId:string;advancePaidPaise:number;settlementPaymentId:string;settlementPaidPaise:number};
+  issuerSnapshot?: InvoiceIssuer;
+  pdfStatus?: "ready" | "needs_office_review";
+  pdfStoragePath?: string;
+  pdfGeneratedAt?: string;
+  pdfError?: string;
+  settlementKind?: "membership_covered";
+  membershipId?: string;
+  id: string;
+  tenantId: string;
+  studioId: string;
+  jobId: string;
+  bookingId: string | null;
+  customerId: string;
+  vehicleId: string;
+  // One visit == one job == one invoice. visitId always equals jobId; it is the
+  // durable visit identity that survives deletion of the vehicle or catalogue entries.
+  visitId?: string;
+  // Copies taken at issue time so the invoice renders after the car or customer record is gone.
+  vehicleSnapshot?: VehicleSnapshot;
+  customerSnapshot?: { name: string };
+  paymentId: string | null; // linked payment (null for draft invoices before payment)
+  invoiceNumber: string; // e.g. "INV-2026-00001" — generated atomically server-side
+  // All financial fields are SNAPSHOTS from booking.priceBreakdown — immutable after issued
+  lineItems: Array<{
+    description: string; // human-readable service name snapshot; never a raw id
+    serviceId?: string; // reference only, never shown to users
+    serviceName?: string; // same human-readable snapshot as description (additive alias)
+    quantity: number;
+    unitPrice: number; // paise
+    total: number; // paise
+  }>;
+  subtotal: number; // paise — gross, BEFORE membershipDiscount (sum of lineItems)
+  // Membership benefit applied to this invoice, if any (Phase 5B P1-9 fix —
+  // previously this amount existed on PriceBreakdown but was silently
+  // dropped when building the Invoice, leaving subtotal+tax != total with
+  // nothing on the document explaining why). 0 / null when no membership
+  // benefit applied. Invariant: subtotal - discount + tax + (roundOffPaise ?? 0) === total.
+  discount: number; // paise; 0 when no membership benefit applied
+  discountDescription: string | null; // e.g. "Membership discount (20%)" / "Membership wash credit" — null when discount is 0
+  taxRatePercent: number; // snapshotted at booking creation
+  taxDescription: string; // e.g. "GST 18%"
+  tax: number; // paise — computed on the POST-discount (taxable) subtotal
+  total: number; // paise — must equal booking.totalAmount; = subtotal - discount + tax + roundOffPaise
+  currency: string; // "INR"
+  status: InvoiceStatus;
+  pdfUrl: string | null;
+  publicToken: string; // UUID for unauthenticated view
+  issuedAt: string | null;
+  voidedAt: string | null;
+  voidedReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InvoiceCounter {
+  tenantId: string;
+  nextNumber: number; // incremented atomically inside a Firestore transaction
+  year: number; // resets to 1 on new calendar year
+}

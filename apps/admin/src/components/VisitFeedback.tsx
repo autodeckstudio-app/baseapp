@@ -1,0 +1,10 @@
+'use client';
+import{useEffect,useState}from'react';
+import{useAdminAuth}from'../lib/auth-context';
+import{getVisitFeedback,type VisitFeedback as Feedback,type VisitFeedbackTarget}from'../lib/visit-feedback';
+export function VisitFeedback({target}:{target:VisitFeedbackTarget}){const{user,claims}=useAdminAuth();const scope=user&&claims&&['admin','superadmin'].includes(claims.role)?`${user.uid}|${claims.tenantId}|${target.jobId??target.bookingId}`:'';return scope?<ScopedFeedback key={scope} target={target}/>:null;}
+function ScopedFeedback({target}:{target:VisitFeedbackTarget}){const[review,setReview]=useState<Feedback|null>(null),[state,setState]=useState<'loading'|'ready'|'error'>('loading'),[attempt,setAttempt]=useState(0);
+ useEffect(()=>{let alive=true;setReview(null);setState('loading');void getVisitFeedback(target).then(r=>{if(alive){setReview(r);setState('ready')}}).catch(()=>{if(alive)setState('error')});return()=>{alive=false}},[target.jobId,target.bookingId,attempt]);
+ return <VisitFeedbackCard review={review} state={state} onRetry={()=>setAttempt(n=>n+1)}/>;
+}
+export function VisitFeedbackCard({review,state,onRetry}:{review:Feedback|null;state:'loading'|'ready'|'error';onRetry:()=>void}){return <section className="ax-panel" aria-label="Customer feedback"><p className="ax-label">Customer feedback</p>{state==='loading'?<p role="status">Checking visit feedback…</p>:state==='error'?<><p role="alert">Visit feedback could not load.</p><button className="ax-button" onClick={onRetry}>Retry feedback</button></>:review?<><p aria-label={`${review.rating} out of 5 stars`} style={{color:'var(--ad-accent,#f47721)',fontSize:24,letterSpacing:3,margin:'8px 0'}}>{'★'.repeat(review.rating)}{'☆'.repeat(5-review.rating)} <strong style={{fontSize:16,letterSpacing:0,color:'var(--ad-text-primary)'}}>{review.rating} / 5</strong></p><p style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{review.comment||'No written note.'}</p></>:<p className="ax-sub">No customer rating yet.</p>}</section>}

@@ -1,0 +1,687 @@
+[
+  {
+    "original": "src/assets/koch-chemie-ceramic-allround-c0-02.jpg",
+    "originalBytes": 108058,
+    "originalSHA256": "fdc4439e19a53225a9ea2dd2510a381b7cbfb3d3655b9b0a380d6d4f54de32fe",
+    "card": "assets/imagery/optimized/catalogue/koch-chemie-ceramic-allround-c0-02-card.jpg",
+    "cardBytes": 7057,
+    "detail": "assets/imagery/optimized/catalogue/koch-chemie-ceramic-allround-c0-02-detail.jpg",
+    "detailBytes": 52854,
+    "product": true
+  },
+  {
+    "original": "src/assets/koch-chemie-ceramic-body-cb0-01.jpg",
+    "originalBytes": 69781,
+    "originalSHA256": "fd909a91c456deec6e75f2a09fbd16107f9467a7c01dea8ae79c0ce27f290be9",
+    "card": "assets/imagery/optimized/catalogue/koch-chemie-ceramic-body-cb0-01-card.jpg",
+    "cardBytes": 5773,
+    "detail": "assets/imagery/optimized/catalogue/koch-chemie-ceramic-body-cb0-01-detail.jpg",
+    "detailBytes": 34625,
+    "product": true
+  },
+  {
+    "original": "src/assets/koch-chemie-ceramic-rims-cr0-01.jpg",
+    "originalBytes": 65745,
+    "originalSHA256": "442d3b44afbb9b182ee14c04984094b57e65b31a6761597a1b5e6149dd0db5ca",
+    "card": "assets/imagery/optimized/catalogue/koch-chemie-ceramic-rims-cr0-01-card.jpg",
+    "cardBytes": 5401,
+    "detail": "assets/imagery/optimized/catalogue/koch-chemie-ceramic-rims-cr0-01-detail.jpg",
+    "detailBytes": 31214,
+    "product": true
+  },
+  {
+    "original": "src/assets/koch-chemie-ceramic-neo-c0-03.jpg",
+    "originalBytes": 106386,
+    "originalSHA256": "ad46e9001d322e387b1b6183fd4717113e819c8256d3096aeecc25446d8a81cb",
+    "card": "assets/imagery/optimized/catalogue/koch-chemie-ceramic-neo-c0-03-card.jpg",
+    "cardBytes": 7195,
+    "detail": "assets/imagery/optimized/catalogue/koch-chemie-ceramic-neo-c0-03-detail.jpg",
+    "detailBytes": 52507,
+    "product": true
+  },
+  {
+    "original": "src/assets/kovalent-graphene-matrix.png",
+    "originalBytes": 125532,
+    "originalSHA256": "772e9b2df1fe9b2435d2dc467a199c125f2200f18e07f428ab2505e6ee1d711f",
+    "card": "assets/imagery/optimized/catalogue/kovalent-graphene-matrix-card.jpg",
+    "cardBytes": 8416,
+    "detail": "assets/imagery/optimized/catalogue/kovalent-graphene-matrix-detail.jpg",
+    "detailBytes": 24770,
+    "product": true
+  },
+  {
+    "original": "src/assets/kovalent-prolong-light.png",
+    "originalBytes": 118125,
+    "originalSHA256": "9200bd0d17e2979baf70b308cf319383bab9c5684ce54fdca521cece54b027df",
+    "card": "assets/imagery/optimized/catalogue/kovalent-prolong-light-card.jpg",
+    "cardBytes": 7945,
+    "detail": "assets/imagery/optimized/catalogue/kovalent-prolong-light-detail.jpg",
+    "detailBytes": 23729,
+    "product": true
+  },
+  {
+    "original": "src/assets/kovalent-overlay.png",
+    "originalBytes": 121134,
+    "originalSHA256": "c4f610e53eefef71a0b1c7fbd5cb9a5ba06b159287c01044c90eb20d4847d436",
+    "card": "assets/imagery/optimized/catalogue/kovalent-overlay-card.jpg",
+    "cardBytes": 9291,
+    "detail": "assets/imagery/optimized/catalogue/kovalent-overlay-detail.jpg",
+    "detailBytes": 29431,
+    "product": true
+  },
+  {
+    "original": "src/assets/kovalent-matte.png",
+    "originalBytes": 146743,
+    "originalSHA256": "47e6809d1bc20259baab9e980fe991f060ddb05153f2bb6cf03ca088c3570b39",
+    "card": "assets/imagery/optimized/catalogue/kovalent-matte-card.jpg",
+    "cardBytes": 8685,
+    "detail": "assets/imagery/optimized/catalogue/kovalent-matte-detail.jpg",
+    "detailBytes": 27100,
+    "product": true
+  },
+  {
+    "original": "src/assets/kovalent-fabric.png",
+    "originalBytes": 92450,
+    "originalSHA256": "c339ddfc1b3eca65be432a5bf0cefdb12d48ae57e4677980ad7cc4469f9d5bea",
+    "card": "assets/imagery/optimized/catalogue/kovalent-fabric-card.jpg",
+    "cardBytes": 6911,
+    "detail": "assets/imagery/optimized/catalogue/kovalent-fabric-detail.jpg",
+    "detailBytes": 19141,
+    "product": true
+  },
+  {
+    "original": "src/assets/carpro-cquartz-uk-3-0.jpg",
+    "originalBytes": 208547,
+    "originalSHA256": "4a416a40bf047825ddedbb4920ef26a87ae1d067258df46a3e720b98aa9b85ac",
+    "card": "assets/imagery/optimized/catalogue/carpro-cquartz-uk-3-0-card.jpg",
+    "cardBytes": 14283,
+    "detail": "assets/imagery/optimized/catalogue/carpro-cquartz-uk-3-0-detail.jpg",
+    "detailBytes": 104981,
+    "product": true
+  },
+  {
+    "original": "src/assets/carpro-cquartz-lite-2-0.jpg",
+    "originalBytes": 192516,
+    "originalSHA256": "39a6f87579cec16c34316c14bd7ebac85fa9878ca000cee9550a7ecd60fb2395",
+    "card": "assets/imagery/optimized/catalogue/carpro-cquartz-lite-2-0-card.jpg",
+    "cardBytes": 15944,
+    "detail": "assets/imagery/optimized/catalogue/carpro-cquartz-lite-2-0-detail.jpg",
+    "detailBytes": 93678,
+    "product": true
+  },
+  {
+    "original": "src/assets/carpro-cquartz-sic.jpg",
+    "originalBytes": 229625,
+    "originalSHA256": "f150bf63ae23260e573834d2c1b9f8d599f1cd3543385d2519c8196460920703",
+    "card": "assets/imagery/optimized/catalogue/carpro-cquartz-sic-card.jpg",
+    "cardBytes": 17780,
+    "detail": "assets/imagery/optimized/catalogue/carpro-cquartz-sic-detail.jpg",
+    "detailBytes": 118389,
+    "product": true
+  },
+  {
+    "original": "src/assets/carpro-cquartz-dlight.jpg",
+    "originalBytes": 218448,
+    "originalSHA256": "d4f8503c45f0fd342348775783a74a11293503a761d53802da394cea70b88404",
+    "card": "assets/imagery/optimized/catalogue/carpro-cquartz-dlight-card.jpg",
+    "cardBytes": 15336,
+    "detail": "assets/imagery/optimized/catalogue/carpro-cquartz-dlight-detail.jpg",
+    "detailBytes": 113121,
+    "product": true
+  },
+  {
+    "original": "src/assets/carpro-cquartz-blackout-2-0.jpg",
+    "originalBytes": 197931,
+    "originalSHA256": "45a5a810e24e87fb7911664a84c1084a27454c6977f8f75afe85a25558827d09",
+    "card": "assets/imagery/optimized/catalogue/carpro-cquartz-blackout-2-0-card.jpg",
+    "cardBytes": 14042,
+    "detail": "assets/imagery/optimized/catalogue/carpro-cquartz-blackout-2-0-detail.jpg",
+    "detailBytes": 101640,
+    "product": true
+  },
+  {
+    "original": "src/assets/carpro-dquartz-go.jpg",
+    "originalBytes": 208091,
+    "originalSHA256": "3cccef729fc7c94261e13d8f09e5dfdc3db8a29f99ac9d61d18cd33730c1b273",
+    "card": "assets/imagery/optimized/catalogue/carpro-dquartz-go-card.jpg",
+    "cardBytes": 14337,
+    "detail": "assets/imagery/optimized/catalogue/carpro-dquartz-go-detail.jpg",
+    "detailBytes": 106549,
+    "product": true
+  },
+  {
+    "original": "src/assets/carpro-dquartz-gforce.jpg",
+    "originalBytes": 216922,
+    "originalSHA256": "c5fb2a6d7a2c4f3b97586375a793ad89c4c5f84ffa8f9fd7babf18983bc166fd",
+    "card": "assets/imagery/optimized/catalogue/carpro-dquartz-gforce-card.jpg",
+    "cardBytes": 14659,
+    "detail": "assets/imagery/optimized/catalogue/carpro-dquartz-gforce-detail.jpg",
+    "detailBytes": 111479,
+    "product": true
+  },
+  {
+    "original": "src/assets/carpro-cquartz-fabric-2-0.jpg",
+    "originalBytes": 108255,
+    "originalSHA256": "cc66c3dbe2e6d9ee1cf9487cedf646d18a0a32e37419c54d98c5c587d67517a9",
+    "card": "assets/imagery/optimized/catalogue/carpro-cquartz-fabric-2-0-card.jpg",
+    "cardBytes": 7477,
+    "detail": "assets/imagery/optimized/catalogue/carpro-cquartz-fabric-2-0-detail.jpg",
+    "detailBytes": 51682,
+    "product": true
+  },
+  {
+    "original": "src/assets/carpro-cquartz-leather-2-0.jpg",
+    "originalBytes": 223457,
+    "originalSHA256": "d7a4cd3a7dc42781506feab6e1baed26c3a17690713d0a9faa61a94db505b8c2",
+    "card": "assets/imagery/optimized/catalogue/carpro-cquartz-leather-2-0-card.jpg",
+    "cardBytes": 18280,
+    "detail": "assets/imagery/optimized/catalogue/carpro-cquartz-leather-2-0-detail.jpg",
+    "detailBytes": 114301,
+    "product": true
+  },
+  {
+    "original": "src/assets/carpro-cquartz-skin.jpg",
+    "originalBytes": 210829,
+    "originalSHA256": "fd425df85c69210d9a6d06a8676d3164e4a11251bd66f172b62428610eadff13",
+    "card": "assets/imagery/optimized/catalogue/carpro-cquartz-skin-card.jpg",
+    "cardBytes": 14539,
+    "detail": "assets/imagery/optimized/catalogue/carpro-cquartz-skin-detail.jpg",
+    "detailBytes": 107375,
+    "product": true
+  },
+  {
+    "original": "src/assets/carpro-cquartz-dlux-2-0.jpg",
+    "originalBytes": 218306,
+    "originalSHA256": "91bd86d6350a26b010538476988845ce5dafc63a259ee4da38e4a5deb7ff9600",
+    "card": "assets/imagery/optimized/catalogue/carpro-cquartz-dlux-2-0-card.jpg",
+    "cardBytes": 15208,
+    "detail": "assets/imagery/optimized/catalogue/carpro-cquartz-dlux-2-0-detail.jpg",
+    "detailBytes": 108939,
+    "product": true
+  },
+  {
+    "original": "src/assets/fireball-aegis.jpg",
+    "originalBytes": 98936,
+    "originalSHA256": "bdab28c38dcfa4b6635e62124ada7c178844038183ec90d22d4d00ae419fde56",
+    "card": "assets/imagery/optimized/catalogue/fireball-aegis-card.jpg",
+    "cardBytes": 7198,
+    "detail": "assets/imagery/optimized/catalogue/fireball-aegis-detail.jpg",
+    "detailBytes": 48715,
+    "product": true
+  },
+  {
+    "original": "src/assets/fireball-butterfly.jpg",
+    "originalBytes": 100570,
+    "originalSHA256": "ff6693f726bd5ab6d09c31ac1d7e9a8ebcb62b336ec4de6571f398d515a5e286",
+    "card": "assets/imagery/optimized/catalogue/fireball-butterfly-card.jpg",
+    "cardBytes": 7303,
+    "detail": "assets/imagery/optimized/catalogue/fireball-butterfly-detail.jpg",
+    "detailBytes": 49617,
+    "product": true
+  },
+  {
+    "original": "src/assets/fireball-butterfly-graphene.jpg",
+    "originalBytes": 99293,
+    "originalSHA256": "f6244512257c80427a790452db032ec6bbc2e49d1b898acf12982f79a7439050",
+    "card": "assets/imagery/optimized/catalogue/fireball-butterfly-graphene-card.jpg",
+    "cardBytes": 7669,
+    "detail": "assets/imagery/optimized/catalogue/fireball-butterfly-graphene-detail.jpg",
+    "detailBytes": 48501,
+    "product": true
+  },
+  {
+    "original": "src/assets/fireball-devil-s-blood.jpg",
+    "originalBytes": 101709,
+    "originalSHA256": "4c6703fefa2f1fc3edfc909ba2be30f54be4c6cf870638eab8de0c8bef7c9e93",
+    "card": "assets/imagery/optimized/catalogue/fireball-devil-s-blood-card.jpg",
+    "cardBytes": 7448,
+    "detail": "assets/imagery/optimized/catalogue/fireball-devil-s-blood-detail.jpg",
+    "detailBytes": 50161,
+    "product": true
+  },
+  {
+    "original": "src/assets/fireball-dok-do.jpg",
+    "originalBytes": 111065,
+    "originalSHA256": "12036be0a9e72c5aabadcd2b39204172726516e67b61c33f9d37c55d712939b8",
+    "card": "assets/imagery/optimized/catalogue/fireball-dok-do-card.jpg",
+    "cardBytes": 7694,
+    "detail": "assets/imagery/optimized/catalogue/fireball-dok-do-detail.jpg",
+    "detailBytes": 54966,
+    "product": true
+  },
+  {
+    "original": "src/assets/fireball-silla.jpg",
+    "originalBytes": 98663,
+    "originalSHA256": "dfd84a4e4e6dba938d7b811d7e9f79a5c595ea51ac478f733df45ac2cbd3d3fd",
+    "card": "assets/imagery/optimized/catalogue/fireball-silla-card.jpg",
+    "cardBytes": 7195,
+    "detail": "assets/imagery/optimized/catalogue/fireball-silla-detail.jpg",
+    "detailBytes": 48611,
+    "product": true
+  },
+  {
+    "original": "src/assets/fireball-talon.jpg",
+    "originalBytes": 99714,
+    "originalSHA256": "d5c75dc75983476d047eb49896dfb4d8e3a449f1d465b7fbbeac36f133b6e345",
+    "card": "assets/imagery/optimized/catalogue/fireball-talon-card.jpg",
+    "cardBytes": 7252,
+    "detail": "assets/imagery/optimized/catalogue/fireball-talon-detail.jpg",
+    "detailBytes": 49104,
+    "product": true
+  },
+  {
+    "original": "src/assets/fireball-raptor.jpg",
+    "originalBytes": 128515,
+    "originalSHA256": "d6ff74025e8cb6aba227195d4fd8091840df31513926911c49111784c3eb1bb7",
+    "card": "assets/imagery/optimized/catalogue/fireball-raptor-card.jpg",
+    "cardBytes": 8896,
+    "detail": "assets/imagery/optimized/catalogue/fireball-raptor-detail.jpg",
+    "detailBytes": 63849,
+    "product": true
+  },
+  {
+    "original": "src/assets/fireball-red-eye.jpg",
+    "originalBytes": 131495,
+    "originalSHA256": "9c7b453539c07a96920378e71c8cbcb9e23b55d921feec15f9a1662585129dbe",
+    "card": "assets/imagery/optimized/catalogue/fireball-red-eye-card.jpg",
+    "cardBytes": 9012,
+    "detail": "assets/imagery/optimized/catalogue/fireball-red-eye-detail.jpg",
+    "detailBytes": 64857,
+    "product": true
+  },
+  {
+    "original": "src/assets/fireball-hera.jpg",
+    "originalBytes": 128791,
+    "originalSHA256": "7f96f53350974c391ff815b58c74e2a229e9b1ebc6a14f1401f899032a07c202",
+    "card": "assets/imagery/optimized/catalogue/fireball-hera-card.jpg",
+    "cardBytes": 8799,
+    "detail": "assets/imagery/optimized/catalogue/fireball-hera-detail.jpg",
+    "detailBytes": 63520,
+    "product": true
+  },
+  {
+    "original": "src/assets/fireball-fx88.jpg",
+    "originalBytes": 129950,
+    "originalSHA256": "dedcff6518548bf731bc736b334e1155ef744a8ae9dd55f7cc2bcf69b197df59",
+    "card": "assets/imagery/optimized/catalogue/fireball-fx88-card.jpg",
+    "cardBytes": 9004,
+    "detail": "assets/imagery/optimized/catalogue/fireball-fx88-detail.jpg",
+    "detailBytes": 64324,
+    "product": true
+  },
+  {
+    "original": "src/assets/fireball-wizard.jpg",
+    "originalBytes": 127716,
+    "originalSHA256": "80e0453c3dbfb438f8affab6144f1e19fba35cbfb5a93d3e097939661d26c809",
+    "card": "assets/imagery/optimized/catalogue/fireball-wizard-card.jpg",
+    "cardBytes": 8861,
+    "detail": "assets/imagery/optimized/catalogue/fireball-wizard-detail.jpg",
+    "detailBytes": 63305,
+    "product": true
+  },
+  {
+    "original": "src/assets/gen-menu-coat-fabric.jpg",
+    "originalBytes": 177876,
+    "originalSHA256": "d8ad0261414174f94c02039dc95a6b9f347ad1e08136b9615b499d327e658b1f",
+    "card": "assets/imagery/optimized/catalogue/gen-menu-coat-fabric-card.jpg",
+    "cardBytes": 17051,
+    "detail": "assets/imagery/optimized/catalogue/gen-menu-coat-fabric-detail.jpg",
+    "detailBytes": 131541,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-menu-coat-glass.jpg",
+    "originalBytes": 209561,
+    "originalSHA256": "4498e89b6ff8b30d1d4b3d5b12c8b72dc0af738fd6e10121c955b3a69554fd9b",
+    "card": "assets/imagery/optimized/catalogue/gen-menu-coat-glass-card.jpg",
+    "cardBytes": 22467,
+    "detail": "assets/imagery/optimized/catalogue/gen-menu-coat-glass-detail.jpg",
+    "detailBytes": 156689,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-menu-coat-leather.jpg",
+    "originalBytes": 193113,
+    "originalSHA256": "c479914ef283c58a8e894d5deefc9f608c2e7e9532178ad9fc5000572a6598a8",
+    "card": "assets/imagery/optimized/catalogue/gen-menu-coat-leather-card.jpg",
+    "cardBytes": 17314,
+    "detail": "assets/imagery/optimized/catalogue/gen-menu-coat-leather-detail.jpg",
+    "detailBytes": 143783,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-menu-coat-trim.jpg",
+    "originalBytes": 173176,
+    "originalSHA256": "eb904b413aef8a17d904df3975a29e67a1111e5b1c690bdbcb2f23c397802857",
+    "card": "assets/imagery/optimized/catalogue/gen-menu-coat-trim-card.jpg",
+    "cardBytes": 18510,
+    "detail": "assets/imagery/optimized/catalogue/gen-menu-coat-trim-detail.jpg",
+    "detailBytes": 128824,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-menu-coat-wheels.jpg",
+    "originalBytes": 164724,
+    "originalSHA256": "4dac6fa79698c46552b883c0815eef1146640374fe7aabe7efd843f758ddcd21",
+    "card": "assets/imagery/optimized/catalogue/gen-menu-coat-wheels-card.jpg",
+    "cardBytes": 21063,
+    "detail": "assets/imagery/optimized/catalogue/gen-menu-coat-wheels-detail.jpg",
+    "detailBytes": 125498,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-menu-garage-ac.jpg",
+    "originalBytes": 177224,
+    "originalSHA256": "02f550207efa1b0c2267b7fcae78c16418f9e13eb13273842d28c2d0ba51da9d",
+    "card": "assets/imagery/optimized/catalogue/gen-menu-garage-ac-card.jpg",
+    "cardBytes": 21488,
+    "detail": "assets/imagery/optimized/catalogue/gen-menu-garage-ac-detail.jpg",
+    "detailBytes": 133874,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-menu-garage-alignment.jpg",
+    "originalBytes": 207016,
+    "originalSHA256": "d2c9328f40d926610c5458a7e3417e9136348716b2476a3011e84015dd455e70",
+    "card": "assets/imagery/optimized/catalogue/gen-menu-garage-alignment-card.jpg",
+    "cardBytes": 23388,
+    "detail": "assets/imagery/optimized/catalogue/gen-menu-garage-alignment-detail.jpg",
+    "detailBytes": 155949,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-menu-garage-battery.jpg",
+    "originalBytes": 137657,
+    "originalSHA256": "4093b3c783ab9409dd1d6625fd14df90268c788b419310b231d44582734e5da0",
+    "card": "assets/imagery/optimized/catalogue/gen-menu-garage-battery-card.jpg",
+    "cardBytes": 18166,
+    "detail": "assets/imagery/optimized/catalogue/gen-menu-garage-battery-detail.jpg",
+    "detailBytes": 104717,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-menu-garage-inspection.jpg",
+    "originalBytes": 188263,
+    "originalSHA256": "a575918bcd1e57251a25c8de39fc1c00e255c9d68ce58cf45087bf1c520d2da5",
+    "card": "assets/imagery/optimized/catalogue/gen-menu-garage-inspection-card.jpg",
+    "cardBytes": 22192,
+    "detail": "assets/imagery/optimized/catalogue/gen-menu-garage-inspection-detail.jpg",
+    "detailBytes": 143418,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-menu-garage-repairs.jpg",
+    "originalBytes": 187858,
+    "originalSHA256": "46806e26a7cfbcd0ebeab6f57a187d2b8eaf3b40e79c0fc02d78a9755b19a419",
+    "card": "assets/imagery/optimized/catalogue/gen-menu-garage-repairs-card.jpg",
+    "cardBytes": 23217,
+    "detail": "assets/imagery/optimized/catalogue/gen-menu-garage-repairs-detail.jpg",
+    "detailBytes": 143583,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-menu-mods-styling.jpg",
+    "originalBytes": 153862,
+    "originalSHA256": "a37ad5eaafddb600030e5a95dad54d391eaff8fe30c42886fec4843560fff0b2",
+    "card": "assets/imagery/optimized/catalogue/gen-menu-mods-styling-card.jpg",
+    "cardBytes": 18339,
+    "detail": "assets/imagery/optimized/catalogue/gen-menu-mods-styling-detail.jpg",
+    "detailBytes": 115316,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-menu-mods-tint.jpg",
+    "originalBytes": 174519,
+    "originalSHA256": "f6a50c759bd44ce5f118f0f507b0965b70569fec9b56172016b6c5fddce7e9a2",
+    "card": "assets/imagery/optimized/catalogue/gen-menu-mods-tint-card.jpg",
+    "cardBytes": 20550,
+    "detail": "assets/imagery/optimized/catalogue/gen-menu-mods-tint-detail.jpg",
+    "detailBytes": 131881,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-menu-mods-wrap.jpg",
+    "originalBytes": 157656,
+    "originalSHA256": "9bc4eca2ca485d4b36dde764c77aa9a0f66975e47e6006db1e528782a090bcac",
+    "card": "assets/imagery/optimized/catalogue/gen-menu-mods-wrap-card.jpg",
+    "cardBytes": 19876,
+    "detail": "assets/imagery/optimized/catalogue/gen-menu-mods-wrap-detail.jpg",
+    "detailBytes": 120414,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-menu-pickup.jpg",
+    "originalBytes": 168658,
+    "originalSHA256": "646dab6a77acd8af23b18be612cc369745c0acad3ad0c30f7d425c6446bcca33",
+    "card": "assets/imagery/optimized/catalogue/gen-menu-pickup-card.jpg",
+    "cardBytes": 19843,
+    "detail": "assets/imagery/optimized/catalogue/gen-menu-pickup-detail.jpg",
+    "detailBytes": 125944,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-menu-wash-exterior.jpg",
+    "originalBytes": 269277,
+    "originalSHA256": "0c450e9b23758cc3380f7f4dee8245d457d77b98aac6a9816a1be30614e8266c",
+    "card": "assets/imagery/optimized/catalogue/gen-menu-wash-exterior-card.jpg",
+    "cardBytes": 29431,
+    "detail": "assets/imagery/optimized/catalogue/gen-menu-wash-exterior-detail.jpg",
+    "detailBytes": 200638,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-menu-wash-full.jpg",
+    "originalBytes": 311676,
+    "originalSHA256": "78ebcbc65d60c5867f36bbdd71e894a1e781971d3ffcb475dc8d1086177fad69",
+    "card": "assets/imagery/optimized/catalogue/gen-menu-wash-full-card.jpg",
+    "cardBytes": 29848,
+    "detail": "assets/imagery/optimized/catalogue/gen-menu-wash-full-detail.jpg",
+    "detailBytes": 230033,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-menu-wash-interior.jpg",
+    "originalBytes": 163366,
+    "originalSHA256": "ca6ddfded0ab651cd105b9aad07f5dcbfc3b3caf0c61090cf74c6345b4a24b07",
+    "card": "assets/imagery/optimized/catalogue/gen-menu-wash-interior-card.jpg",
+    "cardBytes": 19318,
+    "detail": "assets/imagery/optimized/catalogue/gen-menu-wash-interior-detail.jpg",
+    "detailBytes": 124013,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-svc-coating-maintenance.jpg",
+    "originalBytes": 172057,
+    "originalSHA256": "15a026a4100725db478c4557461e1251d85e0c93270fc2d137d112be03a166da",
+    "card": "assets/imagery/optimized/catalogue/gen-svc-coating-maintenance-card.jpg",
+    "cardBytes": 21417,
+    "detail": "assets/imagery/optimized/catalogue/gen-svc-coating-maintenance-detail.jpg",
+    "detailBytes": 129686,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-svc-coating-teflon.jpg",
+    "originalBytes": 229610,
+    "originalSHA256": "a34d2d7dac3cb971dc5b9035e0e405ea425ce4600b78d48b8c2d464d349bca56",
+    "card": "assets/imagery/optimized/catalogue/gen-svc-coating-teflon-card.jpg",
+    "cardBytes": 25650,
+    "detail": "assets/imagery/optimized/catalogue/gen-svc-coating-teflon-detail.jpg",
+    "detailBytes": 172325,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-svc-wash-detail-spa.jpg",
+    "originalBytes": 151255,
+    "originalSHA256": "79491ec0b76760bc3594ba2f3a925de598ee4449d7efd18ed98fd4d6d3334ef5",
+    "card": "assets/imagery/optimized/catalogue/gen-svc-wash-detail-spa-card.jpg",
+    "cardBytes": 17894,
+    "detail": "assets/imagery/optimized/catalogue/gen-svc-wash-detail-spa-detail.jpg",
+    "detailBytes": 115029,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-svc-wash-headlight-buffing.jpg",
+    "originalBytes": 183643,
+    "originalSHA256": "bc5078703acbefcd686bd0a3f3c6d394a356b1e09ebfff6e1c118365936d8863",
+    "card": "assets/imagery/optimized/catalogue/gen-svc-wash-headlight-buffing-card.jpg",
+    "cardBytes": 21049,
+    "detail": "assets/imagery/optimized/catalogue/gen-svc-wash-headlight-buffing-detail.jpg",
+    "detailBytes": 138441,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-svc-wash-premium.jpg",
+    "originalBytes": 252376,
+    "originalSHA256": "7f7733f51c373a178a7b46af45e318860615fff5dffed5228d7fe812be741403",
+    "card": "assets/imagery/optimized/catalogue/gen-svc-wash-premium-card.jpg",
+    "cardBytes": 28635,
+    "detail": "assets/imagery/optimized/catalogue/gen-svc-wash-premium-detail.jpg",
+    "detailBytes": 188918,
+    "product": false
+  },
+  {
+    "original": "src/assets/gen-svc-wash-regular.jpg",
+    "originalBytes": 306373,
+    "originalSHA256": "46b1665c9a38b0bdef51a6e93957ec95d7d03c375ae28e111ea46e23f112209b",
+    "card": "assets/imagery/optimized/catalogue/gen-svc-wash-regular-card.jpg",
+    "cardBytes": 31163,
+    "detail": "assets/imagery/optimized/catalogue/gen-svc-wash-regular-detail.jpg",
+    "detailBytes": 227086,
+    "product": false
+  },
+  {
+    "original": "src/assets/gtechniq-c1.jpg",
+    "originalBytes": 82685,
+    "originalSHA256": "7957bd7f89e08289b1c5a3784702ba3aabb3e9cac9f00a828d7dcd534adb1128",
+    "card": "assets/imagery/optimized/catalogue/gtechniq-c1-card.jpg",
+    "cardBytes": 7620,
+    "detail": "assets/imagery/optimized/catalogue/gtechniq-c1-detail.jpg",
+    "detailBytes": 42314,
+    "product": true
+  },
+  {
+    "original": "src/assets/gtechniq-c4.jpg",
+    "originalBytes": 125304,
+    "originalSHA256": "f6c1d4cbff17150b94915c48c4f2c108c64ab866269c5257cfb542c8a04fd7ee",
+    "card": "assets/imagery/optimized/catalogue/gtechniq-c4-card.jpg",
+    "cardBytes": 9898,
+    "detail": "assets/imagery/optimized/catalogue/gtechniq-c4-detail.jpg",
+    "detailBytes": 63277,
+    "product": true
+  },
+  {
+    "original": "src/assets/gtechniq-c5.jpg",
+    "originalBytes": 135612,
+    "originalSHA256": "396924ed3d9641b0c2956916359a2a157b3492b70166e9866f8acafada806ec6",
+    "card": "assets/imagery/optimized/catalogue/gtechniq-c5-card.jpg",
+    "cardBytes": 10729,
+    "detail": "assets/imagery/optimized/catalogue/gtechniq-c5-detail.jpg",
+    "detailBytes": 69811,
+    "product": true
+  },
+  {
+    "original": "src/assets/gtechniq-crystal-serum-light.jpg",
+    "originalBytes": 121715,
+    "originalSHA256": "bd7db200f06d8609bd50c93e8997d275b76172bf790edff094efd5b80f3e4258",
+    "card": "assets/imagery/optimized/catalogue/gtechniq-crystal-serum-light-card.jpg",
+    "cardBytes": 8030,
+    "detail": "assets/imagery/optimized/catalogue/gtechniq-crystal-serum-light-detail.jpg",
+    "detailBytes": 60419,
+    "product": true
+  },
+  {
+    "original": "src/assets/gtechniq-halov2.jpg",
+    "originalBytes": 65339,
+    "originalSHA256": "32857a6ef3882bba780e456bce59a5ba10bf560fba15a540c3e13728cb0e13ba",
+    "card": "assets/imagery/optimized/catalogue/gtechniq-halov2-card.jpg",
+    "cardBytes": 8236,
+    "detail": "assets/imagery/optimized/catalogue/gtechniq-halov2-detail.jpg",
+    "detailBytes": 43631,
+    "product": true
+  },
+  {
+    "original": "src/assets/kovalent-borophene.png",
+    "originalBytes": 138584,
+    "originalSHA256": "7cef7a2df3a1a754184ae7ba5aea9f60a9f2cef3604f530cababc1c47a18b6b6",
+    "card": "assets/imagery/optimized/catalogue/kovalent-borophene-card.jpg",
+    "cardBytes": 7850,
+    "detail": "assets/imagery/optimized/catalogue/kovalent-borophene-detail.jpg",
+    "detailBytes": 24365,
+    "product": true
+  },
+  {
+    "original": "src/assets/kovalent-graphene.png",
+    "originalBytes": 102391,
+    "originalSHA256": "16629c889ac5bb6ab7b682d9503a00bcb03c93983d0dc5edec3cd04f9718c525",
+    "card": "assets/imagery/optimized/catalogue/kovalent-graphene-card.jpg",
+    "cardBytes": 7304,
+    "detail": "assets/imagery/optimized/catalogue/kovalent-graphene-detail.jpg",
+    "detailBytes": 20842,
+    "product": true
+  },
+  {
+    "original": "src/assets/kovalent-prolong.png",
+    "originalBytes": 90373,
+    "originalSHA256": "685ad403db727bc44a883c1dd98f881a796ea608619db6e5acd3ab537223cd21",
+    "card": "assets/imagery/optimized/catalogue/kovalent-prolong-card.jpg",
+    "cardBytes": 7743,
+    "detail": "assets/imagery/optimized/catalogue/kovalent-prolong-detail.jpg",
+    "detailBytes": 21929,
+    "product": true
+  },
+  {
+    "original": "src/assets/kovalent-glass.png",
+    "originalBytes": 114799,
+    "originalSHA256": "a59994c51d61b17f3a07e96a913cb890e4da837db59bd16fff93bd813555fb4c",
+    "card": "assets/imagery/optimized/catalogue/kovalent-glass-card.jpg",
+    "cardBytes": 7776,
+    "detail": "assets/imagery/optimized/catalogue/kovalent-glass-detail.jpg",
+    "detailBytes": 22148,
+    "product": true
+  },
+  {
+    "original": "src/assets/kovalent-restore.png",
+    "originalBytes": 107575,
+    "originalSHA256": "3e52e87ba2e96a84a39c5501fa00d4f59959e3b00684feea819d38fce7123bd1",
+    "card": "assets/imagery/optimized/catalogue/kovalent-restore-card.jpg",
+    "cardBytes": 7509,
+    "detail": "assets/imagery/optimized/catalogue/kovalent-restore-detail.jpg",
+    "detailBytes": 21907,
+    "product": true
+  },
+  {
+    "original": "assets/imagery/category/paint-protection.jpg",
+    "originalBytes": 190894,
+    "originalSHA256": "1971c7c806490316a57bd4ff30344a2a3b27a29af8380b8c226b086f1c444e8d",
+    "card": "assets/imagery/optimized/paint-protection.jpg",
+    "cardBytes": 77102
+  },
+  {
+    "original": "assets/imagery/category/detailing.jpg",
+    "originalBytes": 191158,
+    "originalSHA256": "5f0dc00a692c491828a7f960c151b9fda3856744abe1d887e4f6ef04082afeb8",
+    "card": "assets/imagery/optimized/detailing.jpg",
+    "cardBytes": 78831
+  },
+  {
+    "original": "assets/imagery/category/wash-and-care.jpg",
+    "originalBytes": 226099,
+    "originalSHA256": "4e873e760ac51b1bfc7fbf42718f9dd2f4445b427908770e0621a965cdeb67e0",
+    "card": "assets/imagery/optimized/wash-and-care.jpg",
+    "cardBytes": 90225
+  },
+  {
+    "original": "assets/imagery/category/garage.jpg",
+    "originalBytes": 184712,
+    "originalSHA256": "ed3a7f56d71254983763bb59f65f32843cf934901fb4f1cdff802f61abaa4d8c",
+    "card": "assets/imagery/optimized/garage.jpg",
+    "cardBytes": 74614
+  },
+  {
+    "original": "assets/imagery/category/modifications.jpg",
+    "originalBytes": 183061,
+    "originalSHA256": "d479778b8bad052748dd035c632afc79b086b11721bede235a0fe94129ecb856",
+    "card": "assets/imagery/optimized/modifications.jpg",
+    "cardBytes": 74693
+  }
+]

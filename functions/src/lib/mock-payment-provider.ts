@@ -1,0 +1,190 @@
+// MockPaymentProvider — used in all emulator/test/development environments.
+// Never calls any external API. Returns deterministic, controllable results.
+// NOT for production use.
+import type {
+  PaymentProvider,
+  RefundLookupResult, RefundBinding,
+  CreatePaymentLinkParams,
+  PaymentLinkResult,
+  InitiateRefundParams,
+  RefundResult,
+  VerifyWebhookParams,
+  ProviderWebhookEvent,
+  CancelPaymentLinkResult,
+} from "./payment-provider.js";
+
+export class MockPaymentProvider implements PaymentProvider {
+  readonly name = "mock";
+
+  // Deterministic IDs for emulator test assertions
+  private mockPaymentLinkId(referenceId: string) {
+    return `mock_plink_${referenceId}`;
+  }
+  private mockRefundId(referenceId: string) {
+    return `mock_rfnd_${referenceId}`;
+  }
+
+  // Test control: link ids listed here cancel with the given outcome instead
+  // of the default "cancelled". cancelledLinkCalls records every attempt.
+  readonly cancelLinkOutcomes = new Map<string, CancelPaymentLinkResult["outcome"]>();
+  readonly cancelledLinkCalls: string[] = [];
+
+  async cancelPaymentLink(providerPaymentLinkId: string): Promise<CancelPaymentLinkResult> {
+    this.cancelledLinkCalls.push(providerPaymentLinkId);
+    return { outcome: this.cancelLinkOutcomes.get(providerPaymentLinkId) ?? "cancelled" };
+  }
+
+  async createPaymentLink(params: CreatePaymentLinkParams): Promise<PaymentLinkResult> {
+    this.createdLinks.set(this.mockPaymentLinkId(params.referenceId), { amount: params.amount, currency: params.currency, referenceId: params.referenceId });
+    return {
+      providerPaymentLinkId: this.mockPaymentLinkId(params.referenceId),
+      providerOrderId: `mock_order_${params.referenceId}`,
+      paymentUrl: `https://mock-razorpay.local/pay/${params.referenceId}?amount=${params.amount}`,
+    };
+  }
+
+  private readonly createdLinks = new Map<string, { amount: number; currency: string; referenceId: string }>();
+
+  async fetchPaymentLink(providerPaymentLinkId: string): Promise<(PaymentLinkResult & { status: string; amount: number; currency: string }) | null> {
+    const found = this.createdLinks.get(providerPaymentLinkId);
+    if (!found) return null;
+    return {
+      providerPaymentLinkId,
+      providerOrderId: `mock_order_${found.referenceId}`,
+      paymentUrl: `https://mock-razorpay.local/pay/${found.referenceId}?amount=${found.amount}`,
+      status: "created",
+      amount: found.amount,
+      currency: found.currency,
+    };
+  }
+
+  verifyWebhookSignature(_params: VerifyWebhookParams): boolean {
+    // Mock always accepts — never validate signatures in dev
+    return true;
+  }
+
+  parseWebhookEvent(rawBody: string): ProviderWebhookEvent {
+    const parsed: unknown = JSON.parse(rawBody);
+    const body = parsed as {
+      event?: string;
+      payload?: {
+        payment?: { entity?: { id?: string; amount?: number; currency?: string } };
+        refund?: { entity?: { id?: string; payment_id?: string; amount?: number; currency?: string; status?: string; receipt?: string | null } };
+        payment_link?: { entity?: { id?: string } };
+      };
+      id?: string;
+    };
+    const eventType = (body.event ?? "payment.captured") as ProviderWebhookEvent["eventType"];
+    const payment = body.payload?.payment?.entity;
+    const refund = body.payload?.refund?.entity;
+    const plink = body.payload?.payment_link?.entity;
+
+    return {
+      eventType,
+      providerEventId: body.id ?? `mock_event_${Date.now()}`,
+      providerPaymentId: payment?.id ?? refund?.payment_id ?? "mock_pay_id",
+      providerPaymentLinkId: plink?.id ?? null,
+      providerRefundId: refund?.id ?? null,
+      providerRefundAmount: refund?.amount ?? null,
+      providerRefundCurrency: refund?.currency ?? null,
+      providerRefundPaymentId: refund?.payment_id ?? null,
+      providerPaymentEntityId: payment?.id ?? null,
+      providerPaymentEntityCurrency: payment?.currency ?? null,
+      providerRefundStatus: refund?.status ?? null,
+      providerRefundReceipt: refund?.receipt ?? null,
+      amount: payment?.amount ?? refund?.amount ?? 0,
+      currency: payment?.currency ?? "INR",
+    };
+  }
+
+  // Test hook: when set, initiateRefund "succeeds" server-side but the
+  // response is lost (the ambiguous-submit case). The lookup still finds it.
+  loseNextRefundResponse = false;
+  private submitted = new Map<string, RefundResult & InitiateRefundParams>();
+
+  // Observable submission count: a path that must NOT submit (event-driven
+  // drain, held request) asserts this never moves.
+  public initiateRefundCallCount = 0;
+
+  // Test hook: awaited AFTER the provider-side refund is recorded but BEFORE
+  // the response is delivered - a refund that already exists at the provider
+  // while the caller is still in flight (webhook-vs-handler race barrier).
+  beforeRefundResponse: (() => Promise<void>) | null = null;
+
+  // Test helper: back to a pristine provider between tests.
+  reset(): void {
+    this.submitted.clear();
+    this.initiateRefundCallCount = 0;
+    this.loseNextRefundResponse = false;
+    this.failNextRefund = false;
+    this.nextRefundStatus = null;
+    this.authoritativeNegatives = false;
+    this.beforeRefundResponse = null;
+  }
+
+  // Test hook: like loseNextRefundResponse, but the provider-side refund
+  // lands in "failed" status (Razorpay refund.failed: "not able to process a
+  // refund" - a notification; docs settle no finality). The bound lookup then
+  // reports failed_confirmed.
+  failNextRefund = false;
+
+  // Test hook: flip a stored refund's status (e.g. a failed notification that
+  // later turns out to have processed - exactly why holds must not release).
+  setStoredRefundStatus(referenceId: string, status: string): void {
+    const hit = this.submitted.get(referenceId);
+    if (hit) this.submitted.set(referenceId, { ...hit, status });
+  }
+
+  // Test hook: lifecycle status the NEXT successful initiateRefund lands in
+  // (e.g. "pending" -> later flipped with setStoredRefundStatus). Default
+  // "processed", matching an instant refund.
+  nextRefundStatus: string | null = null;
+
+  async initiateRefund(params: InitiateRefundParams): Promise<RefundResult> {
+    this.initiateRefundCallCount += 1;
+    const status = this.nextRefundStatus ?? "processed";
+    this.nextRefundStatus = null;
+    const result = { providerRefundId: this.mockRefundId(params.referenceId), status, ...params };
+    if (this.failNextRefund) {
+      this.failNextRefund = false;
+      this.submitted.set(params.referenceId, { ...result, status: "failed" });
+      throw new Error("network: response lost; provider-side refund reported failed");
+    }
+    this.submitted.set(params.referenceId, result);
+    if (this.beforeRefundResponse) {
+      const hook = this.beforeRefundResponse;
+      this.beforeRefundResponse = null;
+      await hook();
+    }
+    if (this.loseNextRefundResponse) {
+      this.loseNextRefundResponse = false;
+      throw new Error("network: response lost after provider accepted");
+    }
+    return result;
+  }
+
+  // When false (default), a miss reports "unknown" (inconclusive) — matching
+  // providers with no authoritative negative lookup. Set true in tests to
+  // model a provider whose reconciliation contract confirms absence.
+  authoritativeNegatives = false;
+
+  async findRefundByReference(referenceId: string, binding: RefundBinding): Promise<RefundLookupResult> {
+    const hit = this.submitted.get(referenceId);
+    // Bound like the real adapter: identity only when payment id, amount and
+    // currency all agree; a partial match is held as unknown, never attached.
+    // Status-aware like the real adapter: only a processed refund founds; a
+    // one reported failed is failed_confirmed; anything else holds.
+    if (hit && hit.providerPaymentId === binding.providerPaymentId
+        && hit.amount === binding.amountPaise
+        && ((hit as { currency?: string }).currency ?? "INR") === binding.currency) {
+      const status = hit.status ?? "processed";
+      if (status === "processed") return { outcome: "found", providerRefundId: hit.providerRefundId };
+      if (status === "failed") return { outcome: "failed_confirmed", providerRefundId: hit.providerRefundId };
+      return { outcome: "unknown" };
+    }
+    if (hit) return { outcome: "unknown" };
+    return this.authoritativeNegatives ? { outcome: "absent_confirmed" } : { outcome: "unknown" };
+  }
+}
+
+export const mockProvider = new MockPaymentProvider();

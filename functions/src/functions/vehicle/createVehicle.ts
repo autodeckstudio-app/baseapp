@@ -1,0 +1,101 @@
+import { matchingVehicles } from "../../domain/vehicleIdentity.js";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { getFirestore } from "firebase-admin/firestore";
+import type { Vehicle, Customer } from "@autodeck/core";
+import { COLLECTIONS } from "@autodeck/database";
+import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
+import { validate } from "../../middleware/validate.js";
+import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { createVehicleSchema } from "../../schemas/vehicle.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import { requireCustomerDocId, resolveCustomerDocId } from "../../lib/customer-identity.js";
+
+export const createVehicle = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
+  const user = extractUser(request);
+  assertRole(user, "customer", "studio", "admin", "superadmin");
+  assertTenant(user, user.claims.tenantId);
+
+  const data = validate(createVehicleSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "vehicle.create");
+
+  const db = getFirestore();
+  const ref = db.collection(COLLECTIONS.vehicles()).doc();
+
+  // A customer always owns their own vehicle. Studio/admin may register a
+  // vehicle on behalf of an existing customer during walk-in intake — the
+  // target customer must already exist in this tenant (doc20: full
+  // customer-creation-from-studio is explicitly not V1 scope; only an
+  // existing account's vehicle can be added this way).
+  // Records key on the customer DOCUMENT id when one resolves: a claimed walk-in's doc
+  // id differs from the auth uid. Base behavior stamped the uid directly with no profile
+  // lookup; a verified-absent profile (customer or staff) keeps exactly that uid keying.
+  let ownerId = (await resolveCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid)) ?? user.uid;
+  // A self reference is the resolved doc id OR the raw auth uid (older clients
+  // still send their uid); anything else is an on-behalf intake by staff.
+  if (data.ownerId && data.ownerId !== ownerId && data.ownerId !== user.uid) {
+    if (user.claims.role === "customer") {
+      throw new HttpsError("permission-denied", "Cannot create a vehicle for another customer.");
+    }
+    const ownerSnap = await db.collection(COLLECTIONS.customers()).doc(data.ownerId).get();
+    if (!ownerSnap.exists) throw new HttpsError("not-found", "Customer not found.");
+    const owner = ownerSnap.data() as Customer;
+    assertTenant(user, owner.tenantId);
+    ownerId = data.ownerId;
+  }
+
+  const now = new Date().toISOString();
+  const vehicle: Vehicle = {
+    id: ref.id,
+    tenantId: user.claims.tenantId, // Server-set — not client-settable
+    ownerId, // Server-resolved — never trusted verbatim from the client
+    registrationNumber: data.registrationNumber,
+    make: data.make,
+    model: data.model,
+    year: data.year,
+    color: data.color,
+    category: data.category ?? null,
+    photoUrl: null,
+    odometer: null,
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null,
+  };
+
+  await db.runTransaction(async (tx) => {
+    // One live car per plate per owner, read inside the transaction so two
+    // simultaneous requests cannot both pass. An archived car with the same plate
+    // is never shown; the app asks the customer whether it is the same car.
+    const same = await tx.get(
+      db
+        .collection(COLLECTIONS.vehicles())
+        .where("tenantId", "==", vehicle.tenantId)
+        .where("ownerId", "==", ownerId),
+    );
+    const rows = matchingVehicles(same.docs.map((d) => ({ ...d.data(), id: d.id }) as Vehicle), vehicle.registrationNumber);
+    const active = rows.find((v) => !v.deletedAt);
+    if (active) throw new HttpsError("already-exists", "This car is already added.", { field: "registrationNumber", reason: "duplicate", vehicleId: active.id });
+    const archived = rows.find((v) => !!v.deletedAt);
+    if (archived) {
+      throw new HttpsError("failed-precondition", "archived-match", {
+        vehicleId: archived.id,
+        registrationNumber: archived.registrationNumber,
+        make: archived.make,
+        model: archived.model,
+        year: archived.year,
+        color: archived.color,
+      });
+    }
+    tx.set(ref, vehicle);
+    writeAuditLog(tx, {
+      action: "vehicle.created",
+      entityType: "Vehicle",
+      entityId: ref.id,
+      user,
+      studioId: null,
+      after: { id: ref.id, tenantId: vehicle.tenantId, ownerId: vehicle.ownerId },
+    });
+  });
+
+  return { vehicle };
+});

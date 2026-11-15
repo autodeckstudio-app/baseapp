@@ -1,0 +1,231 @@
+import{useCataloguePublication}from'../../../hooks/useCataloguePublication';
+import {useAuth} from '../../../hooks/useAuth';
+import {useForegroundRefresh} from '../../../hooks/useForegroundRefresh';
+import {homeCatalogueBack,catalogueReturnParams} from "../../../lib/home-service-navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { TextInput, View, useWindowDimensions } from "react-native";
+import { useLocalSearchParams, usePathname, useRouter } from "expo-router";
+import { Icon, useExperienceTheme } from "@autodeck/ui/native";
+import { SERVICE_HOMES, GST_ENABLED, type Service } from "@autodeck/core";
+import { FilterPills } from "../../../ui/FilterPills";
+import { Button, Notice, Screen, Skeleton, T } from "../../../ui/kit";
+import { JourneySheet } from "../../../ui/JourneySheet";
+import { ServicesExplorer } from "../../../ui/ServicesExplorer";
+import {
+  getServiceCatalogue,
+  peekCatalogue,
+} from "../../../lib/catalogue-service";
+import {
+  currentServices,
+  parentPath,
+  pathParams,
+  routePath,
+  type ServicesPath,
+} from "../../../lib/services-navigation";
+import {
+  usePricingVehicle,
+  useVehiclePrices,
+  servicePriceText,
+} from "../../../lib/vehicle-size";
+import { careEntryPrice } from "../../../lib/service-journey";
+import { SERVICE_QUOTE_JOURNEY_READY } from "../../../lib/service-quote";
+import { useSegmentSwipe } from "../../../lib/segment-swipe";
+import { glassInner } from "../../../lib/glass";
+
+export default function CatalogueScreen() {
+  const router = useRouter(),
+    params = useLocalSearchParams<{home?:string;family?:string;brand?:string;work?:string;cat?:string;need?:string;p?:string;mock?:string;theme?:string;returnTo?:string;homeEntry?:string}>();
+  const { colors } = useExperienceTheme();
+  const auth=useAuth();
+  const ownerScope=auth.status==='ready'?`${auth.user.uid}:${auth.claims.tenantId}`:__DEV__&&params.mock==='1'?'preview':null;
+  const ownerRef=useRef(ownerScope);ownerRef.current=ownerScope;
+  const loadedScope=useRef(ownerScope);
+  const [services, setServices] = useState<Service[] | null>(() =>
+      peekCatalogue(),
+    ),
+    [error, setError] = useState(false),
+    [q, setQ] = useState("");
+  const { height: winH } = useWindowDimensions();
+  const loadGeneration=useRef(0);
+  const load = useCallback(async () => {
+    const scope=ownerRef.current;if(!scope)return;
+    const generation=++loadGeneration.current;
+    setError(false);
+    try {
+      const rows=await getServiceCatalogue(undefined,{fresh:true});
+      if(generation===loadGeneration.current&&scope===ownerRef.current){loadedScope.current=scope;setServices(rows);}
+    } catch {
+      if(generation===loadGeneration.current&&scope===ownerRef.current)setError(true);
+    }
+  }, []);
+  useCataloguePublication(()=>{void load()});
+  useForegroundRefresh(()=>{void load()},ownerScope);
+  useEffect(()=>()=>{loadGeneration.current++},[]);
+  const all = useMemo(() => currentServices(loadedScope.current===ownerScope?services ?? []:[]), [services,ownerScope]);
+  const path = routePath(params, all);
+  const pricingVehicle = usePricingVehicle(),
+    prices = useVehiclePrices(all, pricingVehicle.category);
+  const selfPath = usePathname();
+  const navigate = (next: ServicesPath, replace = false) => {
+    setQ("");
+    // Stay on the current pathname so dev previews (e.g. /preview-catalogue) keep working,
+    // and keep dev-only params (mock/theme) across in-screen navigation.
+    const href = {
+      pathname: selfPath as "/(tabs)/catalogue",
+      params: { ...(params.returnTo==="home"?{returnTo:"home",homeEntry:params.homeEntry??""}:{}), ...pathParams(next), ...(params.mock ? { mock: params.mock } : {}), ...(params.theme ? { theme: params.theme } : {}) },
+    };
+    if (replace) router.replace(href);
+    else router.push(href);
+  };
+  const filterKeys = ["all", ...SERVICE_HOMES.map((h) => h.key)];
+  const pathRef = useRef(path);
+  pathRef.current = path;
+  const searching = !!q.trim();
+  const fromRoute = !!path.home;
+  const swipe = useSegmentSwipe(
+    filterKeys,
+    () => pathRef.current.home ?? "all",
+    (key) =>
+      navigate(
+        key === "all" ? {} : { home: key as ServicesPath["home"] },
+        true,
+      ),
+  );
+  const top = (
+    <View
+      style={{ gap: 14, paddingBottom: 16 }}
+      testID="services-filter-header"
+    >
+      <View
+        style={{
+          height: 48,
+          borderRadius: 24,
+          ...glassInner,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 10,
+          paddingHorizontal: 16,
+        }}
+      >
+        <Icon name="search" color={colors.textTertiary} size={20} />
+        <TextInput
+          accessibilityLabel="Search services"
+          value={q}
+          onChangeText={setQ}
+          placeholder="Search all services"
+          placeholderTextColor={colors.textTertiary}
+          style={
+            {
+              flex: 1,
+              minWidth: 0,
+              color: colors.textPrimary,
+              fontSize: 15,
+              outlineStyle: "none",
+            } as never
+          }
+        />
+        {q ? (
+          <Button
+            kind="quiet"
+            label="Clear"
+            onPress={() => setQ("")}
+            style={{ marginTop: 0, paddingHorizontal: 8, minHeight: 32 }}
+          />
+        ) : null}
+      </View>
+      <FilterPills
+        items={[
+          { key: "all", label: "All" },
+          ...SERVICE_HOMES.map((h) => ({ key: h.key, label: h.label })),
+        ]}
+        value={path.home ?? "all"}
+        onChange={(key) =>
+          navigate(
+            key === "all" ? {} : { home: key as ServicesPath["home"] },
+            true,
+          )
+        }
+      />
+
+    </View>
+  );
+  return (
+    <Screen
+      scrollIdentity={JSON.stringify(path)}
+      appBar="Services"
+      top={top}
+      onBack={params.returnTo==="home" ? () => {const parent=homeCatalogueBack(path,params.homeEntry);if(parent)navigate(parent,true);else router.navigate("/(tabs)");} : fromRoute ? () => router.canGoBack() ? router.back() : navigate(parentPath(path), true) : undefined}
+    >
+      <View
+        key={JSON.stringify(path)}
+        testID="services-swipe-area"
+        {...(!path.family && !searching ? swipe.handlers : {})}
+        style={[
+          { gap: 20, minHeight: Math.max(winH - 300, 480) },
+          !path.family && !searching ? swipe.style : null,
+        ]}
+      >
+        {error ? (
+          <Notice
+            title="Can't refresh services"
+            body="Check your connection and try again. Any saved menu below may be out of date."
+            action={
+              <Button
+                kind="quiet"
+                label="Try again"
+                onPress={() => void load()}
+              />
+            }
+          />
+        ) : null}
+        {!services && !error ? (
+          <>
+            <Skeleton height={64} />
+            <Skeleton height={180} />
+          </>
+        ) : null}
+        {services ? (
+          <ServicesExplorer
+            services={services}
+            path={path}
+            query={q}
+            onPath={navigate}
+            onOpen={(s) =>
+              // Dev-only fixture chain: inside a preview route the real leaf is
+              // auth-gated, so open the equivalent fixture detail instead.
+              __DEV__ && selfPath.startsWith("/preview")
+                ? router.push({ pathname: "/preview-service" as never, params: { id: s.id } })
+                : router.push({pathname:`/(tabs)/catalogue/${s.id}` as never,params:params.returnTo==="home"?catalogueReturnParams(path,params.homeEntry):{}})
+            }
+            onQuote={(s) =>
+              SERVICE_QUOTE_JOURNEY_READY
+                ? router.push({
+                    pathname: "/(tabs)/quote-request",
+                    params: { serviceId: s.id },
+                  })
+                : router.push({pathname:`/(tabs)/catalogue/${s.id}` as never,params:params.returnTo==="home"?catalogueReturnParams(path,params.homeEntry):{}})
+            }
+            onReference={(r) =>
+              router.push({
+                pathname: "/(tabs)/catalogue/enquiry",
+                params: { id: r.key, ...(params.returnTo==="home"?catalogueReturnParams(path,params.homeEntry):{}) },
+              })
+            }
+            onHelp={(service) =>
+              router.push({ pathname: "/(tabs)/help", params: { service } })
+            }
+            priceLabel={(s) =>
+              careEntryPrice(
+                servicePriceText(s, pricingVehicle.category, prices),
+                !!pricingVehicle.category,
+              )
+            }
+          />
+        ) : null}
+        {services && !fromRoute && !searching ? (
+          <JourneySheet kind="services" />
+        ) : null}
+      </View>
+    </Screen>
+  );
+}

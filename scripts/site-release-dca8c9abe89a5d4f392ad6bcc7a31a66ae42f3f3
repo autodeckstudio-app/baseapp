@@ -1,0 +1,3 @@
+# Audited one-shot site release marker.
+# Parent dca8c9abe89a5d4f392ad6bcc7a31a66ae42f3f3 carries the approved combined batch site changes (seam-fixed hero film, checked services catalogue JSON).
+# Existence of this file makes scripts/vercel-ignore.sh build the site project exactly once for this parent.

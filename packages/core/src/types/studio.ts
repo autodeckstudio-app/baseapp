@@ -1,0 +1,61 @@
+import type { InvoiceIssuer } from "../invoice-issuer.js";
+import type { BayType } from "./service.js";
+
+export interface Bay {
+  id: string;
+  tenantId: string;
+  studioId: string;
+  name: string; // e.g. "Bay 1", "Protection Bay A"
+  bayType: BayType;
+  active: boolean;
+}
+
+export interface OperatingHours {
+  dayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Sunday
+  open: string; // "HH:mm" in studio timezone
+  close: string;
+  closed: boolean;
+}
+
+export interface StudioConfig {
+  invoiceIssuer?: InvoiceIssuer;
+  id: string;
+  tenantId: string;
+  studioId: string;
+  name: string; // e.g. "AutoDeck Ahmedabad" — display name, admin-configurable
+  timezone: string; // IANA timezone — "Asia/Kolkata" (India default)
+  currency: string; // ISO 4217 — "INR" (India default)
+  taxRatePercent: number; // default 18 (GST India)
+  taxDescription: string; // "GST 18%"
+  operatingHours: OperatingHours[];
+  holidays: string[]; // ISO date strings
+  vehiclePlateRegex: string; // India format default; tenant-configurable
+  slotIntervalMinutes: number; // booking grid granularity
+  maxAdvanceBookingDays: number;
+  cancellationWindowHours: number;
+  bays: Bay[];
+  updatedAt: string; // ISO timestamp — last admin mutation
+}
+
+export interface Employee {
+  documentReview?:{revision:string;status:"submitted"|"reviewed"|"needs_resubmission";submittedAt:string;reviewedAt:string|null};
+  id: string;
+  tenantId: string;
+  studioId: string | null; // null for tenant admins (not studio-scoped)
+  // Firebase uid of the staff member's Google account. Empty until the
+  // person first signs in with the roster email and the role resolver links it.
+  authUid: string;
+  // Google account email the roster matches on at sign-in (lower-cased).
+  // Optional only for records created before Google sign-in.
+  email?: string;
+  name: string;
+  phone: string;
+  // "accountant" is read-only Money access. No callable, API route or UI creates or assigns it (their role enums reject it).
+  // Any roster entry with this role is fixture or owner-approved data; edits and deactivation are owner or superadmin only.
+  // Access still requires an ACTIVE roster entry matching a verified email at sign-in.
+  role: "studio" | "admin" | "accountant";
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  terminatedAt: string | null;
+}

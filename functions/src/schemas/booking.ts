@@ -1,0 +1,95 @@
+import { z } from "zod";
+
+const vehicleCategoryEnum = z.enum([
+  "hatchback",
+  "sedan",
+  "suv",
+  "luxury",
+  "commercial",
+  "van",
+]);
+
+const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD");
+const timeStr = z.string().regex(/^\d{2}:\d{2}$/, "Must be HH:mm");
+
+export const getAvailabilitySchema = z.object({
+  quoteJourneyId: z.string().min(1).max(120).regex(/^[A-Za-z0-9_-]+$/).optional(),
+  quoteRevision: z.number().int().positive().optional(),
+  quoteTermsVersion: z.string().min(1).max(120).optional(),
+  serviceId: z.string().min(1),
+  studioId: z.string().min(1),
+  startDate: dateStr,
+  lookAheadDays: z.number().int().min(1).max(30).optional(),
+  /** More services in the same visit; the slot length is the sum. */
+  extraServiceIds: z.array(z.string().min(1)).max(4).optional(),
+}).strict();
+
+export const combinedBookingReviewSchema=z.object({
+  version:z.union([z.literal(2),z.literal(3)]),paymentChoice:z.enum(['advance20','full']),expectedTotalPaise:z.number().int().safe().nonnegative(),expectedPayNowPaise:z.number().int().safe().nonnegative(),
+  transport:z.object({quoteId:z.string().min(1).max(80),kind:z.enum(['pickup','drop','both']),lat:z.number().min(-90).max(90),lng:z.number().min(-180).max(180),address:z.string().trim().min(8).max(300),requestedPickupTime:z.string().trim().max(100).optional()}).strict().optional(),
+}).strict();
+export const createBookingSchema = z.object({
+  combinedReview:combinedBookingReviewSchema.optional(),
+  quoteJourneyId: z.string().min(1).max(120).regex(/^[A-Za-z0-9_-]+$/).optional(),
+  quoteRevision: z.number().int().positive().optional(),
+  quoteTermsVersion: z.string().min(1).max(120).optional(),
+  serviceId: z.string().min(1),
+  /** More services in the same visit (up to 4 on top of serviceId). */
+  extraServiceIds: z.array(z.string().min(1)).max(4).optional(),
+  vehicleId: z.string().min(1),
+  vehicleCategory: vehicleCategoryEnum,
+  studioId: z.string().min(1),
+  scheduledDate: dateStr,
+  scheduledTime: timeStr,
+  idempotencyKey: z.string().min(1).max(128),
+  notes: z.string().max(500).optional(),
+  membershipId: z.string().min(1).optional(),
+  /** A gift code that was already claimed by this account; books the gifted wash. */
+  giftCode: z.string().min(1).max(32).optional(),
+  /** How the customer will pay. online holds the slot for 15 minutes until paid; studio confirms at once. Omitted = studio (older apps). */
+  payMode: z.enum(["online", "studio"]).optional(),
+  /** Capability marker: old clients must refresh before a priced studio advance. */
+  advanceFlowVersion: z.literal(1).optional(),
+}).strict();
+
+export const cancelBookingSchema = z.object({
+  customerContext: z.boolean().optional(),
+  bookingId: z.string().min(1),
+  reason: z.string().min(1).max(500),
+}).strict();
+
+export const requestAdvancePaymentSchema = z
+  .object({
+    bookingId: z.string().min(1),
+    expectedAdvancePaise: z.number().int().positive().safe().optional(),
+  })
+  .strict();
+
+export const rescheduleBookingSchema = z.object({
+  customerContext: z.boolean().optional(),
+  bookingId: z.string().min(1),
+  newDate: dateStr,
+  newTime: timeStr,
+  idempotencyKey: z.string().min(1).max(128),
+}).strict();
+
+export const requestBookingRescheduleSchema = z.object({
+  customerContext: z.boolean().optional(),
+  bookingId: z.string().min(1),
+  newDate: dateStr,
+  newTime: timeStr,
+  note: z.string().max(500).optional(),
+  idempotencyKey: z.string().min(1).max(128),
+}).strict();
+
+export const decideBookingRescheduleRequestSchema = z.object({
+  bookingId: z.string().min(1),
+  approve: z.boolean(),
+  note: z.string().max(500).optional(),
+  idempotencyKey: z.string().min(1).max(128),
+}).strict();
+
+export type GetAvailabilityInput = z.infer<typeof getAvailabilitySchema>;
+export type CreateBookingInput = z.infer<typeof createBookingSchema>;
+export type CancelBookingInput = z.infer<typeof cancelBookingSchema>;
+export type RescheduleBookingInput = z.infer<typeof rescheduleBookingSchema>;

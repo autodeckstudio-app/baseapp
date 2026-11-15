@@ -1,0 +1,21 @@
+// Guard: the production web export must not contain dev preview screens or their sample data.
+// Run after `expo export --platform web`:  node scripts/prod-bundle-guard.mjs   (the Vercel build command runs it)
+import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
+import { join } from "node:path";
+const dist = new URL("../dist/", import.meta.url).pathname;
+if (!existsSync(dist)) { console.error("FAIL dist/ missing: run expo export first"); process.exit(1); }
+// Strings that exist only in dev sample data or dev preview screens.
+const MARKERS = ["Dev-only mock of the Cars screen", "Dev preview only. Sample data", "DEV_SAMPLE_BOOKING", "Grand i10", "Seltos", "MH40CQ3182", "BMW M340i", "MH 40 AB 1234", "MH 31 XY 5678", "FIXTURE product (not for sale)", "fixture-tee", "dev-customer", "POL-882134", "PUC-551200", "POL-SAMPLE-2", "PUC-SAMPLE-3", "SAMPLE 01", "RC-SAMPLE-1", "DEV_SAMPLE_CATALOGUE"];
+const walk = (d) => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
+let bad = 0;
+for (const f of walk(dist).filter((f) => /\.(js|html|map)$/.test(f) && !/\.map$/.test(f) || /\.js$/.test(f))) {
+  const t = readFileSync(f, "utf8");
+  for (const m of MARKERS) if (t.includes(m)) { console.error(`FAIL ${f.replace(dist, "")} contains dev sample marker "${m}"`); bad++; }
+}
+// Preview routes must not be in the exported route list.
+const routes = walk(dist).filter((f) => /preview[-.a-z]*\.html$/.test(f));
+for (const r of routes) { console.error(`FAIL preview route exported: ${r.replace(dist, "")}`); bad++; }
+// /assets is immutable: Expo must give every asset a content hash (density suffixes are valid).
+for(const f of walk(join(dist,'assets'))){if(!/\.[0-9a-f]{32}(?:@[0-9]+x)?\.[^/]+$/.test(f)){console.error(`FAIL unversioned immutable asset ${f.replace(dist,"")}`);bad++;}}
+if (bad) { console.error(`${bad} problem(s)`); process.exit(1); }
+console.log("prod-bundle-guard ok");

@@ -1,0 +1,6 @@
+import{it,expect,vi}from'vitest';const h=vi.hoisted(()=>({response:{}as any,calls:[]as any[]}));
+vi.mock('./firebase',()=>({functions:{}}));vi.mock('firebase/functions',()=>({httpsCallable:(_f:any,name:string,options:any)=>async(data:any)=>{h.calls.push({name,options,data});return{data:h.response}}}));
+import{getJobWorkCoverage}from'./work-coverage-service';
+it('self request contains only exact job reference and bounded timeout',async()=>{h.calls=[];h.response={jobId:'j',status:'not_recorded',revision:null,items:[]};expect(await getJobWorkCoverage('j','self')).toEqual({...h.response,workLock:"unknown"});expect(h.calls).toEqual([{name:'getMyJobWorkCoverage',options:{timeout:15000},data:{jobId:'j'}}])});
+it('staff request never selects audience from response payload',async()=>{h.calls=[];h.response={jobId:'j',status:'recorded',revision:1,items:[]};await getJobWorkCoverage('j','staff');expect(h.calls[0].name).toBe('getStaffJobWorkCoverage')});
+it('wrong job, unknown outcome and invalid rows are never displayed as a successful check',async()=>{for(const response of[{jobId:'other',status:'recorded',items:[]},{jobId:'j',status:'invented',items:[]},{jobId:'j',status:'recorded',items:null},{jobId:'j',status:'recorded',items:new Array(101).fill({})}]){h.response=response;await expect(getJobWorkCoverage('j','self')).rejects.toThrow('could not be checked')}});

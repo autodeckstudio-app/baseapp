@@ -1,0 +1,1 @@
+import{mergeConfig}from'vitest/config';import path from'node:path';import base from'./vitest.emulator.config';export default mergeConfig(base,{test:{include:['src/test/emulator/work-coverage-client.work-contract.ts']},resolve:{alias:[{find:/^firebase\/functions$/,replacement:path.resolve(__dirname,'src/test/work-read-client-transport.ts')}]}});

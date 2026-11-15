@@ -1,0 +1,92 @@
+import { getApps, initializeApp } from "firebase/app";
+import { initializeAuth, getReactNativePersistence, connectAuthEmulator } from "firebase/auth";
+import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { initializeFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
+import { getStorage, connectStorageEmulator } from "firebase/storage";
+import { emulatorConnectionsVerified, emulatorTargets, resolveUseEmulator, type EmulatorConnectionProof } from "./emulator-flag";
+
+// metro.config.js sets resolverMainFields: ["react-native", "browser", "main"] and enables
+// the "react-native" package-exports condition so Metro picks @firebase/auth's RN build
+// (dist/rn/index.js), which exports getReactNativePersistence. AsyncStorage persists the
+// auth token to device storage so the session survives app restarts.
+
+// In a real production (release) build, silently falling back to the dev
+// project ID would mean real bookings/payments land in "autodeck-dev"
+// instead of the actual production Firebase project, with no error or
+// warning anywhere - a genuine deploy-safety hole (Phase 6 hostile audit
+// finding). __DEV__ is false in a production RN/Expo bundle regardless of
+// how the build was invoked, so this check can't be bypassed by simply
+// forgetting to set NODE_ENV.
+// Also enforced in development: a missing project id used to fall back to
+// "autodeck-dev", so one app could read and write a different database from the
+// others and jobs would look unsynced between apps.
+if (!process.env["EXPO_PUBLIC_FIREBASE_PROJECT_ID"]) {
+  throw new Error(
+    "EXPO_PUBLIC_FIREBASE_PROJECT_ID is not set in a production build - refusing to silently fall back to the dev Firebase project.",
+  );
+}
+
+const firebaseConfig = {
+  apiKey: process.env["EXPO_PUBLIC_FIREBASE_API_KEY"] ?? "demo-key",
+  authDomain:
+    process.env["EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN"] ?? "autodeck-dev.firebaseapp.com",
+  projectId: process.env["EXPO_PUBLIC_FIREBASE_PROJECT_ID"] ?? "autodeck-dev",
+  storageBucket:
+    process.env["EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET"] ?? "autodeck-dev.firebasestorage.app",
+  messagingSenderId:
+    process.env["EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID"] ?? "000000000000",
+  appId: process.env["EXPO_PUBLIC_FIREBASE_APP_ID"] ?? "1:000000000000:web:demo",
+};
+
+const app = getApps()[0] ?? initializeApp(firebaseConfig);
+
+export const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage),
+});
+
+// Web (Safari/iOS especially): the default WebChannel streaming transport can
+// stall or be cut by proxies, which surfaces as every live listener erroring.
+// Long polling is slower to start but reliable; native keeps the default.
+export const db = initializeFirestore(app, Platform.OS === "web" ? { experimentalForceLongPolling: true } : {});
+export const functions = getFunctions(app, "asia-south1");
+export const storage = getStorage(app);
+
+// NOTE: direct process.env["..."] reads only - Expo's web export inlines
+// EXPO_PUBLIC_* variables per access site and cannot see through a
+// passed-around process.env object.
+export const useEmulator = resolveUseEmulator({
+  USE_FIREBASE_EMULATOR: process.env["USE_FIREBASE_EMULATOR"],
+  EXPO_PUBLIC_USE_FIREBASE_EMULATOR: process.env["EXPO_PUBLIC_USE_FIREBASE_EMULATOR"],
+});
+
+const emulatorEnv = {
+  FIREBASE_EMULATOR_HOST: process.env["FIREBASE_EMULATOR_HOST"],
+  EXPO_PUBLIC_FIREBASE_EMULATOR_HOST: process.env["EXPO_PUBLIC_FIREBASE_EMULATOR_HOST"],
+  EXPO_PUBLIC_FIRESTORE_EMULATOR_PORT: process.env["EXPO_PUBLIC_FIRESTORE_EMULATOR_PORT"],
+  EXPO_PUBLIC_FUNCTIONS_EMULATOR_PORT: process.env["EXPO_PUBLIC_FUNCTIONS_EMULATOR_PORT"],
+  EXPO_PUBLIC_AUTH_EMULATOR_PORT: process.env["EXPO_PUBLIC_AUTH_EMULATOR_PORT"],
+  EXPO_PUBLIC_STORAGE_EMULATOR_PORT: process.env["EXPO_PUBLIC_STORAGE_EMULATOR_PORT"],
+};
+
+if (useEmulator) {
+  const targets = emulatorTargets(emulatorEnv);
+  // Reconnect independently: an already-connected client must not prevent
+  // a later client from reaching its own emulator. Verification below stays closed.
+  try { connectFirestoreEmulator(db, targets.host, targets.firestorePort); } catch {}
+  try { connectFunctionsEmulator(functions, targets.host, targets.functionsPort); } catch {}
+  try { connectAuthEmulator(auth, targets.authUrl, { disableWarnings: true }); } catch {}
+  try { connectStorageEmulator(storage, targets.host, targets.storagePort); } catch {}
+}
+
+// Fail-closed: true only when the flag is on AND every client provably
+// points at the local emulators. A missed or partial connection leaves
+// this false, so dev-only affordances never run against a real backend.
+const emulatorProof: EmulatorConnectionProof = {
+  storageHost: (storage as unknown as {_host?:string})._host??null,
+  firestoreHost: (db as unknown as { _settings?: { host?: string } })._settings?.host ?? null,
+  functionsOrigin: (functions as unknown as { emulatorOrigin?: string | null }).emulatorOrigin ?? null,
+  authEmulatorUrl: (auth as unknown as { config?: { emulator?: { url?: string } } }).config?.emulator?.url ?? null,
+};
+export const emulatorBackend = useEmulator && emulatorConnectionsVerified(emulatorProof, emulatorEnv);

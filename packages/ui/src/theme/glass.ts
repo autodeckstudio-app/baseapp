@@ -1,0 +1,153 @@
+// Glass morphism: the one raised material (spec §3.5, legacy "liquid glass").
+//
+// A pane is a lit top edge, a blurred translucent fill and a shadow beneath.
+// Rules the primitives enforce:
+//   - Glass never sits on glass. One translucent layer over the lit ground.
+//   - The fill stays readable without a blur: `fallbackFill` is what shows
+//     when backdrop-filter is unsupported, reduced transparency is on, or a
+//     low-end Android device skips the blur.
+//   - Tone (a state's hue) may colour the edge only, and only when the state
+//     is the subject of the pane.
+import type { ThemeName } from "./colors.js";
+
+export interface GlassRecipe {
+  /** Gradient fill over the blur (web `background`). */
+  fill: string;
+  /** Stronger fill for the hero/selected pane. */
+  fillLit: string;
+  /** Amber-lit fill for the one working/active pane. */
+  fillWarm: string;
+  /** Champagne-lit fill for premium (membership/protection) panes. */
+  fillCool: string;
+  /** Solid-enough fill when there is no blur. */
+  fallbackFill: string;
+  /** Flat translucent fill for chrome (nav bars, toasts, palettes). */
+  chromeFill: string;
+  /** Hairline edge. */
+  edge: string;
+  /** The lit top edge, as an inset highlight. */
+  sheen: string;
+  /** Backdrop blur radius in px, and saturation multiplier. */
+  blur: number;
+  saturate: number;
+  /** Chrome (nav) blur, a touch stronger. */
+  chromeBlur: number;
+  /** Native: BlurView intensity (0-100) and tint. */
+  nativeIntensity: number;
+  nativeTint: "dark" | "light";
+}
+
+export const glass: Record<ThemeName, GlassRecipe> = {
+  dark: {
+    fill: "linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.022))",
+    fillLit: "linear-gradient(160deg, rgba(255,255,255,0.085), rgba(255,255,255,0.030))",
+    fillWarm: "linear-gradient(160deg, rgba(224,164,92,0.14), rgba(255,255,255,0.025))",
+    fillCool: "linear-gradient(160deg, rgba(232,217,190,0.12), rgba(255,255,255,0.022))",
+    fallbackFill: "rgba(21,22,26,0.92)",
+    chromeFill: "rgba(21,22,26,0.72)",
+    edge: "rgba(255,255,255,0.09)",
+    sheen: "rgba(255,255,255,0.13)",
+    blur: 24,
+    saturate: 1.6,
+    chromeBlur: 28,
+    nativeIntensity: 40,
+    nativeTint: "dark",
+  },
+  light: {
+    fill: "linear-gradient(160deg, #FFFFFF, rgba(255,255,255,0.86))",
+    fillLit: "linear-gradient(160deg, #FFFFFF, #FFFFFF)",
+    fillWarm: "linear-gradient(160deg, rgba(242,122,26,0.07), rgba(255,255,255,0.92))",
+    fillCool: "linear-gradient(160deg, rgba(120,132,220,0.14), rgba(255,255,255,0.92))",
+    fallbackFill: "rgba(255,255,255,0.96)",
+    chromeFill: "rgba(255,255,255,0.82)",
+    edge: "rgba(29,27,38,0.06)",
+    sheen: "rgba(255,255,255,0.9)",
+    blur: 24,
+    saturate: 1.4,
+    chromeBlur: 28,
+    nativeIntensity: 60,
+    nativeTint: "light",
+  },
+  night: {
+    fill: "linear-gradient(145deg, rgba(87,87,82,.96), rgba(65,65,62,.94))",
+    fillLit: "linear-gradient(145deg, rgba(255,255,255,.16), rgba(255,255,255,.05))",
+    fillWarm: "linear-gradient(145deg, rgba(236,134,56,.20), rgba(255,255,255,.04))",
+    fillCool: "linear-gradient(145deg, rgba(242,211,166,.14), rgba(255,255,255,.04))",
+    fallbackFill: "rgba(72,72,69,0.94)",
+    chromeFill: "rgba(70,70,66,.78)",
+    edge: "rgba(255,255,255,.14)",
+    sheen: "rgba(255,255,255,.22)",
+    blur: 26,
+    saturate: 1.7,
+    chromeBlur: 28,
+    nativeIntensity: 50,
+    nativeTint: "dark",
+  },
+};
+
+export type GlassFill = "base" | "lit" | "warm" | "cool";
+
+export function glassFill(recipe: GlassRecipe, fill: GlassFill): string {
+  switch (fill) {
+    case "lit":
+      return recipe.fillLit;
+    case "warm":
+      return recipe.fillWarm;
+    case "cool":
+      return recipe.fillCool;
+    default:
+      return recipe.fill;
+  }
+}
+
+// ── Ambient field ──────────────────────────────────────────────────────
+// The far wall glass refracts. Light, not a surface: it never carries
+// meaning, never becomes a card, and is only seen through glass. Three
+// overlapping lights so it reads as atmosphere, not a spotlight.
+export interface AmbientLight {
+  color: string;
+  /** Percent of viewport. */
+  x: number;
+  y: number;
+  /** vmax. */
+  size: number;
+  opacity: number;
+}
+
+export const ambient: Record<ThemeName, readonly AmbientLight[]> = {
+  dark: [
+    { color: "#E0A45C", x: 12, y: 8, size: 70, opacity: 0.1 },
+    { color: "#E8D9BE", x: 88, y: 30, size: 55, opacity: 0.06 },
+    { color: "#F0C48C", x: 40, y: 100, size: 60, opacity: 0.05 },
+  ],
+  light: [
+    { color: "#9AA6EC", x: 10, y: 0, size: 85, opacity: 0.55 },
+    { color: "#FFB27A", x: 100, y: 55, size: 65, opacity: 0.45 },
+    { color: "#C9D0F5", x: 40, y: 100, size: 70, opacity: 0.4 },
+  ],
+  night: [
+    { color: "#EC8638", x: 85, y: 6, size: 80, opacity: 0.07 },
+    { color: "#8A8A85", x: 6, y: 40, size: 80, opacity: 0.12 },
+    { color: "#3A3A38", x: 70, y: 100, size: 100, opacity: 0.35 },
+  ],
+};
+
+export const ambientDrift = { distance: 6, durationMs: 32_000 } as const;
+
+export function ambientBackground(lights: readonly AmbientLight[], base: string): string {
+  const layers = lights.map((l) => {
+    const a = Math.round(l.opacity * 255)
+      .toString(16)
+      .padStart(2, "0");
+    return `radial-gradient(${l.size}vmax ${l.size}vmax at ${l.x}% ${l.y}%, ${l.color}${a}, transparent 70%)`;
+  });
+  return [...layers, base].join(", ");
+}
+
+/**
+ * The one Day background for every app: warm off-white with soft sky, peach, rose and periwinkle light,
+ * fixed to the viewport so glass panes always have the same atmosphere behind them. Orange is a faint warm
+ * glow only. Copied verbatim into apps/admin canvas.css, a guard test keeps them identical.
+ */
+export const DAY_ATMOSPHERE =
+  "radial-gradient(90vmax 70vmax at 6% 0%, rgba(150,164,238,0.13), transparent 62%), radial-gradient(80vmax 65vmax at 100% 28%, rgba(255,178,122,0.10), transparent 64%), radial-gradient(90vmax 70vmax at 14% 100%, rgba(236,168,190,0.09), transparent 66%), radial-gradient(70vmax 60vmax at 96% 100%, rgba(168,200,236,0.09), transparent 66%), linear-gradient(180deg, #FFFFFF 0%, #FBFAF8 100%)";

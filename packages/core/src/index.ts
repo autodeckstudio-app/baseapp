@@ -1,0 +1,97 @@
+export * from "./types/index.js";
+export * from "./constants.js";
+export * from "./membership-status.js";
+export * from "./customer-home.js";
+export * from "./pricing-category.js";
+export * from "./invoice-display.js";
+export * from "./booking-code.js";
+export * from "./customer-search.js";
+export * from "./menu.js";
+export * from "./pickup-zone.js";
+export * from "./pay-online.js";
+export * from "./cancellation-policy.js";
+export * from "./reschedule-policy.js";
+export * from "./advance-split.js";
+export * from "./intent-key.js";
+export * from "./service-bundles.js";
+export * from "./winback.js";
+export * from "./gift.js";
+export * from "./membership-upgrade.js";
+export * from "./expiry-reminder.js";
+export * from "./car-segments.js";
+export * from "./shop-order";
+export * from "./shop-concepts.js";
+export * from "./duration.js";
+
+// shop-fixture is a labelled test fixture. Import it from "@autodeck/core/shop-fixture" in dev and tests only, never through this barrel (production bundles must not carry it).
+
+export * from "./settlement-display.js";
+export * from "./floor-jobs.js";
+export * from "./pickup-eligibility.js";
+export * from "./visit-timing.js";
+export * from "./protection-declaration.js";
+
+export * from "./customer-rating-privacy.js";
+
+export * from "./customer-catalogue-eligibility.js";
+
+export * from "./quote-journey.js";
+
+export * from "./service-homes.js";
+
+export * from "./customer-job.js";
+
+export * from './reference-ranges.js';
+
+export {customerOfferingVisible} from "./customer-offering-visibility";
+
+export * from "./invoice-issuer.js";
+
+export * from "./warranty-display.js";
+export * from "./performed-work.js";
+
+export * from "./work-coverage-view.js";
+
+export * from "./job-work-coverage.js";
+
+export * from "./work-command-journal.js";
+
+export * from "./recorded-work-handover.js";
+export * from './vehicle-year.js';
+
+export * from './combined-checkout.js';
+
+export * from "./pickup-tariff.js";
+export * from './studio-clock.js';
+
+export {alignedCustomerServices,isOnCustomerMenu,servicePlacement,referencePlacement,referenceChoices,HOME_COPY,FAMILY_COPY,BRAND_ENQUIRIES} from "./catalogue-display";
+export type {BrandEnquiry} from "./catalogue-display";
+
+export {alignedCustomerPriceLabel,reviewedStartingPrice} from "./catalogue-price-display";
+export {alignedCustomerWarranty} from "./catalogue-warranty-display";
+export * from './visit-work-readiness';
+export * from './shared-visit';
+
+export * from "./visit-read";
+
+export * from "./visit-progress";
+
+export * from "./visit-intake";
+
+export * from './visit-bay-plan';
+export * from './visit-bay-read';
+export * from './visit-schedule';
+export * from './visit-schedule-read';
+export * from './visit-charges';
+
+export * from "./job-stage-command.js";
+
+export * from "./visit-billing";
+
+export * from "./visit-bill-read";
+
+export * from "./visit-receipt-command";
+
+export * from "./visit-cancel-command";
+
+export * from "./visit-invoice-read";

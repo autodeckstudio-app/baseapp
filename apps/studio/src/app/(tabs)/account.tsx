@@ -1,0 +1,153 @@
+import{useBreakCheckoutConfirmation}from "../../hooks/useBreakCheckoutConfirmation";
+import { isNightPalette as nightMaterial } from "@autodeck/ui";
+import { Platform as NightPlatform } from "react-native";
+import { nightGroundStyle, floatCard } from "@autodeck/ui/theme";
+import { CanvasBackdrop, CanvasTitle } from "../../components/CanvasTitle";
+import { useEffect, useState,useRef } from "react";
+import { View, Text, Alert, Platform, Pressable, ScrollView } from "react-native";
+import { useRouter } from "expo-router";
+import { httpsCallable } from "firebase/functions";
+import { signOut } from "firebase/auth";
+import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
+import { COLLECTIONS } from "@autodeck/database";
+import type { AttendanceRecord, Employee } from "@autodeck/core";
+import { auth, db, functions } from "../../lib/firebase";
+import { useAuth } from "../../hooks/useAuth";
+import { colors, isNightPalette, spacing, radius, typography, Avatar, LoadingState } from "@autodeck/ui";
+import { Icon } from "@autodeck/ui/native";
+import { StaffDocument } from "../../components/StaffDocument";
+import { dayActions } from "../../lib/my-day";
+
+type IconName = "home" | "wrench" | "calendar" | "search" | "profile" | "plus" | "check" | "pin" | "close" | "bell" | "users";
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View style={{ marginBottom: spacing.xl }}>
+      <Text style={{ ...typography.caption, color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1, marginBottom: spacing.sm, marginLeft: spacing.xs }}>{title}</Text>
+      <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 28, overflow: "hidden" }}>{children}</View>
+    </View>
+  );
+}
+
+function Row({ icon, label, hint, onPress, disabled, last, danger }: { icon: IconName; label: string; hint?: string; onPress: () => void; disabled?: boolean; last?: boolean; danger?: boolean }) {
+  return (
+    <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={label} style={{ flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: 14, paddingHorizontal: spacing.lg, minHeight: 56, opacity: disabled ? 0.5 : 1, borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.border }}>
+      <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: danger ? (isNightPalette ? "rgba(255,150,132,0.18)" : "#FDECEA") : "rgba(240,125,40,0.14)" }}>
+        <Icon name={icon} color={danger ? colors.error : colors.accent} size={20} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ ...typography.body, color: danger ? colors.error : colors.textPrimary, fontWeight: "600" }}>{label}</Text>
+        {hint ? <Text style={{ ...typography.caption, color: colors.textMuted }}>{hint}</Text> : null}
+      </View>
+    </Pressable>
+  );
+}
+
+
+export default function AccountScreen() {
+  const authState = useAuth();
+  const checkoutConfirmation=useBreakCheckoutConfirmation(authState.status==="ready"?authState.user.uid:null),runLock=useRef(false);
+  const router = useRouter();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const [me, setMe] = useState<Employee | null>(null);
+  const [today, setToday] = useState<AttendanceRecord | null>(null);
+  const uid = authState.status === "ready" ? authState.user.uid : null;
+  const tenantId = authState.status === "ready" ? authState.claims.tenantId : null;
+  useEffect(() => {
+    if (!uid || !tenantId) return;
+    return onSnapshot(query(collection(db, COLLECTIONS.employees()), where("tenantId", "==", tenantId), where("authUid", "==", uid)), (snap) => setMe((snap.docs[0]?.data() as Employee | undefined) ?? null), () => setMe(null));
+  }, [uid, tenantId]);
+  useEffect(() => {
+    if (!me || !tenantId) return;
+    const date = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    return onSnapshot(doc(db, COLLECTIONS.attendance(), `${tenantId}__${me.id}__${date}`), (snap) => setToday(snap.exists() ? (snap.data() as AttendanceRecord) : null), () => setToday(null));
+  }, [me, tenantId]);
+  const hhmm = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" }) : "-");
+  const onBreak = !!today?.breaks.some((b) => !b.endedAt);
+  const dayState = !today?.checkInAt ? "Not checked in yet" : today.checkOutAt ? `Checked out ${hhmm(today.checkOutAt)} · ${Math.floor(today.workedMinutes / 60)}h ${today.workedMinutes % 60}m worked` : onBreak ? `On break · in since ${hhmm(today.checkInAt)}` : `Working · in since ${hhmm(today.checkInAt)}`;
+
+  const acts = me ? dayActions(today) : { in: false, bs: false, be: false, out: false };
+
+  async function run(label: string, fn: string, done: string) {
+    if(busy||runLock.current) return;
+    runLock.current=true;
+    setBusy(label);
+    setNote(null);
+    try {
+      if(label==="out"&&onBreak&&!await checkoutConfirmation.confirm())return;
+      await httpsCallable(functions, fn)(label==="out"&&onBreak?{endOpenBreak:true}:{});
+      setNote(done);
+    } catch (e) {
+      const m = e instanceof Error ? e.message : "";
+      setNote(/already/i.test(m) ? m : "That did not go through. Try again.");
+    } finally {
+      runLock.current=false;
+      setBusy(null);
+    }
+  }
+
+  function handleSignOut() {
+    // Alert.alert with buttons is a no-op on react-native-web, so confirm natively there.
+    const w = globalThis as { confirm?: (m: string) => boolean };
+    if (Platform.OS === "web") {
+      if (typeof w.confirm !== "function" || w.confirm("Sign out of AutoDeck Studio?")) {
+        void signOut(auth);
+      }
+      return;
+    }
+    Alert.alert("Sign Out", "Sign out of AutoDeck Studio?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Sign Out", style: "destructive", onPress: () => void signOut(auth) },
+    ]);
+  }
+
+  if (authState.status !== "ready") return <LoadingState />;
+
+  const email = authState.user.email ?? "Studio staff";
+
+  return (
+    <View style={{ flex: 1 }}>
+    {checkoutConfirmation.dialog}
+    <CanvasBackdrop />
+    <ScrollView style={{ flex: 1, backgroundColor: "transparent" }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, width: "100%", maxWidth: 1040, alignSelf: "center" }}>
+      <CanvasTitle eyebrow="Signed in" title="Account" />
+      <View style={{ alignItems: "center", backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 28, paddingVertical: spacing.xl, marginBottom: spacing.xl }}>
+        <Avatar name={email} size={64} />
+        <Text style={{ ...typography.title, color: colors.textPrimary, marginTop: spacing.md }}>{email}</Text>
+        <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xxs, textTransform: "capitalize" }}>
+          {authState.claims.role}
+          {authState.claims.studioId ? `  |  ${authState.claims.studioId}` : ""}
+        </Text>
+      </View>
+
+      <Section title="My details">
+        <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: "600", padding: spacing.md, paddingBottom: 0 }}>{me?.name ?? email}</Text>
+        <View style={{gap:6,padding:spacing.md,paddingTop:spacing.xxs}}>{me?<><Text style={{...typography.caption,color:colors.textMuted}}>{me.email}</Text>{me.phone?<Text style={{...typography.caption,color:colors.textMuted}}>{me.phone}</Text>:null}<Text style={{...typography.caption,color:colors.textMuted}}>{me.role === "admin" ? "Office" : "Studio"} · Shared with your admin</Text></>:<Text style={{...typography.caption,color:colors.textMuted}}>Your admin has not linked your profile yet.</Text>}</View>
+      </Section>
+
+      {me?<Section title="Document"><StaffDocument employeeId={me.id} revisionKey={me.documentReview?`${me.documentReview.revision}:${me.documentReview.status}`:undefined}/></Section>:null}
+
+      <Section title="My day">
+        <Text style={{ ...typography.body, color: colors.textPrimary, padding: spacing.md }}>{dayState}</Text>
+        <Row icon="check" label="Check in" onPress={() => void run("in", "checkInAttendance", "Checked in for today.")} disabled={busy !== null || !acts.in} />
+        <Row icon="close" label={onBreak?"End break & check out":"Check out"} onPress={() => void run("out", "checkOutAttendance", "Checked out. See you tomorrow.")} disabled={busy !== null || !acts.out} last />
+        {note ? <Text style={{ ...typography.caption, color: colors.textMuted, padding: spacing.md }}>{note}</Text> : null}
+      </Section>
+
+      <Section title="Shortcuts">
+        <Row icon="plus" label="New walk-in" hint="Add a car that just arrived" onPress={() => router.push("/(tabs)/walkin")} />
+        <Row icon="wrench" label="Bay board" onPress={() => router.push("/(tabs)/bays")} />
+        <Row icon="pin" label="Pickup requests" hint="Customers asking for pickup or drop" onPress={() => router.push("/(tabs)/pickups")} />
+        <Row icon="check" label="Memberships" hint="Approve payments and sell plans" onPress={() => router.push("/(tabs)/memberships")} />
+        <Row icon="calendar" label="Calendar" onPress={() => router.push("/(tabs)/calendar")} />
+        <Row icon="search" label="Lookup" hint="Find a customer or car" onPress={() => router.push("/(tabs)/lookup")} last />
+      </Section>
+
+      <Section title="Account">
+        <Row icon="profile" label="Sign out" onPress={handleSignOut} danger last />
+      </Section>
+    </ScrollView>
+    </View>
+  );
+}

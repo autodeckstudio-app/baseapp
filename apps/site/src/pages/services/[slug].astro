@@ -1,0 +1,32 @@
+---
+import { SERVICE_HOMES } from '../../../../../packages/core/src/service-homes';
+import Redesign from '../../layouts/Redesign.astro';
+import services from '../../data/services.json';
+import { SERVICE_NAVIGATION, appServiceLink } from '../../data/service-navigation';
+export function getStaticPaths(){return services.map(service=>({params:{slug:service.slug},props:{service}}))}
+const {service: sourceService}=Astro.props;
+const homeKeys:Record<string,string>={'paint-protection':'paint','ceramic-coating':'paint','detailing':'detailing','washing':'washing','garage':'garage','modifications':'modifications'};
+const home=SERVICE_HOMES.find(h=>h.key===homeKeys[sourceService.slug])!;
+const ceramicLeaf=sourceService.slug==='ceramic-coating';
+const title=ceramicLeaf?'Ceramic coating':home.label;
+const navigation=SERVICE_NAVIGATION[home.key];
+const copy=Object.fromEntries(Object.entries(SERVICE_NAVIGATION).map(([key,value])=>[key,value.summary]));
+const familyInfo=ceramicLeaf?navigation.families.filter(f=>f[0]==='Ceramic'):navigation.families;
+const families=familyInfo.map(f=>f[0]);
+const familyLabels=Object.fromEntries(familyInfo.map(f=>[f[0],f[1]]));
+const familyCopy=Object.fromEntries(familyInfo.map(f=>[f[0],f[2]]));
+const anchor=(family:string)=>'service-'+family.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/-$/,'');
+const routes:Record<string,string>={paint:'paint-protection',detailing:'detailing',washing:'washing',garage:'garage',modifications:'modifications'};
+---
+<Redesign title={`${title} · AutoDeck`} description={copy[home.key]}>
+<div class="page-intro service-intro"><a class="back" href="/services">All services</a><p class="eyebrow">AUTODECK / {home.label}</p><h1>{title}</h1><p>{copy[home.key]}</p>{ceramicLeaf&&<a class="text-link" href="/services/paint-protection">All paint protection services</a>}</div>
+<section class="service-detail"><div><img class="service-detail-image" src={home.key==='paint'?'/assets/redesign/service-ceramic-coating.jpg':sourceService.image} alt={title}/></div><div class="service-decision glass"><p class="eyebrow">CHOOSE THE SERVICE FIRST</p><h2>{title}</h2><p>Explore the service areas below. Current products, availability and the final work are confirmed in the app.</p><div class="service-links" data-public-catalogue-choices></div>{families.length>0?<a class="solid" href={appServiceLink(home.key,ceramicLeaf?'Ceramic':undefined)}>Browse in the app</a>:<p>No confirmed offering is published for this area right now.</p>}</div></section>
+<div class="public-catalogue" data-public-catalogue-home={home.key} data-public-catalogue-family={ceramicLeaf?'Ceramic':undefined} aria-busy="true"><p>Checking current services…</p></div>
+<script>import '../../scripts/public-catalogue';</script>
+
+<section class="service-next"><p class="eyebrow">KEEP EXPLORING</p><h2>All under one roof</h2><div class="service-links">{SERVICE_HOMES.filter(h=>h.key!==home.key).map(h=><a href={`/services/${routes[h.key]}`}>{h.label}</a>)}</div></section>
+</Redesign>
+
+<style is:global>
+.autodeck .public-catalogue{padding:0 var(--canvas-pad,24px) 24px}.autodeck .public-catalogue .service-links{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));max-width:none}.autodeck .public-catalogue .service-links a>span:first-child{min-width:0}.autodeck .public-catalogue .service-links small{display:block;color:#aaa9a4;font-size:12px;line-height:1.5;margin-top:6px}.autodeck .public-catalogue .service-links a>span:first-child{flex:1;overflow-wrap:anywhere;white-space:normal}
+</style>

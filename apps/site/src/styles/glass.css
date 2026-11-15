@@ -1,0 +1,114 @@
+/* AutoDeck glass layer: frosted surfaces, translucency, layered depth.
+   Loaded after global.css. Tokens are reusable for the customer app. */
+:root {
+  --glass-bg: linear-gradient(145deg, rgba(255,255,255,.10), rgba(255,255,255,.03));
+  --glass-bg-strong: linear-gradient(145deg, rgba(255,255,255,.16), rgba(255,255,255,.05));
+  --glass-border: rgba(255,255,255,.14);
+  --glass-hi: inset 0 1px 0 rgba(255,255,255,.22), inset 0 -1px 0 rgba(255,255,255,.04);
+  --glass-shadow: 0 24px 60px -18px rgba(0,0,0,.65), 0 2px 10px rgba(0,0,0,.25);
+  --glass-blur: blur(26px) saturate(170%);
+  --glass-radius: 26px;
+}
+/* ambient light so the glass has something to refract */
+body { position: relative; }
+body::before {
+  content: ""; position: fixed; inset: -10vmax; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(38vmax 38vmax at 82% 8%, rgba(236,134,56,.34), transparent 62%),
+    radial-gradient(34vmax 34vmax at 6% 38%, rgba(120,110,255,.20), transparent 60%),
+    radial-gradient(40vmax 40vmax at 70% 78%, rgba(236,134,56,.20), transparent 62%),
+    radial-gradient(30vmax 30vmax at 20% 96%, rgba(70,150,255,.14), transparent 60%);
+  filter: blur(8px);
+}
+.glass, .site-head nav, .hero-meta .cell, .door, .svc, .svc-note, .visit-block, .visit-banner,
+.lounge-items li, .app-note, .countdown .unit, .appsec-figure .tag, .manifesto-figure figcaption {
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+}
+
+/* header: floating frosted pill */
+.site-head { background: transparent !important; border: 0 !important; padding-top: 14px; pointer-events: none; }
+.site-head > * { pointer-events: auto; }
+.site-head .brand { padding: 10px 18px; border-radius: 999px; background: var(--glass-bg); border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-hi), var(--glass-shadow); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+.site-head nav { padding: 6px 8px; gap: 2px !important; border-radius: 999px; background: var(--glass-bg);
+  border: 1px solid var(--glass-border); box-shadow: var(--glass-hi), var(--glass-shadow); align-items: center; }
+.site-head nav a { padding: 9px 16px; border-radius: 999px; }
+.site-head nav a:hover { background: rgba(255,255,255,.08); }
+.site-head nav a[aria-current="page"] { background: rgba(255,255,255,.12); }
+.site-head .head-cta { background: var(--orange) !important; color: #1a1005 !important; border: 0 !important;
+  box-shadow: 0 6px 22px -4px rgba(236,134,56,.6), inset 0 1px 0 rgba(255,255,255,.4); }
+
+/* hero meta strip: two floating glass cells */
+.hero-meta { border-top: 0 !important; gap: 14px; padding-bottom: 22px; }
+.hero-meta .cell { padding: 16px 22px; border-radius: 20px; background: var(--glass-bg); border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-hi), var(--glass-shadow); }
+.btn.ghost { background: var(--glass-bg); border: 1px solid var(--glass-border); box-shadow: var(--glass-hi);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+.btn:not(.ghost) { box-shadow: 0 10px 30px -8px rgba(236,134,56,.65), inset 0 1px 0 rgba(255,255,255,.35); }
+
+/* marquee: frosted band */
+.marquee { background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); border-color: rgba(255,255,255,.1) !important;
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+
+/* cards */
+.door, .svc, .visit-block, .lounge-items li, .svc-note, .app-note {
+  background: var(--glass-bg) !important; border: 1px solid var(--glass-border) !important;
+  border-radius: var(--glass-radius); box-shadow: var(--glass-hi), var(--glass-shadow);
+  overflow: hidden; position: relative;
+}
+.door-list, .svc-list { display: grid; gap: 14px; border: 0 !important; }
+.door, .svc { padding-left: clamp(20px, 3vw, 40px); padding-right: clamp(20px, 3vw, 40px); border-radius: var(--glass-radius); margin: 0; }
+.door:hover, .svc:hover { transform: translateY(-3px); box-shadow: var(--glass-hi), 0 34px 70px -20px rgba(0,0,0,.7), 0 0 0 1px rgba(236,134,56,.35); }
+.door, .svc { transition: transform .5s cubic-bezier(.2,.7,.2,1), box-shadow .5s; }
+.door-fill, .svc-fill { background: linear-gradient(120deg, rgba(236,134,56,.28), rgba(236,134,56,.05)) !important; }
+.visit-banner { background: var(--glass-bg-strong) !important; border: 1px solid var(--glass-border) !important; border-radius: var(--glass-radius); box-shadow: var(--glass-hi), var(--glass-shadow); }
+
+/* figures: rounded, layered, with a glass caption */
+.manifesto-figure, .appsec-figure, .lounge-figure, .svc-visual figure { border-radius: 30px; overflow: hidden; position: relative;
+  box-shadow: var(--glass-shadow), 0 0 0 1px rgba(255,255,255,.1); }
+.manifesto-figure figcaption { position: absolute; left: 14px; right: 14px; bottom: 14px; padding: 12px 18px; border-radius: 16px;
+  background: linear-gradient(145deg, rgba(20,20,24,.45), rgba(20,20,24,.25)); border: 1px solid var(--glass-border); box-shadow: var(--glass-hi); }
+.appsec-figure .tag { background: var(--glass-bg-strong); border: 1px solid var(--glass-border); border-radius: 14px; box-shadow: var(--glass-hi); }
+
+/* countdown: glass tiles over the covered car */
+.countdown { gap: 14px; }
+.countdown .unit { padding: 22px 26px; border-radius: 24px; background: var(--glass-bg-strong); border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-hi), var(--glass-shadow); min-width: 96px; text-align: center; }
+.wraps-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,14,.35), rgba(10,10,14,.6)); }
+
+/* footer wordmark sits in a soft glass slab */
+.site-foot { background: linear-gradient(180deg, transparent, rgba(255,255,255,.04)); border-top: 1px solid rgba(255,255,255,.08) !important; }
+
+@media (max-width: 640px) {
+  .site-head { padding-top: 10px; }
+  .site-head nav { padding: 4px; }
+  .site-head nav a { padding: 8px 10px; }
+  .hero-meta { flex-direction: column; }
+  .countdown .unit { padding: 14px 12px; min-width: 0; border-radius: 18px; }
+  :root { --glass-radius: 20px; --glass-blur: blur(18px) saturate(160%); }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root { --glass-bg: rgba(40,40,46,.85); --glass-bg-strong: rgba(48,48,54,.9); }
+}
+
+/* refinements */
+.door, .svc { isolation: isolate; }
+.door-idx, .svc-idx, .lounge-items .li-idx { -webkit-text-stroke-color: rgba(255,255,255,.38) !important; }
+.door:hover .door-idx, .svc:hover .svc-idx { -webkit-text-stroke-color: var(--orange) !important; }
+/* local light pools behind glass sections */
+.doors::before, .services::before, .visit::before, .lounge::before, .appsec::before {
+  content: ""; position: absolute; inset: 8% 0 auto auto; width: min(62vw, 760px); aspect-ratio: 1; z-index: 0; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(236,134,56,.42), rgba(236,134,56,.10) 55%, transparent 72%); filter: blur(30px);
+}
+.doors::after, .services::after, .lounge::after {
+  content: ""; position: absolute; left: -12vw; bottom: 6%; width: min(48vw, 600px); aspect-ratio: 1; z-index: 0; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(110,120,255,.30), transparent 70%); filter: blur(30px);
+}
+.doors > *, .services > *, .visit > *, .lounge > *, .appsec > * { position: relative; z-index: 1; }
+.door-hook, .svc-desc { color: rgba(245,242,236,.72) !important; }
+
+/* header must stay legible on both dark and paper sections: no blend inversion, tinted glass */
+.site-head { mix-blend-mode: normal !important; }
+.site-head .brand, .site-head nav { background: linear-gradient(145deg, rgba(24,24,28,.62), rgba(24,24,28,.42)) !important; }
+.site-head nav a:not(.head-cta), .site-head .brand { color: var(--paper) !important; }
+.app-note { background: none !important; border: 0 !important; box-shadow: none !important; border-radius: 0; -webkit-backdrop-filter: none; backdrop-filter: none; overflow: visible; }

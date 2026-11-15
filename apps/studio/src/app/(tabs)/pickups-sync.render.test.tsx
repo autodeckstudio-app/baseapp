@@ -1,0 +1,15 @@
+import React from 'react';
+import { act, create } from 'react-test-renderer';
+import { it, expect, vi, beforeEach } from 'vitest';
+const h=vi.hoisted(()=>({requests:[] as any[],watches:[] as any[],bookError:false,bookStatus:'CONFIRMED'}));
+vi.mock('../../lib/backend-features',()=>({PICKUP_HANDOVER_ENABLED:false,PICKUP_LEG_PROGRESS_ENABLED:false}));
+vi.mock('../../lib/firebase',()=>({db:{},functions:{}}));
+vi.mock('../../hooks/useAuth',()=>({useAuth:()=>({status:'ready',user:{uid:'staff'},claims:{role:'studio',tenantId:'t',studioId:'s'}})}));
+vi.mock('firebase/firestore',()=>({collection:(_:any,c:string)=>c,where:(...args:any[])=>args,query:(...args:any[])=>args,doc:(_:any,c:string,id:string)=>({c,id}),getDocs:async()=>({docs:h.requests.map(r=>({id:r.id,data:()=>r}))}),getDoc:async()=>{if(h.bookError)throw Error('offline');return{exists:()=>true,data:()=>({status:h.bookStatus,vehicleSnapshot:{registrationNumber:'FIXTURE-001'}})}},onSnapshot:(target:any,next:any,error:any)=>{const stop=vi.fn();h.watches.push({target,next,error,stop});return stop}}));
+vi.mock('firebase/functions',()=>({httpsCallable:()=>async()=>({data:{}})}));
+vi.mock('react-native',async()=>{const rn=await vi.importActual<any>('react-native');return{...rn,FlatList:(p:any)=><div>{p.ListHeaderComponent}{p.data.length?p.data.map((item:any)=><div key={item.id}>{p.renderItem({item})}</div>):p.ListEmptyComponent}{p.ListFooterComponent}</div>}});
+import Screen from './pickups';
+beforeEach(()=>{h.requests=[];h.watches=[];h.bookError=false;h.bookStatus='CONFIRMED'});
+const request=()=>({id:'b',bookingId:'b',tenantId:'t',studioId:'s',kind:'pickup',address:'Local fixture address',status:'REQUESTED',feePaise:0});
+it('an incoming request appears without remount; parent booking updates refresh eligibility; subscriptions stop on unmount',async()=>{let r:any;await act(async()=>{r=create(<Screen/>)});expect(JSON.stringify(r.toJSON())).toContain('No pickup or drop requests');const queryWatch=h.watches.find(w=>Array.isArray(w.target));expect(queryWatch.target).toEqual(['pickupRequests',['tenantId','==','t'],['studioId','==','s']]);h.requests=[request()];await act(async()=>{queryWatch.next();await Promise.resolve()});expect(JSON.stringify(r.toJSON())).toContain('Local fixture address');const bookingWatch=h.watches.find(w=>w.target.id==='b');await act(async()=>bookingWatch.next());h.bookStatus='CANCELLED';await act(async()=>bookingWatch.next());expect(JSON.stringify(r.toJSON())).not.toContain('Local fixture address');await act(async()=>r.unmount());expect(h.watches.every(w=>w.stop.mock.calls.length>0)).toBe(true)});
+it('booking read errors and stream errors are unavailable, never confirmed empty',async()=>{h.requests=[request()];h.bookError=true;let r:any;await act(async()=>{r=create(<Screen/>)});expect(JSON.stringify(r.toJSON())).toContain('Booking status unavailable');expect(JSON.stringify(r.toJSON())).not.toContain('No pickup or drop requests');await act(async()=>h.watches.find(w=>Array.isArray(w.target)).error(Error('stream unavailable')));expect(JSON.stringify(r.toJSON())).toContain('stream unavailable');await act(async()=>r.unmount())});

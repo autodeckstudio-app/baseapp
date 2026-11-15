@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';const h=fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
+test('app story has one dedicated handoff rather than repeated buttons',()=>{const story=h.slice(h.indexOf('id="app"'),h.indexOf('id="cars"'));assert.equal((story.match(/Explore the app/g)||[]).length,1);assert(!story.includes('Open the app'));});
+test('latest approved hierarchy places six services before app, then cars and store',()=>{for(const [a,b] of [['services','app'],['app','cars'],['cars','store']]){assert(h.indexOf('id="'+a+'"')>=0);assert(h.indexOf('id="'+a+'"')<h.indexOf('id="'+b+'"'))}});

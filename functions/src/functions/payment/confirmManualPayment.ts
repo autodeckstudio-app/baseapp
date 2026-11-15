@@ -1,0 +1,161 @@
+import{readCombinedPaymentBasis,assertCombinedSettlementPayment}from "../../lib/combined-settlement.js";
+// Studio/admin confirms an EXISTING pending cash/manual payment â the
+// production counterpart to recordManualPayment (which creates a new
+// completed payment from scratch). This closes the gap left when a customer
+// initiates a "Pay at studio" payment via initiatePayment: that payment sits
+// 'pending' until a real member of staff confirms cash was actually received.
+// Online (razorpay_payment_link) payments are explicitly out of scope here â
+// those complete only via the (deferred) Razorpay webhook, never manually.
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { getFirestore } from "firebase-admin/firestore";
+import type { Payment, ServiceJob } from "@autodeck/core";
+import { COLLECTIONS } from "@autodeck/database";
+import { extractUser } from "../../middleware/auth.js";
+import { validate } from "../../middleware/validate.js";
+import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { confirmManualPaymentSchema } from "../../schemas/payment.js";
+import { prepareJobInvoice } from "../../lib/job-invoice.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
+
+export const confirmManualPayment = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
+  const user = extractUser(request);
+
+  if (!["studio", "admin", "superadmin"].includes(user.claims.role)) {
+    throw new HttpsError("permission-denied", "Studio or admin role required.");
+  }
+
+  const data = validate(confirmManualPaymentSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "payment.confirmManual");
+
+  const db = getFirestore();
+  const paymentSnap = await db.collection(COLLECTIONS.payments()).doc(data.paymentId).get();
+  if (!paymentSnap.exists) throw new HttpsError("not-found", "Payment not found.");
+
+  const payment = paymentSnap.data() as Payment;
+
+  if (payment.tenantId !== user.claims.tenantId) {
+    throw new HttpsError("permission-denied", "Cross-tenant access denied.");
+  }
+  if (user.claims.role === "studio" && user.claims.studioId !== payment.studioId) {
+    throw new HttpsError("permission-denied", "Payment belongs to a different studio.");
+  }
+  if (payment.method === "razorpay_payment_link") {
+    throw new HttpsError(
+      "failed-precondition",
+      "Online payments cannot be confirmed manually - they complete via the payment provider.",
+    );
+  }
+
+  // Office policy (28 Oct 2026, explicit owner decision for UPI): a direct
+  // UPI payment can only be confirmed by someone who can check the receiving
+  // account - admin or superadmin. Staff cannot see the account, so their
+  // confirmation would be unverifiable. Cash stays staff-confirmable: the
+  // notes are physically in hand at the counter. Other methods are unchanged.
+  if (payment.method === "upi_manual" && !["admin", "superadmin"].includes(user.claims.role)) {
+    throw new HttpsError(
+      "permission-denied",
+      "Only the office can confirm account payments. Staff can confirm cash.",
+    );
+  }
+
+  // Idempotent: a payment already confirmed (by this or a concurrent call)
+  // returns its existing completed state rather than erroring.
+  if (payment.status === "completed") {
+    return { paymentId: payment.id, invoiceId: payment.invoiceId, alreadyCompleted: true };
+  }
+  if (payment.status !== "pending" && payment.status !== "processing") {
+    throw new HttpsError(
+      "failed-precondition",
+      `Cannot confirm a payment in status '${payment.status}'.`,
+    );
+  }
+  if (!payment.jobId) {
+    throw new HttpsError("failed-precondition", "Payment has no linked job.");
+  }
+
+  const result = await db.runTransaction(async (tx) => {
+    // All reads before any writes.
+    const jobRef = db.collection(COLLECTIONS.jobs()).doc(payment.jobId as string);
+    const jobSnap = await tx.get(jobRef);
+    if (!jobSnap.exists) throw new HttpsError("not-found", "Job not found.");
+    const job = jobSnap.data() as ServiceJob;
+    if((job as ServiceJob & {cashReconciliationId?:string}).cashReconciliationId)throw new HttpsError('failed-precondition','Cash reconciliation is held. Do not confirm another payment.');
+    if(job.offlineSettlement)throw new HttpsError("failed-precondition","Actual offline receipts already exist. Office review required before confirming another payment.");
+
+    // Re-check status inside the transaction â a concurrent confirmation
+    // (e.g. two staff tapping "Confirm" at once) must not double-complete.
+    const freshPaymentSnap = await tx.get(db.collection(COLLECTIONS.payments()).doc(payment.id));
+    const freshPayment = freshPaymentSnap.data() as Payment;
+    if (freshPayment.status === "completed") {
+      return { paymentId: payment.id, invoiceId: freshPayment.invoiceId, alreadyCompleted: true };
+    }
+    if (freshPayment.status !== "pending" && freshPayment.status !== "processing") {
+      throw new HttpsError(
+        "failed-precondition",
+        `Cannot confirm a payment in status '${freshPayment.status}'.`,
+      );
+    }
+    // Guard against the job having moved out from under this payment since
+    // it was initiated â e.g. a different payment on the same job already
+    // completed (recordManualPayment now blocks creating a second in-flight
+    // payment, but this is defense-in-depth against that invariant ever
+    // being violated), or the job/booking was cancelled while this payment
+    // sat pending (Phase 6 hostile-audit finding â this check was previously
+    // entirely absent here).
+    if (job.paymentStatus === "paid") {
+      throw new HttpsError("already-exists", "This job has already been marked as paid.");
+    }
+    if (job.status === "CANCELLED") {
+      throw new HttpsError("failed-precondition", "Cannot confirm payment for a cancelled job.");
+    }
+
+    const combinedBasis=await readCombinedPaymentBasis(db,tx,job);
+    assertCombinedSettlementPayment(job,freshPayment,combinedBasis);
+    const now = new Date().toISOString();
+    const prepared = await prepareJobInvoice(db, tx, job, payment.id);
+    if (prepared.existing) {
+      throw new HttpsError("already-exists", "An invoice already exists for this job.");
+    }
+    const { invoiceRef, invoice } = prepared;
+    const invoiceNumber = invoice.invoiceNumber;
+    if(combinedBasis?.advancePaymentId){invoice.paymentAllocation={advancePaymentId:combinedBasis.advancePaymentId,advancePaidPaise:combinedBasis.advanceCapturedPaise,settlementPaymentId:freshPayment.id,settlementPaidPaise:freshPayment.amount};tx.update(db.collection(COLLECTIONS.payments()).doc(combinedBasis.advancePaymentId),{invoiceId:invoiceRef.id,updatedAt:now});}
+
+    tx.update(db.collection(COLLECTIONS.payments()).doc(payment.id), {
+      status: "completed",
+      invoiceId: invoiceRef.id,
+      completedAt: now,
+      updatedAt: now,
+    });
+    tx.set(invoiceRef, invoice);
+    tx.update(jobRef, { paymentStatus: "paid",...(combinedBasis?{combinedSettlement:{advancePaymentId:combinedBasis.advancePaymentId,advanceCapturedPaise:combinedBasis.advanceCapturedPaise,balanceDuePaise:0,settlementPaymentId:freshPayment.id,settledAt:now}}:{}),updatedAt: now });
+    if (job.bookingId) {
+      tx.update(db.collection(COLLECTIONS.bookings()).doc(job.bookingId), {
+        paymentStatus: "paid",
+      ...(combinedBasis?{combinedSettlement:{advancePaymentId:combinedBasis.advancePaymentId,advanceCapturedPaise:combinedBasis.advanceCapturedPaise,balanceDuePaise:0,settlementPaymentId:freshPayment.id,settledAt:now}}:{}),
+        updatedAt: now,
+      });
+    }
+
+    writeAuditLog(tx, {
+      action: "payment.completed",
+      entityType: "Payment",
+      entityId: payment.id,
+      user,
+      studioId: job.studioId,
+      after: { method: payment.method, amount: payment.amount, status: "completed", invoiceId: invoiceRef.id },
+    });
+    writeAuditLog(tx, {
+      action: "invoice.issued",
+      entityType: "Invoice",
+      entityId: invoiceRef.id,
+      user,
+      studioId: job.studioId,
+      after: { invoiceNumber, total: invoice.total, status: "issued" },
+    });
+
+    return { paymentId: payment.id, invoiceId: invoiceRef.id, alreadyCompleted: false };
+  });
+
+  return result;
+});

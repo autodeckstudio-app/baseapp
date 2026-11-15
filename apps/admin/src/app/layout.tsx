@@ -1,0 +1,41 @@
+import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
+import { AdminAuthProvider } from "../lib/auth-context";
+import { ThemeStyle } from "../experience/ThemeStyle";
+import { AutoThemeScript } from "../experience/AutoTheme";
+import "./globals.css";
+import "../experience/experience.css";
+import "../experience/garage.css";
+
+// Experience type faces (OFL). Exposed as CSS variables; screens opt in
+// through the ax- type classes as they migrate.
+const display = localFont({ src: "../fonts/montserrat-latin-wght-normal.woff2", weight: "100 900", variable: "--ad-font-display", display: "swap" });
+const body = localFont({ src: "../fonts/inter-latin-wght-normal.woff2", weight: "100 900", variable: "--ad-font-body", display: "swap" });
+const data = localFont({ src: "../fonts/inter-latin-wght-normal.woff2", weight: "100 900", variable: "--ad-font-data", display: "swap" });
+const gu = localFont({ src: "../fonts/noto-sans-gujarati-gujarati-wght-normal.woff2", weight: "100 900", variable: "--ad-font-gu", display: "swap" });
+const hi = localFont({ src: "../fonts/noto-sans-devanagari-devanagari-wght-normal.woff2", weight: "100 900", variable: "--ad-font-hi", display: "swap" });
+
+export const metadata: Metadata = {
+  title: "AutoDeck Admin",
+  description: "AutoDeck studio operations and administration",
+  manifest: "/manifest.webmanifest",
+  icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "Admin", statusBarStyle: "default" },
+  robots: { index: false, follow: false },
+};
+
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#F3EEFB" };
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" data-theme="light" suppressHydrationWarning className={`${display.variable} ${body.variable} ${data.variable} ${gu.variable} ${hi.variable}`}>
+      <head>
+        <ThemeStyle />
+        <AutoThemeScript />
+      </head>
+      <body>
+        <AdminAuthProvider>{children}</AdminAuthProvider>
+      </body>
+    </html>
+  );
+}

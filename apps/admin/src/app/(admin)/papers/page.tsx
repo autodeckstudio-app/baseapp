@@ -1,0 +1,122 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { collection, getDocs, query, where, documentId } from "firebase/firestore";
+import { FIRST_STUDIO_ID } from "@autodeck/core";
+import type { PaperVerification, Vehicle } from "@autodeck/core";
+import { COLLECTIONS } from "@autodeck/database";
+import { db } from "../../../lib/firebase";
+import { listenToPapers, findVehicleByPlate, submitPaper, reviewPaper, resolvePaperEvidence } from "../../../lib/papers-service";
+import { useAdminAuth } from "../../../lib/auth-context";
+import { PapersView } from "../../../experience/PapersView";
+
+type StatusFilter = "PENDING" | "VERIFIED" | "REJECTED";
+
+export default function PapersPage() {
+  const { claims, user } = useAdminAuth();
+  const [filter, setFilter] = useState<StatusFilter>("PENDING");
+  const [focusedPaper, setFocusedPaper] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("status");
+    if (status === "VERIFIED" || status === "REJECTED" || status === "PENDING") setFilter(status);
+    setFocusedPaper(params.get("paper"));
+  }, []);
+  const [papers, setPapers] = useState<PaperVerification[]>([]);
+  const [vehiclesById, setVehiclesById] = useState<Map<string, Vehicle>>(new Map());
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const studioId = claims?.studioId ?? FIRST_STUDIO_ID;
+
+  useEffect(() => {
+    if (!claims) return;
+    setLoading(true);
+    const unsub = listenToPapers(
+      claims.tenantId,
+      studioId,
+      filter,
+      (rows) => { setPapers(rows); setLoading(false); },
+      () => { setError("Couldn't load papers."); setLoading(false); },
+    );
+    return unsub;
+  }, [claims, studioId, filter]);
+
+  // Resolve vehicle labels for the visible papers (chunked documentId IN).
+  useEffect(() => {
+    if (!claims || papers.length === 0) return;
+    const missing = [...new Set(papers.map((x) => x.vehicleId))].filter((id) => !vehiclesById.has(id));
+    if (missing.length === 0) return;
+    (async () => {
+      const found = new Map(vehiclesById);
+      for (let i = 0; i < missing.length; i += 10) {
+        const chunk = missing.slice(i, i + 10);
+        const snap = await getDocs(
+          query(collection(db, COLLECTIONS.vehicles()), where("tenantId", "==", claims.tenantId), where(documentId(), "in", chunk)),
+        );
+        for (const d of snap.docs) found.set(d.id, d.data() as Vehicle);
+      }
+      setVehiclesById(found);
+    })().catch(() => {});
+  }, [claims, papers, vehiclesById]);
+
+  async function run(action: () => Promise<unknown>, ok: string, fail: string) {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await action();
+      setMessage(ok);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : fail);
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const resolvePlate = useMemo(
+    () => async (plate: string) => (claims ? findVehicleByPlate(claims.tenantId, plate) : null),
+    [claims],
+  );
+
+  return (
+    <PapersView key={`${user?.uid ?? ""}:${claims?.tenantId ?? ""}:${claims?.role ?? ""}:${claims?.studioId ?? ""}:${filter}`}
+      filter={filter}
+      papers={focusedPaper ? papers.filter((paper) => paper.id === focusedPaper) : papers}
+      vehiclesById={vehiclesById}
+      loading={loading}
+      busy={busy}
+      error={error}
+      message={message}
+      onOpenEvidence={resolvePaperEvidence}
+      onFilter={(value) => { setFocusedPaper(null); setFilter(value); }}
+      onResolvePlate={resolvePlate}
+      onSubmit={(input) =>
+        void run(
+          () =>
+            submitPaper({
+              studioId,
+              vehicleId: input.vehicleId,
+              kind: input.kind,
+              reference: input.reference,
+              ...(input.expiresOn ? { expiresOn: input.expiresOn } : {}),
+              ...(input.notes ? { notes: input.notes } : {}),
+            }),
+          "Document registered for verification.",
+          "Couldn't register the document.",
+        )
+      }
+      onReview={(paper, decision, reason, inspectedPlate) =>
+        run(
+          () => reviewPaper({ paperId: paper.id, decision, ...(decision === "VERIFIED" ? { ...(inspectedPlate ? { inspectedPlate } : {}), originalInspected: true } : {}), ...(reason ? { rejectionReason: reason } : {}) }),
+          decision === "VERIFIED" ? "Marked verified." : "Marked rejected.",
+          "Couldn't save the review.",
+        )
+      }
+    />
+  );
+}

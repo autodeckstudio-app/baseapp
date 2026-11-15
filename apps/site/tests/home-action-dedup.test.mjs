@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
+const h=fs.readFileSync(new URL('../src/data/redesign/home.html',import.meta.url),'utf8');
+test('homepage booking has one slider action and no duplicate fallback',()=>{assert(h.includes('data-slide-book'));assert(h.includes('Book a visit in the app'));assert(!h.includes('plain-book'));assert(!h.includes('Or book in the app'));});
+test('homepage car section has one clear action while Buy Sell page stays functional',()=>{const c=h.slice(h.indexOf('id="cars"'),h.indexOf('id="store"'));assert.equal((c.match(/class="inventory-actions"/g)||[]).length,1);assert(c.includes('href="/cars"'));assert(c.includes('Explore Buy &amp; Sell'));assert(c.includes('data-inventory-track'));const page=fs.readFileSync(new URL('../src/data/redesign/cars.html',import.meta.url),'utf8');assert(page.includes('data-cars-tab="buy"'));assert(page.includes('data-cars-tab="sell"'));});

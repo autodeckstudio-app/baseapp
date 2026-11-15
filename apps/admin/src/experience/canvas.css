@@ -1,0 +1,388 @@
+/*
+ * Canvas layout (Orizon reference). The whole app is ONE rounded canvas on a
+ * plain backdrop. The photo fills it edge to edge. Navigation, headline and
+ * cards float inside it. Chrome (top notch, left rail, flush cards) is a solid
+ * surface that meets the canvas edge with concave cutout corners.
+ */
+.ax-shell { --ax-chrome: rgba(252,249,244,.97); --ax-cut: 30px; --ax-inset: 16px; }
+html[data-theme="night"] .ax-shell { --ax-chrome: rgba(44,44,41,.97); }
+.ax-ambient-root:has(.ax-shell-frame) { background: #E6DFD4 !important; }
+html[data-theme="night"] .ax-ambient-root:has(.ax-shell-frame) { background: #141413 !important; }
+.ax-ambient-root:has(.ax-shell-frame)::before { inset: var(--ax-inset); }
+
+.ax-shell-frame {
+  position: fixed !important; inset: calc(var(--ax-inset) + 2px); z-index: 1; display: block !important;
+  padding: 0 !important; gap: 0 !important; overflow: hidden; border-radius: 42px; min-height: 0 !important;
+}
+.ax-shell-frame > .ax-main {
+  position: absolute !important; inset: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column;
+  padding: 96px 36px 36px 268px !important; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.ax-shell-frame > .ax-main::-webkit-scrollbar { display: none; }
+.ax-shell-frame > .ax-main > .ax-page { flex: 1 0 auto; min-width: 0; }
+
+/* Corner pills */
+.ax-corner { position: absolute; top: 18px; z-index: 12; height: 54px; border-radius: 999px; display: flex; align-items: center; background: var(--ax-chrome); box-shadow: 0 14px 30px -18px rgba(60,35,10,.5); }
+.ax-corner--l { left: 22px; padding: 0 22px; }
+.ax-corner--l .ax-lg { height: 28px; width: auto; }
+.ax-corner--l .ax-lg--mark { display: none !important; }
+html[data-theme="night"] .ax-corner--l .ax-lg--mark { display: none !important; }
+.ax-corner--r { right: 22px; padding: 0 8px 0 8px; gap: 6px; }
+.ax-corner--r .ax-avatar { width: 38px; height: 38px; }
+.ax-corner-out { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px 0 12px; border-radius: 999px; border: 1px solid rgba(120,100,80,.25); background: transparent; color: var(--ad-text-primary); font: 500 14px/1 var(--ad-font-body, inherit); cursor: pointer; min-height: 0 !important; }
+.ax-corner-out:hover { background: rgba(236,134,56,.14); }
+
+/* Top notch: chrome tab hanging from the top edge, concave cutouts either side */
+.ax-notch { position: absolute; z-index: 11; top: 0; left: 50%; transform: translateX(-50%); max-width: calc(100% - 560px); background: var(--ax-chrome); border-radius: 0 0 28px 28px; padding: 12px 14px 14px; box-sizing: border-box; }
+.ax-notch::before, .ax-notch::after { content: ""; position: absolute; top: 0; width: var(--ax-cut); height: var(--ax-cut); pointer-events: none; }
+.ax-notch::before { left: calc(var(--ax-cut) * -1); background: radial-gradient(circle at 0 100%, transparent calc(var(--ax-cut) - .5px), var(--ax-chrome) var(--ax-cut)); }
+.ax-notch::after { right: calc(var(--ax-cut) * -1); background: radial-gradient(circle at 100% 100%, transparent calc(var(--ax-cut) - .5px), var(--ax-chrome) var(--ax-cut)); }
+.ax-notch .ax-chips { display: flex !important; flex-wrap: nowrap !important; overflow-x: auto; width: auto !important; max-width: 100%; margin: 0 !important; padding: 0 !important; gap: 4px; background: transparent !important; border: none !important; box-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; scrollbar-width: none; align-items: center; justify-content: flex-start; }
+.ax-notch .ax-chips::-webkit-scrollbar { display: none; }
+.ax-notch .ax-chip-link { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; height: 40px; min-height: 40px !important; padding: 0 18px !important; border-radius: 999px; border: 1px solid transparent; background: transparent; box-shadow: none; line-height: 1; font-size: 14px; font-weight: 500; white-space: nowrap; color: var(--ad-text-secondary); text-decoration: none; }
+.ax-notch .ax-chip-link:hover { background: rgba(236,134,56,.10); }
+.ax-notch .ax-chip-link[aria-current="page"] { background: rgba(236,134,56,.2); border-color: rgba(236,134,56,.65); color: #8E4208; box-shadow: none; font-weight: 600; }
+html[data-theme="night"] .ax-notch .ax-chip-link[aria-current="page"] { background: rgba(236,134,56,.3); color: #fff; }
+
+/* Left rail: chrome slab attached to the left edge, cutouts above and below */
+@media (min-width: 861px) {
+  .ax-shell .ax-shell-frame > .ax-side, html[data-theme="night"] .ax-shell .ax-shell-frame > .ax-side {
+    position: absolute !important; display: block !important; left: 0; top: 112px; bottom: 112px; width: 224px; height: auto !important; margin: 0 !important; padding: 0 !important;
+    z-index: 10; border-radius: 0 32px 32px 0 !important; border: none !important; box-shadow: none !important;
+    background: var(--ax-chrome) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; overflow: visible !important;
+  }
+  .ax-side::before, .ax-side::after { content: ""; position: absolute; left: 0; width: var(--ax-cut); height: var(--ax-cut); pointer-events: none; }
+  .ax-side::before { top: calc(var(--ax-cut) * -1); background: radial-gradient(circle at 100% 0, transparent calc(var(--ax-cut) - .5px), var(--ax-chrome) var(--ax-cut)); }
+  .ax-side::after { bottom: calc(var(--ax-cut) * -1); background: radial-gradient(circle at 100% 100%, transparent calc(var(--ax-cut) - .5px), var(--ax-chrome) var(--ax-cut)); }
+  .ax-side-scroll { height: 100%; overflow-y: auto; padding: 18px 12px 18px 14px; display: flex; flex-direction: column; gap: 6px; scrollbar-width: none; box-sizing: border-box; }
+  .ax-side-scroll::-webkit-scrollbar { display: none; }
+  .ax-side .ax-nav-link { min-height: 38px !important; padding: 0 14px !important; }
+}
+
+/* Dashboard: layered composition. Headline on the photo, flush chrome card bottom-left, glass cards bottom-right. */
+@media (min-width: 861px) {
+  .ax-dash { display: flex; flex-direction: column; min-height: 100%; }
+  .ax-dash .ax-page-head { min-height: 0 !important; margin-bottom: 14px; }
+  .ax-dash .ax-page-head > div:first-child { flex: 1 1 auto; align-self: flex-start; }
+  .ax-dash .ax-page-head h1 { font-size: clamp(64px, 9.4vw, 150px) !important; }
+  .ax-dash .ax-hero-side { position: absolute; right: 36px; top: 96px; }
+  .ax-dash .ax-tiles { max-width: 640px; }
+  .ax-dash .ax-detail { margin-top: auto !important; padding-top: 24px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr); gap: 0 28px; align-items: end; }
+  .ax-dash .ax-detail-main { align-self: end; margin-left: -4px; }
+  .ax-dash .ax-detail-main > .ax-panel {
+    position: relative; border-radius: 36px 36px 0 0; background: var(--ax-chrome) !important; border: none; box-shadow: none;
+    backdrop-filter: none; -webkit-backdrop-filter: none; padding: 26px 30px 30px; margin-bottom: -36px; padding-bottom: 66px;
+  }
+  .ax-dash .ax-detail-main > .ax-panel::before, .ax-dash .ax-detail-main > .ax-panel::after { content: ""; position: absolute; bottom: 0; width: var(--ax-cut); height: var(--ax-cut); pointer-events: none; }
+  .ax-dash .ax-detail-main > .ax-panel::before { left: calc(var(--ax-cut) * -1); background: radial-gradient(circle at 0 0, transparent calc(var(--ax-cut) - .5px), var(--ax-chrome) var(--ax-cut)); }
+  .ax-dash .ax-detail-main > .ax-panel::after { right: calc(var(--ax-cut) * -1); background: radial-gradient(circle at 100% 0, transparent calc(var(--ax-cut) - .5px), var(--ax-chrome) var(--ax-cut)); }
+  .ax-dash .ax-detail-side { gap: 16px; padding-bottom: 6px; }
+  .ax-dash .ax-setup { display: none; }
+  .ax-dash .ax-detail-side > .ax-panel + .ax-panel { display: none; }
+  .ax-dash .ax-tiles .ax-tile { min-height: 0; padding: 18px 22px; }
+  .ax-dash .ax-detail-side > .ax-panel { margin-bottom: 18px; }
+}
+
+/* Phone: same canvas, notch full width under the corner pills */
+@media (max-width: 860px) {
+  .ax-shell { --ax-cut: 18px; --ax-inset: 6px; }
+  .ax-shell-frame { border-radius: 32px; }
+  .ax-shell-frame > .ax-main { padding: 80px 14px calc(112px + env(safe-area-inset-bottom)) 14px !important; }
+  .ax-corner { top: 12px; height: 44px; }
+  .ax-corner--l { left: 12px; padding: 0; background: transparent !important; box-shadow: none; width: 52px; justify-content: center; }
+  .ax-corner--l .ax-lg--full, html[data-theme="night"] .ax-corner--l .ax-lg--full { display: none !important; }
+  .ax-corner--l .ax-lg--mark.ax-lg-l { display: block !important; height: 28px; filter: drop-shadow(0 1px 8px rgba(255,255,255,.75)); }
+  .ax-corner--l .ax-lg--mark.ax-lg-d { display: none !important; }
+  html[data-theme="night"] .ax-corner--l .ax-lg--mark.ax-lg-l { display: none !important; }
+  html[data-theme="night"] .ax-corner--l .ax-lg--mark.ax-lg-d { display: block !important; height: 28px; filter: drop-shadow(0 1px 8px rgba(0,0,0,.6)); }
+  .ax-corner--r { right: 12px; padding: 0 3px; }
+  .ax-corner--r .ax-avatar, .ax-corner-out-t { display: none; }
+  .ax-corner-out { padding: 0; width: 38px; justify-content: center; border: none; }
+  .ax-notch { left: 76px; right: 76px; transform: none; max-width: none; padding: 8px 10px 10px; border-radius: 0 0 22px 22px; }
+  .ax-notch .ax-chip-link { height: 36px; min-height: 36px !important; padding: 0 14px !important; font-size: 13px; }
+  .ax-dash .ax-hero-side { margin-left: 0; width: 100%; box-sizing: border-box; }
+}
+
+/* Phone tab bar: icon only, thin. */
+@media (max-width: 860px) {
+  .ax-shell .ax-tabbar { padding: 3px; left: 18px; right: 18px; bottom: calc(10px + env(safe-area-inset-bottom)); }
+  .ax-shell .ax-tab { height: 40px !important; gap: 0 !important; }
+  .ax-shell .ax-tab span { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; font-size: 0 !important; }
+  .ax-shell .ax-tab svg { width: 22px; height: 22px; }
+  .ax-shell-frame > .ax-main { padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important; }
+}
+
+/* One spacing system: 16px between cards, everywhere. */
+.ax-shell { --ax-gap: 16px; }
+.ax-shell .ax-page { display: flex; flex-direction: column; gap: var(--ax-gap); }
+.ax-shell .ax-page > * { margin-top: 0 !important; margin-bottom: 0 !important; }
+.ax-shell .ax-page-head { margin: 0 !important; }
+.ax-shell .ax-tiles, .ax-shell .ax-detail { gap: var(--ax-gap); }
+.ax-shell .ax-detail-main, .ax-shell .ax-detail-side { display: flex; flex-direction: column; gap: var(--ax-gap); min-width: 0; }
+.ax-dash { gap: var(--ax-gap); }
+@media (min-width: 861px) {
+  .ax-dash .ax-detail { margin-top: auto !important; padding-top: 0; gap: 0 var(--ax-gap); }
+  .ax-dash .ax-detail-main { margin-left: 0; }
+  .ax-dash .ax-detail-side > .ax-panel { margin-bottom: 0; }
+  .ax-dash .ax-detail-side { padding-bottom: 0; }
+  .ax-dash .ax-detail-main > .ax-panel { margin-bottom: -36px; }
+}
+@media (max-width: 860px) { .ax-shell { --ax-gap: 14px; } }
+
+/* Stats: long figures (₹11,999) never run into the next stat. */
+.ax-shell .ax-kpis { grid-auto-columns: minmax(0, auto); grid-template-columns: none; }
+.ax-shell .ax-kpis > div { min-width: 0; }
+.ax-shell .ax-kpis .ax-kpi-v { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+@media (max-width: 860px) {
+  .ax-shell .ax-kpis { display: flex; }
+  .ax-shell .ax-kpis > div { flex: 1 1 0; }
+  .ax-shell .ax-kpis > div:first-child { flex: 1.5 1 0; }
+  .ax-shell .ax-kpis .ax-kpi-v { font-size: 22px; line-height: 28px; }
+}
+@media (max-width: 860px) { .ax-shell .ax-kpis .ax-label { font-size: 9.5px; letter-spacing: .4px; overflow-wrap: anywhere; } }
+@media (max-width: 360px) { .ax-shell .ax-kpis .ax-kpi-v { font-size: 18px; } }
+
+/* Featured (solid orange) tile: white number, label and icon in both themes. */
+html .ax-shell .ax-tile--featured .ax-kpi-v,
+html .ax-shell .ax-tile--featured .ax-label,
+html[data-theme="night"] .ax-shell .ax-tile--featured .ax-kpi-v,
+html[data-theme="night"] .ax-shell .ax-tile--featured .ax-label { color: #FFFFFF !important; }
+html[data-theme="day"] .ax-shell .ax-tile--featured { background: linear-gradient(140deg, #F58A2E, #C2540A) !important; }
+
+/* Day: frosted cards get dark ink and a firmer glass so text stays readable on the photo. */
+html[data-theme="day"] .ax-shell .ax-panel,
+html[data-theme="day"] .ax-shell .ax-tile:not(.ax-tile--featured),
+html[data-theme="day"] .ax-shell .ax-col,
+html[data-theme="day"] .ax-shell .ax-card,
+html[data-theme="day"] .ax-shell .detail-card,
+html[data-theme="day"] .ax-shell .stat-tile,
+html[data-theme="day"] .ax-shell .ax-kpis {
+  --ad-text-primary: #26211C;
+  --ad-text-secondary: #4A423A;
+  --ad-text-tertiary: #6B6157;
+  background: rgba(255,255,255,.80) !important;
+  color: #26211C;
+}
+html[data-theme="day"] .ax-shell .ax-tile:not(.ax-tile--featured) .ax-kpi-v,
+html[data-theme="day"] .ax-shell .ax-panel .ax-kpi-v { color: #B8530A; }
+html[data-theme="day"] .ax-shell .ax-side,
+html[data-theme="day"] .ax-shell .ax-notch,
+html[data-theme="day"] .ax-shell .ax-hero-side {
+  --ad-text-primary: #26211C;
+  --ad-text-secondary: #4A423A;
+  --ad-text-tertiary: #6B6157;
+}
+html[data-theme="day"] .ax-shell .ax-hero-side { background: rgba(255,255,255,.80) !important; }
+html[data-theme="day"] .ax-shell .ax-hero-side .ax-label { color: #6B6157; }
+html[data-theme="day"] .ax-shell .ax-hero-side .ax-kpi-v, html[data-theme="day"] .ax-shell .ax-hero-side .ax-data { color: #26211C; }
+html[data-theme="day"] .ax-shell .ax-panel .kv > span:first-child { color: #4A423A; }
+html[data-theme="day"] .ax-shell .ax-panel .kv .ax-data { color: #26211C; }
+html[data-theme="day"] .ax-shell .ax-nav-link, html[data-theme="day"] .ax-shell .ax-chip-link { color: #4A423A; }
+html[data-theme="day"] .ax-shell .ax-nav-link[aria-current="page"], html[data-theme="day"] .ax-shell .ax-chip-link[aria-current="page"] { color: #B8530A; }
+html[data-theme="day"] .ax-shell .ax-panel .kv .ax-data, html[data-theme="day"] .ax-shell .ax-panel .kv .ax-data * { color: #26211C !important; }
+html[data-theme="day"] .ax-shell .ax-corner-out { color: #26211C !important; border-color: rgba(60,50,40,.35); background: rgba(255,255,255,.55); }
+@media (max-width: 860px) {
+  .ax-shell .ax-kpis .ax-label { overflow-wrap: normal; word-break: normal; hyphens: none; letter-spacing: .2px; font-size: 9px; }
+  .ax-shell .ax-kpis > div:nth-child(2) { flex: 1.35 1 0; }
+}
+@media (max-width: 360px) {
+  .ax-shell .ax-kpis .ax-kpi-v { font-size: 16px; }
+  .ax-shell .ax-kpis > div:first-child { flex: 1.5 1 0; }
+  .ax-shell .ax-kpis > div:nth-child(3) { flex: .8 1 0; }
+}
+
+/* Dashboard alignment (desktop/iPad): "Taken today" sits in the stat row, same top and bottom as the three tiles;
+   the two bottom cards share one top and one bottom edge. */
+@media (min-width: 861px) {
+  .ax-dash .ax-hero-side--head { display: none; }
+  .ax-dash .ax-tiles { max-width: none; display: flex; align-items: stretch; }
+  .ax-dash .ax-tiles > .ax-tile { flex: 0 0 auto; width: 214px; }
+  .ax-dash .ax-hero-side--row { position: static; margin-left: auto; flex: 0 0 auto; width: 214px; box-sizing: border-box; align-items: flex-start; justify-content: center; }
+  .ax-dash .ax-detail { align-items: stretch; }
+  .ax-dash .ax-detail-side { justify-content: flex-end; }
+  .ax-dash .ax-detail-side > .ax-panel { margin-bottom: -36px; padding-bottom: 66px; border-radius: 36px 36px 0 0; }
+}
+@media (max-width: 860px) {
+  .ax-dash .ax-hero-side--row, .ax-dash .ax-hero-side--head { display: none; }
+  .ax-shell-frame[data-hero="on"] .ax-page-head, .ax-dash .ax-page-head { min-height: 0 !important; }
+}
+@media (min-width: 861px) {
+  .ax-dash .ax-detail-main > .ax-panel, .ax-dash .ax-detail-side > .ax-panel { flex: 1 1 auto; }
+}
+@media (min-width: 861px) {
+  .ax-dash .ax-detail-main, .ax-dash .ax-detail-side { align-self: stretch; }
+  .ax-dash .ax-tiles > .ax-tile, .ax-dash .ax-hero-side--row { flex: 1 1 0; width: auto; min-width: 0; }
+}
+
+/* iPad landscape / small desktop: keep every nav pill visible */
+@media (min-width: 861px) and (max-width: 1180px) {
+  .ax-notch { max-width: calc(100% - 440px); }
+  .ax-notch .ax-chip-link { height: 36px; min-height: 36px !important; padding: 0 11px !important; font-size: 13px; }
+}
+@media (min-width: 861px) and (max-width: 1000px) {
+  .ax-notch { max-width: calc(100% - 400px); }
+  .ax-notch .ax-chip-link { padding: 0 9px !important; font-size: 12.5px; }
+}
+@media (min-width: 861px) and (max-width: 1000px) {
+  .ax-dash .ax-detail { grid-template-columns: minmax(0, 1fr); gap: 16px 0; align-items: stretch; }
+  .ax-dash .ax-detail-main > .ax-panel, .ax-dash .ax-detail-side > .ax-panel { margin-bottom: 0 !important; padding-bottom: 24px; border-radius: 28px; flex: 0 0 auto; }
+}
+/* ---- Scaffold fixes (root causes) ---------------------------------------------------------
+   1. Content scrolls in a viewport that starts BELOW the top chrome row, so a heading or a
+      button can never slide behind or beside the floating nav.
+   2. The notch is centred over the content column (not the whole frame) and always has room
+      between the logo pill and the account pill.
+   3. Dashboard bottom cards share one shape: same radius on all four corners, same height,
+      no flush edge, no concave cutouts, no dead band between the tiles and the cards. */
+.ax-shell { --ax-top: 88px; }
+.ax-shell-frame > .ax-main {
+  inset: var(--ax-top) 0 0 0 !important;
+  padding-top: 6px !important;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 18px);
+}
+.ax-dash .ax-hero-side { top: 6px; }
+@media (min-width: 861px) {
+  .ax-notch {
+    left: 258px; right: 246px; transform: none; width: fit-content; margin: 0 auto;
+    max-width: calc(100% - 258px - 246px);
+  }
+  .ax-notch .ax-chips { overflow-x: auto; }
+  .ax-dash .ax-detail { margin-top: 0 !important; flex: 1 1 auto; align-items: stretch; }
+  .ax-dash .ax-detail-main > .ax-panel, .ax-dash .ax-detail-side > .ax-panel {
+    border-radius: 28px !important; margin-bottom: 0 !important; padding: 24px 28px !important;
+    background: var(--ax-chrome) !important; flex: 1 1 auto;
+  }
+  .ax-dash .ax-detail-main > .ax-panel::before, .ax-dash .ax-detail-main > .ax-panel::after { display: none; }
+  .ax-dash .ax-detail-side { justify-content: stretch; }
+}
+@media (min-width: 861px) and (max-width: 1400px) {
+  .ax-corner-out { width: 38px; padding: 0; justify-content: center; }
+  .ax-corner-out-t { display: none; }
+  .ax-notch { right: 170px; max-width: calc(100% - 258px - 170px); }
+  .ax-notch .ax-chip-link { padding: 0 13px !important; font-size: 13.5px; }
+}
+@media (min-width: 861px) and (max-width: 1000px) {
+  .ax-notch { left: 236px; right: 160px; max-width: calc(100% - 236px - 160px); }
+}
+@media (max-width: 860px) { .ax-shell { --ax-top: 72px; } .ax-shell-frame > .ax-main { padding-top: 6px !important; } }
+
+/* ---- Dashboard v3: one radius, one glass, a headline that sits on the photo instead of shouting. ---- */
+.ax-shell { --ax-card-r: 28px; }
+@media (min-width: 861px) {
+  .ax-dash .ax-page-head h1 { font-size: clamp(44px, 5.4vw, 80px) !important; line-height: 1 !important; letter-spacing: -1.5px !important; font-weight: 400 !important; margin-top: 4px !important; }
+  .ax-dash .ax-tiles .ax-tile, .ax-dash .ax-tiles .ax-hero-side--row,
+  .ax-dash .ax-detail-main > .ax-panel, .ax-dash .ax-detail-side > .ax-panel { border-radius: var(--ax-card-r) !important; }
+  html[data-theme="night"] .ax-dash .ax-detail-main > .ax-panel,
+  html[data-theme="night"] .ax-dash .ax-detail-side > .ax-panel {
+    background: var(--fl-glass-night) !important;
+    border: 1px solid rgba(255,255,255,.17) !important;
+    box-shadow: 0 24px 54px -22px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.22) !important;
+    backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%);
+  }
+  /* Cards hug their content and sit at the bottom of the canvas; no tall empty slabs. */
+  .ax-dash .ax-detail { align-items: stretch; margin-top: auto !important; flex: 0 0 auto; }
+  .ax-dash .ax-detail-main > .ax-panel, .ax-dash .ax-detail-side > .ax-panel { flex: 1 1 auto; }
+}
+@media (max-width: 860px) {
+  .ax-dash .ax-page-head h1 { font-size: clamp(34px, 10vw, 48px) !important; letter-spacing: -1px !important; line-height: 1.05 !important; font-weight: 400 !important; }
+}
+
+/* ---- Shared form and control rules (one place, applies to every admin page) ----
+   Fields: one height, text centred vertically, one radius family.
+   Selects: same custom chevron everywhere, optically centred, never the browser default.
+   Buttons: one inline-flex box so glyphs and labels centre on the same line. */
+.ax-shell { --ax-field-h: 44px; --ax-field-r: 22px; }
+.ax-shell input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+.ax-shell select { min-height: var(--ax-field-h); height: var(--ax-field-h); line-height: 1.2; box-sizing: border-box; padding-top: 0; padding-bottom: 0; display: block; }
+.ax-shell textarea {
+  box-sizing: border-box; border-radius: var(--ax-field-r); padding: 12px 18px; min-height: var(--ax-field-h); line-height: 20px; resize: vertical; display: block;
+}
+.ax-shell textarea:not([rows]), .ax-shell textarea[rows="1"] { height: var(--ax-field-h); padding-top: 11px; padding-bottom: 11px; resize: none; }
+.ax-shell textarea[rows="2"], .ax-shell textarea[rows="3"], .ax-shell textarea[rows="4"] { height: auto; padding-top: 12px; padding-bottom: 12px; resize: vertical; }
+.ax-shell input::placeholder, .ax-shell textarea::placeholder { line-height: inherit; opacity: .6; }
+.ax-shell input[type="date"], .ax-shell input[type="datetime-local"], .ax-shell input[type="time"] { padding-right: 14px; }
+.ax-shell input[type="date"]::-webkit-calendar-picker-indicator, .ax-shell input[type="datetime-local"]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; opacity: .8; }
+html[data-theme="night"] .ax-shell input[type="date"]::-webkit-calendar-picker-indicator, html[data-theme="night"] .ax-shell input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+.ax-shell select {
+  appearance: none; -webkit-appearance: none; padding-right: 42px; cursor: pointer;
+  background-repeat: no-repeat; background-position: right 16px center; background-size: 12px 8px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%23999' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.ax-shell .ax-toolbar select, .ax-shell .ax-person select, .ax-shell .ax-paper select { height: 36px; min-height: 36px; }
+.ax-shell .ax-button, .ax-shell button.ax-button, .ax-shell a.ax-button { display: inline-flex; align-items: center; justify-content: center; line-height: 1; gap: 8px; box-sizing: border-box; }
+.ax-shell .ax-button[aria-label="Next day"], .ax-shell .ax-button[aria-label="Previous day"] { width: 44px; padding: 0; font-size: 22px; padding-bottom: 3px; }
+.ax-shell summary { display: flex; align-items: center; gap: 8px; }
+/* Save / Cancel pairs: Cancel is quiet glass, Save is the one orange action, same height. */
+.ax-shell .ax-panel-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ax-shell .ax-button--primary { color: #fff; }
+
+/* ---- Customer page: aligned header, one row grammar for visits and messages, inline edit ---- */
+.ax-crow { display: flex; align-items: center; gap: 16px; width: 100%; text-align: left; }
+.ax-vrow-when { flex: 0 0 150px; }
+.ax-vrow-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; white-space: normal; }
+.ax-vrow-main strong { font-weight: 600; color: var(--ad-text-primary); }
+.ax-vrow-amt { flex: 0 0 96px; text-align: right; }
+.ax-vrow-read { flex: 0 0 72px; text-align: right; }
+.ax-hero { align-items: flex-start; }
+.ax-hero > div:first-child { display: flex; flex-direction: column; justify-content: flex-end; }
+.ax-cust-facts .ax-cust-edit { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ax-cust-facts .ax-cust-edit input { width: 100%; }
+.ax-cust-edit-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 10px; }
+.ax-cust-facts-end { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.ax-inline-add { background: none; border: none; padding: 0; min-height: 0; color: var(--ad-accent-strong); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 860px) {
+  .ax-crow { flex-wrap: wrap; gap: 4px 12px; }
+  .ax-vrow-when { flex: 1 0 100%; }
+  .ax-vrow-main { flex: 1 1 60%; }
+  .ax-vrow-amt, .ax-vrow-read { flex: 0 0 auto; }
+}
+@media (min-width: 1100px) { .ax-cust-facts:not(:has(.ax-cust-edit)) { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.ax-cust-facts:has(.ax-cust-edit) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 700px) { .ax-cust-facts:has(.ax-cust-edit) { grid-template-columns: 1fr; } }
+
+.ax-list .is-center, .ax-shell .ax-list-row > span.is-center { text-align: center; justify-self: center; }
+
+/* A customer's own car inside the profile (not the for-sale card) */
+.ax-ocar { margin-top: 10px; padding: 14px 18px; border-radius: 20px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); min-width: 0; }
+html[data-theme="day"] .ax-ocar { border-color: rgba(60,40,20,.12); background: rgba(255,255,255,.55); }
+.ax-ocar .ax-car-head { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+
+.ax-detail.ax-detail--solo, .ax-dash .ax-detail.ax-detail--solo { grid-template-columns: minmax(0, 1fr) !important; }
+.ax-detail--solo .ax-cars { grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); }
+
+/* Customer rows: explicit grid so every row lines up, left-aligned text */
+.ax-shell .ax-panel .ax-crow { display: grid; grid-template-columns: 170px minmax(0, 1fr) 110px 96px; align-items: center; column-gap: 18px; width: 100%; text-align: left; justify-items: start; padding: 12px 4px; }
+.ax-shell .ax-panel .ax-crow > * { margin: 0; min-width: 0; flex: none; width: auto; }
+.ax-shell .ax-panel .ax-crow .ax-vrow-main { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 2px; }
+.ax-shell .ax-panel .ax-crow .ax-vrow-amt { justify-self: end; text-align: right; }
+.ax-shell .ax-panel .ax-crow .ax-vrow-read { justify-self: end; text-align: right; grid-column: 4; }
+.ax-shell .ax-panel .ax-crow--log { grid-template-columns: 170px minmax(0, 1fr) auto; }
+@media (max-width: 860px) {
+  .ax-shell .ax-panel .ax-crow { grid-template-columns: minmax(0, 1fr) auto; row-gap: 2px; }
+  .ax-shell .ax-panel .ax-crow .ax-vrow-when { grid-column: 1 / -1; }
+  .ax-shell .ax-panel .ax-crow .ax-vrow-read { grid-column: auto; }
+}
+
+/* Sidebar hierarchy by size, weight and position (no labels, no rules) */
+@media (min-width: 861px) {
+  .ax-side .ax-nav-group, html[data-theme="night"] .ax-side .ax-nav-group { border-top: none !important; padding-top: 0 !important; gap: 0; }
+  .ax-side .ax-nav-group[data-tier="1"] .ax-nav-link { min-height: 48px !important; font-size: 16px; font-weight: 600; gap: 12px; }
+  .ax-side .ax-nav-group[data-tier="1"] .ax-nav-link svg { display: block; width: 20px; height: 20px; opacity: .85; flex: none; }
+  .ax-side .ax-nav-group[data-tier="2"] .ax-nav-link { min-height: 38px !important; font-size: 14px; font-weight: 500; }
+  .ax-side .ax-nav-group[data-tier="2"][data-first] { margin-top: 22px; }
+  .ax-side .ax-nav-group[data-tier="3"] .ax-nav-link { min-height: 32px !important; font-size: 13px; font-weight: 500; opacity: .62; }
+  .ax-side .ax-nav-group[data-tier="3"] .ax-nav-link[aria-current="page"], .ax-side .ax-nav-group[data-tier="3"] .ax-nav-link:hover { opacity: 1; }
+  .ax-side .ax-nav-group[data-tier="3"][data-first] { margin-top: auto; padding-top: 22px !important; }
+}
+@media (max-width: 860px) { .ax-corner--l .ax-lg--mark.ax-lg-d { display: block !important; height: 28px; filter: drop-shadow(0 1px 8px rgba(0,0,0,.6)); } .ax-corner--l .ax-lg--mark.ax-lg-l { display: none !important; } }
+
+/* One Day background, identical to DAY_ATMOSPHERE in packages/ui/src/theme/glass.ts (a guard test keeps them equal). */
+html[data-theme="day"], html[data-theme="day"] body { background: radial-gradient(90vmax 70vmax at 6% 0%, rgba(150,164,238,0.13), transparent 62%), radial-gradient(80vmax 65vmax at 100% 28%, rgba(255,178,122,0.10), transparent 64%), radial-gradient(90vmax 70vmax at 14% 100%, rgba(236,168,190,0.09), transparent 66%), radial-gradient(70vmax 60vmax at 96% 100%, rgba(168,200,236,0.09), transparent 66%), linear-gradient(180deg, #FFFFFF 0%, #FBFAF8 100%); background-attachment: fixed; background-repeat: no-repeat; }
+html[data-theme="day"] .ax-shell, html[data-theme="day"] .ax-login { background: transparent !important; }
+html[data-theme="day"] .ax-ambient { background: none; animation: none; }
+
+/* Invoice side panel has three fields, never the generic four-column visit grid. */
+.ax-shell .ax-panel .ax-crow.ax-crow--invoice { grid-template-columns:minmax(0,1fr) auto; gap:6px 12px; }
+.ax-shell .ax-panel .ax-crow.ax-crow--invoice > :first-child { grid-column:1 / -1; overflow-wrap:anywhere; }
+.ax-shell .ax-panel .ax-crow.ax-crow--invoice > :last-child { justify-self:end; white-space:nowrap; }

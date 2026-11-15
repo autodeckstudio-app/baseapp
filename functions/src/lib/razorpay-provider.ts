@@ -1,0 +1,296 @@
+// RazorpayProvider — production payment provider for India.
+// In development (USE_PAYMENT_MOCK=true or emulator context), the mock provider
+// is used instead. This file is NEVER called with real credentials in development.
+//
+// PAID SERVICE: Razorpay transaction fees apply in production.
+// Sandbox is free. REQUIRES APPROVAL before production activation.
+import type {
+  PaymentProvider,
+  PaymentLinkEvidence,
+  CreatePaymentLinkParams,
+  PaymentLinkResult,
+  InitiateRefundParams,
+  RefundResult,
+  RefundLookupResult, RefundBinding,
+  VerifyWebhookParams,
+  ProviderWebhookEvent,
+  CancelPaymentLinkResult,
+} from "./payment-provider.js";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { isProductionProject } from "./environment.js";
+import { mockProvider } from "./mock-payment-provider.js";
+
+interface RazorpayPaymentLinkResponse {
+  id: string;
+  short_url: string;
+  order_id?: string;
+}
+
+interface RazorpayRefundResponse {
+  id: string;
+  status?: string;
+}
+
+interface RazorpayWebhookPayload {
+  id: string;
+  event: string;
+  payload?: {
+    payment?: { entity?: { id?: string; order_id?: string; amount?: number; currency?: string } };
+    refund?: { entity?: { id?: string; payment_id?: string; amount?: number; currency?: string; status?: string; receipt?: string | null } };
+    payment_link?: { entity?: { id?: string; reference_id?: string; order_id?: string; amount?: number } };
+  };
+}
+
+export class RazorpayProvider implements PaymentProvider {
+  readonly name = "razorpay";
+
+  private readonly keyId: string;
+  private readonly keySecret: string;
+  private readonly webhookSecret: string;
+  private readonly baseUrl = "https://api.razorpay.com/v1";
+
+  constructor(keyId: string, keySecret: string, webhookSecret: string) {
+    this.keyId = keyId;
+    this.keySecret = keySecret;
+    this.webhookSecret = webhookSecret;
+  }
+
+  private get authHeader() {
+    const credentials = Buffer.from(`${this.keyId}:${this.keySecret}`).toString("base64");
+    return `Basic ${credentials}`;
+  }
+
+  async createPaymentLink(params: CreatePaymentLinkParams): Promise<PaymentLinkResult> {
+    const response = await fetch(`${this.baseUrl}/payment_links`, {
+      method: "POST",
+      headers: {
+        Authorization: this.authHeader,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        amount: params.amount,
+        currency: params.currency,
+        description: params.description,
+        // An empty contact is rejected by Razorpay, so only send it when we have one.
+        customer: {
+          name: params.customerName,
+          ...(params.customerPhone ? { contact: params.customerPhone } : {}),
+        },
+        reference_id: params.referenceId,
+        ...(params.expireByEpochSeconds ? { expire_by: params.expireByEpochSeconds } : {}),
+        notes: { bookingId: params.bookingId },
+        callback_url: null, // handled via webhook
+        callback_method: null,
+      }),
+    });
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      let reason = "";
+      try { reason = (JSON.parse(detail) as { error?: { description?: string } }).error?.description ?? ""; } catch { /* non-JSON body */ }
+      throw new Error(`Razorpay createPaymentLink failed: ${response.status}${reason ? ` (${reason})` : ""}`);
+    }
+
+    const data = (await response.json()) as RazorpayPaymentLinkResponse;
+    return {
+      providerPaymentLinkId: data.id,
+      providerOrderId: data.order_id ?? null,
+      paymentUrl: data.short_url,
+    };
+  }
+
+  async fetchPaymentLink(providerPaymentLinkId: string): Promise<(PaymentLinkResult & { status: string; amount: number; currency: string; evidence?: PaymentLinkEvidence }) | null> {
+    // GET /v1/payment_links/:id (official API reference). Reconciliation
+    // only - never a creation path.
+    const response = await fetch(`${this.baseUrl}/payment_links/${providerPaymentLinkId}`, {
+      headers: { Authorization: this.authHeader },
+    });
+    if (response.status === 404) return null;
+    if (!response.ok) {
+      throw new Error(`Razorpay fetchPaymentLink failed: ${response.status}`);
+    }
+    const data = (await response.json()) as RazorpayPaymentLinkResponse & { status?: string; amount?: number; currency?: string; reference_id?: unknown; amount_paid?: unknown; payments?: unknown };
+    return {
+      providerPaymentLinkId: data.id,
+      providerOrderId: data.order_id ?? null,
+      paymentUrl: data.short_url,
+      status: data.status ?? "unknown",
+      // Reconciliation compares these against the stored payment, so a
+      // missing field must FAIL the compare, never pass by default.
+      amount: data.amount ?? -1,
+      currency: data.currency ?? "",
+      evidence: { referenceId: data.reference_id, amountPaid: data.amount_paid, payments: data.payments },
+    };
+  }
+
+  verifyWebhookSignature(params: VerifyWebhookParams): boolean {
+    // An unset secret must never validate: HMAC with an empty key is guessable.
+    if (!this.webhookSecret || !params.signature) return false;
+    const expected = createHmac("sha256", this.webhookSecret)
+      .update(params.rawBody)
+      .digest("hex");
+    const a = Buffer.from(expected);
+    const b = Buffer.from(params.signature);
+    return a.length === b.length && timingSafeEqual(a, b);
+  }
+
+  parseWebhookEvent(rawBody: string): ProviderWebhookEvent {
+    const body = JSON.parse(rawBody) as RazorpayWebhookPayload;
+    const eventType = body.event as ProviderWebhookEvent["eventType"];
+    const payment = body.payload?.payment?.entity;
+    const refund = body.payload?.refund?.entity;
+    const plink = body.payload?.payment_link?.entity;
+
+    return {
+      eventType,
+      // Razorpay sends the event id in the X-Razorpay-Event-Id header, not the body;
+      // the handler overrides this with the header. A body hash is the stable fallback.
+      providerEventId: body.id ?? createHash("sha256").update(rawBody).digest("hex"),
+      providerPaymentId: payment?.id ?? refund?.payment_id ?? "",
+      providerPaymentLinkId: plink?.id ?? null,
+      providerRefundId: refund?.id ?? null,
+      providerRefundAmount: refund?.amount ?? null,
+      providerRefundCurrency: refund?.currency ?? null,
+      providerRefundPaymentId: refund?.payment_id ?? null,
+      providerPaymentEntityId: payment?.id ?? null,
+      providerPaymentEntityCurrency: payment?.currency ?? null,
+      providerRefundStatus: refund?.status ?? null,
+      providerRefundReceipt: refund?.receipt ?? null,
+      providerOrderId: payment?.order_id ?? plink?.order_id ?? null,
+      referenceId: plink?.reference_id ?? null,
+      amount: payment?.amount ?? plink?.amount ?? refund?.amount ?? 0,
+      currency: payment?.currency ?? "INR",
+    };
+  }
+
+  // POST /v1/payment_links/:id/cancel (official API reference, 28 Oct 2026).
+  // Maps Razorpay's documented 400s to explicit outcomes so the caller can fail
+  // closed on money and retry on the provider's short-lived lock.
+  async cancelPaymentLink(providerPaymentLinkId: string): Promise<CancelPaymentLinkResult> {
+    const response = await fetch(`${this.baseUrl}/payment_links/${encodeURIComponent(providerPaymentLinkId)}/cancel`, {
+      method: "POST",
+      headers: { Authorization: this.authHeader, "Content-Type": "application/json" },
+    });
+    if (response.ok) {
+      const body = (await response.json().catch(() => null)) as { status?: string } | null;
+      if (body?.status === "cancelled") return { outcome: "cancelled" };
+      throw new Error(`Razorpay cancelPaymentLink: unexpected success body (status=${body?.status ?? "unknown"})`);
+    }
+    const detail = await response.text().catch(() => "");
+    let reason = "";
+    try { reason = (JSON.parse(detail) as { error?: { description?: string } }).error?.description ?? ""; } catch { /* non-JSON body */ }
+    if (response.status === 400 && /already paid|partially paid/i.test(reason)) return { outcome: "already_paid" };
+    if (response.status === 400 && /expired link|or cancelled/i.test(reason)) return { outcome: "already_inactive" };
+    if (response.status === 400 && /update is already in progress/i.test(reason)) return { outcome: "in_progress" };
+    throw new Error(`Razorpay cancelPaymentLink failed: ${response.status}${reason ? ` (${reason})` : ""}`);
+  }
+
+  async initiateRefund(params: InitiateRefundParams): Promise<RefundResult> {
+    const response = await fetch(
+      `${this.baseUrl}/payments/${params.providerPaymentId}/refund`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: this.authHeader,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: params.amount,
+          notes: { reason: params.reason },
+          receipt: params.referenceId,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`Razorpay initiateRefund failed: ${response.status}`);
+    }
+
+    const data = (await response.json()) as RazorpayRefundResponse;
+    return { providerRefundId: data.id, status: data.status ?? null };
+  }
+
+  /**
+   * Reconciles an ambiguous refund submit by our durable reference id, which
+   * initiateRefund sets as the Razorpay refund's receipt. The query is scoped
+   * to OUR stored provider payment id and the match is bound to amount and
+   * currency, so identity never rests on the receipt field alone (receipts
+   * have no provider uniqueness contract). List freshness is still not
+   * contractual, so a miss can NEVER be treated as authoritative absence (a
+   * committed refund could sit beyond the page or behind an index delay).
+   * Every miss, ambiguity, or partial match is "unknown": the reservation
+   * stays held for manual reconciliation rather than releasing the balance.
+   */
+  async findRefundByReference(referenceId: string, binding: RefundBinding): Promise<RefundLookupResult> {
+    // BOUND reconciliation. The query is scoped to OUR payment
+    // (/payments/{providerPaymentId}/refunds), anchoring identity to the
+    // stored provider payment id instead of an account-wide receipt scan.
+    // A match must then agree on receipt AND amount AND currency. Exactly one
+    // fully-bound match founds; every other shape is "unknown" and the hold
+    // stays held for manual reconciliation:
+    //  - zero matches: inconclusive (page/index lag), NEVER absent_confirmed;
+    //  - 2+ bound matches: ambiguous, never an arbitrary pick;
+    //  - a receipt match whose amount/currency disagrees: conflict-shaped,
+    //    treated as unknown (held) rather than attached or released;
+    //  - transport failure, non-OK status, malformed JSON: unknown.
+    let data: { items?: Array<{ id?: string; receipt?: string | null; amount?: number; currency?: string; status?: string }> };
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/payments/${encodeURIComponent(binding.providerPaymentId)}/refunds?count=100`,
+        { headers: { Authorization: this.authHeader } },
+      );
+      if (!response.ok) return { outcome: "unknown" };
+      data = (await response.json()) as { items?: Array<{ id?: string; receipt?: string | null; amount?: number; currency?: string; status?: string }> };
+    } catch {
+      return { outcome: "unknown" };
+    }
+    const receiptMatches = (data.items ?? []).filter((refund) => refund?.receipt === referenceId);
+    const bound = receiptMatches.filter(
+      (refund) => refund?.amount === binding.amountPaise && refund?.currency === binding.currency,
+    );
+    // A found refund is not necessarily successful: only "processed" moves
+    // money. Per Razorpay's documented lifecycle (created -> processed |
+    // failed), "failed" is a failure NOTIFICATION whose finality the provider
+    // contract does not settle (the runner holds it for manual
+    // reconciliation); "pending"/"partial"/
+    // missing status is inconclusive - hold, do not project, do not release.
+    if (bound.length === 1 && bound.length === receiptMatches.length && bound[0]?.id) {
+      if (bound[0].status === "processed") return { outcome: "found", providerRefundId: bound[0].id };
+      if (bound[0].status === "failed") return { outcome: "failed_confirmed", providerRefundId: bound[0].id };
+    }
+    return { outcome: "unknown" };
+  }
+}
+
+// Factory — returns mock in emulator/dev, real provider in production.
+// NEVER pass real credentials in development.
+export function getPaymentProvider(): PaymentProvider {
+  const useMock =
+    process.env["USE_PAYMENT_MOCK"] === "true" ||
+    process.env["FUNCTIONS_EMULATOR"] === "true" ||
+    !process.env["RAZORPAY_KEY_ID"];
+
+  if (useMock) {
+    // Phase 5B P1-10 fix: previously, a missing RAZORPAY_KEY_ID (or an
+    // accidentally-set USE_PAYMENT_MOCK/FUNCTIONS_EMULATOR) in the actual
+    // production project silently substituted the mock provider — real
+    // payment links would silently become fake mock-razorpay.local URLs
+    // with no error anywhere, breaking customer payment collection
+    // invisibly. Fail loudly instead: a missing production secret must be
+    // fixed, never silently worked around.
+    if (isProductionProject()) {
+      throw new Error(
+        "Refusing to use the mock payment provider in the production Firebase project " +
+          "(autodeck-prod). RAZORPAY_KEY_ID is missing, or USE_PAYMENT_MOCK/FUNCTIONS_EMULATOR " +
+          "is set in production configuration — fix the production secret/config instead of " +
+          "silently falling back to mock payments.",
+      );
+    }
+    return mockProvider;
+  }
+
+  const keyId = process.env["RAZORPAY_KEY_ID"] ?? "";
+  const keySecret = process.env["RAZORPAY_KEY_SECRET"] ?? "";
+  const webhookSecret = process.env["RAZORPAY_WEBHOOK_SECRET"] ?? "";
+  return new RazorpayProvider(keyId, keySecret, webhookSecret);
+}

@@ -1,0 +1,65 @@
+[
+  {
+    "key": "llumar-ppf",
+    "brand": "LLumar",
+    "name": "LLumar PPF",
+    "group": "ppf",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://llumar.com/en/paint-protection-film",
+    "level": "brand"
+  },
+  {
+    "key": "garware-ppf",
+    "brand": "Garware",
+    "name": "Garware PPF",
+    "group": "ppf",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://www.garwareppf.com/",
+    "level": "brand"
+  },
+  {
+    "key": "xpel-ppf",
+    "brand": "XPEL",
+    "name": "XPEL PPF",
+    "group": "ppf",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://www.xpel.com/",
+    "level": "brand"
+  },
+  {
+    "key": "avery-dennison-ppf",
+    "brand": "Avery Dennison",
+    "name": "Avery Dennison PPF",
+    "group": "ppf",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://graphics.averydennison.com/eu-en/home/graphics-products/vehicle-wrapping-films/spf-dir-series.html",
+    "level": "brand"
+  },
+  {
+    "key": "avvyx-ppf",
+    "brand": "AVVYX",
+    "name": "AVVYX PPF",
+    "group": "ppf",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://avvyx.com/",
+    "level": "brand"
+  },
+  {
+    "key": "nar-ppf",
+    "brand": "NAR",
+    "name": "NAR PPF",
+    "group": "ppf",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://www.narppf.com/",
+    "level": "brand"
+  },
+  {
+    "key": "gswf-ppf",
+    "brand": "GSWF",
+    "name": "GSWF PPF",
+    "group": "ppf",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://gswf.com/",
+    "level": "brand"
+  }
+]

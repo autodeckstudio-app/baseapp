@@ -1,0 +1,68 @@
+import { httpsCallable } from "firebase/functions";
+import { collection, doc, query, where, orderBy, limit, onSnapshot, type Unsubscribe } from "firebase/firestore";
+import { db, functions } from "./firebase";
+import { COLLECTIONS } from "@autodeck/database";
+import type { Payment, PaymentMethod } from "@autodeck/core";
+
+type InitiatePaymentInput = { jobId: string; method: PaymentMethod };
+type InitiatePaymentOutput = { paymentId: string; paymentUrl: string | null; status: string };
+
+// Keyed by jobId - the payable operational job - so this works identically
+// whether the job came from a booking or a walk-in. Development uses
+// MockPaymentProvider - no real Razorpay charge occurs. Payment only becomes
+// "completed" once studio/admin confirms it (confirmManualPayment /
+// recordManualPayment) - the customer app never has access to a function
+// that can mark its own payment successful.
+export type RequestAdvanceOutput = { paymentId: string; paymentUrl: string | null; status: string };
+
+/** Pay-at-studio 20% advance (basket item 4, PREVIEW - reachable only when
+ *  ADVANCE_SPLIT_ENABLED is on). The server claims the booking's advance
+ *  slot, reconciles with the provider and returns a payable URL, or
+ *  status "manual_review" (never a URL) when a human must reconcile. */
+export async function requestAdvancePayment(bookingId: string, expectedAdvancePaise?: number): Promise<RequestAdvanceOutput> {
+  const fn = httpsCallable<{ bookingId: string; expectedAdvancePaise?: number }, RequestAdvanceOutput>(functions, "requestAdvancePayment");
+  const result = await fn({ bookingId, ...(expectedAdvancePaise !== undefined ? { expectedAdvancePaise } : {}) });
+  return result.data;
+}
+
+export async function initiatePayment(jobId: string, method: PaymentMethod): Promise<InitiatePaymentOutput> {
+  const fn = httpsCallable<InitiatePaymentInput, InitiatePaymentOutput>(functions, "initiatePayment");
+  const result = await fn({ jobId, method });
+  return result.data;
+}
+
+/**
+ * Real-time listener for the most recent payment on a job.
+ *
+ * Filters by tenantId and customerId as well as jobId: Firestore rejects a
+ * list query outright unless every field the security rule checks is
+ * constrained by an equality filter it can verify statically (see
+ * job-service.ts's listenToJobForBooking for the full explanation).
+ */
+export function listenToPaymentForJob(
+  jobId: string,
+  tenantId: string,
+  customerId: string,
+  onData: (payment: Payment | null) => void,
+  onError: (err: Error) => void,
+  advance?: { paymentId: string; bookingId: string; amount: number; studioId: string },
+): Unsubscribe {
+  if (advance) return onSnapshot(doc(db, COLLECTIONS.payments(), advance.paymentId), snap => {
+    const p = snap.exists() ? snap.data() as Payment : null;
+    if (!p || p.id !== advance.paymentId || p.targetType !== "booking" || p.jobId !== null || p.bookingId !== advance.bookingId || p.tenantId !== tenantId || p.customerId !== customerId || p.studioId !== advance.studioId || p.amount !== advance.amount || p.currency !== "INR") { onError(new Error("Advance payment binding unavailable.")); return; }
+    onData(p);
+  }, onError);
+  const q = query(
+    collection(db, COLLECTIONS.payments()),
+    where("jobId", "==", jobId),
+    where("tenantId", "==", tenantId),
+    where("customerId", "==", customerId),
+    orderBy("createdAt", "desc"),
+    limit(1),
+  );
+  return onSnapshot(
+    q,
+    (snap) => onData(snap.empty ? null : (snap.docs.at(0)?.data() as Payment | undefined) ?? null),
+    onError,
+  );
+}

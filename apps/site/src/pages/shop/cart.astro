@@ -1,0 +1,35 @@
+---
+import Base from '../../layouts/Base.astro';
+import '../../styles/store.css';
+import '../../styles/shop-flow.css';
+import fixture from '../../data/shop-fixture.json';
+const dev = import.meta.env.DEV;
+const imgs = Object.fromEntries((fixture.products as { id: string; image: string }[]).map(p => [p.id, p.image]));
+---
+<Base title="Cart · AutoDeck Store" description="Your AutoDeck Store cart." page="shop">
+{dev ? (
+  <section class="wrap cart" data-cart data-api="http://127.0.0.1:8796" data-imgs={JSON.stringify(imgs)}>
+    <div>
+      <span class="fx-tag"><i></i> Fixture flow. Local only. No payment.</span>
+      <h1>Your cart</h1>
+      <div class="cart-card"><div data-lines></div><div class="sum" data-sum></div></div>
+    </div>
+    <div class="cart-card">
+      <h2 style="font-size:18px;margin:0 0 14px">Delivery details</h2>
+      <form class="gf">
+        <label>Full name<input name="name" autocomplete="name" required /></label>
+        <label>Mobile<input name="mobile" inputmode="numeric" autocomplete="tel" required /></label>
+        <label>Email (optional)<input name="email" type="email" autocomplete="email" /></label>
+        <label>Address<input name="address" autocomplete="street-address" required /></label>
+        <div class="two"><label>City<input name="city" required /></label><label>State<input name="state" required /></label></div>
+        <label>Pincode<input name="pincode" inputmode="numeric" maxlength="6" required /></label>
+        <button class="btn-solid" type="submit" data-submit>Place test order</button>
+      </form>
+      <p class="res" data-res></p>
+    </div>
+  </section>
+) : (
+  <section class="wrap" style="padding-block:44px 64px"><h1>Cart</h1><p class="store-small">Ordering is not open yet.</p><p><a class="btn-link" style="margin:0" href="/shop">Back to the store</a></p></section>
+)}
+{dev && <script>import '../../scripts/cart.js';</script>}
+</Base>

@@ -1,0 +1,23 @@
+# Reviewed manifest of Cloud Run SERVICE IDs (lowercase, as deployed in
+# asia-south1, autodeck-studio) whose backing Firebase callable is INTENDED to
+# be publicly invocable (roles/run.invoker on allUsers) because customer/admin
+# devices call them over HTTPS and authenticate inside the function with a
+# Firebase ID token. Service IDs are the lowercase Cloud Run names, NOT the
+# camelCase function export names - the API 404s on camelCase.
+# Add a service ONLY with an explicit reviewer sign-off. Services NOT listed
+# here are not asserted private by the checker - they are simply not checked.
+# Incident 2026-11-01: these 5 were first-deployed without the binding.
+createmyprotection
+updatemyprotection
+removemyvehicleimage
+removemylistingphoto
+replacemylistingphoto
+recordwebvital
+# Incident 2026-11-03: getPickupQuote first-deployed without the binding
+# (run-level 403); requestPickupDrop is the sibling public callable and is
+# asserted here so the checker covers the whole pickup/drop ingress.
+getpickupquote
+requestpickupdrop
+# Incident 2026-11-07: recoverManagedCataloguePublish first-deployed without
+# the binding (run-level 401); binding applied live per owner approval.
+recovermanagedcataloguepublish

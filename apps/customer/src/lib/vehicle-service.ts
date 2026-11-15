@@ -1,0 +1,217 @@
+import { readPrivatePhoto } from './private-photo-service';
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  getDocs,
+  type Unsubscribe,
+  type QuerySnapshot,
+} from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
+import { resolveMyCustomerDocId } from "./auth-service";
+import { auth, db, functions } from "./firebase";
+import { COLLECTIONS } from "@autodeck/database";
+import type { Vehicle, VehicleCategory } from "@autodeck/core";
+
+export type VehiclePhotoBody = Blob | Uint8Array;
+export async function putVehiclePhoto(url: string, headers: Record<string, string>, body: VehiclePhotoBody): Promise<void> {
+  const response = body instanceof Uint8Array
+    ? await (await import("expo/fetch")).fetch(url, { method: "PUT", headers, body })
+    : await fetch(url, { method: "PUT", headers, body });
+  if (!response.ok) throw new Error(`Photo upload failed (${response.status}).`);
+}
+
+type CreateVehicleInput = {
+  registrationNumber: string;
+  make: string;
+  model: string;
+  year: number;
+  color: string;
+  category: VehicleCategory;
+  archivedChoice?: "new";
+};
+
+type UpdateVehicleInput = {
+  vehicleId: string;
+  registrationNumber?: string;
+  make?: string;
+  model?: string;
+  year?: number;
+  color?: string;
+  category?: VehicleCategory;
+  odometer?: number;
+  photoUrl?: string | null;
+};
+
+export async function createVehicle(input: CreateVehicleInput): Promise<Vehicle> {
+  const fn = httpsCallable<CreateVehicleInput, { vehicle: Vehicle }>(
+    functions,
+    "createVehicle",
+  );
+  const result = await fn(input);
+  return result.data.vehicle;
+}
+
+export async function updateVehicle(input: UpdateVehicleInput): Promise<void> {
+  const fn = httpsCallable<UpdateVehicleInput, { vehicleId: string }>(
+    functions,
+    "updateVehicle",
+  );
+  await fn(input);
+}
+
+// Permanent delete (owner approved 28 Oct 2026): the car record and its cover
+// photos are removed for good; history, bills and inspection photos are kept.
+export async function deleteVehiclePermanently(
+  vehicleId: string,
+): Promise<{ deleted: boolean; photoCleanupFailed: boolean }> {
+  const fn = httpsCallable<
+    { vehicleId: string },
+    { vehicleId: string; deleted: boolean; photos?: { deleted: number; failed: boolean } }
+  >(
+    functions,
+    "deleteVehicle",
+  );
+  const res = await fn({ vehicleId });
+  return { deleted: res.data.deleted, photoCleanupFailed: res.data.photos?.failed === true };
+}
+
+export async function archiveVehicle(vehicleId: string): Promise<void> {
+  const fn = httpsCallable<{ vehicleId: string }, { vehicleId: string; archived: boolean }>(
+    functions,
+    "archiveVehicle",
+  );
+  await fn({ vehicleId });
+}
+
+/**
+ * Real-time listener for the authenticated customer's vehicles.
+ * Only returns non-archived vehicles. Legacy records predate the deletedAt
+ * field: a missing field counts as active (never filtered out).
+ * Firestore rules enforce that customers can only read their own vehicles.
+ */
+export function listenToMyVehicles(
+  uid: string,
+  tenantId: string,
+  onData: (vehicles: Vehicle[]) => void,
+  onError: (err: Error) => void,
+): Unsubscribe {
+  const q = query(
+    collection(db, COLLECTIONS.vehicles()),
+    where("ownerId", "==", uid),
+    where("tenantId", "==", tenantId),
+  );
+
+  return onSnapshot(
+    q,
+    { includeMetadataChanges: true },
+    (snap: QuerySnapshot) => {
+      // Deliver cached snapshots too: a freshly added or restored car must
+      // appear immediately, and the listener reconciles with the server next.
+      // A null-equality deletedAt filter would hide legacy cars whose records
+      // predate the field, so archived cars are dropped client-side instead.
+      const vehicles = snap.docs.map((doc) => doc.data() as Vehicle).filter((v) => !v.deletedAt);
+      onData(vehicles);
+    },
+    onError,
+  );
+}
+
+/**
+ * Uploads a cover photo for a vehicle the customer owns, end to end:
+ * callable-issued signed PUT URL (object metadata ownerId is stamped by the
+ * signature), direct upload to Storage, then photoUrl on the vehicle doc.
+ * Returns the storage object path.
+ */
+export async function uploadVehiclePhoto(vehicleId: string, blob: VehiclePhotoBody, contentType: string): Promise<string> {
+  const fn = httpsCallable<
+    { vehicleId: string; contentType: string },
+    { uploadUrl: string; path: string; requiredHeaders: Record<string, string> }
+  >(functions, "issueVehiclePhotoUploadUrl");
+  const { uploadUrl, path, requiredHeaders } = (await fn({ vehicleId, contentType })).data;
+  await putVehiclePhoto(uploadUrl, requiredHeaders, blob);
+  const publish = () =>
+    // Points the car at the new file (single writer) and returns a read URL.
+    httpsCallable<{ vehicleId: string; path: string; publish: boolean }, { url: string }>(
+      functions, "publishVehiclePhoto",
+    )({ vehicleId, path, publish: true });
+  try {
+    await publish();
+  } catch {
+    // One retry with the SAME issued path: publish is replay/idempotent-safe, so a
+    // retry after a lost response succeeds as a no-op. A stale-upload failure means
+    // the flow must restart - surface the error instead of re-pointing the field
+    // directly (publish is the only writer of the photo field).
+    await publish();
+  }
+  return path;
+}
+
+/** Resolves a stored vehicle photo path to a renderable URL (rules-gated read). */
+export async function resolveVehiclePhotoUrl(path: string, version?: string | null, refresh=false): Promise<string> {
+  // A private signed URL must not be modified after signing. Do not fall back to
+  // the legacy publisher: its owner check used auth UID, not canonical customer ID.
+  const parts = path.split('/');
+  if (parts[1] !== 'vehicles' || !parts[2] || path.includes('..')) throw new Error('Saved car photo path is invalid.');
+  return readPrivatePhoto('vehiclePhoto', parts[2], path, refresh, version);
+}
+
+export function normalizePlate(value: string): string {
+  return value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+}
+
+/** Registration alone identifies a car, including archived cars and old plate formatting. */
+export async function findVehicleWithPlate(uid: string, tenantId: string, plate: string): Promise<Vehicle | null> {
+  const snap = await getDocs(query(collection(db, COLLECTIONS.vehicles()), where("ownerId", "==", uid), where("tenantId", "==", tenantId)));
+  const target = normalizePlate(plate);
+  const matches = snap.docs.map((d) => ({ ...d.data(), id: d.id }) as Vehicle).filter((v) => normalizePlate(v.registrationNumber ?? "") === target);
+  return matches.find((v) => !v.deletedAt) ?? matches[0] ?? null;
+}
+
+export async function restoreVehicle(vehicleId: string): Promise<void> {
+  const fn = httpsCallable<{ vehicleId: string }, { vehicleId: string; restored: boolean }>(functions, "restoreVehicle");
+  await fn({ vehicleId });
+}
+
+
+/** Archived vehicles remain owner/tenant scoped; history is never filtered by garage state. */
+export function listenToMyArchivedVehicles(uid:string,tenantId:string,onData:(vehicles:Vehicle[])=>void,onError:(err:Error)=>void):Unsubscribe {
+ const q=query(collection(db,COLLECTIONS.vehicles()),where("ownerId","==",uid),where("tenantId","==",tenantId));
+ return onSnapshot(q,snap=>onData(snap.docs.map(d=>({...d.data(),id:d.id}) as Vehicle).filter(v=>!!v.deletedAt)),onError);
+}
+
+
+/** Uploads the car's RC (registration certificate) photo and records it as rcPhotoUrl. Returns the storage path. */
+export async function uploadVehicleRc(vehicleId: string, blob: VehiclePhotoBody, contentType: string): Promise<string> {
+  const fn = httpsCallable<
+    { vehicleId: string; contentType: string; kind: "rc" },
+    { uploadUrl: string; path: string; requiredHeaders: Record<string, string> }
+  >(functions, "issueVehiclePhotoUploadUrl");
+  const { uploadUrl, path, requiredHeaders } = (await fn({ vehicleId, contentType, kind: "rc" })).data;
+  await putVehiclePhoto(uploadUrl, requiredHeaders, blob);
+  await httpsCallable<{ vehicleId: string; path: string; publish: boolean; kind: "rc" }, { url: string }>(functions, "publishVehiclePhoto")({ vehicleId, path, publish: true, kind: "rc" });
+  return path;
+}
+
+/** Uploads the signed-in customer's driving licence photo and records it as licensePhotoUrl. Returns the storage path. */
+export async function uploadLicensePhoto(blob: VehiclePhotoBody, contentType: string): Promise<string> {
+  // Always name the customer: the server infers it only for a "customer" sign-in, and staff or test sign-ins get "customerId is required".
+  const uid = auth.currentUser?.uid;
+  const customerId = uid ? await resolveMyCustomerDocId() : null;
+  if (auth.currentUser?.uid !== uid) throw new Error("Sign in again to save your licence photo.");
+  if (!customerId) throw new Error("Sign in again to save your licence photo.");
+  const fn = httpsCallable<
+    { customerId: string; contentType: string },
+    { uploadUrl: string; path: string; requiredHeaders: Record<string, string> }
+  >(functions, "issueLicensePhotoUploadUrl");
+  const { uploadUrl, path, requiredHeaders } = (await fn({ customerId, contentType })).data;
+  await putVehiclePhoto(uploadUrl, requiredHeaders, blob);
+  await httpsCallable<{ customerId: string; path: string; publish: boolean }, { url: string }>(functions, "publishLicensePhoto")({ customerId, path, publish: true });
+  return path;
+}
+
+/** Removes the car's saved cover or RC photo (the image and its field only, never the car). Safe to retry. */
+export async function removeVehicleImage(vehicleId: string, kind: "cover" | "rc"): Promise<void> {
+  await httpsCallable<{ vehicleId: string; kind: "cover" | "rc" }, { removed: boolean }>(functions, "removeMyVehicleImage")({ vehicleId, kind });
+}

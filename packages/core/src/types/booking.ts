@@ -1,0 +1,178 @@
+import type{CombinedPaymentSnapshot,BookingTransportSnapshot}from'../combined-checkout.js';
+import type { VehicleCategory } from "./service.js";
+
+export type BookingStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "ACTIVE"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "EXPIRED";
+
+// Price breakdown — snapshotted at booking creation; immutable thereafter.
+// All amounts in paise (INR * 100). No floating-point arithmetic for money.
+// (doc06 §6.4 Historical Truth Rule 1)
+export interface PriceBreakdown {
+  roundOffPaise?: number; // new checkout only: signed explicit total adjustment, never tax
+  vehicleCategory: VehicleCategory; // snapshotted — drives scopeAdjustment
+  basePrice: number; // paise — service.basePrice at snapshot time
+  scopeAdjustment: number; // paise — vehicle category adjustment (V1); scope adjustment (V2+)
+  addOns: Array<{ id: string; name: string; price: number }>; // paise each; empty in V1
+  subtotal: number; // paise = basePrice + scopeAdjustment + sum(addOns)
+  membershipDiscount: number | null; // paise; null in V1
+  membershipDiscountPercent: number | null; // null in V1
+  pickupFee: number; // paise — 0 in V1 (no pickup/drop)
+  dropFee: number; // paise — 0 in V1
+  taxRatePercent: number; // snapshotted; default 18 (GST 18%)
+  taxDescription: string; // e.g. "GST 18%"; snapshotted
+  tax: number; // paise = Math.round(subtotal * taxRatePercent / 100)
+  total: number; // paise = subtotal + tax
+  currency: string; // ISO 4217; snapshotted
+}
+
+export type QuoteStatus = "requested" | "quoted" | "approved" | "declined";
+
+export interface Booking {
+  combinedPayment?:CombinedPaymentSnapshot;
+  transportSnapshot?:Readonly<BookingTransportSnapshot>|null;
+  settlementKind?: "membership_covered";
+  invoiceId?: string;
+  /** Public projection only. Operational cancellation details are server-only. */
+  cancelIntent?: { state: "waiting" | "needs_review" | "resolved"; requestedAt: string };
+  /** Explicit staff-created physical visit grouping; never inferred by car/date. */
+  visitId?: string;
+  id: string;
+  // Set only for price-on-request services. requested -> quoted (studio sets price) -> approved (customer).
+  quoteStatus?: QuoteStatus;
+  quoteExpiresAt?: string;
+  quoteRespondedAt?: string;
+  priceOnRequest?: boolean;
+  /** Revised pickup/drop total requires exact customer consent before payment. */
+  requiresPriceApproval?: boolean;
+  tenantId: string;
+  studioId: string;
+  customerId: string;
+  vehicleId: string;
+  // Copy of the car at booking time, so old bookings still read correctly if the car is edited or removed.
+  vehicleSnapshot?: { registrationNumber: string; make: string; model: string; year: number; color: string; photoUrl: string | null };
+  serviceId: string;
+  /** Set when the visit has more than one service: main service first, then the extras. Prices are paise snapshots. */
+  lines?: Array<{ serviceId: string; name: string; price: number; durationMinutes: number }>;
+  vehicleCategory: VehicleCategory;
+  scheduledAt: string; // ISO UTC — slot start time
+  scheduledDate: string; // "YYYY-MM-DD" in studio TZ — for date-scoped queries
+  scheduledTime: string; // "HH:mm" in studio TZ
+  estimatedEndAt: string; // ISO UTC = scheduledAt + durationMinutes
+  estimatedEndDate: string; // "YYYY-MM-DD" in studio TZ
+  estimatedEndTime: string; // "HH:mm" in studio TZ
+  durationMinutes: number; // snapshotted at booking creation (service duration, excl. buffer)
+  bayReleasedAt?: string;
+  bayReleasedBy?: string;
+  bayId: string; // assigned at booking creation
+  assignedEmployeeId: string | null;
+  status: BookingStatus;
+  priceBreakdown: PriceBreakdown;
+  totalAmount: number; // paise — equals priceBreakdown.total
+  /** Set when this visit is a redeemed gift wash (paid for by the buyer, so the total here is 0). */
+  giftId?: string | null;
+  membershipId: string | null; // set when a membership benefit was applied at booking creation
+  membershipDiscountApplied: boolean; // true for either wash-credit or percent-discount redemption
+  membershipWashUsed: boolean; // true only when an included wash credit was consumed
+  paymentStatus: "unpaid" | "partial" | "paid" | "refunded";
+  /** How the customer chose to pay. */
+  payMode?: "online" | "studio";
+  /** PENDING online bookings hold their slot until this time (ISO). */
+  holdExpiresAt?: string | null;
+  /** Refund tracking on a cancelled, paid booking. */
+  // requested = a durable recorded refund request. The field alone does not
+  //   establish whether the refund was submitted to or accepted by the
+  //   provider (it can persist after submission until the processed
+  //   projection), so UI copy must not promise submission, acceptance, or
+  //   money movement.
+  // reserved = legacy vocabulary for the same recorded-request state, kept so
+  //   older written docs still render; no current backend writer.
+  // initiated = the refund is recorded as in motion. Current backend: written
+  //   by the MANUAL cash/UPI path when the studio records the return. Older
+  //   writes used it for refunds submitted to the provider through the legacy
+  //   path (submission recorded, provider acceptance never verified) - the
+  //   value alone does not say which, so UI copy must stay mechanism-neutral.
+  // processed = the provider reported this exact refund as processed (a provider status, NOT proof the money reached the bank).
+  // failed = the provider refused it (legacy writer; no current backend writer).
+  refundStatus?: "reserved" | "requested" | "initiated" | "processed" | "failed";
+  refundProcessedAt?: string | null;
+  refundId?: string | null;
+  notes: string | null;
+  idempotencyKey: string;
+  rescheduleCount: number; // starts at 0; max enforced by Cloud Function
+  /** Premium reschedule request (basket item 6, PREVIEW - pending migration/backward-compat
+   *  review before activation). Optional by design: absent on all existing bookings means
+   *  no request, and that absence IS the backward compatibility - no migration writes needed.
+   *  At most one request is ever attached; a new request is allowed only after the previous
+   *  one reached a terminal state (approved/declined/expired). */
+  rescheduleRequest?: {
+    requestedDate: string; // yyyy-mm-dd, studio-local
+    requestedTime: string; // HH:mm, studio-local
+    requestedAt: string;   // ISO timestamp
+    status: "pending" | "approved" | "declined" | "expired";
+    decidedBy?: string | null;
+    decidedAt?: string | null;
+    note?: string | null;
+    /** The booking's scheduledAt (ISO) when the request was made. Approval re-checks this:
+     *  if the booking has since moved or otherwise changed, the approval is stale and rejected. */
+    baseScheduledAt: string;
+    /** The customer's submission idempotency key. A retry with the same key and the same
+     *  requested slot returns the existing request unchanged (exactly-once); the same key
+     *  with a different slot is a conflict and never silently applies. */
+    idempotencyKey: string;
+    /** The admin's decision idempotency key, recorded with the decision for the same
+     *  exactly-once retry semantics. */
+    decisionIdempotencyKey?: string | null;
+    /** The admin's note recorded WITH the decision (the customer's own note stays in
+     *  `note`). Compared on decision retries: same key + same approve + same note is a
+     *  retry; any payload difference is a conflict. */
+    decisionNote?: string | null;
+  } | null;
+  /** How many reschedule requests the customer has submitted for this booking (absent = 0).
+   *  The adopted premium rule is ONE request per booking; an idempotent retry of the same
+   *  submission does not increment. Declined/expired requests still count - re-requesting
+   *  after a decline is a genuine open policy question flagged for owner review, so the
+   *  strict reading (no re-request) is enforced rather than an invented repeat allowance. */
+  rescheduleRequestCount?: number;
+  /** Pay-at-studio advance (basket item 4, PREVIEW): the deterministic
+   *  advance Payment id (advance-<bookingId>) once an advance link exists.
+   *  Never set while ADVANCE_PAYMENT_ENABLED is false. */
+  advancePaymentId?: string | null;
+  /** Set by the verified webhook when the advance payment completes
+   *  (targetType "booking"). Marker only - it never flips booking status;
+   *  the job/invoice lifecycle is unchanged. Null while unpaid. */
+  advancePaidAt?: string | null;
+  standbyArrivedAt?: string | null;
+  standbyAdmittedAt?: string | null;
+  missedAt?: string | null; // persisted by the 9pm scheduler; cleared on reschedule
+  missedForScheduledAt?: string | null; // identifies the missed slot
+  confirmedAt: string | null;
+  cancelledAt: string | null;
+  cancellationReason: string | null;
+  /** Fee in paise for a customer cancel inside the free window (cancellation-policy.ts). Recorded only; the studio settles it. Absent or 0 = no fee. */
+  cancellationFeePaise?: number;
+  /** Who settles the fee and how it ended: "due" until the studio marks it, then "collected", "withheld" (kept from a refund) or "waived". */
+  cancellationFeeStatus?: "due" | "collected" | "withheld" | "waived";
+  cancelledBy?: "customer" | "admin" | "system";
+  /** Set when an admin cancelled as the studio (full refund, no customer fee). */
+  cancelledByStudio?: boolean;
+  /** Historical recorded cash compensation obligation. Preserved for older bookings; new studio cancellations do not create this obligation. */
+  studioCompensationPaise?: number;
+  /** Historical obligation status, preserved without waiver or payout. No settlement or payout flow exists. */
+  studioCompensationStatus?: "due";
+  cancellationFeeSettledBy?: string;
+  cancellationFeeSettledAt?: string;
+  cancellationFeeNote?: string;
+  /** Paise sent back to the customer when an admin cancelled a paid booking. */
+  refundedPaise?: number;
+  /** Manual/counter cancel: paise OWED to the customer and NOT yet returned. Not a refund claim; payment stays completed. */
+  manualRefundDuePaise?: number | null;
+  /** Service categories of the visit (primary first), saved at booking time so the cancel band cannot change later. */
+  cancelCategories?: string[];
+  createdAt: string;
+  updatedAt: string;
+}

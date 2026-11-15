@@ -1,0 +1,39 @@
+import { describe, expect, it } from "vitest";
+import { planProblem } from "./MembershipsView";
+import { daysLeft } from "./VehiclesView";
+
+const ok = { planId: null, tier: "gold" as const, name: "Gold", priceInRupees: "1499", includedWashes: "4", discountPercent: "10", freePickups: "0", prioritySlot: false };
+
+describe("planProblem", () => {
+  it("accepts a sane plan", () => expect(planProblem(ok)).toBeNull());
+  it("rejects a bad free pickup count", () => { expect(planProblem({ ...ok, freePickups: "-1" })).toBeTruthy(); expect(planProblem({ ...ok, freePickups: "2.5" })).toBeTruthy(); expect(planProblem({ ...ok, freePickups: "3" })).toBeNull(); });
+  it("rejects zero price", () => expect(planProblem({ ...ok, priceInRupees: "0" })).toMatch(/Price/));
+  it("rejects fractional washes", () => expect(planProblem({ ...ok, includedWashes: "2.5" })).toMatch(/whole/));
+  it("rejects discount over 100", () => expect(planProblem({ ...ok, discountPercent: "120" })).toMatch(/Discount/));
+  it("rejects blank name", () => expect(planProblem({ ...ok, name: "  " })).toMatch(/name/));
+});
+
+describe("daysLeft", () => {
+  it("counts forward", () => expect(daysLeft("2026-10-12", "2026-09-24")).toBe(18));
+  it("is negative when expired", () => expect(daysLeft("2026-09-20", "2026-09-24")).toBe(-4));
+  it("is zero on the day", () => expect(daysLeft("2026-09-24", "2026-09-24")).toBe(0));
+});
+
+import { hoursProblem } from "./StudioView";
+describe("hoursProblem", () => {
+  const day = (open: string, close: string, closed = false) => ({ dayOfWeek: 1 as const, open, close, closed });
+  it("accepts a normal day", () => expect(hoursProblem([day("09:00", "19:00")])).toBeNull());
+  it("flags close before open", () => expect(hoursProblem([day("19:00", "09:00")])).toMatch(/closes before/));
+  it("ignores closed days", () => expect(hoursProblem([day("", "", true)])).toBeNull());
+});
+
+import { readFileSync } from "node:fs";
+describe("no GST in the admin", () => {
+  it("the Invoices page has no GST column or KPI and Studio settings has no GST input; old invoices keep their stored tax", () => {
+    const o = readFileSync(new URL("./OfficeViews.tsx", import.meta.url), "utf8");
+    const v = readFileSync(new URL("./StudioView.tsx", import.meta.url), "utf8");
+    expect(o).not.toContain("GST billed");
+    expect(o).not.toContain('head: "GST"');
+    expect(v).not.toContain("GST (%)");
+  });
+});

@@ -1,0 +1,128 @@
+"use client";
+
+import { owedFromBookings, refundsOwedTotalText } from "../../../lib/refund-owed-copy";
+import { BOOKINGS_LIST_LIMIT } from "../../../lib/bookings-service";
+import { useEffect, useMemo, useState } from "react";
+import { useStaffAlerts } from "../../../components/StaffAlertsNotice";
+import { useRouter } from "next/navigation";
+import { useAdminAuth } from "../../../lib/auth-context";
+import { listenToBookings } from "../../../lib/bookings-service";
+import { BoundedJobsNotice } from "../../../components/BoundedJobsNotice";
+import { listenToJobs } from "../../../lib/jobs-service";
+import { listenToPayments } from "../../../lib/payments-service";
+import { listenToPendingApprovals, listenToExpiringMemberships, listenToTodayAttendance, listenToLowStock, listenToPendingPapers } from "../../../lib/dashboard-service";
+import { studioToday } from "../../../lib/format";
+import { DashboardView } from "../../../experience/DashboardView";
+import { FIRST_STUDIO_ID } from "@autodeck/core";
+import type { Booking, ServiceJob, Payment, ApprovalRequest, Membership } from "@autodeck/core";
+
+export default function DashboardPage() {
+  const { claims } = useAdminAuth();
+  const router = useRouter();
+
+  const [loaded, setLoaded] = useState({bookings: false, jobs: false, payments: false, approvals: false});
+  const staffAlerts = useStaffAlerts();
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [boundedNote, setBoundedNote] = useState<string | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [jobs, setJobs] = useState<ServiceJob[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [pendingApprovals, setPendingApprovals] = useState<ApprovalRequest[]>([]);
+  const [expiringMemberships, setExpiringMemberships] = useState<Membership[]>([]);
+  const [staffPresent, setStaffPresent] = useState(0);
+  const [lowStock, setLowStock] = useState(0);
+  const [pendingPapers, setPendingPapers] = useState(0);
+
+  useEffect(() => {
+    if (!claims) return undefined;
+    const unsubs = [
+      listenToBookings(claims.tenantId, data => {setBookings(data);setLoaded(l => ({...l, bookings: true}));}, err => setLoadError(err.message)),
+      listenToJobs(claims.tenantId, data => {setJobs(data);setLoaded(l => ({...l, jobs: true}));}, err => setLoadError(err.message), setBoundedNote),
+      listenToPayments(claims.tenantId, data => {setPayments(data);setLoaded(l => ({...l, payments: true}));}, err => setLoadError(err.message)),
+      listenToPendingApprovals(claims.tenantId, data => {setPendingApprovals(data);setLoaded(l => ({...l, approvals: true}));}, err => setLoadError(err.message)),
+      listenToExpiringMemberships(claims.tenantId, setExpiringMemberships, () => undefined),
+    ];
+    return () => unsubs.forEach((u) => u());
+  }, [claims]);
+
+  const today = studioToday();
+
+  const stats = useMemo(() => {
+    const todaysBookings = bookings.filter((b) => b.scheduledDate === today);
+    const todaysJobs = jobs.filter((j) => j.scheduledDate === today);
+    const activeJobs = jobs.filter((j) => j.status !== "DELIVERED" && j.status !== "CANCELLED");
+    const completedToday = todaysJobs.filter((j) => j.status === "DELIVERED");
+    const walkinsToday = todaysJobs.filter((j) => j.isWalkIn);
+    const revenueToday = payments
+      // Studio-day, not UTC-day: a payment at 1 am IST belongs to today.
+      .filter((p) => p.status === "completed" && studioToday(new Date(p.createdAt)) === today)
+      .reduce((sum, p) => sum + p.amount, 0);
+    const pendingPayments = payments.filter((p) => p.status === "pending" || p.status === "processing");
+    const failedPayments = payments.filter((p) => p.status === "failed");
+    const unpaidCompletedJobs = jobs.filter((j) => j.status === "DELIVERED" && j.paymentStatus === "unpaid");
+    const staleCutoff = Date.now() - 48 * 3600_000;
+    const staleJobs = jobs.filter((j) => {
+      if (!["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK"].includes(j.status)) return false;
+      if (new Date(j.updatedAt).getTime() >= staleCutoff) return false;
+      // A multi-day job (e.g. a PPF service) is expected to sit unchanged
+      // for days while genuinely in progress - only flag it once it's run
+      // past its own estimated completion date, not merely because 48h
+      // passed without a status change.
+      if (j.scheduledDate !== j.estimatedEndDate) return j.estimatedEndDate < today;
+      return true;
+    });
+    const owed = owedFromBookings(bookings, bookings.length >= BOOKINGS_LIST_LIMIT);
+    const soonExpiring = expiringMemberships.filter((m) => m.endDate && m.endDate <= new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
+
+    const floor = {
+      arriving: jobs.filter((j) => j.status === "PENDING_VEHICLE" && j.scheduledDate === today).length,
+      working: jobs.filter((j) => ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK"].includes(j.status)).length,
+      ready: jobs.filter((j) => j.status === "READY_FOR_DELIVERY").length,
+      delivered: completedToday.length,
+    };
+
+    return {
+      floor,
+      todaysBookingsCount: todaysBookings.length,
+      activeJobsCount: activeJobs.length,
+      completedTodayCount: completedToday.length,
+      walkinsTodayCount: walkinsToday.length,
+      revenueToday,
+      owed,
+      pendingPayments,
+      failedPayments,
+      unpaidCompletedJobs,
+      staleJobs,
+      soonExpiring,
+    };
+  }, [bookings, jobs, payments, expiringMemberships, today]);
+
+  if (loadError) return <div className="ax-panel" role="alert">Could not load today: {loadError}. Refresh to try again.</div>;
+  if (!Object.values(loaded).every(Boolean)) return <div className="ax-panel" role="status">Loading today's studio and payments...</div>;
+
+  return (
+    <>
+    <BoundedJobsNotice note={boundedNote} />
+    <DashboardView
+      today={today}
+      now={new Date()}
+      revenueToday={stats.revenueToday}
+      refundsOwedText={refundsOwedTotalText(stats.owed.paise, stats.owed.count, stats.owed.truncated)}
+      tiles={{ bookings: stats.todaysBookingsCount, active: stats.activeJobsCount, delivered: stats.completedTodayCount, walkins: stats.walkinsTodayCount, staffPresent }}
+      floor={stats.floor}
+      counts={{
+        failedPayments: stats.failedPayments.length,
+        paymentsToReview: staffAlerts.length,
+        unpaidDelivered: stats.unpaidCompletedJobs.length,
+        pendingApprovals: pendingApprovals.length,
+        staleJobs: stats.staleJobs.length,
+        pendingPayments: stats.pendingPayments.length,
+        expiringMemberships: stats.soonExpiring.length,
+        lowStock,
+        pendingPapers,
+      }}
+      onOpen={(href) => router.push(href)}
+    />
+    </>
+  );
+}

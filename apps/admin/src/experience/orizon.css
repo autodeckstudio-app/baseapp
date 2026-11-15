@@ -1,0 +1,181 @@
+/*
+ * Orizon fidelity layer. Loaded after float.css.
+ * A full-bleed studio photograph fills a big rounded frame; the named rail,
+ * the section pills and every card float on top of it as frosted glass.
+ * Hero headline is oversized and sits on the photo. Orange stays #EC8638.
+ */
+.ax-ambient-root:has(.ax-shell-frame) { position: relative; isolation: isolate; }
+.ax-shell .ax-ambient { display: none; }
+.ax-herobg { display: none !important; }
+
+/* The photo frame: fixed so it never repaints on scroll. */
+.ax-ambient-root:has(.ax-shell-frame)::before {
+  content: ""; position: fixed; z-index: -1; inset: 12px;
+  border-radius: 44px; pointer-events: none;
+  border: 2px solid rgba(255,255,255,.92);
+  box-shadow: 0 40px 90px -30px rgba(70,45,20,.55);
+  background:
+    radial-gradient(90vmax 46vmax at 50% 0%, rgba(236,134,56,.16), rgba(236,134,56,0) 70%),
+    linear-gradient(180deg, rgba(251,247,241,.38) 0%, rgba(251,247,241,.66) 46%, rgba(251,247,241,.86) 100%);
+}
+.ax-ambient-root:has(.ax-shell-frame[data-hero="on"])::before {
+  background:
+    radial-gradient(90vmax 46vmax at 50% 0%, rgba(236,134,56,.16), rgba(236,134,56,0) 70%),
+    linear-gradient(180deg, rgba(20,16,12,.10) 0%, rgba(251,247,241,.10) 30%, rgba(251,247,241,.70) 72%, rgba(251,247,241,.88) 100%);
+}
+html[data-theme="night"] .ax-ambient-root:has(.ax-shell-frame)::before {
+  border-color: rgba(255,255,255,.22);
+  box-shadow: 0 40px 90px -30px rgba(0,0,0,.8);
+  background:
+    radial-gradient(90vmax 46vmax at 50% 0%, rgba(236,134,56,.16), rgba(236,134,56,0) 70%),
+    linear-gradient(180deg, rgba(40,40,38,.50) 0%, rgba(52,52,49,.74) 50%, rgba(62,62,59,.90) 100%);
+}
+html[data-theme="night"] .ax-ambient-root:has(.ax-shell-frame[data-hero="on"])::before {
+  background:
+    radial-gradient(90vmax 46vmax at 50% 0%, rgba(236,134,56,.16), rgba(236,134,56,0) 70%),
+    linear-gradient(180deg, rgba(20,20,18,.12) 0%, rgba(40,40,38,.20) 30%, rgba(52,52,49,.72) 72%, rgba(60,60,57,.90) 100%);
+}
+
+/* Rail sits inside the frame edge, like the reference's floating rail. */
+@media (min-width: 861px) {
+  .ax-shell-frame { padding: 12px; }
+  .ax-side { margin: 14px 0 14px 14px; top: 26px; height: calc(100vh - 52px); border-radius: 36px; }
+  @supports (height: 100dvh) { .ax-side { height: calc(100dvh - 52px); } }
+  .ax-main { padding: 22px 34px 60px 18px; }
+}
+
+/* Section pills float as a centred frosted bar (the reference's top pill). */
+.ax-shell .ax-chips {
+  display: flex; width: fit-content; margin-left: auto; margin-right: auto; flex-wrap: wrap; gap: 4px; max-width: 100%;
+  padding: 6px; margin-bottom: 18px; border-radius: 999px;
+  background: rgba(255,255,255,.74); border: 1px solid rgba(255,255,255,.92);
+  box-shadow: 0 16px 36px -18px rgba(90,55,20,.45);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+}
+.ax-shell .ax-chips .ax-chip-link { border: none; background: transparent; box-shadow: none; min-height: 38px; padding: 0 18px; }
+.ax-shell .ax-chips .ax-chip-link[aria-current="page"] { background: #fff; color: #B4520F; box-shadow: 0 6px 16px -6px rgba(236,134,56,.55); }
+html[data-theme="night"] .ax-shell .ax-chips { background: rgba(60,60,57,.62); border-color: rgba(255,255,255,.18); }
+html[data-theme="night"] .ax-shell .ax-chips .ax-chip-link[aria-current="page"] { background: rgba(236,134,56,.30); color: #fff; }
+
+/* Cards: bigger radius, frostier, softer shadow. */
+.ax-shell { --fl-radius: 34px; }
+.ax-shell .ax-panel, .ax-shell .ax-tile { backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%); }
+.ax-shell .ax-panel { padding: 22px 24px; }
+.ax-shell .ax-tile { border-radius: 36px; }
+
+/* Dashboard hero: oversized headline on the photo, info floats as a glass card. */
+.ax-shell-frame[data-hero="on"] .ax-page-head {
+  position: relative; min-height: clamp(250px, 40vh, 420px); align-items: flex-end; margin-bottom: 22px;
+}
+.ax-shell-frame[data-hero="on"] .ax-page-head > div:first-child { flex: 1 1 100%; align-self: flex-start; }
+.ax-shell-frame[data-hero="on"] .ax-page-head h1 {
+  font-size: clamp(54px, 13.5vw, 132px); line-height: .96; letter-spacing: -3px; font-weight: 500;
+  color: rgba(255,255,255,.94); text-shadow: 0 6px 40px rgba(0,0,0,.35); margin: 6px 0 0;
+}
+.ax-shell-frame[data-hero="on"] .ax-page-head .ax-label { color: rgba(255,255,255,.9); text-shadow: 0 1px 12px rgba(0,0,0,.45); }
+.ax-shell-frame[data-hero="on"] .ax-hero-side {
+  position: static; margin-left: auto; align-items: flex-start; gap: 2px;
+  padding: 18px 26px; border-radius: 32px;
+  background: rgba(255,255,255,.62); border: 1px solid rgba(255,255,255,.9);
+  box-shadow: 0 22px 48px -20px rgba(70,40,10,.5);
+  backdrop-filter: blur(22px) saturate(150%); -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+.ax-shell-frame[data-hero="on"] .ax-hero-side .ax-label { color: var(--ad-text-secondary); text-shadow: none; }
+.ax-shell-frame[data-hero="on"] .ax-hero-total { font-size: clamp(32px, 6vw, 48px); line-height: 1.05; }
+html[data-theme="night"] .ax-shell-frame[data-hero="on"] .ax-hero-side { background: linear-gradient(150deg, rgba(255,255,255,.16), rgba(255,255,255,.05)), rgba(70,70,66,.58); border-color: rgba(255,255,255,.2); }
+
+/* Phone: frame nearly edge to edge, rounded like a device. */
+@media (max-width: 860px) {
+  .ax-ambient-root:has(.ax-shell-frame)::before { inset: 6px; border-radius: 32px; }
+  .ax-main { padding-left: 14px; padding-right: 14px; }
+  .ax-shell-frame[data-hero="on"] .ax-page-head { min-height: 230px; }
+  .ax-shell-frame[data-hero="on"] .ax-page-head h1 { font-size: clamp(44px, 15vw, 72px); letter-spacing: -2px; overflow-wrap: anywhere; }
+  .ax-shell-frame[data-hero="on"] .ax-hero-side { margin-left: 0; width: 100%; }
+  .ax-shell .ax-chips { border-radius: 28px; }
+}
+
+/* ---- Header system: one pattern for every page ---- */
+.ax-shell .ax-page-head { align-items: flex-end; gap: 16px 24px; margin-bottom: 20px; }
+.ax-shell .ax-page-head > div:first-child { min-width: 0; }
+.ax-shell .ax-page-head .ax-label { display: block; margin: 0 0 6px; line-height: 1.2; }
+.ax-shell .ax-page-head h1 { margin: 0; overflow-wrap: anywhere; }
+.ax-shell-frame:not([data-hero="on"]) .ax-page-head h1 { font-size: clamp(38px, 8vw, 60px); letter-spacing: -1.6px; }
+.ax-shell .ax-label { text-transform: uppercase; }
+
+/* Stats: an aligned grid, equal columns, labels hold two lines. */
+.ax-shell .ax-kpis {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0;
+  padding: 14px 6px; border-radius: 30px;
+  background: rgba(255,255,255,.62); border: 1px solid rgba(255,255,255,.9);
+  box-shadow: 0 18px 40px -20px rgba(80,50,20,.45);
+  backdrop-filter: blur(20px) saturate(140%); -webkit-backdrop-filter: blur(20px) saturate(140%);
+}
+html[data-theme="night"] .ax-shell .ax-kpis { background: linear-gradient(150deg, rgba(255,255,255,.14), rgba(255,255,255,.04)), rgba(70,70,66,.58); border-color: rgba(255,255,255,.18); }
+.ax-shell .ax-kpis > div { gap: 4px; padding: 2px 16px; align-items: flex-start; min-width: 0; }
+.ax-shell .ax-kpis > div + div { border-left: 1px solid rgba(120,100,80,.18); }
+html[data-theme="night"] .ax-shell .ax-kpis > div + div { border-left-color: rgba(255,255,255,.14); }
+.ax-shell .ax-kpis .ax-kpi-v { font-size: 32px; line-height: 36px; white-space: nowrap; }
+.ax-shell .ax-kpis .ax-label { font-size: 11px; letter-spacing: .9px; line-height: 1.25; min-height: 2.5em; }
+
+/* Empty board columns stay compact. */
+.ax-shell .ax-col:has(.ax-col-empty) { padding: 12px 20px; gap: 0; min-height: 0; }
+.ax-shell .ax-col:has(.ax-col-empty) .ax-col-empty { display: none; }
+.ax-shell .ax-col:has(.ax-col-empty) .ax-col-head { padding: 0; }
+
+@media (max-width: 860px) {
+  /* Section pills: one clean scrolling pill bar, never a wrapped second row. */
+  .ax-shell .ax-chips { display: flex; flex-wrap: nowrap; overflow-x: auto; width: fit-content; max-width: 100%; margin-left: auto; margin-right: auto; border-radius: 999px; padding: 5px; gap: 2px; scrollbar-width: none; }
+  .ax-shell .ax-chips::-webkit-scrollbar { display: none; }
+  .ax-shell .ax-chips .ax-chip-link { flex: 0 0 auto; min-height: 36px; padding: 0 16px; font-size: 14px; }
+  .ax-shell .ax-page-head { flex-direction: column; align-items: stretch; gap: 14px; margin-bottom: 16px; }
+  .ax-shell-frame:not([data-hero="on"]) .ax-page-head h1 { font-size: clamp(36px, 11vw, 48px); }
+  .ax-shell .ax-kpis { width: 100%; box-sizing: border-box; }
+  .ax-shell .ax-kpis > div { padding: 2px 12px; }
+  .ax-shell .ax-kpis .ax-kpi-v { font-size: 28px; line-height: 32px; }
+  .ax-shell .ax-kpis .ax-label { font-size: 10px; letter-spacing: .7px; }
+
+  /* List rows become synced two-column cards. */
+  .ax-shell .ax-list-row[role="row"] { grid-template-columns: minmax(0, 1fr) auto !important; align-items: center; column-gap: 12px; row-gap: 6px; padding: 14px 18px; min-height: 0; }
+  .ax-shell .ax-list-row > span { white-space: normal; overflow: visible; text-overflow: clip; }
+  .ax-shell .ax-list-row > span.is-end { text-align: right; justify-self: end; }
+  .ax-shell .ax-list-row > [data-col="who"], .ax-shell .ax-list-row > [data-col="name"] { grid-column: 1; grid-row: 1; font-size: 16px; font-weight: 600; }
+  .ax-shell .ax-list-row > [data-col="amt"] { grid-column: 2; grid-row: 1; font-size: 16px; font-weight: 600; }
+  .ax-shell .ax-list-row > [data-col="when"] { grid-column: 1; grid-row: 2; font-size: 13px; }
+  .ax-shell .ax-list-row > [data-col="status"] { grid-column: 2; grid-row: 2; justify-self: end; }
+  .ax-shell .ax-list-row > [data-col="how"] { grid-column: 1; grid-row: 3; font-size: 13px; }
+  .ax-shell .ax-list-row > [data-col="act"] { grid-column: 2; grid-row: 3; justify-self: end; }
+  .ax-shell .ax-list-row > [data-col="act"]:empty, .ax-shell .ax-list-row > [data-col="act"]:has(.ax-row-actions:empty) { display: none; }
+  .ax-shell .ax-list-row > [data-col="phone"] { grid-column: 1; grid-row: 2; font-size: 14px; }
+  .ax-shell .ax-list-row > [data-col="joined"] { grid-column: 2; grid-row: 1; font-size: 12px; color: var(--ad-text-tertiary); }
+  /* Customers: identity + money on the first line, plates on the second, visit facts last. */
+  .ax-shell .ax-list-row > [data-col="name"] + [data-col="cars"] { grid-column: 1 / -1; grid-row: 2; }
+  .ax-shell .ax-list-row > [data-col="cars"] .ax-cust-cars { flex-wrap: wrap; white-space: normal; }
+  .ax-shell .ax-list-row > [data-col="due"] { grid-column: 2; grid-row: 1; justify-self: end; font-size: 16px; text-align: right; }
+  .ax-shell .ax-list-row > [data-col="visits"] { grid-column: 1; grid-row: 3; justify-self: start; text-align: left; font-size: 13px; color: var(--ad-text-secondary); }
+  .ax-shell .ax-list-row > [data-col="visits"]::before { content: "Visits "; }
+  .ax-shell .ax-list-row > [data-col="last"] { grid-column: 2; grid-row: 3; justify-self: end; text-align: right; font-size: 13px; }
+  .ax-shell .ax-list-row > [data-col="last"]::before { content: "Last visit "; color: var(--ad-text-tertiary); }
+  .ax-shell .ax-row-actions { flex-wrap: wrap; justify-content: flex-end; }
+  /* An open two-step panel (UPI received ack, refund reason) leaves the narrow
+     action column: it takes the full card width and stacks - question or
+     reason line first, buttons in a row below - so the name/date columns are
+     never crushed and nothing overflows the card under the floating tab bar. */
+  .ax-shell .ax-list-row > [data-col="act"]:has(.ax-confirm-panel) { grid-column: 1 / -1; justify-self: stretch; }
+  .ax-shell .ax-confirm-panel { display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: 100%; text-align: left; }
+  .ax-shell .ax-confirm-panel .ax-confirm-q { font-size: 14px; }
+  .ax-shell .ax-confirm-panel .ax-confirm-buttons { display: flex; gap: 8px; }
+  .ax-shell .ax-confirm-panel .ax-confirm-buttons .ax-button { flex: 1 1 0; justify-content: center; text-align: center; }
+  .ax-shell .ax-confirm-panel input { width: 100%; box-sizing: border-box; }
+}
+
+@media (max-width: 860px) {
+  /* Filter segments scroll as one row instead of orphaning the last option. */
+  .ax-shell .ax-seg { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; border-radius: 999px; }
+  .ax-shell .ax-seg::-webkit-scrollbar { display: none; }
+  .ax-shell .ax-seg button { flex: 0 0 auto; white-space: nowrap; }
+}
+
+/* Pill bar: items vertically centred with equal padding above and below. */
+.ax-shell .ax-chips { align-items: center; box-sizing: border-box; }
+.ax-shell .ax-chips .ax-chip-link { display: inline-flex; align-items: center; justify-content: center; height: 38px; min-height: 38px; padding-top: 0; padding-bottom: 0; line-height: 1; box-sizing: border-box; }
+.ax-shell .ax-chips .ax-chip-link[aria-current="page"] { margin: 0; }

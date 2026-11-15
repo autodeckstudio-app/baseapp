@@ -1,0 +1,23 @@
+import {readFileSync} from 'node:fs';import {describe,it,expect} from 'vitest';
+const source=(p:string)=>readFileSync('src/'+p,'utf8');
+describe('Round 2 safeguards',()=>{
+ it('round 5: car type is asked once in the garage, never on the booking page; booking is blocked until it is set',()=>{const s=source('app/(tabs)/book/[serviceId].tsx');expect(s).not.toContain('SelectField');expect(s).not.toContain('ensureVehicleSize');expect(s).not.toContain('Save your car size');expect(s).not.toContain('Choose once');expect(s).toContain('Add car type');expect(s).toContain('!selectedVehicle.category');const g=source('app/(tabs)/garage/[id].tsx');expect(g).toContain('Add car type');expect(g).toContain('category: typePick');const a=source('app/(tabs)/garage/add.tsx');expect(a).toContain('setSizeError(!size)');});
+ it('round 5: Add to calendar fires only on tap and shows Added so a second tap cannot duplicate the event',()=>{const s=source('app/(tabs)/bookings/[id].tsx');expect(s).toContain('Added to calendar');expect(s).toContain('autodeck.cal.');expect(s).toContain('if (calAdded) return;');});
+ it('keeps plate lookup owner scoped and exact normalized match',()=>{const s=source('lib/vehicle-service.ts');expect(s).toContain('where("ownerId", "==", uid)');expect(s).toContain('where("tenantId", "==", tenantId)');expect(s).toContain('normalizePlate(v.registrationNumber ?? "") === target');const f=source('app/(tabs)/garage/add.tsx');expect(f).toContain("submitSeq");});
+ it('new document form excludes FASTAG and uses date picker',()=>{const s=source('app/(tabs)/garage/[id].tsx');expect(s).toContain('["RC", "INSURANCE", "PUC", "OTHER"]');expect(s).toContain('<DateField');expect(s).toContain('validateDocument(docForm.kind');});
+ it('all file inputs are routed through the shared uploader',()=>{for(const p of ['app/(tabs)/garage/add.tsx','app/(tabs)/garage/[id].tsx','app/(tabs)/cars/sell.tsx']){expect(source(p)).toContain('<FileUploader');expect(source(p)).not.toContain('type: "file"');}});
+});
+describe('retained history routing contracts',()=>{
+ it('global history does not require a garage car and shows orphan invoices',()=>{const s=source('app/(tabs)/garage/history.tsx');expect(s).toContain('listenToMyJobs');expect(s).toContain('listenToMyInvoices');expect(s).toContain('invoices.filter(inv=>!jobs.some');expect(s).not.toContain('if (!vehicleId || auth.status');});
+ it('invoice uses immutable snapshots after vehicle removal',()=>{const s=source('app/(tabs)/bookings/invoice.tsx');expect(s).toContain('snapshots.vehicleSnapshot');expect(s).toContain('snapshots.customerSnapshot');});
+});
+
+import { readFileSync as _rf } from "node:fs";
+describe("licence photo names the customer", () => {
+  it("both callables get customerId from the signed-in uid, so staff and test sign-ins do not hit 'customerId is required'", () => {
+    const s = _rf("src/lib/vehicle-service.ts", "utf8");
+    expect(s).toContain("auth.currentUser?.uid");
+    expect(s).toContain("fn({ customerId, contentType })");
+    expect(s).toContain("({ customerId, path, publish: true })");
+  });
+});

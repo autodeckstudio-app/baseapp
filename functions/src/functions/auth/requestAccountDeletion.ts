@@ -1,0 +1,30 @@
+import { onCall } from "firebase-functions/v2/https";
+import { getFirestore } from "firebase-admin/firestore";
+import { COLLECTIONS } from "@autodeck/database";
+import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
+import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
+
+/**
+ * Customer asks to delete their account. This only RECORDS the request; nothing is erased here.
+ * Erasure follows the retention rules the owner decides (invoices and warranties may need to be kept). New, additive.
+ */
+export const requestAccountDeletion = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
+  const user = extractUser(request);
+  assertRole(user, "customer");
+  assertTenant(user, user.claims.tenantId);
+  await enforceRateLimit(subjectFrom(user), "account.deletion");
+  const db = getFirestore();
+  const ref = db.collection(COLLECTIONS.accountDeletionRequests()).doc(user.uid);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (snap.exists) return;
+    const now = new Date();
+    const plusDays = (n: number) => new Date(now.getTime() + n * 86400000).toISOString();
+    // Owner rule: the customer can cancel within 7 days; personal data is erased 30 days after the request.
+    tx.set(ref, { id: user.uid, tenantId: user.claims.tenantId, customerId: user.uid, status: "REQUESTED", createdAt: now.toISOString(), cancelUntil: plusDays(7), purgeAfter: plusDays(30) });
+    writeAuditLog(tx, { action: "account.deletion_requested", entityType: "Customer", entityId: user.uid, user, studioId: null });
+  });
+  return { status: "REQUESTED" };
+});

@@ -1,0 +1,2 @@
+import {it,expect} from 'vitest';import {jobStageCommand} from './job-stage-command';
+it('stage commands bind the exact displayed version, remain stable for retry and separate rework',()=>{const j={status:'QUALITY_CHECK' as const,updatedAt:'2026-11-15T00:00:00Z'};expect(jobStageCommand(j)).toEqual(jobStageCommand(j));expect(jobStageCommand(j,true).operationId).not.toBe(jobStageCommand(j).operationId);expect(jobStageCommand({...j,updatedAt:'later'}).operationId).not.toBe(jobStageCommand(j).operationId);expect(()=>jobStageCommand({...j,updatedAt:''})).toThrow('Reload')});

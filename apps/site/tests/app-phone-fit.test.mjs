@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
+const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
+test('phone image keeps native proportions without a fixed-height crop',()=>{const c=read('public/assets/redesign/site.css');assert.match(c,/\.phone img\{width:100%;display:block/);assert.match(c,/\.page-app-story\.app-walkthrough\{height:auto;overflow:visible/);assert.match(c,/\.page-app-story \.walk-phone-column\{align-self:stretch/);for(const [p,count] of [['home',5],['app',5]])assert.equal((read('src/data/redesign/'+p+'.html').match(/class="walk-step[ "]/g)||[]).length,count)});
+test('all five image assets are local and present',()=>{for(const f of ['home','bookings','garage-stories','buysell','profile'])assert(fs.existsSync(new URL('../public/assets/redesign/'+f+'.webp',import.meta.url)))});

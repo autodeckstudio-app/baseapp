@@ -1,0 +1,14 @@
+import { beforeEach, expect, it, vi } from "vitest";
+const h = vi.hoisted(() => ({ os: "android", available: true, print: vi.fn(), share: vi.fn(), remove: vi.fn(), web: vi.fn() }));
+vi.mock("react-native", () => ({ Platform: { get OS() { return h.os; } } }));
+vi.mock("./invoice-display", () => ({ printInvoiceHtml: h.web }));
+vi.mock("expo-print", () => ({ printToFileAsync: h.print }));
+vi.mock("expo-sharing", () => ({ isAvailableAsync: async () => h.available, shareAsync: h.share }));
+vi.mock("expo-file-system", () => ({ deleteAsync: h.remove }));
+import { exportInvoiceCopy } from "./invoice-export";
+beforeEach(() => { vi.clearAllMocks(); h.os = "android"; h.available = true; h.print.mockResolvedValue({ uri: "file:///private-cache/invoice.pdf" }); h.share.mockResolvedValue(undefined); h.remove.mockResolvedValue(undefined); });
+it.each(["android", "ios"])("%s creates exact readable copy privately, opens OS sheet and cleans cache", async os => { h.os = os; await exportInvoiceCopy("<html>EXACT HISTORICAL COPY</html>", () => true); expect(h.print).toHaveBeenCalledWith({html:"<html>EXACT HISTORICAL COPY</html>"}); expect(h.share).toHaveBeenCalledWith("file:///private-cache/invoice.pdf", {mimeType:"application/pdf",UTI:"com.adobe.pdf",dialogTitle:"Save invoice copy"}); expect(h.remove).toHaveBeenCalledWith("file:///private-cache/invoice.pdf", {idempotent:true}); expect(h.web).not.toHaveBeenCalled(); });
+it("web keeps existing print without native API or file", async () => { h.os="web"; await exportInvoiceCopy("existing",()=>true);expect(h.web).toHaveBeenCalledWith("existing");expect(h.print).not.toHaveBeenCalled(); });
+it("no share/file when unavailable or stale",async()=>{h.available=false;await expect(exportInvoiceCopy("private",()=>true)).rejects.toThrow("unavailable");expect(h.print).not.toHaveBeenCalled();await exportInvoiceCopy("private",()=>false);expect(h.share).not.toHaveBeenCalled();});
+it("changing account/route while rendering suppresses sheet and deletes private file",async()=>{let current=true;h.print.mockImplementation(async()=>{current=false;return{uri:"file:///private-cache/invoice.pdf"}});await exportInvoiceCopy("private",()=>current);expect(h.share).not.toHaveBeenCalled();expect(h.remove).toHaveBeenCalledTimes(1);});
+it("OS cancellation/failure still cleans private file and does not claim save",async()=>{h.share.mockRejectedValue(new Error("cancelled"));await expect(exportInvoiceCopy("private",()=>true)).rejects.toThrow("cancelled");expect(h.remove).toHaveBeenCalledTimes(1);});

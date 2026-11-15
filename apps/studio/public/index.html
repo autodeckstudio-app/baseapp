@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <title>AutoDeck Studio</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <!-- Home-screen install on iPhone and iPad: full screen, no Safari bar, real icon. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" href="/icon-192.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Studio" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="theme-color" content="#F3EEFB" />
+    <style id="ios-input-zoom">
+      /* iOS Safari zooms the page when a focused field is under 16px and does not zoom back. Phone widths only;
+         pinch zoom stays allowed (the viewport meta is untouched). */
+      @media (max-width: 820px) {
+        input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+        select,
+        textarea {
+          font-size: 16px !important;
+        }
+      }
+    </style>
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        overflow: hidden;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+      /* Dynamic viewport: iOS home-screen and Safari report the visible height, not the tall 100vh. */
+      @supports (height: 100dvh) {
+        html,
+        body,
+        #root {
+          height: 100dvh;
+        }
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+        overscroll-behavior: none;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

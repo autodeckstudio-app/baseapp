@@ -1,0 +1,73 @@
+"use client";
+
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useAdminAuth } from "../../lib/auth-context";
+import { clearReturning, notePageView, replaceWithoutCounting } from "../../lib/go-back";
+import { BOOKINGS_VIEW_KEY, dropListView, viewStillRelevant } from "../../lib/list-view-state";
+import { canSeeOffice, canVisit, homeFor } from "../../lib/staff-access";
+import { Ambient } from "../../experience/Ambient";
+import { StaffShell } from "../../experience/StaffShell";
+import "../../experience/shell.css";
+
+// Admin host requires an Admin/superadmin session, or the separate read-only accountant scope.
+// Studio staff use the separate Studio app, including when an old Admin tab returns to focus.
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const { user, claims, loading, signOut } = useAdminAuth();
+  const router = useRouter();
+  const pathname = usePathname() ?? "/";
+
+  useEffect(() => { notePageView(); if (!viewStillRelevant(pathname)) { dropListView(BOOKINGS_VIEW_KEY); clearReturning(); } }, [pathname]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user || !claims) {
+      router.replace("/login");
+    } else if (!canVisit(claims.role, pathname)) {
+      replaceWithoutCounting(router, homeFor(claims.role));
+    }
+  }, [loading, user, claims, pathname, router]);
+
+  if (loading) {
+    return (
+      <div className="ax-shell">
+        <Ambient>
+          <p className="ax-label" style={{ padding: "var(--ad-space-section)" }} role="status">
+            Loading…
+          </p>
+        </Ambient>
+      </div>
+    );
+  }
+  if (!user || !claims || !canVisit(claims.role, pathname)) return null;
+  if (claims.role === "accountant") {
+    // Minimal read-only frame: no Office/Studio navigation, no push alerts, only Money and sign out.
+    return (
+      <div className="ax-shell">
+        <Ambient>
+          <header style={{ display: "flex", justifyContent: "space-between", padding: "16px var(--ad-space-section)" }}>
+            <span className="ax-label">AutoDeck, accountant</span>
+            <button type="button" className="ax-button" onClick={() => void signOut()}>Sign out</button>
+          </header>
+          <main style={{ padding: "0 var(--ad-space-section) var(--ad-space-section)" }}>{children}</main>
+        </Ambient>
+      </div>
+    );
+  }
+  const office = canSeeOffice(claims.role);
+  const who = user.displayName || user.email || "Signed in";
+
+  return (
+    <StaffShell
+      pathname={pathname}
+      office={office}
+      role={claims.role}
+      who={who}
+      home={homeFor(claims.role)}
+      onSignOut={() => void signOut()}
+    >
+      {children}
+    </StaffShell>
+  );
+}

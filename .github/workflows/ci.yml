@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    # Preview incorporation branch: hosted CI on push without involving main.
+    branches: [main, preview/gauri-basket, qa/quote-fixtures-20261106]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Public Firebase values are build-time identifiers, not secrets. CI uses
+      # inert values so configuration guards are exercised without touching a
+      # live project. Runtime Admin credentials are deliberately not required.
+      NEXT_PUBLIC_FIREBASE_API_KEY: ci-api-key
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci.invalid
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: autodeck-ci
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: autodeck-ci.invalid
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "000000000000"
+      NEXT_PUBLIC_FIREBASE_APP_ID: ci-app-id
+      NEXT_PUBLIC_RECAPTCHA_SITE_KEY: ci-recaptcha-site-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      # Firestore emulator runs on Java.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - run: pnpm install --frozen-lockfile
+      # firebase-tools is CI-only, kept out of the repo's dependencies so the
+      # production install surface does not grow. Emulators run against a
+      # demo-* project: no credentials, no live backend, no billing.
+      # Install ISOLATED from the repo: npm at the pnpm workspace root fails
+      # on workspace: protocol links (EUNSUPPORTEDPROTOCOL), so firebase-tools
+      # lives in its own throwaway dir outside the workspace.
+      - run: mkdir -p /tmp/fbtools && cd /tmp/fbtools && npm init -y && npm install firebase-tools@13
+      # Some storage tests need to exercise the signed-URL code path. They use
+      # a THROWAWAY keypair generated per run - never production credentials -
+      # purely so Admin SDK cert() signing works locally. Nothing to revoke.
+      - name: Generate throwaway signing keypair for emulator tests
+        run: |
+          openssl genrsa -out /tmp/ci-sign-key.pem 2048
+          echo "TEST_SIGN_CLIENT_EMAIL=ci-signer@demo-autodeck-ci.iam.gserviceaccount.com" >> "$GITHUB_ENV"
+          echo "TEST_SIGN_PRIVATE_KEY<<EOF_KEY" >> "$GITHUB_ENV"
+          cat /tmp/ci-sign-key.pem >> "$GITHUB_ENV"
+          echo "EOF_KEY" >> "$GITHUB_ENV"
+          rm /tmp/ci-sign-key.pem
+      - run: /tmp/fbtools/node_modules/.bin/firebase emulators:exec --only auth,firestore,storage --project demo-autodeck-ci 'pnpm --filter functions test:emulator'

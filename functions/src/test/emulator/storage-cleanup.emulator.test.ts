@@ -1,0 +1,95 @@
+import { getStorage } from "firebase-admin/storage";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { TEST_PROJECT_ID } from "../emulator-setup";
+/**
+ * Round 7 photo handling against the REAL local Firestore + Storage emulators (success path). Failure paths are unit-tested with mocks.
+ * Proves objects are actually removed from Storage, only the intended one, and records match. Fixtures only, emulator only.
+ */
+import { describe, it, expect, beforeAll, vi } from "vitest";
+import { deleteApp, getApp, initializeApp } from "firebase-admin/app";
+
+const TENANT = "storage-tenant";
+// Base64 MD5 of src/test/fixtures/synthetic-policy.png - the bytes these tests actually upload.
+const FIXTURE_MD5 = "+u1VOWA2mKyFM0wEptyqZw==";
+let n = 0;
+const uid = (p: string) => `${p}-${Date.now()}-${++n}`;
+const auth = (u: string) => ({ uid: u, token: { role: "customer", tenantId: TENANT, studioId: null } });
+let db: FirebaseFirestore.Firestore;
+let bucket: ReturnType<ReturnType<typeof getStorage>["bucket"]>;
+let fns: { deleteMyPaper: any; updateMyPaper: any; finalizeMyPaper: any; removeMyVehicleImage: any; removeMyListingPhoto: any; replaceMyListingPhoto: any };
+const put = (p: string) => bucket.file(p).save(Buffer.from("x"), { contentType: "image/jpeg" });
+const has = async (p: string) => (await bucket.file(p).exists())[0];
+
+beforeAll(async () => {
+  await deleteApp(getApp());
+  initializeApp({ projectId: TEST_PROJECT_ID, storageBucket: `${TEST_PROJECT_ID}.appspot.com` });
+  const { getFirestore } = await import("firebase-admin/firestore");
+  db = getFirestore(); bucket = getStorage().bucket();
+  const papers = await import("../../functions/papers/myPaperEdits.js");
+  const sub = await import("../../functions/papers/submitMyPaper.js");
+  const veh = await import("../../functions/vehicle/removeMyVehicleImage.js");
+  const sale = await import("../../functions/carsale/carsale.js");
+  fns = { deleteMyPaper: papers.deleteMyPaper, updateMyPaper: papers.updateMyPaper, finalizeMyPaper: sub.finalizeMyPaper, removeMyVehicleImage: veh.removeMyVehicleImage, removeMyListingPhoto: sale.removeMyListingPhoto, replaceMyListingPhoto: sale.replaceMyListingPhoto };
+});
+
+describe("Storage success path (emulator)", () => {
+  it("deleteMyPaper removes that paper's photo only", async () => {
+    const me = uid("c"); const v = uid("v"); const pid = uid("p"); const other = uid("p");
+    await db.collection("vehicles").doc(v).set({ id: v, ownerId: me, tenantId: TENANT });
+    const mine = `${TENANT}/vehicles/${v}/paper-${pid}.jpg`; const keep = `${TENANT}/vehicles/${v}/paper-${other}.jpg`;
+    await put(mine); await put(keep);
+    await db.collection("papers").doc(pid).set({ id: pid, tenantId: TENANT, studioId: "s", vehicleId: v, customerId: me, kind: "INSURANCE", reference: "R-" + pid, status: "VERIFIED", evidencePath: mine });
+    await fns.deleteMyPaper.run({ data: { paperId: pid }, auth: auth(me) });
+    expect(await has(mine)).toBe(false);
+    expect(await has(keep)).toBe(true);
+    expect((await db.collection("papers").doc(pid).get()).exists).toBe(false);
+  });
+
+  it("updateMyPaper with another file type removes the old own photo object", async () => {
+    const me = uid("c"); const v = uid("v"); const pid = uid("p");
+    await db.collection("vehicles").doc(v).set({ id: v, ownerId: me, tenantId: TENANT, registrationNumber: "GJ01AB1234" });
+    const old = `${TENANT}/vehicles/${v}/paper-${pid}.jpg`;
+    await put(old);
+    await db.collection("papers").doc(pid).set({ id: pid, tenantId: TENANT, studioId: "s", vehicleId: v, customerId: me, kind: "INSURANCE", reference: "R-" + pid, status: "VERIFIED", evidencePath: old, submittedBy: "customer" });
+    // URL signing is stubbed (the emulator has no signing key); the bytes upload is the client step.
+    const sign = vi.spyOn(Object.getPrototypeOf(getStorage().bucket().file("x")), "getSignedUrl").mockResolvedValue(["https://signed.example/put"] as never);
+    try {
+      await fns.updateMyPaper.run({ data: { paperId: pid, contentType: "image/png", contentMd5: FIXTURE_MD5 }, auth: auth(me) });
+      const stagedDoc = (await db.collection("papers").doc(pid).get()).data()!;
+      expect(stagedDoc.evidencePath).toBe(old); // staged: repoint only at finalize
+      const stagedPath = stagedDoc.pendingEvidencePath as string;
+      expect(stagedPath).toMatch(new RegExp(`^${TENANT}/vehicles/${v}/paper-${pid}\\.[a-f0-9]{8}\\.png$`));
+      expect(await has(old)).toBe(true); // old object removed only after promotion
+      await bucket.file(stagedPath).save(readFileSync(resolve(__dirname, "../fixtures/synthetic-policy.png")), { metadata: { contentType: "image/png" } });
+      await fns.finalizeMyPaper.run({ data: { paperId: pid }, auth: auth(me) });
+      expect(await has(old)).toBe(false); // finalize removed the old own object
+      expect((await db.collection("papers").doc(pid).get()).data()?.evidencePath).toBe(stagedPath);
+      await bucket.file(stagedPath).delete({ ignoreNotFound: true });
+    } finally { sign.mockRestore(); }
+  });
+
+  it("removeMyVehicleImage removes the cover object and clears only that field", async () => {
+    const me = uid("c"); const v = uid("v");
+    const cover = `${TENANT}/vehicles/${v}/cover.jpg`; const rc = `${TENANT}/vehicles/${v}/rc.jpg`;
+    await put(cover); await put(rc);
+    await db.collection("vehicles").doc(v).set({ id: v, ownerId: me, tenantId: TENANT, photoUrl: cover, rcPhotoUrl: rc });
+    await fns.removeMyVehicleImage.run({ data: { vehicleId: v, kind: "cover" }, auth: auth(me) });
+    expect(await has(cover)).toBe(false); expect(await has(rc)).toBe(true);
+    expect((await db.collection("vehicles").doc(v).get()).data()).toMatchObject({ photoUrl: null, rcPhotoUrl: rc });
+  });
+
+  it("listing photo remove and replace act on the chosen photo only; others keep their objects", async () => {
+    const me = uid("c"); const lid = uid("L");
+    await db.collection("customers").doc(me).set({ id: me, authUid: me, tenantId: TENANT, deletedAt: null });
+    const a = `${TENANT}/listings/${lid}-a.jpg`, b = `${TENANT}/listings/${lid}-b.jpg`, c = `${TENANT}/listings/${lid}-c.jpg`, nw = `${TENANT}/listings/${lid}-new.png`;
+    await Promise.all([put(a), put(b), put(c), put(nw)]);
+    await db.collection("carListings").doc(lid).set({ id: lid, sellerId: me, tenantId: TENANT, studioId: "s", status: "live", photoPaths: [a, b, c] });
+    await fns.replaceMyListingPhoto.run({ data: { listingId: lid, index: 1, expectedCount: 3, newPath: nw }, auth: auth(me) });
+    expect((await db.collection("carListings").doc(lid).get()).data()?.photoPaths).toEqual([a, nw, c]);
+    expect(await has(b)).toBe(false); expect(await has(a)).toBe(true); expect(await has(nw)).toBe(true);
+    await fns.removeMyListingPhoto.run({ data: { listingId: lid, index: 0, expectedCount: 3 }, auth: auth(me) });
+    expect((await db.collection("carListings").doc(lid).get()).data()?.photoPaths).toEqual([nw, c]);
+    expect(await has(a)).toBe(false); expect(await has(c)).toBe(true);
+  });
+});

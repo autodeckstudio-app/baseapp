@@ -1,0 +1,70 @@
+import { fetch as nativeFetch } from "expo/fetch";
+import { httpsCallable } from "firebase/functions";
+import type { CarListingView } from "@autodeck/core";
+import { auth, functions } from "./firebase";
+
+export async function getCarListings(mine = false): Promise<CarListingView[]> {
+  // Wait for the saved sign-in to load first, or a signed-in customer is treated as signed out: no prices, no own listings.
+  await auth.authStateReady();
+  // Browsing is open: signed-out visitors see the public list. Their own listings need a sign-in.
+  if (!auth.currentUser) {
+    if (mine) return [];
+    const pub = httpsCallable<Record<string, never>, { listings: CarListingView[] }>(functions, "listPublicCarListings");
+    return (await pub({})).data.listings;
+  }
+  const fn = httpsCallable<{ mine: boolean }, { listings: CarListingView[] }>(functions, "listCarListings");
+  return (await fn({ mine })).data.listings;
+}
+
+export async function uploadListingPhoto(blob: Blob | Uint8Array, contentType: string): Promise<string> {
+  const issue = httpsCallable<{ contentType: string }, { uploadUrl: string; path: string; requiredHeaders: Record<string, string> }>(functions, "issueListingPhotoUploadUrl", { timeout: 20000 });
+  const { uploadUrl, path, requiredHeaders } = (await issue({ contentType })).data;
+  const transport = blob instanceof Uint8Array ? nativeFetch : fetch;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 45000);
+  try {
+    const res = await transport(uploadUrl, { method: "PUT", headers: requiredHeaders, body: blob, signal: controller.signal });
+    if (!res.ok) throw new Error("A photo did not upload. Try again.");
+    return path;
+  } finally { clearTimeout(timer); }
+}
+
+export type SellInput = {
+  listingId?: string; operationId?: string; make: string; model: string; variant: string | null; year: number; kmDriven: number;
+  fuel: "petrol" | "diesel" | "cng" | "electric" | "hybrid"; gearbox: "manual" | "automatic"; bodyType: "hatchback" | "sedan" | "suv" | "muv" | "coupe" | "other" | null; owners: number; colour: string; area: string;
+  askingPrice: number; description: string | null; insuranceValidTill: string | null; photoPaths: string[];
+  sellerName: string; sellerPhone: string; registrationNumber: string | null;
+};
+export async function submitMyListing(input: SellInput): Promise<string> {
+  const result = await httpsCallable<SellInput, { id: string }>(functions, "submitMyListing", { timeout: 30000 })(input);
+  if (!result.data.id) throw new Error("The listing was not confirmed. Check your saved listings before retrying.");
+  return result.data.id;
+}
+
+/** Exact operation receipt only. A not_found response does not cancel an in-flight submit. */
+export type ListingSubmissionState={status:'not_found'}|{status:'committed';id:string;listingStatus:string};
+export async function getMyListingSubmission(operationId:string):Promise<ListingSubmissionState>{
+ return (await httpsCallable<{operationId:string},ListingSubmissionState>(functions,'getMyListingSubmission',{timeout:15000})({operationId})).data;
+}
+
+export async function markListingSold(listingId: string): Promise<void> {
+  await httpsCallable(functions, "markMyListingSold")({ listingId });
+}
+
+export async function sendCarLead(listingId: string, kind: "interest" | "report", phone?: string, note?: string): Promise<void> {
+  await httpsCallable(functions, "expressInterest")({ listingId, kind, ...(phone ? { phone } : {}), ...(note ? { note } : {}) });
+}
+
+export const inr = (paise: number) => `₹${(paise / 100).toLocaleString("en-IN")}`;
+export const kmLabel = (km: number) => `${km.toLocaleString("en-IN")} km`;
+
+/** Seller removes one photo from their own listing (by position). The server checks ownership and keeps at least one photo. */
+export async function removeListingPhoto(listingId: string, index: number, expectedCount: number): Promise<void> {
+  await httpsCallable(functions, "removeMyListingPhoto")({ listingId, index, expectedCount });
+}
+
+/** Seller replaces one photo on their own listing: upload the new file, then the server swaps it in at that position (owner, count and path checked) and removes the old object. */
+export async function replaceListingPhoto(listingId: string, index: number, expectedCount: number, blob: Blob | Uint8Array, contentType: string): Promise<void> {
+  const newPath = await uploadListingPhoto(blob, contentType);
+  await httpsCallable(functions, "replaceMyListingPhoto")({ listingId, index, expectedCount, newPath });
+}

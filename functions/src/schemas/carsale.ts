@@ -1,0 +1,74 @@
+import {currentVehicleYear} from '@autodeck/core';
+import { z } from "zod";
+
+const contentType = z.enum(["image/jpeg", "image/png", "image/webp"]);
+const fields = {
+  make: z.string().min(1).max(50).trim(),
+  model: z.string().min(1).max(80).trim(),
+  variant: z.string().max(80).trim().nullable().optional(),
+  year: z.number().int().min(1990).refine(year=>year<=currentVehicleYear(),()=>({message:`Year cannot be later than ${currentVehicleYear()}.`})),
+  kmDriven: z.number().int().min(0).max(1_500_000),
+  fuel: z.enum(["petrol", "diesel", "cng", "electric", "hybrid"]),
+  gearbox: z.enum(["manual", "automatic"]),
+  bodyType: z.enum(["hatchback", "sedan", "suv", "muv", "coupe", "other"]).nullable().optional(),
+  owners: z.number().int().min(1).max(10),
+  colour: z.string().min(1).max(40).trim(),
+  area: z.string().min(1).max(60).trim(),
+  askingPrice: z.number().int().min(100_000).max(100_000_000_00), // paise
+  description: z.string().max(1000).nullable().optional(),
+  insuranceValidTill: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  photoPaths: z.array(z.string().max(300)).min(1).max(12),
+};
+
+// No links or phone-like numbers in public text: enquiries go through the studio.
+export const noContactInText = (s: string | null | undefined): boolean => !s || !/(https?:\/\/|www\.|\d[\d\s-]{8,}\d)/i.test(s);
+
+export const issueListingPhotoUploadUrlSchema = z.object({ contentType }).strict();
+
+export const adminSaveListingSchema = z.object({
+  listingId: z.string().min(1).optional(),
+  status: z.enum(["draft", "live", "reserved", "sold"]),
+  ...fields,
+  sellerName: z.string().max(80).nullable().optional(),
+  sellerPhone: z.string().max(20).nullable().optional(),
+  registrationNumber: z.string().max(15).nullable().optional(),
+  reservePrice: z.number().int().min(0).nullable().optional(),
+  adminNotes: z.string().max(500).nullable().optional(),
+}).strict();
+
+export const submitMyListingSchema = z.object({
+  operationId: z.string().regex(/^[A-Za-z0-9_-]{16,120}$/).optional(), // backwards compatible; only keyed requests are retry-safe
+  listingId: z.string().min(1).optional(), // edit own listing (goes back to pending)
+  ...fields,
+  sellerName: z.string().min(1).max(80).trim(),
+  sellerPhone: z.string().min(10).max(15).trim(),
+  registrationNumber: z.string().max(15).nullable().optional(),
+}).strict();
+
+export const reviewListingSchema = z.object({
+  listingId: z.string().min(1),
+  decision: z.enum(["approve", "reject"]),
+  reason: z.string().max(300).optional(),
+}).strict();
+
+export const listCarListingsSchema = z.object({ includeAll: z.boolean().optional(), mine: z.boolean().optional() }).strict();
+
+export const expressInterestSchema = z.object({
+  listingId: z.string().min(1),
+  kind: z.enum(["interest", "report"]),
+  phone: z.string().trim().transform((s) => s.replace(/[\s()-]/g, "").replace(/^\+91/, "").replace(/^91(?=\d{10}$)/, "")).refine((s) => /^[6-9]\d{9}$/.test(s), "Enter a valid 10-digit mobile number.").optional(),
+  note: z.string().max(300).optional(),
+}).strict().superRefine((d, ctx) => {
+  if (d.kind === "interest" && !d.phone) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["phone"], message: "Phone number is required for an enquiry." });
+});
+
+export const setLeadStatusSchema = z.object({ leadId: z.string().min(1), status: z.enum(["new", "contacted", "closed"]) }).strict();
+export const listCarLeadsSchema = z.object({}).strict();
+
+export const removeMyListingPhotoSchema = z.object({ listingId: z.string().min(1).max(120), index: z.number().int().min(0).max(11), expectedCount: z.number().int().min(1).max(12) }).strict();
+export const replaceMyListingPhotoSchema = z.object({ listingId: z.string().min(1).max(120), index: z.number().int().min(0).max(11), expectedCount: z.number().int().min(1).max(12), newPath: z.string().min(1).max(300) }).strict();
+export const markMyListingSoldSchema = z.object({ listingId: z.string().min(1) }).strict();
+
+export const approveListingPhotoSchema = z
+  .object({ listingId: z.string().min(1).max(40), photoPath: z.string().min(1).max(300), expectedSha256: z.string().regex(/^[0-9a-f]{64}$/i).optional() })
+  .strict();

@@ -1,0 +1,45 @@
+---
+import{websiteText}from'../../lib/website-text';
+import Base from '../../layouts/Base.astro';
+import '../../styles/store.css';
+import '../../styles/shop-flow.css';
+import collection from '../../data/shop.json';
+import fixture from '../../data/shop-fixture.json';
+interface Variant { id: string; label: string; stock?: number }
+interface Product {
+  id: string; name: string; department: string; description: string; image: string; imageAlt: string;
+  pricePaise?: number | null; variants?: Variant[]; details?: { label: string; value: string }[]; fixture?: boolean;
+}
+export function getStaticPaths() {
+  const real = (collection.products as Product[]).filter(p => p.id && p.name && p.image && p.imageAlt);
+  // Fixtures exist only in the dev server, never in a build.
+  const all = import.meta.env.DEV ? [...real, ...(fixture.products as Product[])] : real;
+  return all.map(p => ({ params: { slug: p.id }, props: { p } }));
+}
+const { p } = Astro.props as { p: Product };
+const test = !!p.fixture && import.meta.env.DEV;
+
+
+---
+<Base title={`${websiteText(p.name) || 'AutoDeck collection'} · AutoDeck Store`} description={websiteText(p.description)} page="shop">
+<section class="wrap pp">
+  <div class="pp-photo"><img src={p.image} alt={websiteText(p.imageAlt)} /></div>
+  <div class="pp-copy">
+    {p.fixture && <span class="fx-tag"><i></i> Fixture. Layout test, not a product</span>}
+    <p class="eyebrow" style="margin-top:14px"><i></i> {websiteText(p.department)}</p>
+    <h1>{websiteText(p.name) || 'AutoDeck collection'}</h1>
+    <p>{websiteText(p.description)}</p>
+    {p.details && p.details.length > 0 && <dl>{p.details.filter(d=>websiteText(d.label)&&websiteText(d.value)).map(d => <div><dt>{d.label}</dt><dd>{d.value}</dd></div>)}</dl>}
+    <p class="pp-sub">Not available to order.</p>
+    {test ? (
+      <div data-pp>
+        <div class="sizes" role="radiogroup" aria-label="Size">{(p.variants || []).map((v, i) => <label><input type="radio" name="size" value={v.id} disabled={v.stock === 0} checked={i === 0 && v.stock !== 0} /><span>{v.label}{v.stock === 0 ? '' : ''}</span></label>)}</div>
+        <button class="btn-solid" type="button" data-add-to-cart={p.id}>Add to cart</button><a class="btn-link" href="/shop/cart">View cart</a>
+        <p class="pp-sub" data-cart-msg style="margin-top:12px"></p>
+      </div>
+    ) : null}
+    <p style="margin-top:22px"><a class="btn-link" style="margin:0" href="/shop">Back to the store</a></p>
+  </div>
+</section>
+{test && <script>import '../../scripts/cart.js';</script>}
+</Base>

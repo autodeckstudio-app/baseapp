@@ -1,0 +1,84 @@
+"use client";
+import { alignedCustomerServices } from "@autodeck/core";
+
+import { httpsCallable } from "firebase/functions";
+import type {
+  Service,
+  ServiceCategory,
+  VehicleCategory,
+  VehicleCategoryPricing,
+  BayType,
+  PriceBreakdown,
+  PriceSnapshot,
+  WarrantyDurationUnit,
+} from "@autodeck/core";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { COLLECTIONS } from "@autodeck/database";
+import { db, functions } from "./firebase";
+
+export async function getServiceCatalogue(category?: ServiceCategory): Promise<Service[]> {
+  const fn = httpsCallable<{ category?: ServiceCategory }, { services: Service[] }>(
+    functions,
+    "getServiceCatalogue",
+  );
+  const result = await fn(category !== undefined ? { category } : {});
+  return alignedCustomerServices(result.data.services).filter(s=>s.catalogueEntryKind!=='enquiry');
+}
+
+// The callable returns active services only. Hidden ones are read directly so the
+// owner can bring them back (Firestore rules allow tenant-scoped reads).
+export async function getServicesIncludingHidden(): Promise<Service[]> {
+  const fn = httpsCallable<{includeInactive:boolean},{services:Service[]}>(functions,"getServiceCatalogue");
+  return (await fn({includeInactive:true})).data.services;
+}
+
+// Reuses the server-side pricing engine - the admin app never computes prices itself.
+export async function calculateServicePrice(
+  serviceId: string,
+  vehicleCategory: VehicleCategory,
+): Promise<{ breakdown: PriceBreakdown; snapshot: PriceSnapshot }> {
+  const fn = httpsCallable<
+    { serviceId: string; vehicleCategory: VehicleCategory },
+    { breakdown: PriceBreakdown; snapshot: PriceSnapshot }
+  >(functions, "calculateServicePrice");
+  const result = await fn({ serviceId, vehicleCategory });
+  return result.data;
+}
+
+export interface CreateServiceInput {
+  imageUrl?: string | null;
+  internalRating?: "A" | "B" | "C" | "D" | null;
+  name: string;
+  category: ServiceCategory;
+  brand: string | null;
+  description: string;
+  basePrice: number; // paise
+  currency?: string;
+  estimatedDurationMinutes: number;
+  warrantyLabel: string | null;
+  careTips?: string[];
+  warrantyDurationValue: number | null;
+  warrantyDurationUnit: WarrantyDurationUnit | null;
+  vehicleCategoryPricing?: VehicleCategoryPricing[];
+  requiredBayType?: BayType;
+  membershipWashEligible?: boolean;
+  displayOrder?: number;
+}
+
+export async function createService(input: CreateServiceInput): Promise<Service> {
+  const fn = httpsCallable<CreateServiceInput, { service: Service }>(functions, "createService");
+  const result = await fn(input);
+  return result.data.service;
+}
+
+export type UpdateServiceInput = Partial<CreateServiceInput> & { serviceId: string };
+
+export async function updateService(input: UpdateServiceInput): Promise<void> {
+  const fn = httpsCallable(functions, "updateService");
+  await fn(input);
+}
+
+export async function setServiceActive(serviceId: string, active: boolean): Promise<void> {
+  const fn = httpsCallable(functions, "setServiceActive");
+  await fn({ serviceId, active });
+}

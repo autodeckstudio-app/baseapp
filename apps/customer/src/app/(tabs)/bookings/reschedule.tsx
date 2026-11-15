@@ -1,0 +1,214 @@
+import { DateField } from "../../../ui/inputs";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Pressable, ScrollView, View } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { getBookingById, getAvailability, rescheduleBooking, requestBookingReschedule, generateIdempotencyKey, todayIST, type AvailableSlot } from "../../../lib/booking-service";
+import { getServiceCatalogue } from "../../../lib/catalogue-service";
+import { extraServiceIdsOf } from "../../../lib/booking-rules";
+import type { Booking } from "@autodeck/core";
+import { rescheduleRule, isBiggerService, isBookingMissed, intentKey, PREMIUM_REQUEST_CUTOFF_HOURS } from "@autodeck/core";
+import { space } from "@autodeck/ui/theme";
+import { useExperienceTheme } from "@autodeck/ui/native";
+import { Button, Kicker, Loading, Notice, Pane, Screen, T } from "../../../ui/kit";
+
+export default function RescheduleBookingScreen() {
+  const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
+  const router = useRouter();
+  const { colors } = useExperienceTheme();
+
+  const [booking, setBooking] = useState<Booking | null>(null);
+  const [svcCategory, setSvcCategory] = useState<string | null>(null);
+  const [svcLoaded, setSvcLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [slots, setSlots] = useState<AvailableSlot[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [slotsError, setSlotsError] = useState<string | null>(null);
+  const [selectedDate,setSelectedDate] = useState("");
+  useEffect(()=>{const dates=[...new Set(slots.map(s=>s.date))].sort();setSelectedDate(prev=>dates.includes(prev)?prev:dates[0]??"");},[slots]);
+  const [pendingSlot, setPendingSlot] = useState<AvailableSlot | null>(null);
+  // Exactly-once: the submission key is tied to the selected slot and survives
+  // retries and re-renders; picking a different slot mints a new key so the
+  // server never sees one key with two payloads (which it rejects as conflict).
+  const submitKeyRef = useRef<{ intent: string; key: string } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [doneLabel, setDoneLabel] = useState<string | null>(null);
+
+  const requestGeneration=useRef(0),slotGeneration=useRef(0),submitLock=useRef(false);const routeRef=useRef(bookingId);routeRef.current=bookingId;
+  const loadBooking = useCallback(() => {
+    const generation=++requestGeneration.current;submitLock.current=false;setSubmitting(false);slotGeneration.current++;setBooking(null);setSvcCategory(null);setSvcLoaded(false);setSlots([]);setPendingSlot(null);setDoneLabel(null);setActionError(null);submitKeyRef.current=null;setLoadFailed(false);
+    if(!bookingId){setLoading(false);setSvcLoaded(true);return;}
+    setLoading(true);
+    void(async()=>{try{const b=await getBookingById(bookingId);if(generation!==requestGeneration.current)return;setBooking(b);if(b){const all=await getServiceCatalogue();if(generation!==requestGeneration.current)return;setSvcCategory(all.find(x=>x.id===b.serviceId&&x.active)?.category??null)}}catch{if(generation===requestGeneration.current)setLoadFailed(true)}finally{if(generation===requestGeneration.current){setLoading(false);setSvcLoaded(true)}}})();
+  },[bookingId]);
+  useEffect(()=>{loadBooking();return()=>{requestGeneration.current++;slotGeneration.current++}},[loadBooking]);
+  const loadSlots=useCallback(()=>{const generation=++slotGeneration.current;setSlots([]);setPendingSlot(null);setSlotsError(null);if(!booking||!svcCategory){setSlotsLoading(false);return;}
+    setSlotsLoading(true);void getAvailability(booking.serviceId,booking.studioId,todayIST(),14,extraServiceIdsOf(booking)).then(rows=>{if(generation===slotGeneration.current)setSlots(rows.filter(s=>Number.isFinite(Date.parse(s.startAt))&&Date.parse(s.startAt)>Date.now()))}).catch(()=>{if(generation===slotGeneration.current)setSlotsError("Available times could not load. Try again.")}).finally(()=>{if(generation===slotGeneration.current)setSlotsLoading(false)});
+  },[booking,svcCategory]);
+  useEffect(()=>{loadSlots();return()=>{slotGeneration.current++}},[loadSlots]);
+  if(loading)return <Loading label="Opening your booking"/>;
+  if(loadFailed||!booking)return <Screen><Notice title="Booking not found" body="Check your connection and try again." action={<Button icon="refresh" label="Retry" onPress={loadBooking}/>}/></Screen>;
+  if(!svcLoaded)return <Loading label="Opening service terms"/>;
+  if(!svcCategory)return <Screen><Notice title="Service terms unavailable" body="This service's current reschedule terms could not be verified. Refresh before choosing a new time." action={<Button icon="refresh" label="Retry" onPress={loadBooking}/>}/></Screen>;
+
+  // Premium (pay-at-studio) bookings use the request-and-approve flow (item 6,
+  // PREVIEW): the customer sends a request and the studio confirms. The callable
+  // enforces the one-request and >=24h rules authoritatively.
+  const isPremiumRequest = isBiggerService(svcCategory) && !isBookingMissed(booking);
+  const rule = rescheduleRule(svcCategory);
+  const hoursUntil = (new Date(booking.scheduledAt).getTime() - Date.now()) / 3600000;
+  const eligible =
+    booking.status === "CONFIRMED" &&
+    (isPremiumRequest
+      ? (booking.rescheduleRequestCount ?? 0) === 0 && booking.rescheduleRequest?.status !== "pending" && hoursUntil >= PREMIUM_REQUEST_CUTOFF_HOURS
+      : (isBookingMissed(booking) || (booking.rescheduleCount < rule.maxCount &&
+      hoursUntil >= rule.cutoffHours)));
+
+  if (!eligible) {
+    return (
+      <Screen>
+        <Notice
+          title="This booking can no longer be rescheduled"
+          body="It may have changed since you opened this screen. Go back to see the latest status."
+          action={<Button label="Go back" onPress={() => router.back()} />}
+        />
+      </Screen>
+    );
+  }
+
+  const currentScheduledAt = new Date(booking.scheduledAt);
+  const formatSlot = (d: Date) =>
+    d.toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  const currentDisplay = formatSlot(currentScheduledAt);
+
+  async function handleConfirm() {
+    if (!booking || !pendingSlot || submitting||submitLock.current||routeRef.current!==bookingId) return;
+    const scope=bookingId,generation=requestGeneration.current;const current=()=>routeRef.current===scope&&requestGeneration.current===generation;submitLock.current=true;
+    const newDisplay = formatSlot(new Date(pendingSlot.startAt));
+    setSubmitting(true);
+    setActionError(null);
+    try {
+      submitKeyRef.current = intentKey(submitKeyRef.current, pendingSlot.startAt, generateIdempotencyKey);
+      const submitKey = submitKeyRef.current.key;
+      if (isPremiumRequest) {
+        await requestBookingReschedule(booking.id, pendingSlot.date, pendingSlot.startTime, submitKey);
+        if(current())setDoneLabel(`REQUESTED:${newDisplay}`);
+      } else {
+        await rescheduleBooking(booking.id, pendingSlot.date, pendingSlot.startTime, submitKey);
+        if(current())setDoneLabel(newDisplay);
+      }
+      if(current())submitKeyRef.current = null;
+    } catch (err) {
+      if(!current())return;
+      loadBooking();
+      setActionError("Your time change was not confirmed. Refresh the booking before trying again.");
+    } finally {
+      if(current()){submitLock.current=false;setSubmitting(false);}
+    }
+  }
+
+  if (doneLabel) {
+    const requested = doneLabel.startsWith("REQUESTED:");
+    const when = requested ? doneLabel.slice("REQUESTED:".length) : doneLabel;
+    return (
+      <Screen>
+        <Notice
+          title={requested ? "Reschedule request sent" : "Booking rescheduled"}
+          body={requested
+            ? `You've asked for ${when}. Your booking stays at its current time until the studio confirms - one request per booking.`
+            : `Your booking is now set for ${when}.`}
+          action={<Button label="Done" onPress={() => router.back()} />}
+        />
+      </Screen>
+    );
+  }
+
+  const slotsByDate = slots.reduce<Record<string, AvailableSlot[]>>((acc, slot) => {
+    if (!acc[slot.date]) acc[slot.date] = [];
+    (acc[slot.date] as AvailableSlot[]).push(slot);
+    return acc;
+  }, {});
+
+  return (
+    <Screen
+      header={
+        <View style={{ gap: space.hair }}>
+          <Kicker tone="accent">Reschedule</Kicker>
+          <T role="title">Pick a new time</T>
+          <T role="caption" tone="secondary">Currently: {currentDisplay}</T>
+        </View>
+      }
+    >
+      {slotsLoading ? (
+        <T role="caption" tone="tertiary">Checking the studio's calendar...</T>
+      ) : slotsError ? (
+        <Notice title="Can't load times" body={slotsError} action={<Button icon="refresh" label="Retry" kind="quiet" onPress={loadSlots} />} />
+      ) : Object.keys(slotsByDate).length === 0 ? (
+        <Notice title="No free times" body="Nothing available in the next 14 days. Try again tomorrow or call the studio." />
+      ) : (
+        <View style={{gap:space.line}}><DateField label="New booking date" value={selectedDate??""} min={Object.keys(slotsByDate).sort()[0]} max={Object.keys(slotsByDate).sort().at(-1)} onChange={v=>{if(slotsByDate[v]){setSelectedDate(v);setPendingSlot(null);}}}/><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>{Object.keys(slotsByDate).sort().map(date=><Pressable key={date} accessibilityRole="button" accessibilityState={{selected:date===selectedDate}} accessibilityLabel={`Choose ${date}`} disabled={submitting} onPress={()=>{setSelectedDate(date);setPendingSlot(null);}} style={{minHeight:48,justifyContent:"center",paddingHorizontal:16,paddingVertical:10,borderRadius:14,borderWidth:1,borderColor:date===selectedDate?colors.accent:colors.borderSubtle,backgroundColor:date===selectedDate?colors.accentHaze:"transparent"}}><T role="caption" tone={date===selectedDate?"accent":"secondary"}>{new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}</T></Pressable>)}</ScrollView>{Object.entries(slotsByDate).filter(([date])=>date===selectedDate).map(([date, daySlots]) => (
+          <Pane key={date} pad="gap">
+            <View style={{ gap: space.line }}>
+              <T role="heading">{new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}</T>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
+                {[...daySlots].sort((a,b)=>a.startAt.localeCompare(b.startAt)).map((slot) => {
+                  const selected = pendingSlot?.startAt === slot.startAt;
+                  return (
+                    <Pressable
+                      key={slot.startAt}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      disabled={submitting}
+                      onPress={() => setPendingSlot(slot)}
+                      style={({ pressed }) => ({
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: colors.accent,
+                        backgroundColor: selected ? colors.accentHaze : "transparent",
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        opacity: submitting ? 0.4 : pressed ? 0.7 : 1,
+                        minWidth: 76,minHeight:44,justifyContent:"center",
+                        alignItems: "center",
+                      })}
+                    >
+                      <T role="data" tone="accent">{slot.startTime}</T>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </Pane>
+        ))}</View>
+      )}
+
+      {pendingSlot ? (
+        <Notice
+          title={isPremiumRequest ? "Confirm reschedule request" : "Confirm reschedule"}
+          body={isPremiumRequest
+            ? `Ask the studio to move this booking from ${currentDisplay} to ${formatSlot(new Date(pendingSlot.startAt))}. Your booking stays put until the studio confirms, and your price and advance stay the same.`
+            : `Move this booking from ${currentDisplay} to ${formatSlot(new Date(pendingSlot.startAt))}. Your price stays the same.`}
+          action={
+            <View style={{ gap: space.breath }}>
+              <Button label={isPremiumRequest ? "Send request" : "Confirm new time"} busy={submitting} onPress={() => void handleConfirm()} />
+              <Button label="Keep looking" kind="quiet" onPress={() => setPendingSlot(null)} />
+            </View>
+          }
+        />
+      ) : null}
+
+      {actionError ? <Notice title="Couldn't reschedule" body={actionError} /> : null}
+
+      <Button label="Cancel" kind="quiet" disabled={submitting} onPress={() => router.back()} />
+    </Screen>
+  );
+}

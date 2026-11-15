@@ -1,0 +1,124 @@
+import type{CombinedPaymentSnapshot,BookingTransportSnapshot}from'../combined-checkout.js';
+import type { PriceBreakdown } from "./booking.js";
+import type { VehicleSnapshot } from "./customer.js";
+
+export type JobStatus =
+  | "PENDING_VEHICLE"      // Created from booking; vehicle not yet arrived
+  | "STANDBY"             // Arrived, waiting without a bay reservation
+  | "VEHICLE_RECEIVED"     // Vehicle checked in (or walk-in)
+  | "IN_PROGRESS"
+  | "QUALITY_CHECK"
+  | "READY_FOR_DELIVERY"
+  | "DELIVERED"
+  | "CANCELLED";
+
+export interface JobStatusHistoryEntry {
+  status: JobStatus;
+  changedAt: string;
+  changedBy: string; // employeeId or adminId
+  notes: string | null;
+}
+
+export interface ServiceJob {
+  combinedPayment?:CombinedPaymentSnapshot;
+  combinedSettlement?:{advancePaymentId:string|null;advanceCapturedPaise:number;balanceDuePaise:number;settlementPaymentId:string|null;settledAt:string|null};
+  transportSnapshot?:Readonly<BookingTransportSnapshot>|null;
+  /** Display snapshot only; settlement validates linked consumption server-side. */
+  membershipWashUsed?: boolean;
+  settlementKind?: "membership_covered";
+  invoiceId?: string;
+  /** Consolidated unissued obligations, never a legacy job invoice ID. */
+  visitInvoiceId?: string;
+  /** Explicit staff-created physical visit grouping; never inferred by car/date. */
+  visitId?: string;
+  id: string;
+  tenantId: string;
+  studioId: string;
+  bookingId: string | null; // null for walk-ins
+  customerId: string;
+  vehicleId: string;
+  // Copy of the car, stamped when the vehicle is permanently deleted (and may be set earlier).
+  vehicleSnapshot?: VehicleSnapshot;
+  serviceId: string;
+  /** Set when the visit has more than one service: main service first, then the extras. Prices are paise snapshots. */
+  lines?: Array<{ serviceId: string; name: string; price: number; durationMinutes: number }>;
+  /** Explicit unfinished-work pause for one physical shared-visit move. */
+  visitBayPause?:{at:string;by:string;fromBayId:string}|null;
+  bayReleasedAt?: string;
+  bayReleasedBy?: string;
+  bayId: string; // empty while on standby
+  standbyArrivedAt?: string | null;
+  standbyAdmittedAt?: string | null;
+  assignedEmployeeId: string | null;
+  status: JobStatus;
+  statusHistory: JobStatusHistoryEntry[]; // append-only embedded array
+  scheduledAt: string; // ISO UTC — booked start time or walk-in creation time
+  scheduledDate: string; // "YYYY-MM-DD" in studio TZ — used for date-scoped queries
+  // ISO UTC — true service completion instant (buffer-free), computed via
+  // computeScheduleEnd from scheduledAt + estimatedDurationMinutes, walking
+  // forward across operating days only (multi-day-aware; equals the naive
+  // scheduledAt + estimatedDurationMinutes for any service that fits within
+  // its start day). The turnover buffer is applied only where occupancy
+  // intervals are built (buildOccupiedInterval), never baked in here — this
+  // keeps estimatedEndAt directly comparable to Booking.estimatedEndAt.
+  estimatedEndAt: string;
+  estimatedEndDate: string; // "YYYY-MM-DD" in studio TZ — == scheduledDate unless the job spans multiple days
+  estimatedDurationMinutes: number; // snapshotted from service at job creation
+  studioNotes: string | null;
+  additionalWorkDelta: number; // paise — sum of approved ApprovalRequests
+  // Server-authoritative price snapshot, resolved at job creation from
+  // (service, vehicleCategory) via the shared pricing engine. For a
+  // booking-sourced job this is a copy of the booking's own snapshot
+  // (computed once, never recomputed); for a walk-in it is computed
+  // directly since there is no booking. Immutable after creation — this is
+  // the historical truth for payment/invoice, independent of bookingId.
+  priceBreakdown: PriceBreakdown;
+  totalAmount: number; // paise — equals priceBreakdown.total
+  /** Actual receipt register totals. Excess is a separate manual office-return due,
+   * never service revenue, store credit or a provider refund. Amounts in paise. */
+  offlineSettlement?: { appliedPaise: number; officeReturnDuePaise: number; receiptCount: number };
+  /** Cash fact held separately from provider closure/allocation. Presence blocks new collection. */
+  cashReconciliationId?: string;
+  paymentStatus: "unpaid" | "partial" | "paid" | "refunded";
+  isWalkIn: boolean;
+  createdAt: string;
+  updatedAt: string;
+  sealedAt: string | null; // set on DELIVERED
+}
+
+export type ApprovalStatus = "pending" | "approved" | "rejected" | "expired" | "cancelled";
+
+// Mid-job additional-work approval (Phase 3). The additional work is always
+// an existing catalogue Service selected by studio/admin — never a
+// free-typed price — so unitPrice/priceImpact are always server-computed via
+// the same pricing engine used for bookings (calculatePrice), never trusted
+// from the client. originalAmount/newTotal are frozen at creation time so
+// the customer sees a coherent before/after even if other approvals resolve
+// in between. Approving increments ServiceJob.additionalWorkDelta/
+// totalAmount — the original Booking/Job priceBreakdown snapshot is never
+// rewritten (doc06 §6.4 Rule 1).
+export interface ApprovalRequest {
+  id: string;
+  tenantId: string;
+  studioId: string;
+  jobId: string;
+  bookingId: string | null; // SNAPSHOT — job's booking, if any (null for walk-ins)
+  customerId: string;
+  vehicleId: string; // SNAPSHOT — for display without re-reading the job
+  requestedBy: string; // uid of the studio/admin user who created it
+  reason: string; // free text — why this work is needed
+  serviceId: string; // the additional service, selected from the catalogue
+  serviceName: string; // SNAPSHOT
+  quantity: number; // >= 1
+  unitPrice: number; // paise — from the pricing engine, per unit
+  priceImpact: number; // paise — unitPrice * quantity
+  timeImpactMinutes: number; // estimatedDurationMinutes * quantity
+  originalAmount: number; // paise — job.totalAmount at request creation
+  newTotal: number; // paise — originalAmount + priceImpact
+  photos: string[]; // Storage URLs — unused in this build (no Storage/Blaze)
+  status: ApprovalStatus;
+  respondedAt: string | null;
+  respondedBy: string | null; // customerId (approve/reject) or studio/admin uid (cancel)
+  expiresAt: string; // APPROVAL_EXPIRY_HOURS from creation
+  createdAt: string;
+}

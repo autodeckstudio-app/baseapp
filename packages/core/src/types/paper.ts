@@ -1,0 +1,38 @@
+export type PaperKind = "RC" | "INSURANCE" | "PUC" | "FASTAG" | "OTHER";
+export type PaperStatus = "PENDING" | "VERIFIED" | "REJECTED";
+
+/**
+ * One customer vehicle document submitted for office verification (the legacy
+ * "declarations" flow). Staff register the paper from the physical document,
+ * then verify or reject it. Expiry is derived from expiresOn at read time —
+ * no scheduler rewrites status.
+ */
+export interface PaperVerification {
+  id: string;
+  tenantId: string;
+  studioId: string;
+  vehicleId: string;
+  customerId: string; // canonical customer record id; legacy records may use auth uid
+  kind: PaperKind;
+  reference: string; // document / policy / certificate number
+  title?: string | null; // customer-given name, used for OTHER documents
+  supersededAt?: string | null; // set when a newer RC replaced this one; customer UI hides it
+  supersededBy?: string | null;
+  issuedOn: string | null; // YYYY-MM-DD
+  expiresOn: string | null; // YYYY-MM-DD
+  evidenceUrl: string | null; // photo of the document, if captured
+  status: PaperStatus;
+  verificationMode?: "automatic" | "manual" | "review";
+  verificationReason?: string;
+  inspectedPlate?: string | null; // staff transcription from the original, not an OCR claim
+  originalInspected?: boolean | null; // explicit staff attestation, cleared on edits
+  extractedPlate?: string | null;
+  extractedExpiry?: string | null;
+  reviewedBy: string | null; // auth uid
+  reviewedAt: string | null; // ISO
+  rejectionReason: string | null;
+  notes: string | null;
+  createdBy: string; // auth uid of the staff member who registered it
+  createdAt: string; // ISO
+  updatedAt: string; // ISO
+}

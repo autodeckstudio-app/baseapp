@@ -1,0 +1,65 @@
+[
+  {
+    "key": "ppf",
+    "kind": "generated service illustration, not product/stock/customer proof",
+    "sourceSHA256": "484a684049f2d7cf0c302308b6d66afca1d4b9127eae526807f1cbdedc98b59d",
+    "asset": "assets/imagery/service-types/ppf.jpg",
+    "bytes": 59488
+  },
+  {
+    "key": "pps",
+    "kind": "generated service illustration, not product/stock/customer proof",
+    "sourceSHA256": "d72b020325727a6f0967d96824ffc39b4fe66964cb10e0a0d30d62a53874d938",
+    "asset": "assets/imagery/service-types/pps.jpg",
+    "bytes": 54368
+  },
+  {
+    "key": "colour-ppf",
+    "kind": "generated service illustration, not product/stock/customer proof",
+    "sourceSHA256": "846fe59bcd349b64d7739b088934042761670b4da0976dcdda5d6dfcb8dc0800",
+    "asset": "assets/imagery/service-types/colour-ppf.jpg",
+    "bytes": 48026
+  },
+  {
+    "key": "accessories",
+    "kind": "generated service illustration, not product/stock/customer proof",
+    "sourceSHA256": "e3586cc9939451429415f4a215eda62d6e7b4c4c689583e567719686da0850e6",
+    "asset": "assets/imagery/service-types/accessories.jpg",
+    "bytes": 60681
+  },
+  {
+    "key": "ceramic",
+    "kind": "generated service illustration, not product/stock/customer proof",
+    "sourceSHA256": "3f6a94be2e9b74a366e259c8b4d9e987427418586e2855a3808e335aca1e0680",
+    "asset": "assets/imagery/service-types/ceramic.jpg",
+    "bytes": 69544
+  },
+  {
+    "key": "paint-sealant",
+    "kind": "generated service illustration, not product/stock/customer proof",
+    "sourceSHA256": "48e00149b95f7e673594297955d0f2fbbaa38914c50f3ec4179609f3f4afc5d3",
+    "asset": "assets/imagery/service-types/paint-sealant.jpg",
+    "bytes": 63844
+  },
+  {
+    "key": "film-aftercare",
+    "kind": "generated service illustration, not product/stock/customer proof",
+    "sourceSHA256": "43a9026d6123183192e6fb141d35002537c00b7b10b2cfc6557e2c9dc4369beb",
+    "asset": "assets/imagery/service-types/film-aftercare.jpg",
+    "bytes": 72488
+  },
+  {
+    "key": "lights-plastics",
+    "kind": "generated service illustration, not product/stock/customer proof",
+    "sourceSHA256": "9b8845ddedeafb81ffcd047cffdfe1421a39f89ebdf320634e6072bc826ead43",
+    "asset": "assets/imagery/service-types/lights-plastics.jpg",
+    "bytes": 65011
+  },
+  {
+    "key": "tyres-rubber",
+    "kind": "generated service illustration, not product/stock/customer proof",
+    "sourceSHA256": "086d0a4bbefc074dfe0989fcac878db5dead4e6c55c6818572114b04608d066e",
+    "asset": "assets/imagery/service-types/tyres-rubber.jpg",
+    "bytes": 59737
+  }
+]

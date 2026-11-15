@@ -1,0 +1,1 @@
+import React from'react';import{createRoot}from'react-dom/client';import Screen from'./src/app/(tabs)/jobs/[id]';createRoot(document.getElementById('root')!).render(<Screen/>);

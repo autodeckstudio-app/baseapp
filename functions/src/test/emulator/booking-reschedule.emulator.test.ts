@@ -1,0 +1,411 @@
+/**
+ * Emulator integration tests for customer booking reschedule (Phase 3C).
+ *
+ * Run with: pnpm test:emulator (requires Firestore Emulator at localhost:8080).
+ *
+ * Invokes the REAL exported rescheduleBooking Cloud Function handler in-process
+ * via the `.run({ data, auth } as never)` entry point — same pattern as
+ * membership.emulator.test.ts / walkin-financial.emulator.test.ts.
+ */
+import { describe, it, expect, beforeAll, vi } from "vitest";
+import { getFirestore, Transaction, Query } from "firebase-admin/firestore";
+import type { StudioConfig, Service, Vehicle, Booking, ServiceJob } from "@autodeck/core";
+import { MAX_CUSTOMER_RESCHEDULES } from "@autodeck/core";
+import { COLLECTIONS } from "@autodeck/database";
+
+import { createBooking } from "../helpers/paid-advance-booking.js";
+import { rescheduleBooking } from "../../functions/booking/rescheduleBooking.js";
+import { cancelBooking } from "../../functions/booking/cancelBooking.js";
+import {stageFixture as advanceJobStatus} from './stage-fixture.js';
+
+const db = getFirestore();
+
+const TENANT_A = "reschedule-tenant-a";
+const STUDIO_ID = "reschedule-studio";
+
+function customerAuth(authUid: string) {
+  return { uid: authUid, token: { role: "customer", tenantId: TENANT_A, studioId: null }, rawToken: "test" };
+}
+function studioAuth(authUid: string, studioId = STUDIO_ID) {
+  return { uid: authUid, token: { role: "studio", tenantId: TENANT_A, studioId }, rawToken: "test" };
+}
+
+async function getJobForBooking(bookingId: string): Promise<ServiceJob> {
+  const snap = await db.collection(COLLECTIONS.jobs()).where("bookingId", "==", bookingId).limit(1).get();
+  const doc = snap.docs[0];
+  if (!doc) throw new Error(`No job found for booking ${bookingId}`);
+  return doc.data() as ServiceJob;
+}
+
+let seq = 0;
+function uid(prefix: string): string {
+  seq += 1;
+  return `${prefix}-${Date.now()}-${seq}`;
+}
+
+let dayOffset = 3;
+function nextDate(): string {
+  dayOffset += 1;
+  return new Date(Date.now() + dayOffset * 86400000).toISOString().slice(0, 10);
+}
+
+async function seedStudio(bayCount = 10, studioId = STUDIO_ID) {
+  const studioConfig: StudioConfig = {
+    id: studioId,
+    tenantId: TENANT_A,
+    studioId,
+    name: "Reschedule Test Studio",
+    timezone: "Asia/Kolkata",
+    currency: "INR",
+    taxRatePercent: 18,
+    taxDescription: "GST 18%",
+    // Open every day: reschedule only offers slots on days that have hours.
+    operatingHours: [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dayOfWeek: d as 0 | 1 | 2 | 3 | 4 | 5 | 6, open: "09:00", close: "19:00", closed: false })),
+    holidays: [],
+    vehiclePlateRegex: "^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$",
+    slotIntervalMinutes: 30,
+    maxAdvanceBookingDays: 30,
+    cancellationWindowHours: 24,
+    bays: Array.from({ length: bayCount }, (_, i) => ({
+      id: `${studioId}-wash-${i + 1}`,
+      tenantId: TENANT_A,
+      studioId,
+      name: `Wash Bay ${i + 1}`,
+      bayType: "wash" as const,
+      active: true,
+    })),
+    updatedAt: new Date().toISOString(),
+  };
+  await db.collection("studioConfig").doc(studioId).set(studioConfig);
+  return studioConfig;
+}
+
+async function seedService(serviceId: string) {
+  const now = new Date().toISOString();
+  const service: Service = {
+    id: serviceId,
+    tenantId: TENANT_A,
+    name: "Reschedule Test Wash",
+    category: "washing",
+    brand: null,
+    description: "Test service",
+    basePrice: 40000,
+    currency: "INR",
+    estimatedDurationMinutes: 30,
+    warrantyLabel: null,
+    warrantyDurationValue: null,
+    warrantyDurationUnit: null,
+    vehicleCategoryPricing: [],
+    requiredBayType: "wash",
+    membershipWashEligible: false,
+    active: true,
+    displayOrder: 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await db.collection("services").doc(serviceId).set(service);
+  return service;
+}
+
+async function seedVehicle(vehicleId: string, ownerId: string) {
+  await db.collection("customers").doc(ownerId).set({id:ownerId,authUid:ownerId,tenantId:TENANT_A,deletedAt:null}, {merge:true});
+  const now = new Date().toISOString();
+  const vehicle: Vehicle = {
+    id: vehicleId,
+    tenantId: TENANT_A,
+    ownerId,
+    registrationNumber: "GJ01RS" + vehicleId.slice(-4).toUpperCase().padStart(4, "0"),
+    make: "Maruti",
+    model: "Swift",
+    year: 2022,
+    color: "White",
+    category: "hatchback",
+    photoUrl: null,
+    odometer: null,
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null,
+  };
+  await db.collection("vehicles").doc(vehicleId).set(vehicle);
+  return vehicle;
+}
+
+async function makeBooking(customerUid: string, service: Service, vehicle: Vehicle) {
+  const result = (await createBooking.run({
+    data: {
+      serviceId: service.id,
+      vehicleId: vehicle.id,
+      vehicleCategory: "hatchback",
+      studioId: STUDIO_ID,
+      scheduledDate: nextDate(),
+      scheduledTime: "10:00",
+      idempotencyKey: uid("idem"),
+    },
+    auth: customerAuth(customerUid),
+  } as never)) as { booking: Booking };
+  return result.booking;
+}
+
+describe("Customer booking reschedule", () => {
+  let service: Service;
+  let vehicle: Vehicle;
+  let customerId: string;
+
+  beforeAll(async () => {
+    await seedStudio();
+    service = await seedService(uid("svc-wash"));
+    customerId = uid("cust");
+    vehicle = await seedVehicle(uid("veh"), customerId);
+  });
+
+  it("closed transaction job read retries inside SDK before one cancellation commit", async () => {
+    const booking = await makeBooking(customerId, service, vehicle);
+    const original = Transaction.prototype.get;
+    let injected = 0;
+    const spy = vi.spyOn(Transaction.prototype, "get").mockImplementation(function(this: Transaction, target: any, ...args: any[]): any {
+      if (target instanceof Query && (target as any)._queryOptions.collectionId === "jobs" && injected === 0) {
+        injected++;
+        return Promise.reject(Object.assign(new Error("3 INVALID_ARGUMENT: Transaction is invalid or closed."), {code:3,details:"Transaction is invalid or closed."}));
+      }
+      return (original as any).call(this, target, ...args);
+    });
+    try {
+      await cancelBooking.run({data:{bookingId:booking.id,reason:"deterministic closed transaction read"},auth:customerAuth(customerId)} as never);
+    } finally { spy.mockRestore(); }
+    expect(injected).toBe(1);
+    const finalJob = await getJobForBooking(booking.id);
+    expect(finalJob.status).toBe("CANCELLED");
+    expect(finalJob.statusHistory.filter(h=>h.status==="CANCELLED")).toHaveLength(1);
+    expect((await db.collection("bookings").doc(booking.id).get()).data()?.status).toBe("CANCELLED");
+    expect((await db.collection("auditLog").where("entityId","==",booking.id).where("action","==","booking.cancelled").get()).size).toBe(1);
+  });
+
+  it("closed transaction exhaustion keeps existing SDK bound and makes no cancellation writes", async () => {
+    const booking = await makeBooking(customerId, service, vehicle);
+    const original = Transaction.prototype.get;
+    let attempts = 0;
+    const spy = vi.spyOn(Transaction.prototype, "get").mockImplementation(function(this: Transaction, target: any, ...args: any[]): any {
+      if (target instanceof Query && (target as any)._queryOptions.collectionId === "jobs") {
+        attempts++;
+        return Promise.reject(Object.assign(new Error("3 INVALID_ARGUMENT: Transaction is invalid or closed."), {code:3,details:"Transaction is invalid or closed."}));
+      }
+      return (original as any).call(this, target, ...args);
+    });
+    try { await expect(cancelBooking.run({data:{bookingId:booking.id,reason:"bounded failure fixture"},auth:customerAuth(customerId)} as never)).rejects.toMatchObject({code:10}); }
+    finally { spy.mockRestore(); }
+    expect(attempts).toBe(5);
+    expect((await getJobForBooking(booking.id)).status).toBe("PENDING_VEHICLE");
+    expect((await db.collection("bookings").doc(booking.id).get()).data()?.status).not.toBe("CANCELLED");
+    expect((await db.collection("auditLog").where("entityId","==",booking.id).where("action","==","booking.cancelled").get()).size).toBe(0);
+  });
+
+  it("reschedules successfully, preserving price and incrementing rescheduleCount", async () => {
+    const booking = await makeBooking(customerId, service, vehicle);
+    const newDate = nextDate();
+
+    const result = (await rescheduleBooking.run({
+      data: { bookingId: booking.id, newDate, newTime: "12:00", idempotencyKey: uid("idem") },
+      auth: customerAuth(customerId),
+    } as never)) as { booking: Booking };
+
+    expect(result.booking.scheduledDate).toBe(newDate);
+    expect(result.booking.scheduledTime).toBe("12:00");
+    expect(result.booking.rescheduleCount).toBe(1);
+    expect(result.booking.priceBreakdown.total).toBe(booking.priceBreakdown.total);
+    expect(result.booking.totalAmount).toBe(booking.totalAmount);
+    expect(result.booking.bayId).toBeTruthy();
+
+    const stored = (await db.collection("bookings").doc(booking.id).get()).data() as Booking;
+    expect(stored.scheduledDate).toBe(newDate);
+    expect(stored.rescheduleCount).toBe(1);
+  });
+
+  it("rejects a wash reschedule inside the 4h cutoff (item 6 wash rule)", async () => {
+    const booking = await makeBooking(customerId, service, vehicle);
+    // The seeded service is a wash (category "washing"): the adopted rule is
+    // one free move up to 4 hours before start. Force the booking inside 4h.
+    const soon = new Date(Date.now() + 3 * 3600000);
+    await db.collection("bookings").doc(booking.id).update({ scheduledAt: soon.toISOString() });
+
+    await expect(
+      rescheduleBooking.run({
+        data: { bookingId: booking.id, newDate: nextDate(), newTime: "12:00", idempotencyKey: uid("idem") },
+        auth: customerAuth(customerId),
+      } as never),
+    ).rejects.toThrow(/within 4 hours/);
+  });
+
+  it("allows a wash reschedule 12 hours ahead (inside old 24h window, outside new 4h cutoff)", async () => {
+    const booking = await makeBooking(customerId, service, vehicle);
+    const soon = new Date(Date.now() + 12 * 3600000);
+    await db.collection("bookings").doc(booking.id).update({ scheduledAt: soon.toISOString() });
+
+    const targetDate = nextDate();
+    const result = await rescheduleBooking.run({
+      data: { bookingId: booking.id, newDate: targetDate, newTime: "12:00", idempotencyKey: uid("idem") },
+      auth: customerAuth(customerId),
+    } as never);
+    expect(result.booking.scheduledDate).toBe(targetDate);
+    expect(result.booking.rescheduleCount).toBe(1);
+  });
+
+  it("rejects reschedule once the max reschedule count is reached", async () => {
+    const booking = await makeBooking(customerId, service, vehicle);
+    await db.collection("bookings").doc(booking.id).update({ rescheduleCount: MAX_CUSTOMER_RESCHEDULES });
+
+    await expect(
+      rescheduleBooking.run({
+        data: { bookingId: booking.id, newDate: nextDate(), newTime: "12:00", idempotencyKey: uid("idem") },
+        auth: customerAuth(customerId),
+      } as never),
+    ).rejects.toThrow(/Maximum reschedules/);
+  });
+
+  it("rejects reschedule for a non-CONFIRMED booking", async () => {
+    const booking = await makeBooking(customerId, service, vehicle);
+    await db.collection("bookings").doc(booking.id).update({ status: "CANCELLED" });
+
+    await expect(
+      rescheduleBooking.run({
+        data: { bookingId: booking.id, newDate: nextDate(), newTime: "12:00", idempotencyKey: uid("idem") },
+        auth: customerAuth(customerId),
+      } as never),
+    ).rejects.toThrow(/Cannot reschedule a booking with status/);
+  });
+
+  it("rejects reschedule of another customer's booking", async () => {
+    const booking = await makeBooking(customerId, service, vehicle);
+    const otherCustomer = uid("cust-other");
+    await db.collection("customers").doc(otherCustomer).set({id:otherCustomer,authUid:otherCustomer,tenantId:TENANT_A,deletedAt:null});
+
+    await expect(
+      rescheduleBooking.run({
+        data: { bookingId: booking.id, newDate: nextDate(), newTime: "12:00", idempotencyKey: uid("idem") },
+        auth: customerAuth(otherCustomer),
+      } as never),
+    ).rejects.toThrow(/Cannot reschedule another customer's booking/);
+  });
+
+  it("Phase 5B P1-3 regression: concurrent advanceJobStatus + cancelBooking never silently drops a statusHistory entry (P2-4 stress)", async () => {
+    // Repeated stress iterations, not a single pair (Phase 5B P2-4) —
+    // deterministic once fixed (both functions tx.get() the same job), but
+    // the loop guards against a future regression with far higher
+    // confidence than one pair. Each iteration uses its own fresh
+    // customer/vehicle/studio: a fresh customer avoids tripping
+    // booking.cancel's 10/min rate limit across 20 rapid calls from one
+    // uid, and a fresh single-purpose studio lets every iteration safely
+    // reuse the SAME booking date instead of calling nextDate() per
+    // iteration (which draws from this file's shared, monotonic,
+    // 30-day-bounded counter and would exhaust it for other tests).
+    const raceDate = nextDate();
+    const iterations = 20;
+    for (let i = 0; i < iterations; i += 1) {
+      const raceStudioId = uid("p13-race-studio");
+      await seedStudio(2, raceStudioId);
+      const raceCustomerId = uid("p13-cust");
+      const raceVehicle = await seedVehicle(uid("p13-veh"), raceCustomerId);
+      const bookingResult = (await createBooking.run({
+        data: {
+          serviceId: service.id,
+          vehicleId: raceVehicle.id,
+          vehicleCategory: "hatchback",
+          studioId: raceStudioId,
+          scheduledDate: raceDate,
+          scheduledTime: "10:00",
+          idempotencyKey: uid("idem"),
+        },
+        auth: customerAuth(raceCustomerId),
+      } as never)) as { booking: Booking };
+      const booking = bookingResult.booking;
+      const job = await getJobForBooking(booking.id);
+      expect(job.statusHistory.length, `iteration ${i}`).toBe(1); // just the initial PENDING_VEHICLE entry
+
+      const [advanceResult,cancelResult] = await Promise.allSettled([
+        advanceJobStatus.run({ data: { jobId: job.id }, auth: studioAuth(uid("studio-user"), raceStudioId) } as never),
+        cancelBooking.run(
+          { data: { bookingId: booking.id, reason: "race test" }, auth: customerAuth(raceCustomerId) } as never,
+        ),
+      ]);
+
+      if(cancelResult.status==="rejected"){const snapshot=(await db.collection("bookings").doc(booking.id).get()).data();console.error("CANCEL_RACE_DIAGNOSTIC",{iteration:i,reason:cancelResult.reason,booking:snapshot,job:await getJobForBooking(booking.id),payments:(await db.collection("payments").where("bookingId","==",booking.id).get()).docs.map(d=>d.data())});}
+      expect(cancelResult.status, `iteration ${i}: cancel settlement must succeed`).toBe("fulfilled");
+      const finalJob = await getJobForBooking(booking.id);
+      const finalBooking = (await db.collection("bookings").doc(booking.id).get()).data() as Booking;
+
+      // cancelBooking unconditionally cancels the BOOKING regardless of the
+      // job's status — this must always hold.
+      expect(finalBooking.status, `iteration ${i}`).toBe("CANCELLED");
+
+      // The defect this test reproduces: cancelBooking used to read the job
+      // via a plain pre-transaction query, then blindly overwrite
+      // statusHistory with [...staleArray, CANCELLED] inside its
+      // transaction — silently dropping a concurrently-committed
+      // VEHICLE_RECEIVED entry if advanceJobStatus's transaction committed
+      // first. With both functions now reading the job via tx.get(),
+      // whichever commits second sees fresh data, so if advanceJobStatus
+      // succeeded, its entry must survive.
+      if (advanceResult.status === "fulfilled") {
+        expect(finalJob.statusHistory.some((h) => h.status === "VEHICLE_RECEIVED"), `iteration ${i}`).toBe(true);
+      }
+      // Whatever the interleaving, no entry is ever lost: statusHistory
+      // must contain the CANCELLED transition once the job was actually
+      // cancelled (job status still in the cancellable window at the time
+      // of its fresh in-transaction read).
+      if (finalJob.status === "CANCELLED") {
+        expect(finalJob.statusHistory.some((h) => h.status === "CANCELLED"), `iteration ${i}`).toBe(true);
+      }
+    }
+  }, 300_000);
+
+  it("Phase 5B P1-4 regression: concurrent advanceJobStatus + rescheduleBooking never silently drops a statusHistory entry (P2-4 stress)", async () => {
+    // Repeated stress iterations, not a single pair (Phase 5B P2-4) — same
+    // rationale as the P1-3 test above (fresh customer/vehicle/studio per
+    // iteration, two dates hoisted out of the loop and reused).
+    const raceDate = nextDate();
+    const rescheduleDate = nextDate();
+    const iterations = 20;
+    for (let i = 0; i < iterations; i += 1) {
+      const raceStudioId = uid("p14-race-studio");
+      await seedStudio(2, raceStudioId);
+      const raceCustomerId = uid("p14-cust");
+      const raceVehicle = await seedVehicle(uid("p14-veh"), raceCustomerId);
+      const bookingResult = (await createBooking.run({
+        data: {
+          serviceId: service.id,
+          vehicleId: raceVehicle.id,
+          vehicleCategory: "hatchback",
+          studioId: raceStudioId,
+          scheduledDate: raceDate,
+          scheduledTime: "10:00",
+          idempotencyKey: uid("idem"),
+        },
+        auth: customerAuth(raceCustomerId),
+      } as never)) as { booking: Booking };
+      const booking = bookingResult.booking;
+      const job = await getJobForBooking(booking.id);
+
+      const [advanceResult, rescheduleResult] = await Promise.allSettled([
+        advanceJobStatus.run({ data: { jobId: job.id }, auth: studioAuth(uid("studio-user-2"), raceStudioId) } as never),
+        rescheduleBooking.run(
+          {
+            data: { bookingId: booking.id, newDate: rescheduleDate, newTime: "14:00", idempotencyKey: uid("idem") },
+            auth: customerAuth(raceCustomerId),
+          } as never,
+        ),
+      ]);
+
+      const finalJob = await getJobForBooking(booking.id);
+
+      // The defect this test reproduces: rescheduleBooking used to read the
+      // job via a plain pre-transaction query, then blindly overwrite
+      // statusHistory with [...staleArray, rescheduleEntry] — silently
+      // dropping a concurrently-committed VEHICLE_RECEIVED entry.
+      if (advanceResult.status === "fulfilled") {
+        expect(finalJob.statusHistory.some((h) => h.status === "VEHICLE_RECEIVED"), `iteration ${i}`).toBe(true);
+      }
+      if (rescheduleResult.status === "fulfilled") {
+        expect(finalJob.statusHistory.some((h) => h.notes?.includes("Rescheduled to")), `iteration ${i}`).toBe(true);
+      }
+    }
+  }, 300_000);
+});

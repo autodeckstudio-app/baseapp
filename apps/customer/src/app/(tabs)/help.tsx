@@ -1,0 +1,76 @@
+import {useAuth} from '../../hooks/useAuth';
+import {useForegroundRefresh,useForegroundNow} from '../../hooks/useForegroundRefresh';
+// Help: call, WhatsApp, location, hours and a short FAQ.
+import { useEffect, useRef, useState } from "react";
+import { useLocalSearchParams } from "expo-router";
+import { Linking, View } from "react-native";
+import { space } from "@autodeck/ui/theme";
+import { useExperienceTheme } from "@autodeck/ui/native";
+import { NavIcon } from "../../ui/NavIcon";
+import { useLang } from "../../lib/i18n";
+import { FAQ, STUDIO_INFO, formatHours, isOpenNow, type LiveStudioInfo } from "../../lib/studio-info";
+import { getStudioInfo } from "../../lib/booking-service";
+import { FIRST_STUDIO_ID } from "@autodeck/core";
+import { Field, Kicker, Notice, Pane, Row, Screen, T } from "../../ui/kit";
+import { StudioContactDetails } from "../../ui/StudioContactDetails";
+import { searchFaq } from "../../lib/faq-search";
+
+export default function HelpScreen() {
+  const { colors, name } = useExperienceTheme();
+  const cut = name === "light" ? "#FFFFFF" : "#18181C";
+  const { t } = useLang();
+  const [open, setOpen] = useState<number | null>(null);
+  const { q: initialQuery, service: serviceName } = useLocalSearchParams<{ q?: string; service?: string }>();
+  const [query, setQuery] = useState(typeof initialQuery === "string" ? initialQuery.slice(0,160) : "");
+  const shown = searchFaq(FAQ, query);
+  const auth=useAuth();
+  const owner=auth.status==="ready"?`${auth.claims.tenantId}:${auth.user.uid}`:null;
+  const now=useForegroundNow(owner);
+  const [refreshTick,setRefreshTick]=useState(0);
+  const firstFocus=useRef<string|null>(null);
+  useForegroundRefresh(()=>{if(firstFocus.current!==owner){firstFocus.current=owner;return;}setRefreshTick(value=>value+1)},owner);
+  const [liveSource,setLiveSource]=useState<{owner:string|null;info:LiveStudioInfo|null}>({owner:null,info:null});
+  const liveInfo=liveSource.owner===owner?liveSource.info:null;
+  useEffect(()=>{
+    if(!owner)return;
+    let active=true;
+    void getStudioInfo(FIRST_STUDIO_ID).then(info=>{if(active)setLiveSource({owner,info})}).catch(()=>{if(active)setLiveSource({owner,info:null})});
+    return()=>{active=false};
+  },[owner,refreshTick]);
+  const s={...STUDIO_INFO,hours:liveInfo?.operatingHours?.length?formatHours(liveInfo.operatingHours):"Opening hours unavailable"};
+  const openNow=isOpenNow(liveInfo?.operatingHours,new Date(now),liveInfo?.timezone,liveInfo?.holidays??[]);
+  const hasContact = Boolean(s.phone || s.whatsapp);
+  return (
+    <Screen appBar="Help & contact">
+      {typeof serviceName === "string" && serviceName.trim() ? <Notice title={`Ask about ${serviceName.slice(0, 160)}`} body="Call or message to check this service." /> : null}
+      {hasContact ? (
+        <Pane pad="gap">
+          {s.phone ? <Row title={t("Call the studio")} detail="Service help by phone" trailing={<NavIcon name="call" color={colors.textPrimary} size={22} cut={cut} />} onPress={() => void Linking.openURL(`tel:${s.phone}`)} last={!s.whatsapp} /> : null}
+          {s.whatsapp ? <Row title="WhatsApp" detail="Message the studio" trailing={<NavIcon name="whatsapp" color={colors.textPrimary} size={22} cut={cut} />} onPress={() => void Linking.openURL(`https://wa.me/${s.whatsapp}`)} last /> : null}
+        </Pane>
+      ) : (
+        <Notice title="Studio contact unavailable" body="Contact details could not load. Your requests and bookings have not changed." />
+      )}
+      {s.address ? (
+        <StudioContactDetails address={s.address} hours={s.hours} openNow={openNow} onDirections={s.mapsUrl?()=>void Linking.openURL(s.mapsUrl):undefined}/>
+      ) : null}
+      <Kicker>{t("Questions")}</Kicker>
+      <Field label="Search questions" value={query} onChangeText={(v: string) => { setQuery(v); setOpen(null); }} placeholder="Type a few words" />
+      {query.trim() ? <T role="caption" tone="secondary">Please do not type phone numbers or car plates here.</T> : null}
+      {shown.length ? (
+        <Pane pad="gap">
+          {shown.map((f, i) => (
+            <View key={f.q}>
+              <Row title={f.q} onPress={() => setOpen(open === i ? null : i)} last={i === shown.length - 1 && open !== i} />
+              {open === i ? <View style={{ paddingHorizontal: space.line, paddingBottom: space.line }}><View style={{gap:space.line}}>{f.facts.map(fact=><View key={fact.label} style={{gap:4}}><T role="caption" tone="tertiary">{fact.label}</T><T tone="secondary">{fact.detail}</T></View>)}</View></View> : null}
+            </View>
+          ))}
+        </Pane>
+      ) : (
+        <Pane pad="gap">
+          <Row title="No answer found" detail={`Please call the studio. ${s.hours || ""}`.trim()} onPress={s.phone ? () => void Linking.openURL(`tel:${s.phone}`) : undefined} last />
+        </Pane>
+      )}
+    </Screen>
+  );
+}

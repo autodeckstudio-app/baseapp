@@ -1,0 +1,764 @@
+#!/usr/bin/env bash
+# Vercel "Ignored Build Step". Exit 0 = SKIP the build, exit 1 = BUILD.
+# Usage (from vercel.json ignoreCommand): bash ../../scripts/vercel-ignore.sh <app>
+# An app builds only when its own files or a package it imports change.
+# Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
+# Unknown base commit or git error => build (safe default).
+app="$1"
+# Reviewed catalogue/feedback release: all four affected apps, exact base and paths.
+catalogue_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/site-service-arrows-remove-20261114 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$catalogue_parent" = ea891c3c3e9806017dfe8f54069af5fd8792cf98 ]; }; then
+  catalogue_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$catalogue_root" ] || exit 0
+  cd "$catalogue_root" || exit 0
+  [ "$catalogue_parent" = ea891c3c3e9806017dfe8f54069af5fd8792cf98 ] || exit 0
+  git diff --name-only "$catalogue_parent" HEAD > /tmp/catalogue-release-paths-actual || exit 0
+  [ "$(cat /tmp/catalogue-release-paths-actual)" = "$(cat scripts/catalogue-release-paths-20261114.txt)" ] || exit 0
+  case "$app" in customer|admin|studio|site) exit 1 ;; *) exit 0 ;; esac
+fi
+
+# Restore existing website service carousel styles only: exact parent/path contract.
+service_restore_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/site-services-style-restore-20261114 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$service_restore_parent" = 8fd4ebb48cb45bb4130c5b69a678dd8fb5127c78 ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0
+  cd "$root" || exit 0
+  [ "$service_restore_parent" = 8fd4ebb48cb45bb4130c5b69a678dd8fb5127c78 ] || exit 0
+  actual="$(git diff --name-only 8fd4ebb48cb45bb4130c5b69a678dd8fb5127c78 HEAD 2>/dev/null)" || exit 0
+  expected=$(cat <<'SERVICE_RESTORE_PATHS'
+apps/site/public/assets/redesign/site.css
+apps/site/tests/service-carousel-style.test.mjs
+scripts/vercel-ignore.sh
+SERVICE_RESTORE_PATHS
+)
+  [ "$actual" = "$expected" ] || exit 0
+  case "$app" in site) exit 1 ;; *) exit 0 ;; esac
+fi
+# Approved website Visit studio crop: exact parent/path contract, site only.
+site_front_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/site-studio-frontage-20261114 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$site_front_parent" = d2e36580b8cd647943587d48eb18e8bb968f4f54 ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0
+  cd "$root" || exit 0
+  [ "$site_front_parent" = d2e36580b8cd647943587d48eb18e8bb968f4f54 ] || exit 0
+  actual="$(git diff --name-only d2e36580b8cd647943587d48eb18e8bb968f4f54 HEAD 2>/dev/null)" || exit 0
+  expected=$(cat <<'SITE_FRONT_PATHS'
+apps/site/public/assets/redesign/site.css
+apps/site/public/assets/redesign/studio-front-night.png
+apps/site/src/data/redesign/home.html
+apps/site/tests/studio-frontage.test.mjs
+scripts/vercel-ignore.sh
+SITE_FRONT_PATHS
+)
+  [ "$actual" = "$expected" ] || exit 0
+  case "$app" in site) exit 1 ;; *) exit 0 ;; esac
+fi
+# Correct approved studio-image fit against intrinsic RN asset dimensions.
+fit_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/home-studio-fit-correction-20261114 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$fit_parent" = b40ab44d1802fb2077cc5e8f88cb5eeca7f7e618 ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0; cd "$root" || exit 0
+  [ "$fit_parent" = b40ab44d1802fb2077cc5e8f88cb5eeca7f7e618 ] || exit 0
+  actual="$(git diff --name-only b40ab44d1802fb2077cc5e8f88cb5eeca7f7e618 HEAD 2>/dev/null)" || exit 0
+  expected=$(printf '%s\n' apps/customer/src/ui/StudioFooterMockup.tsx apps/customer/src/ui/home-studio-card.render.test.tsx scripts/vercel-ignore.sh)
+  [ "$actual" = "$expected" ] || exit 0
+  case "$app" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
+# Approved Home studio-front crop: exact parent/path contract, Customer only.
+front_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/home-studio-frontage-20261114 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$front_parent" = 5164c55d654cd295d44b903a9b1662a045b22e9a ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0
+  cd "$root" || exit 0
+  [ "$front_parent" = 5164c55d654cd295d44b903a9b1662a045b22e9a ] || exit 0
+  actual="$(git diff --name-only 5164c55d654cd295d44b903a9b1662a045b22e9a HEAD 2>/dev/null)" || exit 0
+  expected=$(cat <<'FRONT_PATHS'
+apps/customer/assets/studio/studio-front-night.png
+apps/customer/src/ui/StudioFooterMockup.tsx
+apps/customer/src/ui/home-studio-card.render.test.tsx
+scripts/vercel-ignore.sh
+FRONT_PATHS
+)
+  [ "$actual" = "$expected" ] || exit 0
+  case "$app" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
+# Scoped Bookings cleanup: exact parent and paths, Customer only.
+bookings_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/bookings-suggestions-car-20261114 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$bookings_parent" = 11348205950bc80817542bfae23b3f54a29b6715 ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0
+  cd "$root" || exit 0
+  [ "$bookings_parent" = 11348205950bc80817542bfae23b3f54a29b6715 ] || exit 0
+  actual="$(git diff --name-only 11348205950bc80817542bfae23b3f54a29b6715 HEAD 2>/dev/null)" || exit 0
+  expected=$(cat <<'BOOKING_PATHS'
+apps/customer/src/app/(tabs)/book/[serviceId].tsx
+apps/customer/src/app/(tabs)/book/booking-car-continuity.render.test.tsx
+apps/customer/src/app/(tabs)/bookings/index.tsx
+apps/customer/src/lib/booking-ideas.test.ts
+apps/customer/src/lib/booking-ideas.ts
+apps/customer/src/ui/BookingSuggestions.tsx
+apps/customer/src/ui/booking-suggestions.render.test.tsx
+docs/bookings-suggestions-car-20261114.md
+scripts/vercel-ignore.sh
+BOOKING_PATHS
+)
+  [ "$actual" = "$expected" ] || exit 0
+  case "$app" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
+# Approved all-Home choice correction. Exact parent/path contract, Customer only.
+choices_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = preview/home-all-service-choices-20261112 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$choices_parent" = 1c8a6bfefa5f7560df1606ca20cc14811f502f25 ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0
+  cd "$root" || exit 0
+  actual="$(git diff --name-only 1c8a6bfefa5f7560df1606ca20cc14811f502f25 HEAD 2>/dev/null)" || exit 0
+  expected=$(cat <<'HOME_CHOICES_PATHS'
+apps/customer/src/app/(tabs)/index.tsx
+apps/customer/src/lib/home-service-navigation.test.ts
+apps/customer/src/lib/home-service-navigation.ts
+apps/customer/src/lib/top-services.ts
+apps/customer/src/ui/HomeView.tsx
+apps/customer/src/ui/top-services.test.ts
+docs/customer-home-all-choices-20261112.md
+scripts/vercel-ignore.sh
+HOME_CHOICES_PATHS
+)
+  [ "$actual" = "$expected" ] || exit 0
+  case "$app" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
+# Approved Home/story batch: exact parent and path list, Customer only.
+home_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = preview/home-stories-routing-20261112 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$home_parent" = 5882e9de691b11550c8bb12da151a193070c6d78 ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0
+  cd "$root" || exit 0
+  actual="$(git diff --name-only 5882e9de691b11550c8bb12da151a193070c6d78 HEAD 2>/dev/null)" || exit 0
+  expected=$(cat <<'HOME_STORY_PATHS'
+apps/customer/src/app/(tabs)/catalogue/[id].tsx
+apps/customer/src/app/(tabs)/catalogue/enquiry.tsx
+apps/customer/src/app/(tabs)/catalogue/index.tsx
+apps/customer/src/app/(tabs)/index.tsx
+apps/customer/src/lib/catalogue-sole-redirect.test.ts
+apps/customer/src/lib/home-service-navigation.test.ts
+apps/customer/src/lib/home-service-navigation.ts
+apps/customer/src/lib/story-groups.test.ts
+apps/customer/src/lib/top-services.ts
+apps/customer/src/ui/ReferenceProductDetail.tsx
+apps/customer/src/ui/StoryCircles.tsx
+apps/customer/src/ui/StoryCover.tsx
+apps/customer/src/ui/StoryVideoThumbnail.tsx
+apps/customer/src/ui/StoryVideoThumbnail.web.tsx
+apps/customer/src/ui/design-contract.test.ts
+apps/customer/src/ui/story-cover.render.test.tsx
+apps/customer/src/ui/top-services.test.ts
+docs/customer-home-preview-20261112.md
+scripts/vercel-ignore.sh
+HOME_STORY_PATHS
+)
+  [ "$actual" = "$expected" ] || exit 0
+  case "$app" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
+
+# Pinned transport release: exact parent + complete path list, Customer only.
+transport_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-transport-20261112 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$transport_parent" = c1aefce6c4482ace2353ed8a3c93b2da53a88fe3 ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0
+  cd "$root" || exit 0
+  actual="$(git diff --name-only c1aefce6c4482ace2353ed8a3c93b2da53a88fe3 HEAD 2>/dev/null)" || exit 0
+  expected=$(cat <<'TRANSPORT_PATHS'
+apps/customer/src/app/(tabs)/book/[serviceId].tsx
+apps/customer/src/app/(tabs)/book/confirm-combined.render.test.tsx
+apps/customer/src/app/(tabs)/book/confirm-pickup-total.render.test.tsx
+apps/customer/src/app/(tabs)/book/confirm.tsx
+apps/customer/src/app/(tabs)/catalogue/[id].tsx
+apps/customer/src/lib/day-surfaces.test.ts
+apps/customer/src/lib/pickup-policy.ts
+apps/customer/src/lib/pickup-service.ts
+apps/customer/src/lib/pickup-slots.test.ts
+apps/customer/src/lib/pickup-slots.ts
+apps/customer/src/lib/pickup-zone.test.ts
+apps/customer/src/ui/CombinedPaymentOptions.tsx
+apps/customer/src/ui/PickupOptions.render.test.tsx
+apps/customer/src/ui/PickupTimeField.tsx
+apps/customer/src/ui/design-contract.test.ts
+apps/customer/src/ui/pickup-preference-contract.test.ts
+apps/customer/src/ui/round8-pickup.test.ts
+apps/customer/src/ui/service-placement56.test.ts
+docs/customer-transport-release-20261112.md
+functions/src/functions/booking/pickupQuote.ts
+functions/src/functions/booking/pickupRequests.ts
+functions/src/lib/booking-transport-snapshot.ts
+functions/src/test/emulator/combined-create.emulator.test.ts
+functions/src/test/emulator/pickup-quote.emulator.test.ts
+functions/src/test/emulator/studio-backend-batch.emulator.test.ts
+functions/src/test/unit/booking-transport-snapshot.test.ts
+packages/core/src/combined-checkout.ts
+packages/core/src/index.ts
+packages/core/src/pickup-tariff.test.ts
+packages/core/src/pickup-tariff.ts
+scripts/vercel-ignore.sh
+TRANSPORT_PATHS
+)
+  [ "$actual" = "$expected" ] || exit 0
+  case "$app" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
+
+# Scoped web payment release: exact parent and changed-path guard.
+# Only the Customer app builds from this commit; all sibling apps skip.
+release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-payment-20261112 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$release_parent" = 6b019cd3199213000c07909bd51834a6d816754f ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$root" ] || exit 0
+  cd "$root" || exit 0
+  actual="$(git diff --name-only 6b019cd3199213000c07909bd51834a6d816754f HEAD 2>/dev/null)" || exit 0
+  expected=$(cat <<'PAYMENT_WEB_PATHS'
+apps/customer/src/app/(tabs)/book/advance-modal-flow.render.test.tsx
+apps/customer/src/app/(tabs)/book/confirm-pickup-total.render.test.tsx
+apps/customer/src/app/(tabs)/book/confirm-states.render.test.tsx
+apps/customer/src/app/(tabs)/book/connected-coating-addon.render.test.tsx
+apps/customer/src/app/(tabs)/book/connected-standard-booking.render.test.tsx
+apps/customer/src/lib/combined-checkout.test.ts
+apps/customer/src/lib/combined-checkout.ts
+apps/customer/src/ui/CombinedPaymentSheet.tsx
+apps/customer/src/ui/combined-payment-sheet.render.test.tsx
+docs/customer-payment-release-20261112.md
+docs/payment-backend-artifacts-20261112.json
+docs/payment-backend-release-20261112.md
+functions/src/functions/payment/requestAdvancePayment.ts
+functions/src/lib/combined-booking.ts
+functions/src/lib/razorpay-verified-checkout.ts
+functions/src/lib/razorpay-webhook.ts
+functions/src/test/emulator/advance-callable.emulator.test.ts
+functions/src/test/emulator/late-membership-atomic.emulator.test.ts
+functions/src/test/emulator/release-legacy-off.emulator.test.ts
+functions/src/test/unit/combined-booking.test.ts
+functions/src/test/unit/razorpay-webhook.test.ts
+scripts/vercel-ignore.sh
+PAYMENT_WEB_PATHS
+)
+  [ "$actual" = "$expected" ] || exit 0
+  case "$app" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
+# Approved Customer-only second batch, exact parent + path contract.
+release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = preview/garage-all-stack-20261112 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$release_parent" = d91fdada8398aaa830a58e9e124f069c612c6702 ]; }; then
+  release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$release_root" ] || exit 0
+  cd "$release_root" || exit 0
+  [ "$release_parent" = d91fdada8398aaa830a58e9e124f069c612c6702 ] || { printf 'Customer second batch wrong parent: SKIP (%s)\n' "$app"; exit 0; }
+  release_paths="$(git diff --name-only "$release_parent" HEAD 2>/dev/null)" || exit 0
+  expected_paths=$(cat <<'CUSTOMER_SECOND_BATCH_PATHS'
+apps/customer/src/app/(tabs)/book/[serviceId].tsx
+apps/customer/src/app/(tabs)/book/confirm.tsx
+apps/customer/src/app/(tabs)/catalogue/[id].tsx
+apps/customer/src/app/(tabs)/garage/[id].tsx
+apps/customer/src/app/(tabs)/garage/garage-detail.documents.render.test.tsx
+apps/customer/src/app/(tabs)/garage/garage-sheet.render.test.tsx
+apps/customer/src/app/(tabs)/garage/index.tsx
+apps/customer/src/lib/car-photo-source.test.ts
+apps/customer/src/lib/catalogue-local-polish.test.ts
+apps/customer/src/lib/day-surfaces.test.ts
+apps/customer/src/lib/garage-live.test.ts
+apps/customer/src/lib/no-sparkle.test.ts
+apps/customer/src/lib/reference-manufacturer-facts.ts
+apps/customer/src/lib/service-manufacturer-facts.json
+apps/customer/src/lib/service-manufacturer-facts.test.ts
+apps/customer/src/lib/service-manufacturer-facts.ts
+apps/customer/src/lib/vercel-second-batch-guard.test.ts
+apps/customer/src/ui/BookingTerms.tsx
+apps/customer/src/ui/NavIcon.tsx
+apps/customer/src/ui/ProductFactRows.tsx
+apps/customer/src/ui/ReferenceProductDetail.tsx
+apps/customer/src/ui/ServicePrice.tsx
+apps/customer/src/ui/ServiceScope.tsx
+apps/customer/src/ui/ServiceTimePicker.tsx
+apps/customer/src/ui/design-contract.test.ts
+apps/customer/src/ui/inputs.tsx
+apps/customer/src/ui/preview-navigation.render.test.tsx
+apps/customer/src/ui/reference-product-detail.render.test.tsx
+apps/customer/src/ui/service-detail-booking.render.test.tsx
+apps/customer/src/ui/service-price-clean.render.test.tsx
+apps/customer/src/ui/uc-review-contract.test.ts
+docs/customer-second-batch-20261112.md
+scripts/vercel-ignore.sh
+scripts/visual/customer-correction/build.mjs
+scripts/visual/customer-correction/entry.tsx
+scripts/visual/customer-correction/gauri-controls.tsx
+scripts/visual/customer-correction/icon-options.tsx
+CUSTOMER_SECOND_BATCH_PATHS
+)
+  [ "$release_paths" = "$expected_paths" ] || { printf 'Customer second batch unexpected paths: SKIP (%s)\n' "$app"; exit 0; }
+  case "$app" in
+    customer) printf 'Pinned Customer second batch: BUILD\n'; exit 1 ;;
+    *) printf 'Pinned Customer second batch: SKIP (%s)\n' "$app"; exit 0 ;;
+  esac
+fi
+# Pinned Customer correction batch. Shared dependency pin must not redeploy sibling apps.
+release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = fix/customer-garage-paper-20261112 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$release_parent" = 03c929b74ddbfc0cd63e09e04df308cc661a0562 ]; }; then
+  release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$release_root" ] || exit 0
+  cd "$release_root" || exit 0
+  release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  [ "$release_parent" = 03c929b74ddbfc0cd63e09e04df308cc661a0562 ] || { printf 'Customer correction wrong parent: SKIP (%s)\n' "$app"; exit 0; }
+  release_paths="$(git diff --name-only "$release_parent" HEAD 2>/dev/null)" || exit 0
+  expected_paths=$(cat <<'CUSTOMER_CORRECTION_PATHS'
+apps/customer/assets/imagery/brands/gtechniq-logo.png
+apps/customer/assets/imagery/brands/gtechniq-logo.svg
+apps/customer/assets/imagery/service-types/ceramic.jpg
+apps/customer/assets/imagery/service-types/film-aftercare.jpg
+apps/customer/assets/imagery/service-types/lights-plastics.jpg
+apps/customer/assets/imagery/service-types/manifest.json
+apps/customer/assets/imagery/service-types/paint-sealant.jpg
+apps/customer/assets/imagery/service-types/tyres-rubber.jpg
+apps/customer/src/app/(tabs)/catalogue/[id].tsx
+apps/customer/src/app/(tabs)/catalogue/enquiry.tsx
+apps/customer/src/app/(tabs)/garage/[id].tsx
+apps/customer/src/app/(tabs)/garage/garage-detail.documents.render.test.tsx
+apps/customer/src/app/(tabs)/garage/garage-sheet.render.test.tsx
+apps/customer/src/app/(tabs)/garage/index.tsx
+apps/customer/src/lib/brand-logos.ts
+apps/customer/src/lib/catalogue-local-polish.test.ts
+apps/customer/src/lib/ceramic-type-image.test.ts
+apps/customer/src/lib/detailing-family-images.test.ts
+apps/customer/src/lib/garage-brands.test.ts
+apps/customer/src/lib/garage-brands.ts
+apps/customer/src/lib/garage-live.test.ts
+apps/customer/src/lib/no-sparkle.test.ts
+apps/customer/src/lib/paper-service.test.ts
+apps/customer/src/lib/paper-service.ts
+apps/customer/src/lib/service-scope-items.test.ts
+apps/customer/src/lib/service-scope-items.ts
+apps/customer/src/lib/service-type-images.ts
+apps/customer/src/lib/vercel-correction-guard.test.ts
+apps/customer/src/ui/CarStoryAchievements.tsx
+apps/customer/src/ui/GarageShowroom.tsx
+apps/customer/src/ui/HomeView.tsx
+apps/customer/src/ui/NavIcon.tsx
+apps/customer/src/ui/ReferenceProductDetail.tsx
+apps/customer/src/ui/ServicePageHeader.tsx
+apps/customer/src/ui/ServiceScope.tsx
+apps/customer/src/ui/ServicesExplorer.tsx
+apps/customer/src/ui/brand-identity.render.test.tsx
+apps/customer/src/ui/car-story-achievements.render.test.tsx
+apps/customer/src/ui/design-contract.test.ts
+apps/customer/src/ui/home-merged.test.ts
+apps/customer/src/ui/home-studio-card.render.test.tsx
+apps/customer/src/ui/preview-navigation.render.test.tsx
+apps/customer/src/ui/reference-product-detail.render.test.tsx
+apps/customer/src/ui/service-detail-booking.render.test.tsx
+apps/customer/src/ui/uc-review-contract.test.ts
+docs/customer-correction-batch-20261112.md
+functions/package.json
+functions/src/test/unit/paper-ocr-runtime-pin.test.ts
+package.json
+packages/ui/src/theme/glyphs.ts
+packages/ui/src/theme/icons.ts
+pnpm-lock.yaml
+scripts/vercel-ignore.sh
+scripts/visual/customer-correction/.gitignore
+scripts/visual/customer-correction/README.md
+scripts/visual/customer-correction/build.mjs
+scripts/visual/customer-correction/entry.tsx
+scripts/visual/customer-correction/garage-full-proof.cjs
+scripts/visual/customer-correction/index.html
+scripts/visual/customer-correction/mocks.ts
+scripts/visual/customer-correction/photo-proof.cjs
+CUSTOMER_CORRECTION_PATHS
+)
+  [ "$release_paths" = "$expected_paths" ] || { printf 'Customer correction unexpected paths: SKIP (%s)\n' "$app"; exit 0; }
+  case "$app" in
+    customer) printf 'Pinned Customer correction: BUILD\n'; exit 1 ;;
+    *) printf 'Pinned Customer correction: SKIP (%s)\n' "$app"; exit 0 ;;
+  esac
+fi
+# Pinned inert Customer hardening release. No other linked project may build.
+# Exact base + changed-path allowlist, on the release branch and its main landing.
+release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-hardening-20261111 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$release_parent" = f853fb733b99eb8eb46888f36baa545a64cdad88 ]; }; then
+  release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$release_root" ] || exit 0
+  cd "$release_root" || exit 0
+  release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  [ "$release_parent" = f853fb733b99eb8eb46888f36baa545a64cdad88 ] || { printf 'Customer hardening wrong parent: SKIP (%s)\n' "$app"; exit 0; }
+  release_paths="$(git diff --name-only "$release_parent" HEAD 2>/dev/null)" || exit 0
+  expected_paths=$(cat <<'CUSTOMER_HARDENING_PATHS'
+apps/admin/src/app/(admin)/accountant/page.tsx
+apps/admin/src/components/BookingPanels.tsx
+apps/admin/src/lib/accountant-service.ts
+apps/customer/src/app/(auth)/login.render.test.tsx
+apps/customer/src/app/(auth)/login.tsx
+apps/customer/src/app/(tabs)/book/confirm-combined.render.test.tsx
+apps/customer/src/app/(tabs)/book/confirm.tsx
+apps/customer/src/app/(tabs)/bookings/[id].tsx
+apps/customer/src/app/(tabs)/bookings/booking-canonical-journey.render.test.tsx
+apps/customer/src/app/(tabs)/bookings/bookings-list-states.render.test.tsx
+apps/customer/src/app/(tabs)/bookings/index.tsx
+apps/customer/src/app/(tabs)/bookings/invoice.tsx
+apps/customer/src/app/(tabs)/garage/garage-detail.documents.render.test.tsx
+apps/customer/src/lib/booking-service.ts
+apps/customer/src/lib/cancellation-error.test.ts
+apps/customer/src/lib/cancellation-error.ts
+apps/customer/src/lib/combined-checkout.test.ts
+apps/customer/src/lib/combined-checkout.ts
+apps/customer/src/lib/invoice-display.test.ts
+apps/customer/src/ui/CombinedPaymentOptions.tsx
+apps/customer/src/ui/CombinedPaymentSheet.tsx
+apps/customer/src/ui/QuoteSchedule.tsx
+apps/customer/src/ui/ServicePrice.tsx
+apps/customer/src/ui/combined-payment-sheet.render.test.tsx
+apps/customer/src/ui/quote-schedule.render.test.tsx
+docs/combined-rounding-v3.md
+functions/src/functions/booking/createBooking.ts
+functions/src/functions/office/getAccountantMoney.ts
+functions/src/functions/payment/requestAdvancePayment.ts
+functions/src/lib/combined-booking.ts
+functions/src/lib/invoice-builder.ts
+functions/src/lib/invoice-pdf.ts
+functions/src/lib/pickup-fee.ts
+functions/src/schemas/booking.ts
+functions/src/test/emulator/combined-create.emulator.test.ts
+functions/src/test/emulator/combined-return.emulator.test.ts
+functions/src/test/emulator/combined-settlement.emulator.test.ts
+functions/src/test/unit/combined-booking.test.ts
+functions/src/test/unit/invoice-builder.test.ts
+functions/src/test/unit/invoice-pdf.test.ts
+packages/core/src/combined-checkout.ts
+packages/core/src/combined-rounding.test.ts
+packages/core/src/customer-job.ts
+packages/core/src/types/booking.ts
+packages/core/src/types/payment.ts
+packages/ui/src/invoice/index.ts
+scripts/vercel-ignore.sh
+scripts/visual/customer-payment/README.md
+scripts/visual/customer-payment/entry.tsx
+CUSTOMER_HARDENING_PATHS
+)
+  [ "$release_paths" = "$expected_paths" ] || { printf 'Customer hardening unexpected paths: SKIP (%s)\n' "$app"; exit 0; }
+  case "$app" in
+    customer) printf 'Pinned Customer hardening: BUILD\n'; exit 1 ;;
+    *) printf 'Pinned Customer hardening: SKIP (%s)\n' "$app"; exit 0 ;;
+  esac
+fi
+# Pinned Gauri payment/booking UI batch. Exact parent + complete path list, Customer only.
+gauri_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = fix/gauri-payment-ui-20261112 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$gauri_parent" = eb4b39ccd1ef6c9e49449abbff5149d271942e10 ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0
+  cd "$root" || exit 0
+  gauri_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  [ "$gauri_parent" = eb4b39ccd1ef6c9e49449abbff5149d271942e10 ] || { printf 'Gauri payment UI wrong parent: SKIP (%s)\n' "$app"; exit 0; }
+  actual="$(git diff --name-only "$gauri_parent" HEAD 2>/dev/null)" || exit 0
+  expected=$(cat <<'GAURI_UI_PATHS'
+apps/customer/src/app/(tabs)/book/advance-modal-flow.render.test.tsx
+apps/customer/src/app/(tabs)/book/confirm-combined.render.test.tsx
+apps/customer/src/app/(tabs)/book/confirm-states.render.test.tsx
+apps/customer/src/app/(tabs)/book/confirm.tsx
+apps/customer/src/app/(tabs)/bookings/[id].tsx
+apps/customer/src/app/(tabs)/bookings/booking-payment.render.test.tsx
+apps/customer/src/app/(tabs)/bookings/index.tsx
+apps/customer/src/app/(tabs)/notifications/index.tsx
+apps/customer/src/lib/vercel-gauri-ui-guard.test.ts
+apps/customer/src/ui/CombinedPaymentOptions.tsx
+apps/customer/src/ui/NextVisitHero.tsx
+apps/customer/src/ui/PickupOptions.tsx
+apps/customer/src/ui/PickupTimeField.tsx
+apps/customer/src/ui/design-contract.test.ts
+apps/customer/src/ui/uc-review-contract.test.ts
+docs/customer-gauri-payment-ui-20261112.md
+functions/src/test/unit/booking-transport-snapshot.test.ts
+packages/core/src/pickup-tariff.test.ts
+packages/core/src/pickup-tariff.ts
+scripts/vercel-ignore.sh
+GAURI_UI_PATHS
+)
+  [ "$actual" = "$expected" ] || { printf 'Gauri payment UI unexpected paths: SKIP (%s)\n' "$app"; exit 0; }
+  case "$app" in
+    customer) printf 'Pinned Customer Gauri payment UI: BUILD\n'; exit 1 ;;
+    *) printf 'Pinned Customer Gauri payment UI: SKIP (%s)\n' "$app"; exit 0 ;;
+  esac
+fi
+
+# Pinned confirm-CTA and pickup-note correction: exact parent + complete path list, Customer only.
+fix_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = fix/confirm-cta-pickup-note-20261113 ] || { [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$fix_parent" = b18d05a13deb1f2910b226398753f2b703782c70 ]; }; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null || true)"; [ -n "$root" ] || exit 0
+  cd "$root" || exit 0
+  [ "$fix_parent" = b18d05a13deb1f2910b226398753f2b703782c70 ] || { printf 'Confirm CTA/note fix wrong parent: SKIP (%s)\n' "$app"; exit 0; }
+  actual="$(git diff --name-only "$fix_parent" HEAD 2>/dev/null)" || exit 0
+  expected=$(cat <<'CONFIRM_FIX_PATHS'
+apps/customer/src/app/(tabs)/book/confirm.tsx
+apps/customer/src/lib/vercel-confirm-fix-guard.test.ts
+apps/customer/src/ui/PickupOptions.render.test.tsx
+apps/customer/src/ui/PickupOptions.tsx
+docs/customer-confirm-cta-note-fix-20261113.md
+scripts/vercel-ignore.sh
+CONFIRM_FIX_PATHS
+)
+  [ "$actual" = "$expected" ] || { printf 'Confirm CTA/note fix unexpected paths: SKIP (%s)\n' "$app"; exit 0; }
+  case "$app" in
+    customer) printf 'Pinned Customer confirm CTA/note fix: BUILD\n'; exit 1 ;;
+    *) printf 'Pinned Customer confirm CTA/note fix: SKIP (%s)\n'; exit 0 ;;
+  esac
+fi
+
+# This isolated emulator-fixture branch never builds or promotes a website/app.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = qa/quote-fixtures-20261106 ]; then
+  printf 'isolated fixture QA branch: SKIP (%s)\n' "$app"
+  exit 0
+fi
+# Script-only CI contract correction. No app bytes changed, so no app builds.
+release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$release_parent" = e6e5c212b0db7643b1133fb85fa76244c04de676 ]; then
+  release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$release_root" ] || exit 0
+  cd "$release_root" || exit 0
+  release_paths="$(git diff --name-only "$release_parent" HEAD 2>/dev/null)" || exit 0
+  if [ "$release_paths" = scripts/vercel-ignore.sh ]; then
+    printf 'reviewed script-only CI correction: SKIP (%s)\n' "$app"
+    exit 0
+  fi
+  printf 'script-only correction paths mismatch: SKIP (%s)\n' "$app"
+  exit 0
+fi
+# Exact reviewed Customer photo/journey repair. Inert beyond this direct parent.
+release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$release_parent" = bb65e6bac5ac399ee711b51ed85f3a59271aead9 ]; then
+  release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$release_root" ] || exit 0
+  cd "$release_root" || exit 0
+  release_paths="$(git diff --name-only bb65e6bac5ac399ee711b51ed85f3a59271aead9 HEAD 2>/dev/null)" || exit 0
+  expected_paths=$(cat <<'CUSTOMER_REVIEWED_PATHS'
+apps/customer/src/app/(tabs)/catalogue/[id].tsx
+apps/customer/src/app/(tabs)/catalogue/brands.tsx
+apps/customer/src/app/(tabs)/catalogue/enquiry.tsx
+apps/customer/src/app/(tabs)/catalogue/index.tsx
+apps/customer/src/app/(tabs)/garage/add.tsx
+apps/customer/src/app/(tabs)/garage/archive-states.render.test.tsx
+apps/customer/src/app/(tabs)/garage/history.tsx
+apps/customer/src/app/(tabs)/garage/index.tsx
+apps/customer/src/app/(tabs)/profile.native-photo.render.test.tsx
+apps/customer/src/app/(tabs)/profile.tsx
+apps/customer/src/app/(tabs)/quote-request-auth.render.test.tsx
+apps/customer/src/app/(tabs)/quote-request.tsx
+apps/customer/src/lib/private-photo-service.test.ts
+apps/customer/src/lib/private-photo-service.ts
+apps/customer/src/lib/vehicle-service.ts
+apps/customer/src/ui/CarThumb.tsx
+apps/customer/src/ui/FilterPills.tsx
+apps/customer/src/ui/GarageShowroom.tsx
+apps/customer/src/ui/JourneySheet.tsx
+apps/customer/src/ui/ProfileHero.tsx
+apps/customer/src/ui/SavedLicensePhoto.tsx
+apps/customer/src/ui/SceneCard.tsx
+apps/customer/src/ui/SceneIntro.tsx
+apps/customer/src/ui/SceneMotion.tsx
+apps/customer/src/ui/ServiceHomes.tsx
+apps/customer/src/ui/ServicePackageCard.tsx
+apps/customer/src/ui/inputs.tsx
+apps/customer/src/ui/journey-sheet.render.test.tsx
+apps/customer/src/ui/kit.tsx
+apps/customer/src/ui/profile-photo.render.test.tsx
+apps/customer/src/ui/saved-license-photo.render.test.tsx
+apps/customer/src/ui/scene-motion.render.test.tsx
+apps/customer/src/ui/uc-review-contract.test.ts
+scripts/vercel-ignore.sh
+CUSTOMER_REVIEWED_PATHS
+)
+  if [ "$release_paths" != "$expected_paths" ]; then printf 'reviewed Customer repair paths mismatch: SKIP\n'; exit 0; fi
+  case "$app" in
+    customer) printf 'reviewed Customer photo/journey repair: BUILD\n'; exit 1 ;;
+    *) printf 'reviewed Customer photo/journey repair: SKIP (%s)\n' "$app"; exit 0 ;;
+  esac
+fi
+# Exact reviewed Customer illustration repair; other app builds are never inferred.
+release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$release_parent" = 6fb18ca112a8a475bbd87cd26e648b0882d8042f ]; then
+  release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$release_root" ] || exit 0
+  cd "$release_root" || exit 0
+  release_paths="$(git diff --name-only "$release_parent" HEAD 2>/dev/null)" || exit 0
+  expected_paths=$(cat <<'REVIEWED_PATHS'
+apps/customer/src/ui/ServiceHomes.tsx
+apps/customer/src/ui/uc-review-contract.test.ts
+scripts/vercel-ignore.sh
+REVIEWED_PATHS
+)
+  if [ "$release_paths" != "$expected_paths" ]; then printf 'reviewed repair paths do not match: SKIP\n'; exit 0; fi
+  case "$app" in
+    customer) printf 'reviewed illustration repair: BUILD (%s)\n' "$app"; exit 1 ;;
+    *) printf 'reviewed illustration repair: SKIP (%s)\n' "$app"; exit 0 ;;
+  esac
+fi
+# One-shot Confirmed-product visibility release. Exact parent and file allowlist isolate this release.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ]; then
+  release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  if [ "$release_parent" = 9419155f38188849dc4d95a28c213efd8756f8cc ]; then
+    [ -n "$release_root" ] || exit 0
+    cd "$release_root" || exit 0
+    release_paths="$(git diff --name-only "$release_parent" HEAD 2>/dev/null)" || exit 0
+    unexpected="$(printf '%s\n' "$release_paths" | grep -Fvx \
+      -e 'apps/customer/src/lib/services-tree.ts' \
+      -e 'apps/customer/src/lib/services-tree.test.ts' \
+      -e 'apps/customer/src/lib/customer-offering-visibility.ts' \
+      -e 'apps/site/src/pages/services/[slug].astro' \
+      -e 'apps/site/src/data/redesign/home.html' \
+      -e 'apps/site/src/data/redesign/services.html' \
+      -e 'packages/core/src/customer-offering-visibility.json' \
+      -e 'packages/core/src/customer-offering-visibility.ts' \
+      -e 'tests/keramik-customer-hold.test.mjs' \
+      -e 'tests/customer-confirmed-offerings.test.mjs' \
+      -e 'tests/vercel-confirmed-release.test.mjs' \
+      -e 'scripts/vercel-ignore.sh' | grep -v '^$' || true)"
+    if [ -n "$unexpected" ]; then printf 'Confirmed-product release unexpected paths: SKIP\n'; exit 0; fi
+    case "$app" in
+      customer|site) printf 'Confirmed-product visibility release: BUILD (%s)\n' "$app"; exit 1 ;;
+      *) printf 'Confirmed-product visibility release: SKIP (%s)\n' "$app"; exit 0 ;;
+    esac
+  fi
+fi
+# One-shot Keramik visibility release. Exact parent and file allowlist isolate this release.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ]; then
+  release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  if [ "$release_parent" = db86ae802280ded4a8b30a9a02fbbad1faf96549 ]; then
+    [ -n "$release_root" ] || exit 0
+    cd "$release_root" || exit 0
+    release_paths="$(git diff --name-only "$release_parent" HEAD 2>/dev/null)" || exit 0
+    unexpected="$(printf '%s\n' "$release_paths" | grep -Fvx \
+      -e 'apps/customer/src/app/(tabs)/book/[serviceId].tsx' \
+      -e 'apps/customer/src/app/(tabs)/catalogue/[id].tsx' \
+      -e 'apps/customer/src/lib/brand-enquiries.ts' \
+      -e 'apps/customer/src/lib/catalogue-service.ts' \
+      -e 'apps/customer/src/lib/customer-offering-visibility.ts' \
+      -e 'apps/site/src/pages/services/[slug].astro' \
+      -e 'tests/keramik-customer-hold.test.mjs' \
+      -e 'tests/vercel-keramik-release.test.mjs' \
+      -e 'scripts/vercel-ignore.sh' | grep -v '^$' || true)"
+    if [ -n "$unexpected" ]; then printf 'Keramik release unexpected paths: SKIP\n'; exit 0; fi
+    case "$app" in
+      customer|site) printf 'Keramik visibility release: BUILD (%s)\n' "$app"; exit 1 ;;
+      *) printf 'Keramik visibility release: SKIP (%s)\n' "$app"; exit 0 ;;
+    esac
+  fi
+fi
+# Single approved website release. Exact parent + allowed paths keep other projects off.
+guard_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ -n "$guard_root" ] && [ -f "$guard_root/scripts/site-only-release-20261104" ]; then
+  cd "$guard_root" || exit 0
+  expected="$(cat scripts/site-only-release-20261104 2>/dev/null)"
+  parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  # A marker alone is not a matching release. Unresolved ancestry falls through
+  # to each app's normal safety policy (apps BUILD, website SKIP without a base).
+  if [ "$expected" = 6f31d7c346d1c2c3fe092a9f2bb3d59d2625068a ] && [ "$parent" = "$expected" ]; then
+    changed="$(git diff --name-only "$parent" HEAD 2>/dev/null)" || exit 0
+    unexpected="$(printf '%s\n' "$changed" | grep -vE '^(apps/site/|scripts/vercel-ignore\.sh$|scripts/site-only-release-20261104$|tests/vercel-site-only-release\.test\.mjs$)' | grep -v '^$' || true)"
+    if [ -n "$unexpected" ]; then printf 'site-only release has unexpected paths: SKIP\n'; exit 0; fi
+    if [ "$app" = site ]; then printf 'approved site-only release: BUILD\n'; exit 1; fi
+    printf 'approved site-only release: SKIP (%s)\n' "$app"; exit 0
+  fi
+  # A proven later commit makes this one-shot marker inert. Existing policy resumes.
+fi
+# Scoped reviewed web release: only these reviewed projects build on this exact branch.
+# Studio remains unchanged. Other branches keep their existing diff/default policy.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = "release/approved-web-20261104" ]; then
+  case "$app" in
+    customer|admin|site) printf 'reviewed web release: BUILD (%s)\n' "$app"; exit 1 ;;
+    *) printf 'reviewed web release: SKIP (%s)\n' "$app"; exit 0 ;;
+  esac
+fi
+# One-shot reviewed wrap release (customer app + marketing site). Fires only
+# when HEAD's parent is exactly the reviewed wrap tip 19ca7ca5 AND HEAD itself
+# changes nothing but this script; any doubt falls through to the policies
+# below (exit 0 = SKIP, never an accidental build).
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ]; then
+  wrap_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  wrap_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  if [ -n "$wrap_root" ] && [ "$wrap_parent" = 19ca7ca50f5031dedce40a2880b7e59fee539ddb ]; then
+    cd "$wrap_root" || exit 0
+    wrap_changed="$(git diff --name-only "$wrap_parent" HEAD 2>/dev/null)" || exit 0
+    if [ "$wrap_changed" = scripts/vercel-ignore.sh ]; then
+      case "$app" in
+        customer|site) printf 'reviewed wrap release: BUILD (%s)\n' "$app"; exit 1 ;;
+        *) printf 'reviewed wrap release: SKIP (%s)\n' "$app"; exit 0 ;;
+      esac
+    fi
+  fi
+fi
+# One-shot site rebuild for the Rodim source-mapping fix (docs-only change;
+# customer/studio/admin unaffected). Fires only when HEAD's parent is exactly
+# 70c7a6a4 AND HEAD changes nothing but this script; doubt falls through.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ]; then
+  fix_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  fix_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  if [ -n "$fix_root" ] && [ "$fix_parent" = 70c7a6a417e725a6cf0b3b9d96dc8b619804ca14 ]; then
+    cd "$fix_root" || exit 0
+    fix_changed="$(git diff --name-only "$fix_parent" HEAD 2>/dev/null)" || exit 0
+    if [ "$fix_changed" = scripts/vercel-ignore.sh ]; then
+      case "$app" in
+        site) printf 'rodim mapping site rebuild: BUILD (%s)\n' "$app"; exit 1 ;;
+        *) printf 'rodim mapping site rebuild: SKIP (%s)\n' "$app"; exit 0 ;;
+      esac
+    fi
+  fi
+fi
+# One-shot customer-only redeploy for the advance-payment exclusion revert.
+# Fires only when HEAD's parent is exactly 0cdf414c AND HEAD changes nothing
+# but this script; doubt falls through to the policies below.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ]; then
+  rev_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  rev_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  if [ -n "$rev_root" ] && [ "$rev_parent" = 0cdf414cd5c8488600f9308d956682cff6aeaf54 ]; then
+    cd "$rev_root" || exit 0
+    rev_changed="$(git diff --name-only "$rev_parent" HEAD 2>/dev/null)" || exit 0
+    if [ "$rev_changed" = scripts/vercel-ignore.sh ]; then
+      case "$app" in
+        customer) printf 'advance exclusion revert: BUILD (%s)\n' "$app"; exit 1 ;;
+        *) printf 'advance exclusion revert: SKIP (%s)\n' "$app"; exit 0 ;;
+      esac
+    fi
+  fi
+fi
+# Website releases fail closed. An app-only push must never rebuild the site
+# merely because its older successful base is missing from a shallow clone.
+if [ "$app" = site ]; then
+  site_skip() { printf 'site: SKIP (%s)\n' "$1"; exit 0; }
+  root="$(git rev-parse --show-toplevel 2>/dev/null)" || site_skip 'git root unavailable'
+  cd "$root" || site_skip 'git root inaccessible'
+  # One-shot audited site release: a committed marker scripts/site-release-<full-sha>
+  # fires a build only when it names HEAD's exact parent commit AND that commit
+  # changes nothing but scripts/vercel-ignore.sh and the marker itself. When the
+  # marker exists but anything is in doubt (diff failure, unexpected path) it
+  # skips; without a marker the fail-closed base check below runs unchanged.
+  # Every resolution failure falls through to that check; nothing here may exit
+  # nonzero by accident, because a nonzero exit means BUILD.
+  head_sha="$(git rev-parse HEAD 2>/dev/null || true)"
+  parent_sha="$(git rev-parse HEAD~1 2>/dev/null || true)"
+  marker="scripts/site-release-$parent_sha"
+  if [ -n "$head_sha" ] && [ -n "$parent_sha" ] && [ -f "$marker" ]; then
+    changed="$(git diff --name-only "$parent_sha" "$head_sha" 2>/dev/null)" || site_skip 'release-marker: diff failed'
+    unexpected="$(printf '%s\n' "$changed" | grep -Fvx -e 'scripts/vercel-ignore.sh' -e "$marker" | grep -v '^$' || true)"
+    [ -z "$unexpected" ] || site_skip "release-marker: unexpected changed paths: $unexpected"
+    printf 'site: BUILD (audited one-shot release marker for parent %s)\n' "$parent_sha"
+    exit 1
+  fi
+  base="${VERCEL_GIT_PREVIOUS_SHA:-}"
+  [[ "$base" =~ ^[0-9a-fA-F]{40}$ ]] || site_skip 'previous successful SHA missing or invalid'
+  if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+    # Fetch only the actual successful base. HEAD^ is unsafe for multi-commit pushes.
+    GIT_TERMINAL_PROMPT=0 timeout 15s git fetch --no-tags --depth=1 origin "$base" >/dev/null 2>&1 || site_skip 'previous successful commit unavailable'
+    git cat-file -e "$base^{commit}" 2>/dev/null || site_skip 'fetched base is not a commit'
+  fi
+  changed="$(git diff --name-only "$base" HEAD -- apps/site 2>/dev/null)" || site_skip 'site diff failed'
+  relevant="$(printf '%s\n' "$changed" | grep -vE '(\.test\.tsx?$|\.md$|/__tests__/|^docs/)' | grep -v '^$')"
+  [ -n "$relevant" ] || site_skip 'no relevant website changes'
+  printf 'site: BUILD (verified website changes since %s)\n' "$base"
+  exit 1
+fi
+case "$app" in
+  customer|studio|admin) paths="apps/$app packages/core packages/database packages/ui packages/auth packages/config pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json" ;;
+  site) paths="apps/site" ;;
+  *) exit 1 ;;
+esac
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 1
+base="${VERCEL_GIT_PREVIOUS_SHA:-}"
+# No usable base commit (first build, shallow clone, force push): always build. Never guess the parent commit:
+# a push of several commits would then skip an app whose changes are further back.
+[ -n "$base" ] && git cat-file -e "$base^{commit}" 2>/dev/null || exit 1
+cd "$root" || exit 1
+changed="$(git diff --name-only "$base" HEAD -- $paths 2>/dev/null)" || exit 1
+relevant="$(printf '%s\n' "$changed" | grep -vE '(\.test\.tsx?$|\.md$|/__tests__/|^docs/)' | grep -v '^$')"
+[ -z "$relevant" ] && exit 0
+exit 1

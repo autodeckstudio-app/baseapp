@@ -1,0 +1,4 @@
+"use client";
+import {useAdminAuth}from'../lib/auth-context';
+/** Private office aid, no submitted customer data and no promised response deadline. */
+export function ComplaintLogPanel(){const{user,claims}=useAdminAuth();if(!user||!['admin','superadmin'].includes(claims?.role??''))return null;return <section className="ax-panel"><h2 className="ax-title">Complaint follow-up</h2><p className="ax-note">Shalin is the selected complaint contact. Use the existing studio contact channels. Record each complaint, owner and next follow-up in the private office log. No response deadline is promised here.</p><a className="ax-button" href="/templates/office-complaint-log.csv" download>Download blank complaint log</a><p className="ax-note">Keep the completed log private in the office. This blank template does not send a complaint or store customer details online.</p></section>}

@@ -1,0 +1,4 @@
+import{it,expect,vi}from'vitest';vi.mock('../../lib/pricing.js',()=>({taxFor:(c:any)=>({taxRatePercent:c.taxRatePercent??0,taxDescription:c.taxDescription??'GST'})}));import{acceptedQuoteBreakdown}from'../../lib/accepted-service-quote';
+it('tax-inclusive quoted total is conserved and canonical invoice rounding matches',()=>{const b=acceptedQuoteBreakdown(11800,'suv',{taxRatePercent:18,taxDescription:'GST 18%',currency:'INR'});expect(b).toMatchObject({basePrice:10000,subtotal:10000,tax:1800,total:11800,taxRatePercent:18})});
+it('unrepresentable total fails closed without charging a different amount',()=>{expect(()=>acceptedQuoteBreakdown(3,'suv',{taxRatePercent:18,currency:'INR'})).toThrow('cannot be represented')});
+it('negative and unsafe tax or money cannot enter booking',()=>{expect(()=>acceptedQuoteBreakdown(100,'suv',{taxRatePercent:-1,currency:'INR'})).toThrow();expect(()=>acceptedQuoteBreakdown(NaN,'suv',{taxRatePercent:18,currency:'INR'})).toThrow()});

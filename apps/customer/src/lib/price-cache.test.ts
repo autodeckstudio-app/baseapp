@@ -1,0 +1,64 @@
+import { describe, expect, it } from "vitest";
+import { createPriceCache, onPriceCacheScopeChange } from "./price-cache";
+
+describe("held price totals", () => {
+  it("are reused only for the same user, service and car size", () => {
+    const c = createPriceCache(() => 0);
+    c.set("u1", "ppf", "suv", 1875000);
+    expect(c.get("u1", "ppf", "suv")).toBe(1875000);
+    expect(c.get("u1", "ppf", "hatchback")).toBeUndefined();
+    expect(c.get("u2", "ppf", "suv")).toBeUndefined();
+    expect(c.get("u1", "other", "suv")).toBeUndefined();
+    expect(c.get(null, "ppf", "suv")).toBeUndefined();
+  });
+  it("expire after 5 minutes", () => {
+    let t = 0;
+    const c = createPriceCache(() => t);
+    c.set("u1", "ppf", "suv", 100);
+    t = 5 * 60_000 - 1;
+    expect(c.get("u1", "ppf", "suv")).toBe(100);
+    t = 5 * 60_000;
+    expect(c.get("u1", "ppf", "suv")).toBeUndefined();
+  });
+  it("can be cleared", () => {
+    const c = createPriceCache(() => 0);
+    c.set("u1", "ppf", "suv", 100);
+    c.clear();
+    expect(c.get("u1", "ppf", "suv")).toBeUndefined();
+  });
+  it("drops everything when the user or the tenant claim changes", () => {
+    const c = createPriceCache(() => 0);
+    c.setScope("u1", "t1");
+    c.set("u1", "ppf", "suv", 100);
+    c.setScope("u1", "t1");
+    expect(c.get("u1", "ppf", "suv")).toBe(100);
+    c.setScope("u1", "t2");
+    expect(c.get("u1", "ppf", "suv")).toBeUndefined();
+    c.set("u1", "ppf", "suv", 100);
+    c.setScope(null, null);
+    expect(c.get("u1", "ppf", "suv")).toBeUndefined();
+  });
+});
+
+describe("scope token and listeners", () => {
+  it("scopeKey reflects the current uid|tenant scope", () => {
+    const c = createPriceCache(() => 0);
+    c.setScope("u1", "t1");
+    expect(c.scopeKey()).toBe("u1|t1");
+    c.setScope(null, null);
+    expect(c.scopeKey()).toBe("|");
+  });
+  it("notifies listeners when scope changes, not on a no-op re-set", () => {
+    const c = createPriceCache(() => 0);
+    let calls = 0;
+    const off = onPriceCacheScopeChange(() => { calls += 1; });
+    c.setScope("u1", "t1");
+    c.setScope("u1", "t1");
+    expect(calls).toBe(1);
+    c.setScope(null, null);
+    expect(calls).toBe(2);
+    off();
+    c.setScope("u2", "t1");
+    expect(calls).toBe(2);
+  });
+});

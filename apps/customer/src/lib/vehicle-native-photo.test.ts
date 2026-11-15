@@ -1,0 +1,20 @@
+import {beforeEach,describe,expect,it,vi} from 'vitest';
+const h=vi.hoisted(()=>({uid:'auth-one',resolve:vi.fn(),calls:[] as {name:string,payload:unknown}[],native:vi.fn()}));
+vi.mock('./auth-service',()=>({resolveMyCustomerDocId:()=>h.resolve()}));
+vi.mock('./firebase',()=>({auth:{get currentUser(){return h.uid?{uid:h.uid}:null;}},db:{},functions:{},storage:{}}));
+vi.mock('expo/fetch',()=>({fetch:(...args:unknown[])=>h.native(...args)}));
+vi.mock('firebase/functions',()=>({httpsCallable:(_f:unknown,name:string)=>async(payload:unknown)=>{h.calls.push({name,payload});return {data:name.startsWith('issue')?{uploadUrl:'https://test.invalid/upload',path:'canonical/licence.jpg',requiredHeaders:{'Content-Type':'image/jpeg','x-goog-meta-ownerId':'canonical-one'}}:{url:'read'}};}}));
+vi.mock('firebase/firestore',()=>({collection:vi.fn(),query:vi.fn(),where:vi.fn(),onSnapshot:vi.fn(),getDocs:vi.fn()}));
+vi.mock('firebase/storage',()=>({getDownloadURL:vi.fn(),ref:vi.fn()}));
+vi.mock('@autodeck/database',()=>({COLLECTIONS:{vehicles:()=> 'vehicles'}}));
+import {putVehiclePhoto,uploadLicensePhoto,uploadVehiclePhoto,uploadVehicleRc} from './vehicle-service';
+beforeEach(()=>{h.uid='auth-one';h.calls=[];h.resolve.mockReset().mockResolvedValue('canonical-one');h.native.mockReset().mockResolvedValue({ok:true});vi.stubGlobal('fetch',vi.fn(async()=>({ok:true})));});
+describe('native photo transport and canonical licence',()=>{
+ it('native bytes use expo transport unchanged with exact signed headers',async()=>{const b=new Uint8Array([1,2]);const headers={a:'b'};await putVehiclePhoto('https://test.invalid',headers,b);expect(h.native).toHaveBeenCalledWith('https://test.invalid',{method:'PUT',headers,body:b});expect(fetch).not.toHaveBeenCalled();});
+ it('web blob stays on web fetch',async()=>{const b=new Blob(['x']);await putVehiclePhoto('https://test.invalid',{},b);expect(fetch).toHaveBeenCalled();expect(h.native).not.toHaveBeenCalled();});
+ it('claimed licence issue and publish use canonical ID not auth UID',async()=>{await uploadLicensePhoto(new Uint8Array([1]),'image/jpeg');expect(h.calls[0]?.payload).toEqual({customerId:'canonical-one',contentType:'image/jpeg'});expect(h.calls[1]?.payload).toEqual({customerId:'canonical-one',path:'canonical/licence.jpg',publish:true});});
+ it('missing binding never issues upload',async()=>{h.resolve.mockResolvedValue(null);await expect(uploadLicensePhoto(new Blob(['x']),'image/jpeg')).rejects.toThrow(/Sign in/);expect(h.calls).toHaveLength(0);});
+ it('account switch during resolver never issues upload',async()=>{h.resolve.mockImplementation(async()=>{h.uid='auth-two';return 'canonical-one';});await expect(uploadLicensePhoto(new Blob(['x']),'image/jpeg')).rejects.toThrow(/Sign in/);expect(h.calls).toHaveLength(0);});
+ it('failed native PUT never publishes',async()=>{h.native.mockResolvedValue({ok:false,status:403});await expect(uploadVehiclePhoto('v1',new Uint8Array([1]),'image/jpeg')).rejects.toThrow('403');expect(h.calls.map(c=>c.name)).toEqual(['issueVehiclePhotoUploadUrl']);});
+ it('RC bytes preserve kind and publish sequence',async()=>{await uploadVehicleRc('v1',new Uint8Array([1]),'image/jpeg');expect(h.calls.map(c=>c.name)).toEqual(['issueVehiclePhotoUploadUrl','publishVehiclePhoto']);expect(h.calls[1]?.payload).toMatchObject({kind:'rc',publish:true});});
+});

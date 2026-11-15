@@ -1,0 +1,195 @@
+[
+  {
+    "slug": "paint-protection",
+    "title": "Paint Protection",
+    "description": "PPF film or PPS spray-on protection. Choose the treatment with the studio.",
+    "image": "/assets/redesign/service-paint-protection.jpg",
+    "heading": "Choose the coverage first.",
+    "intro": "A transparent urethane layer that takes stone chips and everyday scuffs before your paint does. The studio confirms the right film and coverage for your car before quoting.",
+    "choices": [
+      [
+        "PPF Film",
+        "Film coverage for high-impact panels, the full front or full body.",
+        1
+      ],
+      [
+        "PPS - Spray-on Protection",
+        "Spray-applied paint protection, discussed with the studio.",
+        3
+      ]
+    ],
+    "question": "Bring your car for a paint inspection before the final quote. The exact film, finish, coverage and warranty terms are confirmed in writing with the studio.",
+    "related": "ceramic-coating",
+    "relatedLabel": "Explore ceramic coating instead",
+    "source": "Oct12 approved catalogue restructure; current menu coverage groups; prices and brands excluded; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
+    "appChoice": "PPF",
+    "headline": "Two ways to protect your paint.",
+    "zones": true,
+    "poster": "/assets/models/rover-poster.png?v=5683da12fa"
+  },
+  {
+    "slug": "ceramic-coating",
+    "title": "Ceramic coating",
+    "description": "Ceramic and graphene coatings for your car.",
+    "image": "/assets/redesign/service-ceramic-coating.jpg",
+    "heading": "Which surface needs care?",
+    "intro": "Paint, glass, wheels and cabin each take a different coating. Choose the surface first.",
+    "choices": [
+      [
+        "Paint",
+        "Ceramic or graphene for painted surfaces, quoted after a paint-condition check.",
+        3
+      ],
+      [
+        "Glass & wheels",
+        "Separate coatings for glass and wheels, not included in a paint coating.",
+        4
+      ],
+      [
+        "Cabin materials",
+        "Leather and fabric coatings are separate options; dashboard and trim are enquiry-only.",
+        0
+      ]
+    ],
+    "question": "Confirm the exact product, preparation, surfaces and aftercare with the studio before any work.",
+    "related": "paint-protection",
+    "relatedLabel": "Compare film coverage options",
+    "source": "Oct18 owner-approved surface-type expansion; current menu brand-neutral groups only; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
+    "appChoice": "Coatings",
+    "zones": true,
+    "poster": "/assets/models/rover-poster.png?v=5683da12fa",
+    "zonesNote": "Coverage shown is illustrative, not a panel map. Glass coating is a separate option; cabin coatings are not shown on the exterior model."
+  },
+  {
+    "slug": "detailing",
+    "title": "Detailing",
+    "description": "Care for the paint, cabin and the details between.",
+    "image": "/assets/redesign/service-detailing.jpg",
+    "heading": "Choose the area to focus on.",
+    "intro": "Start with the part of the car that needs attention. Cleaning, paint work and coatings are separate choices.",
+    "choices": [
+      [
+        "Interior deep clean",
+        "A cabin-focused visit, tailored to your car's materials.",
+        0
+      ],
+      [
+        "Full detail wash",
+        "One visit covering exterior and interior together.",
+        3
+      ],
+      [
+        "Paint & finishing / Enquiry",
+        "Polish, paint correction and decontamination - enquiry-only, call for an assessment and quote.",
+        3
+      ]
+    ],
+    "question": "Tell the studio which areas concern you and approve the work list first. Coatings and film are separate decisions.",
+    "related": "washing",
+    "relatedLabel": "Compare the wash choices",
+    "source": "Oct18 owner full/exterior/interior bundle clarification plus approved services-type scope; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
+    "appChoice": "Washing & detailing",
+    "zones": true,
+    "poster": "/assets/models/rover-poster.png?v=5683da12fa"
+  },
+  {
+    "slug": "washing",
+    "title": "Washing",
+    "description": "From a foam wash to a full detail wash.",
+    "image": "/assets/redesign/service-wash-and-care.jpg",
+    "heading": "Outside, inside, or both?",
+    "intro": "Pick the scope that fits. Full detail wash already covers exterior and interior together.",
+    "choices": [
+      [
+        "Foam wash",
+        "The exterior starting point. See its work list in the app.",
+        3
+      ],
+      [
+        "Exterior detail wash",
+        "An exterior-focused visit when the outside is the priority.",
+        3
+      ],
+      [
+        "Interior deep clean",
+        "Cabin-focused care when the interior is the priority.",
+        0
+      ],
+      [
+        "Full detail wash",
+        "One visit covering exterior and interior together.",
+        3
+      ]
+    ],
+    "question": "Need both? Start with Full detail wash. Paint correction and surface protection live under Detailing and Ceramic coating.",
+    "related": "detailing",
+    "relatedLabel": "Explore detailing for focused care",
+    "source": "Oct18 original owner bundle approval; current menu wash group. No prices/durations published; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
+    "appChoice": "Washing",
+    "zones": true,
+    "poster": "/assets/models/rover-poster.png?v=5683da12fa"
+  },
+  {
+    "slug": "garage",
+    "title": "Garage",
+    "description": "Car health checks and repairs, starting with an inspection.",
+    "image": "/assets/redesign/service-garage.jpg",
+    "heading": "Start with the concern.",
+    "intro": "Garage work starts with an inspection. Repairs are quoted only after assessment.",
+    "choices": [
+      [
+        "Checks & diagnostics",
+        "Multi-point, AC and battery checks."
+      ],
+      [
+        "Wheels & tyres",
+        "Alignment and balancing, listed separately."
+      ],
+      [
+        "Repairs & other work",
+        "Book an inspection first; parts and labour are quoted after assessment."
+      ]
+    ],
+    "question": "Describe the symptoms when you call, and confirm the diagnosis, parts and labour before approving repairs.",
+    "related": "washing",
+    "relatedLabel": "Looking for care rather than repairs?",
+    "source": "Owner-updated Garage pre-list, excluding stale pickup/prices/durations; approved consult-first menu; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
+    "appChoice": "Garage",
+    "zones": true,
+    "markers": true,
+    "poster": "/assets/models/rover-poster.png?v=5683da12fa",
+    "zonesNote": "Markers suggest typical first-check areas on an illustrative model - not a diagnosis or a quote."
+  },
+  {
+    "slug": "modifications",
+    "title": "Modifications",
+    "description": "Tint, wraps and styling, quoted after we see your car.",
+    "image": "/assets/redesign/service-modifications.jpg",
+    "heading": "Start with the change you want.",
+    "intro": "Quote-led, because your car and its fitment matter more than a generic package.",
+    "choices": [
+      [
+        "Wraps & colour change",
+        "Vinyl wraps and graphics, with finish and coverage confirmed first.",
+        3
+      ],
+      [
+        "Accessories & styling",
+        "Pick the change; the exact accessory and fitment are confirmed first.",
+        0
+      ],
+      [
+        "Interior & fitment / Enquiry",
+        "Audio, cameras, mats and upholstery - enquiry-only, call to discuss.",
+        0
+      ]
+    ],
+    "question": "Call before booking to confirm compatibility, scope and the final quote.",
+    "related": "garage",
+    "relatedLabel": "Need repairs instead? Explore Garage",
+    "source": "Oct18 owner all-services/type expansion and approved consult-only modifications menu; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
+    "appChoice": "Modifications",
+    "zones": true,
+    "poster": "/assets/models/rover-poster.png?v=5683da12fa"
+  }
+]

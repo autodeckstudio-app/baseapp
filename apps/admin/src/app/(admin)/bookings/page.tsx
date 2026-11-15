@@ -1,0 +1,225 @@
+"use client";
+import {WalkinVisitEstimates} from "../../../components/WalkinVisitEstimates";
+import {BoundedListNotice} from "../../../components/BoundedListNotice";
+import { membershipCoveredLabel } from "@autodeck/core";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { matchBookingCode, isBookingMissed, type Booking, type BookingStatus } from "@autodeck/core";
+import { useAdminAuth } from "../../../lib/auth-context";
+import { StaffAlertsNotice } from "../../../components/StaffAlertsNotice";
+import { getStudioConfig } from "../../../lib/studio-service";
+import { bayLabel } from "../../../lib/bay-label";
+import { listenToBookings, BOOKINGS_LIST_LIMIT } from "../../../lib/bookings-service";
+import { StatusBadge } from "../../../components/StatusBadge";
+import { formatPaise, formatDateTime, formatTime, formatDayLong, shiftDay, studioToday } from "../../../lib/format";
+import { statusLabel } from "../../../lib/status-label";
+import { DayAgenda, type AgendaItem } from "../../../experience/DayAgenda";
+import { useLabels } from "../../../lib/use-labels";
+import { BOOKINGS_VIEW_KEY, dropListView, loadReturnedListView, saveListView } from "../../../lib/list-view-state";
+import { clearReturning } from "../../../lib/go-back";
+import { COLLECTIONS } from "@autodeck/database";
+import type { Customer, Vehicle, Service } from "@autodeck/core";
+
+const STATUSES: BookingStatus[] = ["PENDING", "CONFIRMED", "ACTIVE", "COMPLETED", "CANCELLED", "EXPIRED"];
+
+export default function BookingsPage() {
+  const { claims } = useAdminAuth();
+  const router = useRouter();
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Back from a booking returns to the list view the person left. Opening Bookings any other way starts at the default.
+  const savedView = () => loadReturnedListView(BOOKINGS_VIEW_KEY, ["status", "date", "serviceId", "search"]);
+  const [status, setStatus] = useState<BookingStatus | "">(() => { const s = savedView().status; return s && (STATUSES as string[]).includes(s) ? (s as BookingStatus) : ""; });
+  const today = studioToday();
+  const [date, setDate] = useState(() => { const d = savedView().date; return d !== undefined && (d === "" || /^\d{4}-\d{2}-\d{2}$/.test(d)) ? d : today; });
+  const [serviceId, setServiceId] = useState(() => savedView().serviceId ?? "");
+  const [search, setSearch] = useState(() => savedView().search ?? "");
+  useEffect(() => { clearReturning(); dropListView(BOOKINGS_VIEW_KEY); }, []);
+
+  useEffect(() => {
+    if (!claims) return undefined;
+    setLoading(true);
+    return listenToBookings(
+      claims.tenantId,
+      (data) => {
+        setBookings(data);
+        setLoading(false);
+      },
+      (err) => {
+        setError(err.message);
+        setLoading(false);
+      },
+    );
+  }, [claims]);
+
+  const serviceIds = useMemo(() => Array.from(new Set(bookings.map((b) => b.serviceId))).sort(), [bookings]);
+  // A service that no longer has bookings cannot stay selected (it would show an empty list with no way to see why).
+  useEffect(() => { if (!loading && serviceId && !serviceIds.includes(serviceId)) setServiceId(""); }, [loading, serviceId, serviceIds]);
+  const [bays, setBays] = useState<Array<{ id: string; name: string }>>([]);
+  const studioKey = Array.from(new Set(bookings.map((b) => b.studioId))).sort().join(",");
+  useEffect(() => {
+    if (!studioKey) return;
+    let live = true;
+    void Promise.all(studioKey.split(",").map((id) => getStudioConfig(id).catch(() => null))).then((cfgs) => {
+      if (live) setBays(cfgs.flatMap((c) => c?.bays ?? []));
+    });
+    return () => { live = false; };
+  }, [studioKey]);
+
+  const customerNames = useLabels(COLLECTIONS.customers(), bookings.map((b) => b.customerId), (d) => (d as Customer).name);
+  const vehicleRegs = useLabels(COLLECTIONS.vehicles(), bookings.map((b) => b.vehicleId), (d) => (d as Vehicle).registrationNumber);
+  const serviceNames = useLabels(COLLECTIONS.services(), bookings.map((b) => b.serviceId), (d) => (d as Service).name);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    // A booking ID like AD-7K2M-9XQP lists every booking with that code. The code is not unique by guarantee.
+    const byCode = matchBookingCode(bookings, search);
+    if (byCode) return byCode.matches;
+    return bookings.filter((b) => {
+      if (status && b.status !== status) return false;
+      if (date && b.scheduledDate !== date) return false;
+      if (serviceId && b.serviceId !== serviceId) return false;
+      if (q) {
+        const haystack = [b.id, b.customerId, b.vehicleId, customerNames[b.customerId], vehicleRegs[b.vehicleId]]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [bookings, status, date, serviceId, search, customerNames, vehicleRegs]);
+
+  const codeSearch = matchBookingCode(bookings, search);
+
+  if (error) return <p className="error">{error}</p>;
+
+  if (loading) return <div className="ax-panel" role="status">Loading studio bookings...</div>;
+  const dayMode = date !== "";
+  const allSorted = [...filtered].sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
+  // Cancelled bookings sit in their own collapsed group so the live list stays clean.
+  const groupCancelled = status !== "CANCELLED";
+  const sorted = groupCancelled ? allSorted.filter((b) => b.status !== "CANCELLED") : allSorted;
+  const cancelled = groupCancelled ? allSorted.filter((b) => b.status === "CANCELLED") : [];
+  const dayCount = bookings.filter((b) => b.scheduledDate === date && b.status !== "CANCELLED" && b.status !== "EXPIRED").length;
+  const pending = bookings.filter((b) => b.status === "PENDING").length;
+  const upcoming = bookings.filter((b) => b.scheduledDate > today && (b.status === "CONFIRMED" || b.status === "PENDING")).length;
+  const owedBadge = (b: Booking) => (b.status === "CANCELLED" && typeof b.manualRefundDuePaise === "number" && b.manualRefundDuePaise > 0 ? `Refund owed ${formatPaise(b.manualRefundDuePaise)}` : undefined);
+  const open = (id: string) => { saveListView(BOOKINGS_VIEW_KEY, { status, date, serviceId, search }); router.push(`/bookings/${id}`); };
+  const toItem = (b: Booking): AgendaItem => ({
+    id: b.id,
+    time: formatTime(b.scheduledAt),
+    endTime: b.estimatedEndDate === b.scheduledDate ? formatTime(b.estimatedEndAt) : undefined,
+    plate: vehicleRegs[b.vehicleId] ?? "-",
+    customer: customerNames[b.customerId] ?? "Customer",
+    service: serviceNames[b.serviceId] ?? "Service",
+    bay: bayLabel(b.bayId, bays),
+    status: b.status,
+    payment: b.cancelIntent?.state === "waiting" || b.cancelIntent?.state === "needs_review" ? "Cancellation requested" : membershipCoveredLabel(b) ?? b.paymentStatus,
+    amount: formatPaise(b.totalAmount),
+    owed: owedBadge(b),
+  });
+
+  const bookingTable = (rows: Booking[]) => (
+        <table>
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Status</th>
+              <th>Vehicle</th>
+              <th>Customer</th>
+              <th>Service</th>
+              <th>Bay</th>
+              <th>Payment</th>
+              <th style={{ textAlign: "right" }}>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((b) => (
+              <tr key={b.id} className="row-link" onClick={() => open(b.id)}>
+                <td>{formatDateTime(b.scheduledAt)}</td>
+                <td><StatusBadge label={isBookingMissed(b) ? "MISSED" : b.status} /></td>
+                <td className="ax-data">{vehicleRegs[b.vehicleId] ?? "-"}</td>
+                <td>{customerNames[b.customerId] ?? "-"}</td>
+                <td>{serviceNames[b.serviceId] ?? "-"}</td>
+                <td>{b.bayId}</td>
+                <td><StatusBadge label={b.cancelIntent?.state === "waiting" || b.cancelIntent?.state === "needs_review" ? "Cancellation requested" : membershipCoveredLabel(b) ?? b.paymentStatus} />{owedBadge(b) ? <div className="ax-label" style={{ color: "var(--ad-danger)" }}>{owedBadge(b)}</div> : null}</td>
+                <td className="ax-data" style={{ textAlign: "right" }}>{formatPaise(b.totalAmount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+  );
+
+  return (
+    <div className="ax-page">
+      <header className="ax-page-head">
+        <div>
+          <p className="ax-label">Studio schedule</p>
+          <h1>Bookings</h1>
+        </div>
+        <div className="ax-kpis" aria-label="At a glance">
+          <div><span className="ax-kpi-v">{dayMode ? dayCount : bookings.length}</span><span className="ax-label">{dayMode ? "On this day" : "All bookings"}</span></div>
+          <div><span className="ax-kpi-v ax-kpi-v--accent">{pending}</span><span className="ax-label">Need confirming</span></div>
+          <div><span className="ax-kpi-v ax-kpi-v--premium">{upcoming}</span><span className="ax-label">Coming up</span></div>
+        </div>
+      </header>
+      <StaffAlertsNotice />
+      <BoundedListNotice kind="bookings" limit={BOOKINGS_LIST_LIMIT}/>
+
+      <div className="ax-toolbar">
+        <WalkinVisitEstimates />
+      {dayMode ? (
+          <div className="ax-daynav" role="group" aria-label="Day">
+            <button type="button" className="ax-button" aria-label="Previous day" onClick={() => setDate(shiftDay(date, -1))}>‹</button>
+            <span className="ax-daynav-date" aria-live="polite">{date === today ? "Today" : formatDayLong(date)}</span>
+            <button type="button" className="ax-button" aria-label="Next day" onClick={() => setDate(shiftDay(date, 1))}>›</button>
+            {date !== today && <button type="button" className="ax-button" onClick={() => setDate(today)}>Today</button>}
+          </div>
+        ) : null}
+        <div className="ax-seg" role="group" aria-label="View">
+          <button type="button" aria-pressed={dayMode} onClick={() => setDate(today)}>Day</button>
+          <button type="button" aria-pressed={!dayMode} onClick={() => setDate("")}>All dates</button>
+        </div>
+        <div className="ax-filters">
+        <input type="date" aria-label="Pick a date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value as BookingStatus | "")}>
+          <option value="">All statuses</option>
+          {STATUSES.map((s) => (
+            <option key={s} value={s}>{statusLabel(s)}</option>
+          ))}
+        </select>
+        <select aria-label="Service" value={serviceId} onChange={(e) => setServiceId(e.target.value)}>
+          <option value="">All services</option>
+          {serviceIds.map((s) => (
+            <option key={s} value={s}>{serviceNames[s] ?? "Service"}</option>
+          ))}
+        </select>
+        </div>
+        <input className="ax-search" type="search" aria-label="Search" placeholder="Search plate, customer or booking" value={search} onChange={(e) => setSearch(e.target.value)} />
+        {codeSearch ? <span className="ax-note" role="status">{codeSearch.matches.length === 0 ? "No match in the loaded bookings." : codeSearch.ambiguous ? `${codeSearch.matches.length} loaded bookings share this ID. Check the customer and plate before acting.` : "1 loaded booking has this ID."}</span> : null}
+        <span className="ax-count">{filtered.length} of {bookings.length}</span>
+      </div>
+
+      {dayMode ? (
+        <DayAgenda items={sorted.map(toItem)} loading={loading} onOpen={open} />
+      ) : loading ? (
+        <DayAgenda items={[]} loading onOpen={open} />
+      ) : sorted.length === 0 ? (
+        <div className="ax-empty"><p className="ax-title">No matches</p><p>No matches in the loaded bookings. Try another status, service or search.</p></div>
+      ) : (
+        bookingTable(sorted)
+      )}
+
+      {cancelled.length > 0 && (
+        <details className="ax-cancelled">
+          <summary>Cancelled ({cancelled.length})</summary>
+          {dayMode ? <DayAgenda items={cancelled.map(toItem)} loading={false} onOpen={open} /> : bookingTable(cancelled)}
+        </details>
+      )}
+    </div>
+  );
+}

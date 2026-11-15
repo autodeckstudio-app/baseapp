@@ -1,0 +1,55 @@
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { getFirestore } from "firebase-admin/firestore";
+import type { Payment } from "@autodeck/core";
+import { COLLECTIONS } from "@autodeck/database";
+import { extractUser } from "../../middleware/auth.js";
+import { validate } from "../../middleware/validate.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { createCheckoutOrderSchema } from "../../schemas/payment.js";
+import { createRazorpayOrder, findRazorpayOrderByReceipt } from "../../lib/razorpay-checkout.js";
+import { obtainCheckoutOrder, CheckoutOrderError } from "../../lib/checkout-order.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
+
+// Step 1 of Standard Checkout: the customer opens checkout for their own pending payment.
+export const createCheckoutOrder = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"] , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
+  const user = extractUser(request);
+  const data = validate(createCheckoutOrderSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "payment.createOrder");
+
+  const keyId = process.env["RAZORPAY_KEY_ID"] ?? "";
+  const keySecret = process.env["RAZORPAY_KEY_SECRET"] ?? "";
+  if (!keyId || !keySecret) throw new HttpsError("failed-precondition", "Online payment is not set up yet.");
+
+  const ref = getFirestore().collection(COLLECTIONS.payments()).doc(data.paymentId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Payment not found.");
+  const payment = snap.data() as Payment;
+  if (payment.customerId !== user.uid || payment.tenantId !== user.claims.tenantId) throw new HttpsError("permission-denied", "Cannot pay for this.");
+  if (payment.status !== "pending" && payment.status !== "processing") throw new HttpsError("failed-precondition", "This payment is already closed.");
+
+  if (payment.targetType === "membership") throw new HttpsError("failed-precondition", "Membership payments use their existing hosted payment link. Open it from Membership status; contact the studio if it needs checking.");
+
+  // Gift web checkout and hosted native links share one exclusive payment lane.
+  // Persist the lane before contacting Razorpay, including on crash/retry.
+  if (payment.targetType === "gift") {
+    await getFirestore().runTransaction(async tx => {
+      const cur = (await tx.get(ref)).data() as Payment;
+      if (cur.customerId !== user.uid || cur.tenantId !== user.claims.tenantId || cur.targetType !== payment.targetType || cur.status !== "pending" || cur.razorpayPaymentLinkId || (cur.linkCreateLeaseId && cur.linkCreateLeaseId !== `${payment.targetType}-standard-checkout`)) throw new HttpsError("failed-precondition", "This payment has another checkout in progress. Complete it there or contact the studio.");
+      tx.update(ref, { linkCreateLeaseId: `${payment.targetType}-standard-checkout`, updatedAt: new Date().toISOString() });
+    });
+  }
+
+  try {
+    const order = await obtainCheckoutOrder(payment, {
+      createOrder: (p) => createRazorpayOrder({ ...p, keyId, keySecret }),
+      findOrderByReceipt: (receipt) => findRazorpayOrderByReceipt({ receipt, keyId, keySecret }),
+      saveOrder: (orderId) => ref.update({ razorpayOrderId: orderId, updatedAt: new Date().toISOString() }).then(() => undefined),
+      markAmbiguous: (ambiguous) => ref.update({ orderAmbiguous: ambiguous, updatedAt: new Date().toISOString() }).then(() => undefined),
+    });
+    return { orderId: order.orderId, amount: order.amount, currency: order.currency, keyId };
+  } catch (err) {
+    if (err instanceof CheckoutOrderError && err.code === "ambiguous") throw new HttpsError("failed-precondition", err.message);
+    console.error("createCheckoutOrder failed", err instanceof Error ? err.message : err);
+    throw new HttpsError("unavailable", "Could not start the payment. Please try again.");
+  }
+});

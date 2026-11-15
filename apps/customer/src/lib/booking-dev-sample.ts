@@ -1,0 +1,52 @@
+// Dev preview only. Sample data for /preview-booking?mock=1. Not real bookings, not used in production builds.
+import type { Booking } from "@autodeck/core";
+
+// Today 10:00 to 11:30 India time: the ACTIVE sample shows the car at the studio,
+// so the visit must be today's - a future date would be a false live status.
+const IST_MS = 5.5 * 3600_000;
+const today = new Date(Date.now() + IST_MS).toISOString().slice(0, 10);
+const date = today;
+const iso = new Date(`${today}T10:00:00Z`).getTime() - IST_MS;
+const startIso = new Date(iso).toISOString();
+const endIso = new Date(iso + 90 * 60_000).toISOString();
+
+export const DEV_SAMPLE_BOOKING = {
+  id: "devSampleBookingId0001",
+  tenantId: "t", studioId: "s", customerId: "c", vehicleId: "v",
+  vehicleSnapshot: { registrationNumber: "GJ01 AB 1234", make: "Skoda", model: "Slavia", year: 2023, color: "Grey", photoUrl: null },
+  serviceId: "svc-wash-premium", vehicleCategory: "sedan",
+  scheduledAt: startIso, scheduledDate: date, scheduledTime: "10:00",
+  estimatedEndAt: endIso, estimatedEndDate: date, estimatedEndTime: "11:30", durationMinutes: 90,
+  bayId: "b", assignedEmployeeId: null, status: "ACTIVE",
+  priceBreakdown: { vehicleCategory: "sedan", basePrice: 100000, scopeAdjustment: 0, addOns: [], subtotal: 100000, membershipDiscount: null, membershipDiscountPercent: null, pickupFee: 0, dropFee: 0, taxRatePercent: 18, taxDescription: "GST 18%", tax: 18000, total: 118000, currency: "INR" },
+  totalAmount: 118000, membershipId: null, membershipDiscountApplied: false, membershipWashUsed: false,
+  paymentStatus: "paid", payMode: "online", notes: null, idempotencyKey: "k", rescheduleCount: 0, confirmedAt: startIso,
+} as unknown as Booking;
+
+export const DEV_SAMPLE_SERVICE = { name: "Premium Wash", category: "washing", brand: null, imageUrl: null };
+
+// Premium variant for the reschedule-request UI (item 6 preview): a CONFIRMED
+// ceramic booking with a pending request. Same dev-only ?mock=2 guard; the
+// no-evidence invariant applies (no real URLs, no real plates beyond the
+// existing internal sample pattern).
+const reqDate = new Date(Date.now() + IST_MS + 4 * 24 * 3600_000).toISOString().slice(0, 10);
+export const DEV_SAMPLE_PREMIUM_BOOKING = {
+  ...DEV_SAMPLE_BOOKING,
+  id: "devSampleBookingId0002",
+  serviceId: "svc-ceramic-dev",
+  status: "CONFIRMED",
+  payMode: "studio",
+  paymentStatus: "unpaid",
+  rescheduleRequest: {
+    requestedDate: reqDate,
+    requestedTime: "14:00",
+    requestedAt: new Date(Date.now() - 3600_000).toISOString(),
+    status: "pending",
+    note: null,
+    baseScheduledAt: startIso,
+    idempotencyKey: "dev-sample-key",
+  },
+  rescheduleRequestCount: 1,
+} as unknown as Booking;
+
+export const DEV_SAMPLE_PREMIUM_SERVICE = { name: "Ceramic Coating", category: "ceramic", brand: null, imageUrl: null };

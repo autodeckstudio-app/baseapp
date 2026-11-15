@@ -1,0 +1,137 @@
+// Pay-at-studio 20% advance, held OFF in this release candidate for old-native compatibility.
+// The pure builder makes no provider calls; requestAdvancePayment owns those.
+// Basis and rounding remain explicit owner-adopted policies.
+import { advanceSplit, type AdvanceBasis, type AdvanceRounding, type AdvanceSplit } from "@autodeck/core";
+import { calculateTax } from "./pricing.js";
+
+export const ADVANCE_PAYMENT_ENABLED = false;
+
+/** Flag-only seam (reviewer R4): every activation check goes through this
+ *  getter so a test can override JUST the flag and run the REAL builder,
+ *  never a reimplemented copy. */
+export function advancePaymentEnabled(): boolean {
+  return ADVANCE_PAYMENT_ENABLED;
+}
+
+/** Owner-adopted policy (2 Nov 2026, "All 3"): 20% of the discounted service
+ *  price incl GST EXCL pickup, advance rounded UP, balance exact. Single
+ *  source for every call site; the core helper still takes them as REQUIRED
+ *  parameters so no site can silently assume a policy. */
+export const ADVANCE_BASIS_POLICY = "service_total_only" as const;
+export const ADVANCE_ROUNDING_POLICY = "ceil" as const;
+
+export type AdvancePriceBreakdown = {
+  /** Snapshotted subtotal = service + scope + addOns + pickupFee + dropFee
+   *  (applyPickupFees folds pickup/drop INTO subtotal and taxes them). */
+  subtotal: number;
+  pickupFee: number;
+  dropFee: number;
+  membershipDiscount: number | null;
+  taxRatePercent: number;
+  /** Snapshotted grand total (applyPickupFees: subtotal - discount + tax,
+   *  pickup GST included). The studio balance derives from this. */
+  total: number;
+};
+
+export type AdvanceBookingShape = {
+  id: string;
+  payMode: string;
+  currency: string;
+  priceBreakdown: AdvancePriceBreakdown;
+  /** Set once an advance has been recorded for this booking. */
+  advancePaymentId?: string | null;
+};
+
+/** PURE derivation of the advance base from a real snapshotted breakdown -
+ *  testable while the flag stays off.
+ *
+ *  Proven against the pricing pipeline (functions/src/lib/pricing.ts,
+ *  pickup-fee.ts, createBooking.ts composition):
+ *   - calculatePrice: subtotal = base + scope; tax on subtotal.
+ *   - applyMembershipBenefit: discount is taken on the SERVICE subtotal
+ *     (before pickup); tax recomputed on (subtotal - discount).
+ *   - applyPickupFees (later, pickupRequests/setBookingQuote): pickup and
+ *     drop fees are folded INTO subtotal and the SAME discount is kept, so
+ *     tax = round((service + pickup + drop - discount) * rate) - pickup
+ *     fees carry GST inside the snapshot's tax and total.
+ *  The adopted base (discounted service incl GST, EXCL pickup) is therefore
+ *  NOT total - pickupFee - dropFee (that keeps the pickup GST). It is the
+ *  service portion re-taxed at the snapshot's own rate:
+ *    (subtotal - pickupFee - dropFee - membershipDiscount)
+ *      + round(same * taxRatePercent / 100)
+ *  matching the pipeline's integer rounding for the service portion exactly.
+ *  A fully covered wash (discount absorbs the service subtotal) yields a
+ *  zero base and a zero advance - correct: nothing remains to advance. */
+export function computeAdvanceSplitFromBreakdown(
+  pb: AdvancePriceBreakdown,
+  basis: AdvanceBasis,
+  rounding: AdvanceRounding,
+): AdvanceSplit {
+  const serviceSubtotal = pb.subtotal - pb.pickupFee - pb.dropFee;
+  const discountedService = serviceSubtotal - (pb.membershipDiscount ?? 0);
+  // Fail CLOSED on a negative base (reviewer D): a discount exceeding the
+  // service subtotal is a broken snapshot, never a negative or zero-clamped
+  // charge. The pricing contract (assertValidMinorUnits) rejects negative
+  // money; we do the same here before any split math.
+  if (discountedService < 0) {
+    throw new Error(`Advance base is negative (${discountedService} paise): the snapshot's discount exceeds its service subtotal - refusing to compute an advance.`);
+  }
+  const serviceTax = calculateTax(discountedService, pb.taxRatePercent);
+  const serviceTotal = discountedService + serviceTax;
+  return advanceSplit(serviceTotal, pb.pickupFee + pb.dropFee, basis, rounding);
+}
+
+/** What the customer still owes AT THE STUDIO (reviewer E): the booking's
+ *  snapshotted grand total - which already includes pickup/drop fees AND
+ *  their GST and the membership discount exactly once - minus the advance.
+ *  The service-portion remainder alone would under-charge by the pickup
+ *  fees and their GST; the disclosure must reconcile to this figure. */
+export function studioBalancePaise(pb: AdvancePriceBreakdown & { total: number }, advancePaise: number): number {
+  const due = pb.total - advancePaise;
+  if (due < 0) {
+    throw new Error(`Advance ${advancePaise} exceeds the booking total ${pb.total} - refusing to compute a negative studio balance.`);
+  }
+  return due;
+}
+
+export type AdvancePaymentRequest = {
+  amountPaise: number;
+  currency: string;
+  bookingId: string;
+  description: string;
+  /** Deterministic per booking: a provider retry reuses the same reference,
+   *  matching the stored-order-id idempotency pattern in checkout-order.ts. */
+  referenceId: string;
+  advancePaise: number;
+  dueAtStudioPaise: number;
+};
+
+export function buildAdvancePaymentRequest(
+  booking: AdvanceBookingShape,
+  basis: AdvanceBasis,
+  rounding: AdvanceRounding,
+  /** Dependency override (reviewer R4): the caller passes the flag it
+   *  resolved through advancePaymentEnabled(), so a test flips ONE seam and
+   *  the REAL builder + split math run. Defaults to the real getter. */
+  opts?: { enabled?: boolean },
+): AdvancePaymentRequest {
+  if (!(opts?.enabled ?? advancePaymentEnabled())) {
+    throw new Error("Advance split payments are disabled (ADVANCE_PAYMENT_ENABLED=false): policy is owner-adopted; the activation gate (final review) is outstanding.");
+  }
+  if (booking.payMode !== "studio") {
+    throw new Error(`Advance applies to pay-at-studio bookings only (payMode=${booking.payMode}).`);
+  }
+  if (booking.advancePaymentId) {
+    throw new Error("An advance payment is already recorded for this booking.");
+  }
+  const split = computeAdvanceSplitFromBreakdown(booking.priceBreakdown, basis, rounding);
+  return {
+    amountPaise: split.advancePaise,
+    currency: booking.currency,
+    bookingId: booking.id,
+    description: "Advance for your AutoDeck booking (balance payable at the studio)",
+    referenceId: `advance-${booking.id}`,
+    advancePaise: split.advancePaise,
+    dueAtStudioPaise: studioBalancePaise(booking.priceBreakdown, split.advancePaise),
+  };
+}

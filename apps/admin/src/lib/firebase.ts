@@ -1,0 +1,70 @@
+"use client";
+
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
+import { getStorage } from "firebase/storage";
+import { getApps, initializeApp } from "firebase/app";
+import { getAuth, connectAuthEmulator, browserLocalPersistence, setPersistence } from "firebase/auth";
+import { getFirestore, initializeFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
+
+// In a real production build (`next build`/`next start`, NODE_ENV set by
+// Next.js itself - not something this repo needs to configure), silently
+// falling back to the dev project ID would mean real admin actions land in
+// "autodeck-dev" instead of the actual production Firebase project, with no
+// error or warning anywhere - a genuine deploy-safety hole (Phase 6 hostile
+// audit finding).
+// Same rule in development: a missing project id used to fall back to "autodeck-dev",
+// so one app could read and write a different database from the others and jobs
+// would look unsynced. Fail loudly instead (emulator runs are exempt).
+if (!process.env["NEXT_PUBLIC_FIREBASE_PROJECT_ID"] && process.env["NEXT_PUBLIC_USE_FIREBASE_EMULATOR"] !== "true") {
+  throw new Error(
+    "NEXT_PUBLIC_FIREBASE_PROJECT_ID is not set in a production build - refusing to silently fall back to the dev Firebase project.",
+  );
+}
+
+const firebaseConfig = {
+  apiKey: process.env["NEXT_PUBLIC_FIREBASE_API_KEY"] ?? "demo-key",
+  // In the browser the auth handler is served from this site (see the /__/auth rewrite in next.config.ts), so Safari does not treat sign-in as cross-site.
+  authDomain: (typeof window !== "undefined" && process.env["NEXT_PUBLIC_AUTH_SAME_ORIGIN"] === "1" ? window.location.host : undefined) ?? process.env["NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"] ?? "autodeck-dev.firebaseapp.com",
+  projectId: process.env["NEXT_PUBLIC_FIREBASE_PROJECT_ID"] ?? "autodeck-dev",
+  storageBucket: process.env["NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET"] ?? "autodeck-dev.firebasestorage.app",
+  messagingSenderId: process.env["NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID"] ?? "000000000000",
+  appId: process.env["NEXT_PUBLIC_FIREBASE_APP_ID"] ?? "1:000000000000:web:demo",
+};
+
+const app = getApps()[0] ?? initializeApp(firebaseConfig);
+
+export const auth = getAuth(app);
+// Live listeners must keep streaming behind proxies, VPNs and some Safari/mobile
+// networks, where the default WebChannel stream can stall and leave a screen showing
+// stale jobs until reload. Auto-detect falls back to long polling only when needed.
+function openFirestore() {
+  try {
+    return initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+  } catch {
+    return getFirestore(app); // already initialised (fast refresh)
+  }
+}
+export const db = openFirestore();
+export const functions = getFunctions(app, "asia-south1");
+export const storage = getStorage(app);
+
+export const useEmulator = process.env["NEXT_PUBLIC_USE_FIREBASE_EMULATOR"] === "true";
+
+if (useEmulator) {
+  const host = process.env["NEXT_PUBLIC_FIREBASE_EMULATOR_HOST"] ?? "localhost";
+  try {
+    connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
+    const fsPort = Number(process.env["NEXT_PUBLIC_FIRESTORE_EMULATOR_PORT"] ?? "8080");
+    connectFirestoreEmulator(db, host, fsPort);
+    connectFunctionsEmulator(functions, host, 5001);
+  } catch {
+    // Already connected (Next.js fast refresh)
+  }
+} else {
+  void setPersistence(auth, browserLocalPersistence);
+}
+
+// Managed publishing always enforces verified App Check. No debug token/fallback.
+const catalogueAppCheckKey=process.env["NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY"];
+if(typeof window!=="undefined"&&!useEmulator&&catalogueAppCheckKey){initializeAppCheck(app,{provider:new ReCaptchaEnterpriseProvider(catalogueAppCheckKey),isTokenAutoRefreshEnabled:true});}

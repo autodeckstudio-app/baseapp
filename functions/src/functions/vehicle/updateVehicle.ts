@@ -1,0 +1,80 @@
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { getFirestore } from "firebase-admin/firestore";
+import type { Vehicle } from "@autodeck/core";
+import { COLLECTIONS } from "@autodeck/database";
+import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
+import { validate } from "../../middleware/validate.js";
+import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { updateVehicleSchema } from "../../schemas/vehicle.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
+
+export const updateVehicle = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
+  const user = extractUser(request);
+  assertRole(user, "customer", "studio", "admin", "superadmin");
+
+  const data = validate(updateVehicleSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "vehicle.update");
+
+  const db = getFirestore();
+  const customerDocId = user.claims.role === "customer" ? await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid) : null;
+  const ref = db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId);
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+
+    if (!snap.exists) {
+      throw new HttpsError("not-found", "Vehicle not found.");
+    }
+
+    const existing = snap.data() as Vehicle;
+
+    assertTenant(user, existing.tenantId);
+
+    // Customers can only update their own vehicles
+    if (user.claims.role === "customer" && existing.ownerId !== customerDocId) {
+      throw new HttpsError("permission-denied", "You do not own this vehicle.");
+    }
+
+    const updates: Record<string, unknown> = {
+      updatedAt: new Date().toISOString(),
+    };
+    if (data.registrationNumber !== undefined) updates["registrationNumber"] = data.registrationNumber;
+    if (data.make !== undefined) updates["make"] = data.make;
+    if (data.model !== undefined) updates["model"] = data.model;
+    if (data.year !== undefined) updates["year"] = data.year;
+    if (data.color !== undefined) updates["color"] = data.color;
+    if (data.odometer !== undefined) updates["odometer"] = data.odometer;
+    if (data.category !== undefined) updates["category"] = data.category;
+
+    // Changing the plate to one this owner already has live is a duplicate.
+    if (data.registrationNumber !== undefined && data.registrationNumber !== existing.registrationNumber) {
+      const clash = await tx.get(
+        db
+          .collection(COLLECTIONS.vehicles())
+          .where("tenantId", "==", existing.tenantId)
+          .where("ownerId", "==", existing.ownerId)
+          .where("registrationNumber", "==", data.registrationNumber)
+          .limit(10),
+      );
+      if (clash.docs.some((d) => d.id !== data.vehicleId && (d.data() as Vehicle).deletedAt === null)) {
+        throw new HttpsError("already-exists", "This car is already added.", { field: "registrationNumber", reason: "duplicate" });
+      }
+    }
+
+    tx.update(ref, updates);
+
+    writeAuditLog(tx, {
+      action: "vehicle.updated",
+      entityType: "Vehicle",
+      entityId: data.vehicleId,
+      user,
+      studioId: null,
+      before: { registrationNumber: existing.registrationNumber },
+      after: updates,
+    });
+  });
+
+  return { vehicleId: data.vehicleId };
+});

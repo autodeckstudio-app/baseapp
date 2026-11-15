@@ -1,0 +1,2 @@
+import{it,expect}from'vitest';import{readFileSync,existsSync}from'node:fs';
+it('Ceramic has its own hand-application service illustration rather than the PPF fallback',()=>{const s=readFileSync('src/lib/service-type-images.ts','utf8');expect(s).toContain('Ceramic: require("../../assets/imagery/service-types/ceramic.jpg")');expect(existsSync('assets/imagery/service-types/ceramic.jpg')).toBe(true);expect(s).toContain('service-types/ppf.jpg');expect(s).toContain('service-types/pps.jpg')});
