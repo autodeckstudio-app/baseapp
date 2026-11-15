@@ -1,0 +1,5 @@
+import {it,expect}from'vitest';
+import{updateStudioSettingsSchema}from'../../schemas/studio.js';
+const identity=()=>({tradeName:'Local fixture',address:'Fixture address',phone:'+910000000000',gstRegistered:false,gstin:null});
+it('accepts only the explicitly given phone-only issuer without adding optional legacy fields',()=>{const x=updateStudioSettingsSchema.parse({studioId:'s',invoiceIssuer:identity()});expect(x.invoiceIssuer).toEqual(identity());expect(x.invoiceIssuer).not.toHaveProperty('legalName');expect(x.invoiceIssuer).not.toHaveProperty('email')});
+it('retains legacy optional values for compatibility while rejecting malformed, registered and missing seller identity',()=>{expect(updateStudioSettingsSchema.safeParse({studioId:'s',invoiceIssuer:{...identity(),legalName:'Legacy fixture',email:'fixture@example.invalid'}}).success).toBe(true);for(const patch of[{email:'not-email'},{legalName:''},{email:null},{phone:''},{tradeName:''},{address:''},{gstRegistered:true},{gstin:'TEST'},{unknown:'private'}])expect(updateStudioSettingsSchema.safeParse({studioId:'s',invoiceIssuer:{...identity(),...patch}}).success).toBe(false)});

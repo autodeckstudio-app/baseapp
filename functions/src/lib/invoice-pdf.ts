@@ -59,7 +59,7 @@ async function renderSnapshot(inv:PdfRenderSnapshot):Promise<Buffer>{
  for(const[i,l]of inv.lineItems.entries()){const description=`${i+1}. ${l.serviceName??l.description}`;doc.font('regular').fontSize(10);if(doc.y+doc.heightOfString(description,{width:503})+45>700)doc.addPage();doc.strokeColor('#dddcd5').moveTo(46,doc.y).lineTo(549,doc.y).stroke();doc.moveDown(.5);text(description);text(`${l.quantity} x ${money(l.unitPrice)} | ${money(l.total)}`);doc.moveDown(.5);}
  if(doc.y>565)doc.addPage();doc.moveDown();text(`Subtotal: ${money(inv.subtotal)}`);if(inv.discount)text(`Discount: ${money(inv.discount)}`);text(`Tax: ${money(inv.tax)}`);if(inv.roundOffPaise)text(`Round off: ${money(inv.roundOffPaise)}`);text(`Total: ${money(inv.total)}`,17,true);
  if(inv.settlementKind==='membership_covered'&&inv.membershipId)text('Settled by membership benefit. Amount due: INR 0.00',10,true);
- doc.moveDown();text('Amounts and customer/vehicle details are the issued snapshots.',8);text(issuer.legalName,9,true);text(issuer.address,8);text(`${issuer.phone} | ${issuer.email}`,8);text('Not registered under GST. No GST is charged on this invoice.',8);
+ doc.moveDown();text('Amounts and customer/vehicle details are the issued snapshots.',8);text(issuer.tradeName,9,true);text(issuer.address,8);text(issuer.phone,8);text('Not registered under GST. No GST is charged on this invoice.',8);
  const pages=doc.bufferedPageRange();for(let i=pages.start;i<pages.start+pages.count;i++){doc.switchToPage(i);doc.page.margins.bottom=0;doc.font('regular').fontSize(8).fillColor('#73766e').text(`${inv.invoiceNumber} | Page ${i+1} of ${pages.count}`,46,795,{lineBreak:false,width:503,align:'right'});}doc.end();
  });
 }
