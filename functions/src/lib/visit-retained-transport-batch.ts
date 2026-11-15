@@ -26,8 +26,8 @@ export async function readScopedRetainedTransportList(db:Firestore,user:Authoriz
      ['tenantId','studioId','customerId','vehicleId'].some(k=>job[k]!==b[k]||visit[k]!==b[k]))return fail();
     if(job['visitServiceReturnId']&&!b['visitServiceReturnId'])return fail();
    }
-   const root=jobId?(await tx.get(db.collection('visitServiceReturns').doc(jobId))).data():null,retention=jobId?(await tx.get(db.collection('visitTransportRetentions').doc(jobId))).data():null,closure=jobId?(await tx.get(db.collection('visitTransportClosures').doc(jobId))).data():null;
-   if(root||retention||closure||b['visitServiceReturnId']||b['transportReadRevision']){
+   const returnRoot=jobId?(await tx.get(db.collection('visitServiceReturns').doc(jobId))).data():null,chargeRoot=jobId?(await tx.get(db.collection('visitCancellationCharges').doc(jobId))).data():null,root=returnRoot??(chargeRoot?.['version']===2?chargeRoot:null),retention=jobId?(await tx.get(db.collection('visitTransportRetentions').doc(jobId))).data():null,closure=jobId?(await tx.get(db.collection('visitTransportClosures').doc(jobId))).data():null;
+   if(root||retention||closure||b['visitCancellationChargeId']||b['visitServiceReturnId']||b['transportReadRevision']){
     if(!visitId||!root||!retention)return fail();const physical=await readScopedRetainedVisitTransportInTransaction(tx,db,user,visitId);
     if(physical.requestId!==requestId||physical.jobId!==jobId)return fail();rows.push({requestId,kind:'retained' as const,physical});
    }else rows.push({requestId,kind:'legacy' as const});

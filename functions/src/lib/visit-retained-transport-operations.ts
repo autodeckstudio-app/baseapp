@@ -16,8 +16,8 @@ export async function reviewRetainedTransportOperations(db:Firestore,user:Author
    actions.push({action:leg,label:leg==='pickup'?'Picked up':'Dropped back',enabled:reason===null,reason});
   }
   if(physical.requiresExplicitUnusedClosure&&(user.claims.role==='admin'||user.claims.role==='superadmin')){const reason=physical.neededLegs.length?'Finish retained legs':bill.visit.activeHandoverId?'Finish handover review':null;actions.push({action:'close_unused',label:'Close unused legs',enabled:reason===null,reason});}
-  const returns=bill.returnReviews.find(p=>p.jobId===physical.jobId);if(!returns)return fail();
-  const returnSummary={retainedPaise:returns.retainedPaise,returnPaise:returns.returnPaise,returnedPaise:returns.returnedPaise,status:returns.status};
+  const returns=bill.returnReviews.find(p=>p.jobId===physical.jobId),charge=bill.chargeReviews.find(c=>c.summary.jobId===physical.jobId);if(!returns&&!charge)return fail();
+  const returnSummary=returns?{retainedPaise:returns.retainedPaise,returnPaise:returns.returnPaise,returnedPaise:returns.returnedPaise,status:returns.status}:{retainedPaise:charge!.summary.receivedPaise,returnPaise:0,returnedPaise:0,status:'separate_charge'};
   const state={returnSummary,requestId:physical.requestId,visitId:physical.visitId,jobId:physical.jobId,physical,actions,requestToken:visitReturnHash(r),billToken:bill.review.reviewToken};
   return{...state,reviewToken:visitReturnHash(state)};
  });

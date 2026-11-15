@@ -59,8 +59,8 @@ async function readServiceReturnReview(tx: Transaction, db: Firestore, visitId: 
     const anchor=scope.members.find(m=>m.job.id===scope.visit.transportJobId);
     if(anchor?.job.status==='CANCELLED'){
       const retained=(await tx.get(db.collection('visitTransportRetentions').doc(anchor.job.id))).data();
-      if(retained){const root=(await tx.get(db.collection('visitServiceReturns').doc(anchor.job.id))).data(),plan=root?(await tx.get(db.collection('visitServiceReturnPlans').doc(root['planId']))).data():null;
-        if(!root||!plan)return fail();const transportProof=await readRetainedTransportProof(tx,db,root,plan['review']);
+      if(retained){const{readVisitRetentionOwner}=await import('./visit-retained-charge.js'),owner=await readVisitRetentionOwner(tx,db,anchor.job.id);
+        const transportProof=await readRetainedTransportProof(tx,db,owner.record,owner.review);
         if(transportProof.physicalState==='open')return fail();}
     }
   }

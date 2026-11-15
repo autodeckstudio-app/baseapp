@@ -1,3 +1,4 @@
+import{readVisitRetentionOwner}from'./visit-retained-charge.js';
 import type{Firestore,Transaction}from'firebase-admin/firestore';import type{AuthorizedUser}from'@autodeck/auth';import{HttpsError}from'firebase-functions/v2/https';import{assertRole}from'../middleware/auth.js';import{readVisitBilling}from'./visit-billing.js';import{readRetainedTransportProof}from'./visit-transport-retention-state.js';
 const unavailable=():never=>{throw new HttpsError('not-found','Original retained journey unavailable.');};
 /** DORMANT authenticated read seam for future visit/request-list adapters. No
@@ -20,9 +21,8 @@ export async function readScopedRetainedVisitTransportInTransaction(tx:Transacti
   // marker is unknown, not an empty/history result that makes a trip vanish.
   const bill=await readVisitBilling(tx,db,visitId),anchor=bill.members.find(m=>m.job.id===bill.visit.transportJobId);
   if(!anchor||anchor.job.status!=='CANCELLED')return unavailable();
-  const record=(await tx.get(db.collection('visitServiceReturns').doc(anchor.job.id))).data();if(!record)return unavailable();
-  const plan=(await tx.get(db.collection('visitServiceReturnPlans').doc(record['planId']))).data();if(!plan?.['review']?.['transport'])return unavailable();
-  const proof=await readRetainedTransportProof(tx,db,record,plan['review']),r=proof.current,legs=proof.review.retainedLegs as('pickup'|'drop')[],unused=proof.review.proposedUnusedLegs as('pickup'|'drop')[];
+  const{record,review}=await readVisitRetentionOwner(tx,db,anchor.job.id);if(!review?.transport)return unavailable();
+  const proof=await readRetainedTransportProof(tx,db,record,review),r=proof.current,legs=proof.review.retainedLegs as('pickup'|'drop')[],unused=proof.review.proposedUnusedLegs as('pickup'|'drop')[];
   const needed=proof.physicalState==='open'?legs.filter(l=>!r[l+'CompletedAt']):[],completed=legs.filter(l=>!!r[l+'CompletedAt']);
   return{visitId,jobId:anchor.job.id,requestId:anchor.job.bookingId,originalRequestStatus:r['status'] as'REQUESTED'|'CONFIRMED'|'DONE',physicalState:proof.physicalState,
    placement:proof.physicalState==='open'?'active' as const:'history' as const,

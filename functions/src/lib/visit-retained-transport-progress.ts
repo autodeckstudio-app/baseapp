@@ -1,3 +1,4 @@
+import{readVisitRetentionOwner}from'./visit-retained-charge.js';
 import type{Firestore}from'firebase-admin/firestore';
 import type{AuthorizedUser}from'@autodeck/auth';
 import type{Booking}from'@autodeck/core';
@@ -24,10 +25,10 @@ export async function progressRetainedVisitTransport(db:Firestore,user:Authorize
   await assertCustomerNotErasing(tx,db,visit['tenantId'],visit['customerId']);
   const receiptRef=db.collection('visitTransportProgressReceipts').doc('vtp_'+visitReturnHash([user.claims.tenantId,user.uid,d.operationId])),prior=(await tx.get(receiptRef)).data();
   if(prior){if(prior['commandHash']!==visitReturnHash(d))return fail();return{...prior['result'],alreadyCompleted:true};}
-  const billing=await readVisitBilling(tx,db,d.visitId),member=billing.members.find(m=>m.job.id===d.jobId),record=(await tx.get(db.collection('visitServiceReturns').doc(d.jobId))).data();
+  const billing=await readVisitBilling(tx,db,d.visitId),member=billing.members.find(m=>m.job.id===d.jobId);const{record,review}=await readVisitRetentionOwner(tx,db,d.jobId);
   if(!member?.booking||!record||member.job.status!=='CANCELLED')return fail();
-  const plan=(await tx.get(db.collection('visitServiceReturnPlans').doc(record['planId']))).data();if(!plan)return fail();
-  const retained=await readRetainedTransportProof(tx,db,record,plan['review']),r=retained.current;
+
+  const retained=await readRetainedTransportProof(tx,db,record,review),r=retained.current;
   if(retained.closure||visitReturnHash(r)!==d.requestToken||r['status']!=='CONFIRMED'||!retained.review.retainedLegs.includes(d.leg)||retained.review.proposedUnusedLegs.includes(d.leg))return fail();
   const completedField=d.leg+'CompletedAt';if(r[completedField])return fail();
   const scope=await readVisitTransport(tx,db,member.booking as Booking);if(!scope)return fail();

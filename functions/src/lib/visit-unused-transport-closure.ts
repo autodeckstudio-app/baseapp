@@ -1,3 +1,4 @@
+import{readVisitRetentionOwner}from'./visit-retained-charge.js';
 import type{Firestore}from'firebase-admin/firestore';import type{AuthorizedUser}from'@autodeck/auth';import{HttpsError}from'firebase-functions/v2/https';import{z}from'zod';
 import{assertRole}from'../middleware/auth.js';import{assertCustomerNotErasing}from'./customer-erasure-guard.js';import{readVisitBilling}from'./visit-billing.js';import{readRetainedTransportProof}from'./visit-transport-retention-state.js';import{visitReturnHash}from'./visit-service-return-state.js';
 const id=z.string().min(1).max(120).regex(/^[A-Za-z0-9_-]+$/),hash=z.string().regex(/^[a-f0-9]{64}$/);
@@ -15,10 +16,10 @@ export async function closeUnusedVisitTransport(db:Firestore,user:AuthorizedUser
  return db.runTransaction(async tx=>{
   const visit=(await tx.get(db.collection('carVisits').doc(d.visitId))).data();if(!visit||visit['id']!==d.visitId||visit['tenantId']!==user.claims.tenantId)throw new HttpsError('not-found','Visit unavailable.');
   await assertCustomerNotErasing(tx,db,visit['tenantId'],visit['customerId']);
-  const bill=await readVisitBilling(tx,db,d.visitId),member=bill.members.find(m=>m.job.id===d.jobId),record=(await tx.get(db.collection('visitServiceReturns').doc(d.jobId))).data();
+  const bill=await readVisitBilling(tx,db,d.visitId),member=bill.members.find(m=>m.job.id===d.jobId);const{record,review}=await readVisitRetentionOwner(tx,db,d.jobId);
   if(!member?.booking||member.job.status!=='CANCELLED'||!record||bill.visit.transportJobId!==d.jobId||bill.visit.activeHandoverId)return fail();
-  const plan=(await tx.get(db.collection('visitServiceReturnPlans').doc(record['planId']))).data();if(!plan)return fail();
-  const transport=await readRetainedTransportProof(tx,db,record,plan['review']),r=transport.current,choice=transport.review;
+
+  const transport=await readRetainedTransportProof(tx,db,record,review),r=transport.current,choice=transport.review;
   if(transport.closure){if(transport.closure['commandHash']!==commandHash||transport.closure['closedBy']!==user.uid)return fail();return{status:'closed_unused' as const,requestId:record['bookingId'],alreadyClosed:true};}
   if(bill.review.reviewToken!==d.reviewToken||visitReturnHash(r)!==d.requestToken||visitReturnHash(choice.proposedUnusedLegs)!==visitReturnHash(command.unusedLegs)||
    !['REQUESTED','CONFIRMED'].includes(r['status'])||choice.needsUnusedLegDecision||choice.retainedLegs.some((l:string)=>!r[l+'CompletedAt'])||choice.proposedUnusedLegs.some((l:string)=>!!r[l+'CompletedAt']))return fail();

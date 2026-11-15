@@ -31,7 +31,7 @@ export const recordVisitCancellationCharge=onCall({region:'asia-south1',enforceA
   const balancePaise=charge.summary.balancePaise-d.receivedPaise,invoice=balancePaise===0?await prepareCancellationChargeInvoice(tx,db,charge,key):null,now=new Date().toISOString();
   const row={id:key,kind:'visit_cancellation_charge_actual_receipt',...Object.fromEntries(['tenantId','studioId','customerId','vehicleId','visitId','jobId','bookingId'].map(k=>[k,charge.record[k]])),chargeId:charge.record['id'],chargeHash:charge.record['recordHash'],currency:'INR',receivedPaise:d.receivedPaise,method:d.method,reference:d.reference,payloadHash,createdAt:now,recordedBy:user.uid};
   tx.create(receiptRef,{...row,recordHash:visitReturnHash(row)});if(invoice)tx.create(db.collection('visitCancellationChargeInvoices').doc(d.jobId),invoice);
-  tx.update(db.collection('bookings').doc(charge.record['bookingId']),{cancellationFeeStatus:balancePaise===0?'collected':'due',updatedAt:now});tx.update(visitRef,{updatedAt:now,updatedBy:user.uid});
+  tx.update(db.collection('bookings').doc(charge.record['bookingId']),{cancellationFeeStatus:charge.summary.feePaise?(balancePaise===0?'collected':'due'):'none',updatedAt:now});tx.update(visitRef,{updatedAt:now,updatedBy:user.uid});
   writeAuditLog(tx,{action:'visit.cancellationChargeReceiptRecorded',entityType:'visitCancellationChargeReceipt',entityId:key,user,studioId:v['studioId'],after:{visitId:d.visitId,jobId:d.jobId,receivedPaise:d.receivedPaise,balancePaise,invoiceId:invoice?.id??null}});
   return{receiptId:key,receivedPaise:d.receivedPaise,balancePaise,invoiceNumber:invoice?.invoiceNumber??null,alreadyRecorded:false};
  });
