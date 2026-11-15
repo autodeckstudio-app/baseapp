@@ -403,3 +403,34 @@ it('dormant HTTP partial or unrelated discovery remains held and no retry may is
  expect(await runner.qualifyVisitProviderDiscovery(db,providerUser,'v',attempt.id,port)).toEqual({outcome:'review_required'});
  expect(await run()).toEqual({outcome:'review_required'});expect(http.mock.calls.filter(([r])=>r.method==='POST')).toHaveLength(1);
 });
+
+async function coveredVisitFixture() {
+ const pb={vehicleCategory:'hatchback',basePrice:120000,scopeAdjustment:0,addOns:[],subtotal:120000,membershipDiscount:120000,membershipDiscountPercent:null,pickupFee:0,dropFee:0,taxRatePercent:0,taxDescription:'No tax',tax:0,total:0,currency:'INR'};
+ await db.collection('jobs').doc('wash').update({status:'VEHICLE_RECEIVED',isWalkIn:false,totalAmount:0,priceBreakdown:pb,membershipWashUsed:true});
+ await db.collection('bookings').doc('b_wash').update({totalAmount:0,priceBreakdown:pb,membershipId:'covered_plan',membershipWashUsed:true,membershipDiscountApplied:true,paymentStatus:'unpaid'});
+ await db.collection('services').doc('wash').set({id:'wash',tenantId:'t',name:'Covered wash',category:'washing',membershipWashEligible:true});
+ await db.collection('memberships').doc('covered_plan').set({id:'covered_plan',tenantId:'t',customerId:'c',status:'expired',washesUsed:1,washesTotal:1});
+ await db.collection('memberships').doc('covered_plan').collection('usage').doc('wash').set({id:'wash',tenantId:'t',membershipId:'covered_plan',customerId:'c',usageType:'wash',jobId:'wash',bookingId:'b_wash',valueRedeemed:120000,usedAt:new Date().toISOString()});
+ const{settleMembershipCoveredJob}=await import('../../functions/job/settleMembershipCoveredJob.js');
+ const settlement:any=await settleMembershipCoveredJob.run(request({jobId:'wash'}));
+ return{settlement,invoice:(await db.collection('invoices').doc(settlement.invoiceId).get()).data(),membership:(await db.collection('memberships').doc('covered_plan').get()).data()};
+}
+it('actual covered zero settlement remains original while an ordinary sibling receives its exact shared final cash and invoice',async()=>{
+ const{settlement,invoice,membership}=await coveredVisitFixture();await db.collection('jobs').doc('interior').update({status:'VEHICLE_RECEIVED'});
+ const r:any=await read();expect(r).toMatchObject({totalPaise:240000,appliedPaise:0,balancePaise:240000,lines:expect.arrayContaining([expect.objectContaining({jobId:'wash',amountPaise:0,appliedPaise:0,invoiceId:settlement.invoiceId})])});
+ const b:any=await prepare(r.reviewToken),receipt:any=await recordVisit(r,b,{receivedPaise:240000});
+ expect(receipt.entries).toEqual([{jobId:'interior',appliedPaise:240000}]);expect(await read()).toMatchObject({totalPaise:240000,appliedPaise:240000,balancePaise:0});
+ expect((await db.collection('visitInvoices').doc(receipt.invoiceId).get()).data()!.jobIds).toEqual(['interior']);
+ expect((await db.collection('invoices').doc(settlement.invoiceId).get()).data()).toEqual(invoice);expect((await db.collection('memberships').doc('covered_plan').get()).data()).toEqual(membership);
+ expect((await db.collection('jobs').doc('wash').get()).data()).toMatchObject({paymentStatus:'paid',settlementKind:'membership_covered',invoiceId:settlement.invoiceId});
+ expect((await db.collection('payments').get()).empty).toBe(true);
+});
+it.each(['usage-missing','usage-amount','booking-invoice','booking-unpaid','restored-benefit'])('covered original corruption %s cannot be called paid by the shared money review',async kind=>{
+ await coveredVisitFixture();
+ if(kind==='usage-missing')await db.collection('memberships').doc('covered_plan').collection('usage').doc('wash').delete();
+ if(kind==='usage-amount')await db.collection('memberships').doc('covered_plan').collection('usage').doc('wash').update({valueRedeemed:1});
+ if(kind==='booking-invoice')await db.collection('bookings').doc('b_wash').update({invoiceId:'another-invoice'});
+ if(kind==='booking-unpaid')await db.collection('bookings').doc('b_wash').update({paymentStatus:'unpaid'});
+ if(kind==='restored-benefit')await db.collection('bookings').doc('b_wash').update({membershipWashUsed:false});
+ await expect(read()).rejects.toThrow();expect((await db.collection('visitReceipts').get()).empty).toBe(true);expect((await db.collection('visitInvoices').get()).empty).toBe(true);
+});

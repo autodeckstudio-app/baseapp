@@ -1,3 +1,4 @@
+import{readCoveredLink,exactCoveredInvoice}from'./membership-covered.js';
 import{readVisitOnlineProof}from'./visit-online-proof.js';
 import{buildInvoice}from'./invoice-builder.js';
 import{isDeepStrictEqual}from'node:util';
@@ -120,6 +121,7 @@ export async function readVisitBilling(tx:Transaction,db:Firestore,visitId:strin
   if(job.settlementKind==='membership_covered'){
    // Covered zero-price invoices remain visible but never become a cash due.
    if(job.totalAmount!==0||applied!==0||!inv||inv.settlementKind!=='membership_covered'||!inv.membershipId||inv.paymentId!==null||job.paymentStatus!=='paid')return fail('Covered service needs its original settlement review.');
+   const covered=await readCoveredLink(db,tx,job);if(!exactCoveredInvoice(inv,job,covered.booking,covered.membershipId)||covered.booking.paymentStatus!=='paid')return fail('Covered service original linkage changed.');
   }else if(job.paymentStatus!==expectedStatus)return fail('Payment projection does not match original funding.');
   if(inv&&job.settlementKind!=='membership_covered'){
    if(applied!==job.totalAmount||job.invoiceId!==inv.id)return fail('Invoice and collected balance differ.');
