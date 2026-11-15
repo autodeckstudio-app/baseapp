@@ -434,3 +434,100 @@ it.each(['usage-missing','usage-amount','booking-invoice','booking-unpaid','rest
  if(kind==='restored-benefit')await db.collection('bookings').doc('b_wash').update({membershipWashUsed:false});
  await expect(read()).rejects.toThrow();expect((await db.collection('visitReceipts').get()).empty).toBe(true);expect((await db.collection('visitInvoices').get()).empty).toBe(true);
 });
+
+async function cancelReadyReturn(jobId='wash') {
+ const {readVisitServiceReturnReview}=await import('../../lib/visit-service-return-review.js');
+ const {prepareVisitServiceReturnPlan}=await import('../../lib/visit-service-return-plan.js');
+ const {cancelReviewedVisitService}=await import('../../lib/visit-service-cancellation.js');
+ const {readVisitBilling}=await import('../../lib/visit-billing.js');
+ const {randomUUID}=await import('node:crypto');
+ const user={uid:'staff',claims:{role:'admin',tenantId:'t',studioId:'s'}}as any;
+ const review=await db.runTransaction(tx=>readVisitServiceReturnReview(tx,db,'v',jobId,Date.now()));
+ const command={visitId:'v',jobId,operationId:randomUUID(),reviewToken:review.reviewToken,reason:'Customer changed selected work',reviewed:true,cancelled:true};
+ const {cancelled:_,...prepareCommand}=command;
+ const plan=await prepareVisitServiceReturnPlan(db,user,prepareCommand);
+ return{user,command,review,plan,cancel:()=>cancelReviewedVisitService(db,user,command),billing:()=>db.runTransaction(tx=>readVisitBilling(tx,db,'v'))};
+}
+it('dormant funded cancellation records an unpaid Admin return review, preserves original money and keeps the sibling collectible',async()=>{
+ const {r,b}=await receiptReady();await recordVisit(r,b);const ready=await cancelReadyReturn();
+ const sibling=(await db.collection('jobs').doc('interior').get()).data(),original=(await db.collection('visitReceipts').get()).docs[0]!.data(),applications=(await db.collection('offlineReceipts').get()).docs.map(d=>d.data());
+ expect(await ready.cancel()).toMatchObject({alreadyCancelled:false,revision:2,feePaise:0,returnReviewPaise:24000,returnedPaise:0,returnStatus:'awaiting_admin'});
+ expect((await db.collection('jobs').doc('interior').get()).data()).toEqual(sibling);
+ expect((await db.collection('visitReceipts').get()).docs[0]!.data()).toEqual(original);
+ expect((await db.collection('offlineReceipts').get()).docs.map(d=>d.data())).toEqual(applications);
+ expect(await ready.billing()).toMatchObject({returnReviews:[{jobId:'wash',paidPaise:24000,returnPaise:24000,returnedPaise:0,status:'awaiting_admin'}],review:{totalPaise:240000,appliedPaise:48000,balancePaise:192000}});
+ expect((await db.collection('bookings').doc('b_wash').get()).data()).toMatchObject({status:'CANCELLED',manualRefundDuePaise:24000,refundStatus:'awaiting_approval',refundedPaise:0});
+ for(const c of['refundRequests','paymentEvents','visitProviderAttempts','payments','invoices'])expect((await db.collection(c).get()).empty,c).toBe(true);
+ const next:any=await read(),bill:any=await prepare(next.reviewToken),settled:any=await recordVisit(next,bill,{receivedPaise:192000});
+ expect(settled.entries).toEqual([{jobId:'interior',appliedPaise:192000}]);expect((await db.collection('visitInvoices').doc(settled.invoiceId).get()).data()!.jobIds).toEqual(['interior']);
+ expect((await ready.billing()).review).toMatchObject({totalPaise:240000,appliedPaise:240000,balancePaise:0});
+});
+it('dormant fully paid service cancellation leaves its issued invoice and original payment byte-for-byte unchanged',async()=>{
+ await paid();const ready=await cancelReadyReturn(),invoice=(await db.collection('invoices').doc('i').get()).data(),paymentBefore=(await db.collection('payments').doc('p').get()).data();
+ await ready.cancel();expect((await db.collection('invoices').doc('i').get()).data()).toEqual(invoice);expect((await db.collection('payments').doc('p').get()).data()).toEqual(paymentBefore);
+ expect(await ready.billing()).toMatchObject({returnReviews:[{jobId:'wash',invoiceId:'i',returnPaise:120000,returnedPaise:0}],review:{balancePaise:240000}});
+});
+it('dormant fully settled shared online cancellation keeps original capture and shared invoice identities while removing only its obligation',async()=>{
+ const{r,b}=await receiptReady();await recordVisit(r,b);const next:any=await read(),bill:any=await prepare(next.reviewToken),settled=await settleCurrentOnline(next,bill),invoice=(await db.collection('visitInvoices').doc(settled.invoiceId).get()).data();
+ const ready=await cancelReadyReturn();expect(ready.review.entries).toEqual(expect.arrayContaining([expect.objectContaining({providerPaymentId:'pay_current',capturedPaise:96000,returnPaise:96000})]));
+ await ready.cancel();expect((await db.collection('visitInvoices').doc(settled.invoiceId).get()).data()).toEqual(invoice);
+ expect(await ready.billing()).toMatchObject({returnReviews:[{jobId:'wash',returnPaise:120000,returnedPaise:0}],review:{totalPaise:240000,appliedPaise:240000,balancePaise:0}});
+ expect((await db.collection('refundRequests').get()).empty).toBe(true);
+});
+it('dormant cancellation exact retry is one transition and one awaiting-approval identity even concurrently',async()=>{
+ const{r,b}=await receiptReady();await recordVisit(r,b);const ready=await cancelReadyReturn(),results=await Promise.all([ready.cancel(),ready.cancel()]);
+ expect(results.map(r=>r.alreadyCancelled).sort()).toEqual([false,true]);expect(results[0]).toEqual({...results[1],alreadyCancelled:results[0]!.alreadyCancelled});
+ expect((await db.collection('visitServiceReturns').get()).size).toBe(1);expect((await db.collection('carVisits').doc('v').get()).data()!.revision).toBe(2);
+ expect(await ready.cancel()).toMatchObject({alreadyCancelled:true,returnReviewPaise:24000,returnedPaise:0});
+});
+it('dormant cancellation rejects a stale saved review without changing the service or making a return',async()=>{
+ const{r,b}=await receiptReady();await recordVisit(r,b);const ready=await cancelReadyReturn();await db.collection('jobs').doc('interior').update({updatedAt:'changed-work'});
+ await expect(ready.cancel()).rejects.toThrow('changed');expect((await db.collection('jobs').doc('wash').get()).data()!.status).toBe('VEHICLE_RECEIVED');expect((await db.collection('visitServiceReturns').get()).empty).toBe(true);
+});
+it.each(['money','invoice','return-record','saved-review','booking-marker','job-marker'])('dormant cancellation %s corruption never makes a false sibling payable balance',async kind=>{
+ await paid();const ready=await cancelReadyReturn();await ready.cancel();
+ if(kind==='money')await db.collection('payments').doc('p').update({amount:119999});
+ if(kind==='invoice')await db.collection('invoices').doc('i').update({invoiceNumber:'CHANGED'});
+ if(kind==='return-record')await db.collection('visitServiceReturns').doc('wash').update({reviewHash:'0'.repeat(64)});
+ if(kind==='saved-review')await db.collection('visitServiceReturnPlans').doc(ready.plan.plan.id).update({'review.returnPaise':1});
+ if(kind==='booking-marker')await db.collection('bookings').doc('b_wash').update({visitServiceReturnId:'other'});
+ if(kind==='job-marker')await db.collection('jobs').doc('wash').update({visitServiceReturnId:'other'});
+ await expect(ready.billing()).rejects.toBeDefined();expect((await db.collection('refundRequests').get()).empty).toBe(true);
+});
+it('dormant cancellation follows no-fee sibling then existing final-service fee without reallocating the first return',async()=>{
+ const{r,b}=await receiptReady();await recordVisit(r,b);const first=await cancelReadyReturn();await first.cancel();const original=(await db.collection('visitServiceReturns').doc('wash').get()).data();
+ const second=await cancelReadyReturn('interior');expect(second.review).toMatchObject({feeReason:'last_service_policy',feePaise:10000,paidPaise:48000,retainedPaise:10000,returnPaise:38000,feeDuePaise:0});
+ await second.cancel();expect((await db.collection('visitServiceReturns').doc('wash').get()).data()).toEqual(original);
+ expect(await second.billing()).toMatchObject({returnReviews:expect.arrayContaining([expect.objectContaining({jobId:'wash',returnPaise:24000}),expect.objectContaining({jobId:'interior',retainedPaise:10000,returnPaise:38000})]),review:{totalPaise:0,appliedPaise:0,balancePaise:0}});
+ expect((await db.collection('refundRequests').get()).empty).toBe(true);
+});
+it('dormant cancellation will not hide a final outstanding fee or close an existing physical request',async()=>{
+ await receiptReady();await db.collection('jobs').doc('interior').update({status:'CANCELLED'});await db.collection('bookings').doc('b_interior').update({status:'CANCELLED'});
+ const r:any=await read(),b:any=await prepare(r.reviewToken);await recordVisit(r,b,{receivedPaise:5000});const ready=await cancelReadyReturn();expect(ready.review.feeDuePaise).toBe(5000);
+ await expect(ready.cancel()).rejects.toThrow('outstanding');expect((await db.collection('visitServiceReturns').get()).empty).toBe(true);
+});
+it('dormant cancellation rejects changed reason, other actor, foreign tenant and missing confirmation',async()=>{
+ const{r,b}=await receiptReady();await recordVisit(r,b);const ready=await cancelReadyReturn(),{cancelReviewedVisitService}=await import('../../lib/visit-service-cancellation.js');
+ for(const role of['studio','customer','accountant'])await expect(cancelReviewedVisitService(db,{...ready.user,claims:{...ready.user.claims,role}},ready.command)).rejects.toMatchObject({code:'permission-denied'});
+ await expect(cancelReviewedVisitService(db,{...ready.user,uid:'other'},ready.command)).rejects.toThrow();
+ await expect(cancelReviewedVisitService(db,{...ready.user,claims:{...ready.user.claims,tenantId:'other'}},ready.command)).rejects.toMatchObject({code:'not-found'});
+ await expect(cancelReviewedVisitService(db,ready.user,{...ready.command,cancelled:false})).rejects.toMatchObject({code:'invalid-argument'});
+ await expect(cancelReviewedVisitService(db,ready.user,{...ready.command,reason:'Different decision'})).rejects.toThrow();
+ expect((await db.collection('visitServiceReturns').get()).empty).toBe(true);
+});
+it('dormant cancellation never closes even a declined physical request or restores a hidden benefit',async()=>{
+ const{r,b}=await receiptReady();await recordVisit(r,b);const ready=await cancelReadyReturn();
+ const request={id:'b_wash',bookingId:'b_wash',jobId:'wash',tenantId:'t',studioId:'s',customerId:'c',status:'DECLINED',memberMembershipId:'held'};
+ await db.collection('pickupRequests').doc('b_wash').set(request);await expect(ready.cancel()).rejects.toThrow();
+ expect((await db.collection('pickupRequests').doc('b_wash').get()).data()).toEqual(request);expect((await db.collection('visitServiceReturns').get()).empty).toBe(true);
+});
+it('dormant cancellation serializes two saved service decisions so only one can use the sibling fee waiver',async()=>{
+ const{r,b}=await receiptReady();await recordVisit(r,b);const wash=await cancelReadyReturn(),interior=await cancelReadyReturn('interior');
+ const results=await Promise.allSettled([wash.cancel(),interior.cancel()]);expect(results.filter(r=>r.status==='fulfilled')).toHaveLength(1);
+ expect((await db.collection('visitServiceReturns').get()).size).toBe(1);expect((await db.collection('carVisits').doc('v').get()).data()!.revision).toBe(2);
+});
+it('dormant cancellation respects customer erasure before committing',async()=>{
+ const{r,b}=await receiptReady();await recordVisit(r,b);const ready=await cancelReadyReturn();
+ await db.collection('customers').doc('c').update({erasureState:'pending',deletedAt:'erasing'});await expect(ready.cancel()).rejects.toBeDefined();
+ expect((await db.collection('visitServiceReturns').get()).empty).toBe(true);
+});

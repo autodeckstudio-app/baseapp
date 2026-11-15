@@ -39,6 +39,6 @@ export async function readVisitServiceReturnReview(tx: Transaction, db: Firestor
   const paidPaise=funding.reduce((n,f)=>n+f.capturedPaise,0);
   if(paidPaise!==line.appliedPaise||!Number.isSafeInteger(paidPaise)||funding.some(f=>!Number.isSafeInteger(f.capturedPaise)||f.capturedPaise<=0||f.method==='razorpay_payment_link'&&!f.providerPaymentId))return fail();
   const retainedPaise=Math.min(paidPaise,fee.feePaise),entries=allocateCombinedReturn(funding,retainedPaise).map(e=>({...e,providerPaymentId:funding.find(f=>f.key===e.key)!.providerPaymentId,originalReceiptId:funding.find(f=>f.key===e.key)!.originalReceiptId}));
-  const review={visitId,jobId,sourceToken:scope.review.reviewToken,feePaise:fee.feePaise,feeReason:fee.reason,continuingJobIds:fee.continuingJobIds,paidPaise,retainedPaise,feeDuePaise:fee.feePaise-retainedPaise,returnPaise:paidPaise-retainedPaise,invoiceId:line.invoiceId,entries};
+  const review={visitId,jobId,moneyToken:scope.moneyTokens.get(jobId)!,sourceToken:scope.review.reviewToken,feePaise:fee.feePaise,feeReason:fee.reason,continuingJobIds:fee.continuingJobIds,paidPaise,retainedPaise,feeDuePaise:fee.feePaise-retainedPaise,returnPaise:paidPaise-retainedPaise,invoiceId:line.invoiceId,entries};
   return{...review,reviewToken:createHash('sha256').update(JSON.stringify(review)).digest('hex')};
 }

@@ -1,3 +1,4 @@
+import { visitReturnHash, readCancelledVisitReturn } from './visit-service-return-state.js';
 import{readCoveredLink,exactCoveredInvoice}from'./membership-covered.js';
 import{readVisitOnlineProof}from'./visit-online-proof.js';
 import{buildInvoice}from'./invoice-builder.js';
@@ -42,6 +43,7 @@ export async function readVisitBilling(tx:Transaction,db:Firestore,visitId:strin
  const sharedInvoices=new Map<string,Record<string,any>>();
  const sources:unknown[]=[],lines:{jobId:string;bookingId:string|null;name:string;amountPaise:number;appliedPaise:number;cancelled:boolean;invoiceId:string|null;invoiceNumber:string|null;visitInvoiceId:string|null;taxPaise:number|null;additionalPaise:number}[]=[];
  const fundingIds=new Set<string>(),verifiedReceiptIds=new Set<string>();
+ const moneyTokens=new Map<string,string>(),returnReviews:Awaited<ReturnType<typeof readCancelledVisitReturn>>[]=[];
  for(const {job,member,booking}of members){
   if(member.quotePending||member.paymentInFlight||member.cancellationPending||job.cashReconciliationId||job.paymentStatus==='refunded'||!money(job.totalAmount)||!money(job.additionalWorkDelta)||!job.priceBreakdown||job.priceBreakdown.currency!=='INR'||!money(job.priceBreakdown.total)||!money(job.priceBreakdown.tax)||job.priceBreakdown.total+job.additionalWorkDelta!==job.totalAmount)return fail('Service amount or payment needs review.');
   if(job.status==='CANCELLED'&&booking?.['cancellationFeeStatus']==='due'&&booking['cancellationFeePaise']>0)return fail('Cancellation fee settlement needs review.');
@@ -108,13 +110,13 @@ export async function readVisitBilling(tx:Transaction,db:Firestore,visitId:strin
    if(p.offlineReceiptSettlement){if(projection||p.amount!==actualReceipts||!receipts.size)return fail('Receipt settlement projection changed.');projection=p;continue;}
    if(fundingIds.has(p.id))return fail('One original payment cannot fund two services.');fundingIds.add(p.id);completed.set(p.id,p);applied+=p.amount;
   }
-  let onlineApplied=0;
+  let onlineApplied=0;const onlineProofs:unknown[]=[];
   const online=(await tx.get(db.collection('visitOnlineApplications').where('jobId','==',job.id).limit(21)));
   if(online.size>1)return fail('Online receipt history needs review.');
   for(const doc of online.docs){const a=doc.data();if(!validId(a['receiptId']))return fail('Online receipt identity needs review.');
    const proof=await readVisitOnlineProof(tx,db,a['receiptId']);
    if(!proof.applications.some(row=>row['id']===doc.id&&row['jobId']===job.id)||proof.receipt['visitId']!==visit.id||proof.receipt['customerId']!==job.customerId||proof.receipt['tenantId']!==job.tenantId||proof.receipt['studioId']!==job.studioId||proof.receipt['invoiceId']!==job.visitInvoiceId||visitInvoice?.['receiptSource']!=='visit_online_receipt'||visitInvoice['receiptId']!==a['receiptId'])return fail('Online receipt application needs review.');
-   onlineApplied+=a['appliedPaise'];
+   onlineProofs.push(proof);onlineApplied+=a['appliedPaise'];
   }
   applied+=actualReceipts+onlineApplied;if(!money(applied)||applied>job.totalAmount)return fail('Money exceeds the verified original obligation.');
   const expectedStatus=applied===job.totalAmount&&job.totalAmount>0?'paid':applied>0?'partial':'unpaid';
@@ -131,12 +133,17 @@ export async function readVisitBilling(tx:Transaction,db:Firestore,visitId:strin
   }else if(applied===job.totalAmount&&job.totalAmount>0&&!visitInvoice)return fail('Settled service has no verified original invoice.');
   if(visitInvoice&&applied!==job.totalAmount)return fail('Consolidated invoice funding changed.');
   if(visitInvoice)sharedInvoices.set(visitInvoice['id'],{id:visitInvoice['id'],invoiceNumber:visitInvoice['invoiceNumber'],issuedAt:visitInvoice['issuedAt'],currency:'INR',totalPaise:visitInvoice['totalPaise'],subtotalPaise:visitInvoice['subtotalPaise'],discountPaise:visitInvoice['discountPaise'],taxPaise:visitInvoice['taxPaise'],roundOffPaise:visitInvoice['roundOffPaise'],customerSnapshot:visitInvoice['customerSnapshot'],vehicleSnapshot:visitInvoice['vehicleSnapshot'],...(visitInvoice['issuerSnapshot']?{issuerSnapshot:visitInvoice['issuerSnapshot']}:{}),components:visitInvoice['components']});
-  if(job.status==='CANCELLED'&&(applied>0||booking?.['manualRefundDuePaise']||booking?.['refundStatus']&&booking['refundStatus']!=='none'))return fail('Cancelled service money needs original-method review.');
+  const moneyToken=visitReturnHash({job:{id:job.id,tenantId:job.tenantId,studioId:job.studioId,customerId:job.customerId,vehicleId:job.vehicleId,bookingId:job.bookingId,serviceId:job.serviceId,totalAmount:job.totalAmount,priceBreakdown:job.priceBreakdown,additionalWorkDelta:job.additionalWorkDelta,paymentStatus:job.paymentStatus,invoiceId:job.invoiceId??null,visitInvoiceId:job.visitInvoiceId??null,offlineSettlement:job.offlineSettlement??null},onlineProofs,booking:booking?{totalAmount:booking['totalAmount'],priceBreakdown:booking['priceBreakdown']??null,combinedPayment:booking['combinedPayment']??null,advancePaymentId:booking['advancePaymentId']??null}:null,visitInvoice,approvals:approvals.docs.map(d=>({id:d.id,...d.data()})),payments:paymentDocs.map(d=>({id:d.id,...d.data()})),receipts:receipts.docs.map(d=>({id:d.id,...d.data()})),online:online.docs.map(d=>({id:d.id,...d.data()})),invoices:invoices.docs.map(d=>({id:d.id,...d.data()}))});
+  moneyTokens.set(job.id,moneyToken);
+  if(job.status==='CANCELLED'&&(applied>0||(job as typeof job & {visitServiceReturnId?:string}).visitServiceReturnId||booking?.['manualRefundDuePaise']||booking?.['refundStatus']&&booking['refundStatus']!=='none')){
+   if(!booking||!booking['visitServiceReturnId'])return fail('Cancelled service money needs original-method review.');
+   returnReviews.push(await readCancelledVisitReturn(tx,db,{visitId:visit.id,jobId:job.id,job,booking,appliedPaise:applied,invoiceId:inv?.id??job.visitInvoiceId??null,moneyToken}));
+  }
   lines.push({jobId:job.id,bookingId:job.bookingId,name:job.lines?.map(l=>l.name).join(' + ')||'Service',amountPaise:job.totalAmount,appliedPaise:applied,cancelled:job.status==='CANCELLED',visitInvoiceId:job.visitInvoiceId??null,invoiceId:inv?.id??job.visitInvoiceId??null,invoiceNumber:inv?.invoiceNumber??visitInvoice?.['invoiceNumber']??null,taxPaise:inv?.tax??visitComponent?.['taxPaise']??(additions?null:job.priceBreakdown.tax),additionalPaise:additions});
   sources.push({job,visitInvoice,booking:booking??null,approvals:approvals.docs.map(d=>({id:d.id,...d.data()})),payments:paymentDocs.map(d=>({id:d.id,...d.data()})),receipts:receipts.docs.map(d=>({id:d.id,...d.data()})),online:online.docs.map(d=>({id:d.id,...d.data()})),invoices:invoices.docs.map(d=>({id:d.id,...d.data()}))});
  }
  const active=lines.filter(l=>!l.cancelled),totalPaise=active.reduce((n,l)=>n+l.amountPaise,0),appliedPaise=active.reduce((n,l)=>n+l.appliedPaise,0);
  if(!money(totalPaise)||!money(appliedPaise)||appliedPaise>totalPaise)return fail();
  const reviewToken=createHash('sha256').update(JSON.stringify({visit,sources})).digest('hex');
- return{visit,members,review:{visitId:visit.id,revision:visit.revision,reviewToken,currency:'INR' as const,sharedInvoices:[...sharedInvoices.values()],totalPaise,appliedPaise,balancePaise:totalPaise-appliedPaise,lines}};
+ return{visit,members,moneyTokens,returnReviews,review:{visitId:visit.id,revision:visit.revision,reviewToken,currency:'INR' as const,sharedInvoices:[...sharedInvoices.values()],totalPaise,appliedPaise,balancePaise:totalPaise-appliedPaise,lines}};
 }

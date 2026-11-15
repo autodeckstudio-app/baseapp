@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
@@ -7,6 +6,7 @@ import { z } from 'zod';
 import { assertRole } from '../middleware/auth.js';
 import { assertCustomerNotErasing } from './customer-erasure-guard.js';
 import { readVisitServiceReturnReview } from './visit-service-return-review.js';
+import { visitReturnHash as hash } from './visit-service-return-state.js';
 
 const id = z.string().min(1).max(120).regex(/^[A-Za-z0-9_-]+$/);
 const commandSchema = z.object({
@@ -23,11 +23,6 @@ export type VisitServiceReturnPlan = {
   visitId: string; jobId: string; preparedBy: string; preparedAt: string;
   command: VisitServiceReturnPlanCommand; commandHash: string; review: Review; reviewHash: string;
 };
-// Firestore map-key order is not a financial fact. Preserve array order but
-// sort object keys before hashing immutable journal contents.
-const canonical = (v: unknown): unknown => Array.isArray(v) ? v.map(canonical) :
-  v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).sort(([a],[b]) => a.localeCompare(b)).map(([k,value]) => [k,canonical(value)])) : v;
-const hash = (v: unknown) => createHash('sha256').update(JSON.stringify(canonical(v))).digest('hex');
 const fail = (message = 'Saved service return review needs checking.'): never => { throw new HttpsError('failed-precondition', message); };
 function keyFor(user: AuthorizedUser, operationId: string) { return 'vsr_' + hash([user.claims.tenantId, user.uid, operationId]); }
 function commandFor(raw: unknown) {
