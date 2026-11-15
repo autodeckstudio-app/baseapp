@@ -364,3 +364,42 @@ it('dormant final-service fee-window change invalidates a saved review even with
  try{await expect(db.runTransaction(tx=>readCurrentVisitServiceReturnPlan(tx,db,user,command))).rejects.toThrow('changed');}finally{vi.restoreAllMocks();}
  expect((await db.collection('refundRequests').get()).empty).toBe(true);
 });
+
+async function visitProtocolFixture(lostCreate=false) {
+ const{vi}=await import('vitest'),{RazorpayVisitProtocol}=await import('../../lib/razorpay-visit-provider.js'),store=await import('../../lib/visit-provider-store.js'),runner=await import('../../lib/visit-provider-runner.js');
+ const{command}=await providerClaimInput(),{attempt}=await store.claimVisitProviderAttempt(db,providerUser,command);
+ const entity={id:'plink_protocol',order_id:'order_protocol',short_url:'https://rzp.io/i/synthetic-protocol',status:'created',amount:360000,currency:'INR',reference_id:attempt.id,amount_paid:0,payments:[],accept_partial:false,upi_link:false};
+ const http=vi.fn(async(input:any):Promise<any>=>{
+  if(input.method==='POST'){
+   expect((await store.readVisitProviderRecovery(db,providerUser,'v',attempt.id)).attempt.state).toBe('submitting');
+   if(lostCreate)throw Error('Synthetic lost create response');
+   return{status:200,body:entity};
+  }
+  return{status:200,body:input.path.includes('?')?{payment_links:[entity]}:entity};
+ });
+ const port=new RazorpayVisitProtocol(http);
+ return{attempt,entity,http,store,runner,port,run:()=>runner.qualifyVisitProviderSubmission(db,providerUser,'v',attempt.id,port)};
+}
+it('dormant visit HTTP protocol follows the committed one-submit runner and never sends a booking or notification',async()=>{
+ const{run,http,attempt}=await visitProtocolFixture();expect(await run()).toEqual({outcome:'link_bound'});expect(await run()).toEqual({outcome:'link_bound'});
+ expect(http.mock.calls.filter(([r])=>r.method==='POST')).toHaveLength(1);expect(http.mock.calls).toHaveLength(2);
+ expect(http.mock.calls[0]![0]).toMatchObject({body:{reference_id:attempt.id,amount:360000,currency:'INR',notify:{sms:false,email:false},notes:{visitId:'v',billId:attempt.billId}}});
+ expect(JSON.stringify(http.mock.calls)).not.toContain('bookingId');
+ for(const c of['payments','visitOnlineReceipts','visitProviderCaptures','visitInvoices'])expect((await db.collection(c).get()).empty,c).toBe(true);
+});
+it('dormant HTTP lookup recovers a lost create from returned reference and independent direct fetch without a second POST',async()=>{
+ const{run,http,attempt,runner,port,store}=await visitProtocolFixture(true);
+ expect(await run()).toEqual({outcome:'review_required'});expect(await run()).toEqual({outcome:'review_required'});
+ expect(await runner.qualifyVisitProviderDiscovery(db,providerUser,'v',attempt.id,port)).toEqual({outcome:'link_bound'});
+ expect(http.mock.calls.filter(([r])=>r.method==='POST')).toHaveLength(1);
+ expect(http.mock.calls.filter(([r])=>r.method==='GET').map(([r])=>r.path)).toEqual(['/payment_links?reference_id='+attempt.id,'/payment_links/plink_protocol']);
+ expect((await store.readVisitProviderRecovery(db,providerUser,'v',attempt.id)).attempt.state).toBe('link_ready');expect((await db.collection('payments').get()).empty).toBe(true);
+});
+it('dormant HTTP partial or unrelated discovery remains held and no retry may issue another create',async()=>{
+ const{run,http,attempt,runner,port,entity}=await visitProtocolFixture(true);await run();
+ http.mockResolvedValue({status:200,body:{payment_links:[{...entity,reference_id:'other'}]}});
+ expect(await runner.qualifyVisitProviderDiscovery(db,providerUser,'v',attempt.id,port)).toEqual({outcome:'review_required'});
+ http.mockResolvedValue({status:200,body:{payment_links:[entity],has_more:true}});
+ expect(await runner.qualifyVisitProviderDiscovery(db,providerUser,'v',attempt.id,port)).toEqual({outcome:'review_required'});
+ expect(await run()).toEqual({outcome:'review_required'});expect(http.mock.calls.filter(([r])=>r.method==='POST')).toHaveLength(1);
+});

@@ -4,8 +4,9 @@ import type { PaymentLinkResult, PaymentProvider } from './payment-provider.js';
 import { beginVisitProviderSubmission, bindVisitProviderLink, markVisitProviderUncertain, readVisitProviderRecovery, saveVisitProviderCandidate } from './visit-provider-store.js';
 import { verifyVisitProviderFetchedLink } from './visit-provider-recovery.js';
 
-/** Deliberately NOT implemented by the production PaymentProvider. A visit is
+/** Deliberately separate from the legacy production PaymentProvider. A visit is
  * not a booking: never pass its ID through legacy bookingId provider notes.
+ * A dormant injected HTTP protocol implements this contract separately.
  * No scheduler, callable or webhook imports this qualification runner. */
 export type VisitProviderPort = {
   createVisitPaymentLink(input: { visitId: string; billId: string; referenceId: string; amountPaise: number; currency: 'INR' }): Promise<PaymentLinkResult>;
