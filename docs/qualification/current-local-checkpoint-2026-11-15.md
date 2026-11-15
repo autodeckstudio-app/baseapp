@@ -139,3 +139,17 @@ PDF was rendered and visually inspected, not treated as real invoice or owner
 acceptance. Broader partial/unfunded/tax/online/fee slices and production/visible
 integration remain unfinished. Hosted review and all release/provider/UI gates
 unchanged. No app/core/UI source was edited.
+
+## Retained read invalidation signal checkpoint
+
+The dormant explicit closure now atomically writes a minimal original-booking
+transport-read revision bound to the private exact closure proof. It changes no
+original request, booking status/updatedAt or financial field. Missing/mis-scoped
+signal cannot replace proof; exact retry does not bump twice. Original money
+token/return progress/issued retained invoice remain unchanged. Signal is only
+invalidation, never physical state or action authority. No app listener, UI,
+rule or production route changed. All414billing and300connected/privacy/
+Accountant/legacy-owed cases pass; types/build pass; units1999pass/1skip/1same
+unchanged explicit alert-label failure. Actual batch/list lifecycle and combined
+routed before/after remain unqualified. All release/provider-money/UI gates and
+hosted r5 unchanged. Details in retained-transport-list-integration-plan.md.

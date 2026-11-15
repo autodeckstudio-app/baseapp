@@ -85,3 +85,27 @@ provider activation and combined connected preview remain separate open work.
 No owner business-policy question was found in this investigation; the next
 step is engineering plus the already-required visual gate, not an invented
 approval request or permission to release.
+
+## Revision signal qualified locally
+
+The dormant explicit unused closure transaction now writes
+`transportReadRevision:{version:1,visitId,requestId,revision}` on its original
+scoped booking, atomically with closure/retention/visit revision. It does not
+change booking status, updatedAt, prices, refund fields or original request.
+No actor, private hash, note, fee or terminal disposition is in the signal.
+The private closure stores the exact revision and proof validation checks both
+directions. A signal without closure, removed signal, wrong visit/request/
+revision or unexpected extra fields holds reads. Exact replay writes nothing
+and does not bump again. Existing closure records without this new signal are
+not backfilled. No existing-client listener is modified in this checkpoint.
+
+Seven new emulator cases pass, including equal original per-service money token,
+return progress, invoice/request, scoped own-customer invoice read and physical
+projection after closure. Final sibling policy/window scenarios still pass.
+All414billing cases pass with complete unique-name union checked (41focused+
+373others in nine disjoint batches, eight42and one37). All300connected/privacy/
+Accountant/legacy-owed cases pass on this tree. Functions types/build pass; full
+units1999pass,1skip,1same unchanged explicit staff-alert-label failure. No app/
+core/UI source changes. This closes only the source invalidation-signal gap,
+not listener delivery, batching, stale-result handling, actual mounted screens
+or owner preview. Production routing/rules/activation remain unchanged.

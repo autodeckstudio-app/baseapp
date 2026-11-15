@@ -22,9 +22,15 @@ export async function closeUnusedVisitTransport(db:Firestore,user:AuthorizedUser
   if(transport.closure){if(transport.closure['commandHash']!==commandHash||transport.closure['closedBy']!==user.uid)return fail();return{status:'closed_unused' as const,requestId:record['bookingId'],alreadyClosed:true};}
   if(bill.review.reviewToken!==d.reviewToken||visitReturnHash(r)!==d.requestToken||visitReturnHash(choice.proposedUnusedLegs)!==visitReturnHash(command.unusedLegs)||
    !['REQUESTED','CONFIRMED'].includes(r['status'])||choice.needsUnusedLegDecision||choice.retainedLegs.some((l:string)=>!r[l+'CompletedAt'])||choice.proposedUnusedLegs.some((l:string)=>!!r[l+'CompletedAt']))return fail();
+  const bookingRef=db.collection('bookings').doc(record['bookingId']),booking=(await tx.get(bookingRef)).data();
+  if(!booking||booking['id']!==record['bookingId']||['tenantId','studioId','customerId','vehicleId','visitId'].some(k=>booking[k]!==record[k])||booking['transportReadRevision']!==undefined)return fail();
   const now=new Date().toISOString(),revision=visit['revision']+1;if(!Number.isSafeInteger(revision))return fail();
-  const closure={id:d.jobId,kind:'visit_explicit_unused_transport_closure',status:'closed_unused',tenantId:record['tenantId'],studioId:record['studioId'],customerId:record['customerId'],vehicleId:record['vehicleId'],visitId:d.visitId,jobId:d.jobId,bookingId:record['bookingId'],planId:record['planId'],reviewHash:record['reviewHash'],transportHash:transport.proof['transportHash'],requestHash:d.requestToken,unusedLegs:command.unusedLegs,retainedLegs:choice.retainedLegs,retainedTransportPaise:choice.retainedTransportPaise,commandHash,closedBy:user.uid,closedAt:now};
+  // Cache invalidator on an already scoped readable document, not physical or
+  // financial truth. No actor, note, price, private hash or terminal state.
+  const readSignal={version:1,visitId:d.visitId,requestId:record['bookingId'],revision};
+  const closure={id:d.jobId,kind:'visit_explicit_unused_transport_closure',status:'closed_unused',tenantId:record['tenantId'],studioId:record['studioId'],customerId:record['customerId'],vehicleId:record['vehicleId'],visitId:d.visitId,jobId:d.jobId,bookingId:record['bookingId'],planId:record['planId'],reviewHash:record['reviewHash'],transportHash:transport.proof['transportHash'],requestHash:d.requestToken,unusedLegs:command.unusedLegs,retainedLegs:choice.retainedLegs,retainedTransportPaise:choice.retainedTransportPaise,commandHash,closedBy:user.uid,closedAt:now,readSignalRevision:revision};
   tx.create(db.collection('visitTransportClosures').doc(d.jobId),{...closure,recordHash:visitReturnHash(closure)});
+  tx.update(bookingRef,{transportReadRevision:readSignal});
   tx.update(db.collection('visitTransportRetentions').doc(d.jobId),{closureId:d.jobId});
   tx.update(db.collection('carVisits').doc(d.visitId),{revision,updatedBy:user.uid,updatedAt:now});
   return{status:'closed_unused' as const,requestId:record['bookingId'],alreadyClosed:false};

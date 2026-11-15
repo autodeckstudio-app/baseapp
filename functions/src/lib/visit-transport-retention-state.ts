@@ -15,6 +15,13 @@ export async function readRetainedTransportProof(tx:Transaction,db:Firestore,rec
  const current=(await tx.get(db.collection('pickupRequests').doc(record['bookingId']))).data();
  const visit=(await tx.get(db.collection('carVisits').doc(record['visitId']))).data();
  const closure=(await tx.get(db.collection('visitTransportClosures').doc(record['jobId']))).data();
+ const booking=(await tx.get(db.collection('bookings').doc(record['bookingId']))).data();
+ const signal=booking?.['transportReadRevision'];
+ if(signal!==undefined||closure?.['readSignalRevision']!==undefined){
+  if(!closure||!booking||!Number.isSafeInteger(closure['readSignalRevision'])||closure['readSignalRevision']<2||
+   ['tenantId','studioId','customerId','vehicleId','visitId'].some(k=>booking[k]!==record[k])||
+   visitReturnHash(signal)!==visitReturnHash({version:1,visitId:record['visitId'],requestId:record['bookingId'],revision:closure['readSignalRevision']}))return fail();
+ }
  if(!proof||proof['id']!==record['jobId']||proof['kind']!=='visit_original_transport_retention'||
    ['tenantId','studioId','customerId','vehicleId','visitId','jobId','bookingId','planId','reviewHash'].some(k=>proof[k]!==record[k])||
    proof['transportHash']!==visitReturnHash(t)||proof['retainedTransportPaise']!==review['transportRetainedPaise']||
