@@ -391,3 +391,23 @@ use a genuinely supported original prepaid-booking source or finish the
 prearrival/underfunded transport-funding path. This is NOT a new owner-policy
 question or authority to infer receipt/funding. Broader outstanding transport,
 final-fee allocation and benefit-extra cases remain unfinished as stated above.
+
+## Existing original prepayment pickup qualification
+
+A supported original prepaid-booking fixture resolves the pickup qualification
+gap without relaxing the grouped receipt writer. The synthetic existing original
+online payment and matching original invoice are seeded as immutable source
+records, not created through a provider capture or described as one. The actual
+billing reader verifies them; real reviewed cancellation retains the original
+request, then Studio Review journey > Picked up > Confirm picked up completes.
+Admin/Studio/Customer all refresh to Drop pending at320/390/1280. One original
+request remains CONFIRMED with actual pickup stamp and no drop stamp. Cancelled
+work remains CANCELLED, surviving work PENDING_VEHICLE; original payment/invoice
+are unchanged. New emulator test verifies those facts and exact replay. Actual
+pixels inspected, including320confirmation and390Customer lower transport card.
+
+This proves the operation can consume supported original prepayment. It does
+not add a grouped prearrival receipt route or solve underfunded retained charge.
+The earlier failed newly collected prearrival fixture remains correctly rejected.
+See combined-operational-status-20261115.md for whole-outcome built/missing/held
+status. No full outcome completion or new provider authority is implied.
