@@ -1,3 +1,5 @@
+import {assertIngressResolved} from './visit-refund-ingress-proof.js';
+import type {VisitOnlineReturn} from './visit-online-return-state.js';
 import type {Firestore} from 'firebase-admin/firestore';
 import {HttpsError} from 'firebase-functions/v2/https';
 import {readVisitBilling} from './visit-billing.js';
@@ -20,16 +22,17 @@ export async function readVisitReturnLedger(db:Firestore,tenantId:string,studioI
  if(!id(tenantId)||!id(studioId))return fail();
  return db.runTransaction(async tx=>{
   const scope=(name:string)=>db.collection(name).where('tenantId','==',tenantId).where('studioId','==',studioId);
-  const [roots,approvals,manual,online,bookings,jobs,identities]=await Promise.all([
+  const [roots,approvals,manual,online,bookings,jobs,identities,ingress]=await Promise.all([
    ...['visitServiceReturns','visitServiceReturnApprovals','visitServiceManualReturns','visitServiceOnlineReturns'].map(name=>tx.get(scope(name).limit(VISIT_RETURN_LEDGER_CAP+1))),
    tx.get(scope('bookings').where('status','==','CANCELLED').limit(VISIT_RETURN_LEDGER_CAP+1)),
    tx.get(scope('jobs').where('status','==','CANCELLED').limit(VISIT_RETURN_LEDGER_CAP+1)),
    // Provider identities predate a studio field. Resolve their exact request
    // rather than inferring a studio or ignoring a lost processed return.
    tx.get(db.collection('visitServiceProviderRefunds').where('tenantId','==',tenantId).limit(VISIT_RETURN_LEDGER_CAP+1)),
+   tx.get(scope('visitRefundIngress').limit(VISIT_RETURN_LEDGER_CAP+1)),
   ]);
-  if(!roots||!approvals||!manual||!online||!bookings||!jobs||!identities)return fail();
-  if([roots,approvals,manual,online,bookings,jobs,identities].some(s=>s.size>VISIT_RETURN_LEDGER_CAP))throw new HttpsError('resource-exhausted','Service return history exceeds the report cap. No partial money total returned.');
+  if(!roots||!approvals||!manual||!online||!bookings||!jobs||!identities||!ingress)return fail();
+  if([roots,approvals,manual,online,bookings,jobs,identities,ingress].some(s=>s.size>VISIT_RETURN_LEDGER_CAP))throw new HttpsError('resource-exhausted','Service return history exceeds the report cap. No partial money total returned.');
   const originals=new Map(roots.docs.map(d=>[d.id,d.data()]));
   for(const doc of roots.docs){const r=doc.data();if(r['id']!==doc.id||r['jobId']!==doc.id||!id(r['visitId'])||!id(r['bookingId']))return fail();}
   for(const doc of approvals.docs)if(!originals.has(doc.id))return fail();
@@ -53,6 +56,12 @@ export async function readVisitReturnLedger(db:Firestore,tenantId:string,studioI
    for(const child of online.docs.filter(d=>d.data()['returnId']===doc.id&&d.data()['state']==='returned')){const m=child.data(),identity=scopedIdentity.get(child.id);if(!identity)return fail();actual=sum(actual,m['amountPaise']);events.push({id:child.id,method:'razorpay_payment_link',amountPaise:m['amountPaise'],recognisedAt:identity['recognisedAt'],accountingReviewNeeded:true});}
    if(actual!==p.returnedPaise)return fail();
   }
+  // A signed scoped event is not an actual return. Keep every report held
+  // until its exact source was independently fetched, committed and resolved.
+  for(const doc of ingress.docs){const row=doc.data(),request=online.docs.find(d=>d.id===row['referenceId']);
+   if(!request||!request.data()['ingressEventIds']?.includes(doc.id))return fail();assertIngressResolved(row,doc.id,request.data() as VisitOnlineReturn);
+  }
+  for(const doc of online.docs){const ids=doc.data()['ingressEventIds']??[];if(ids.some((eventId:string)=>!ingress.docs.some(e=>e.id===eventId&&e.data()['referenceId']===doc.id)))return fail();}
   // A different visit sharing scope cannot hide a cancelled funded member from
   // this root scan. The existing reader independently validates its markers.
   for(const bill of visits.values())if(bill.returnReviews.some(p=>!originals.has(p.jobId)))return fail();

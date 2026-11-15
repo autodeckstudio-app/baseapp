@@ -3,7 +3,7 @@ import {HttpsError} from 'firebase-functions/v2/https';
 import {visitReturnHash} from './visit-service-return-state.js';
 const fail=():never=>{throw new HttpsError('failed-precondition','Original online service return needs reconciliation.');};
 export type VisitRefundEvidence={id:string;paymentId:string;amountPaise:number;currency:'INR';referenceId:string;status:'processed'|'pending'|'failed'};
-export type VisitOnlineReturn={id:string;kind:'visit_original_online_return';tenantId:string;studioId:string;customerId:string;vehicleId:string;visitId:string;jobId:string;bookingId:string;returnId:string;entryKey:string;reviewHash:string;approvalHash:string;providerPaymentId:string;originalReceiptId:string|null;paymentId:string|null;amountPaise:number;captureAmountPaise:number;currency:'INR';state:'reserved'|'submitting'|'review_required'|'returned';candidateId:string|null;evidence:VisitRefundEvidence|null;createdAt:string;createdBy:string;updatedAt:string};
+export type VisitOnlineReturn={ingressEventIds?:string[];id:string;kind:'visit_original_online_return';tenantId:string;studioId:string;customerId:string;vehicleId:string;visitId:string;jobId:string;bookingId:string;returnId:string;entryKey:string;reviewHash:string;approvalHash:string;providerPaymentId:string;originalReceiptId:string|null;paymentId:string|null;amountPaise:number;captureAmountPaise:number;currency:'INR';state:'reserved'|'submitting'|'review_required'|'returned';candidateId:string|null;evidence:VisitRefundEvidence|null;createdAt:string;createdBy:string;updatedAt:string};
 export const visitOnlineReturnId=(returnId:string,entryKey:string)=>'vor_'+visitReturnHash([returnId,entryKey]);
 export const visitOnlineReturnCaptureId=(paymentId:string)=>'vrc_'+visitReturnHash(paymentId);
 export function exactVisitRefundEvidence(r:VisitOnlineReturn,raw:unknown):VisitRefundEvidence{
@@ -25,6 +25,7 @@ export async function readVisitOnlineReturnClaim(tx:Transaction,db:Firestore,r:V
    guard['claims'].some((c:any)=>typeof c.id!=='string'||!Number.isSafeInteger(c.amountPaise)||c.amountPaise<=0)||
    guard['claims'].reduce((n:number,c:any)=>n+c.amountPaise,0)>r.captureAmountPaise||
    guard['claims'].filter((c:any)=>c.id===r.id&&c.returnId===r.returnId&&c.entryKey===r.entryKey&&c.amountPaise===r.amountPaise&&c.reviewHash===r.reviewHash).length!==1)return fail();
+ if(r.ingressEventIds!==undefined&&(!Array.isArray(r.ingressEventIds)||r.ingressEventIds.length>2000||new Set(r.ingressEventIds).size!==r.ingressEventIds.length||r.ingressEventIds.some(id=>typeof id!=='string'||!/^vri_[a-f0-9]{64}$/.test(id))))return fail();
  if(r.candidateId!==null&&(typeof r.candidateId!=='string'||!/^[A-Za-z0-9_-]{1,120}$/.test(r.candidateId)))return fail();
  if(r.state==='returned'){
   if(!r.candidateId)return fail();

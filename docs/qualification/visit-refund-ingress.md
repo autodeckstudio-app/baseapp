@@ -49,3 +49,32 @@ cases and286connected/privacy/Accountant/legacy-owed cases pass on d732917.
 Actual HTTP routing, journal resolution after independent fetched proof, and
 unresolved-ingress report hold integration are still unfinished, not implied by
 the journal's durable review status. Do not activate or report them as complete.
+
+## Local independently verified resolution and report hold
+
+A later local-only slice adds Admin-only exact-event resolution. It cannot call
+a provider or create/project a return. The original request must already be
+returned with independently fetched processed evidence, a verified source,
+approval and capture identity. The exact event hint must agree with that request
+and actual refund ID. Conflicting or missing evidence cannot be waived. Resolution
+stores a hash binding the original event to that committed evidence and its
+recognition date. Exact retry and exact signed replay preserve it.
+
+Known scoped ingress rows now hold Daily Close, Office and Accountant reports
+until resolution. Resolved proof is revalidated every time. Request event markers
+and scoped rows are checked both directions, so a deleted row, moved tenant or
+studio, missing marker, changed hint/evidence/date/hash or orphan cannot silently
+remove a review. The marker changes request metadata only; original updatedAt
+and actual recognition time, money, receipt and invoice remain unchanged. A
+report recognizes no second refund when the event review is resolved.
+
+Unknown/unscoped events still require a proved provider-account/tenant routing
+boundary before production activation. This scoped report hold does not claim
+that an unattributed event belongs to an arbitrary tenant. No production route
+imports the journal or resolver. Credentialed transport, authenticated factory,
+real HTTP routing/acknowledgement and reference-length acceptance remain held.
+
+Focused qualification:24ingress and19protocol emulator cases pass, including13
+new resolution/report-marker cases. Functions types pass. The prior329-case full
+qualification applies to d732917; broader regression of this follow-up slice is
+pending at this note. No actual provider or live data action occurred.
