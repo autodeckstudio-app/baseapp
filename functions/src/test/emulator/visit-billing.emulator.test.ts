@@ -280,3 +280,87 @@ it('dormant fully funded return review preserves cash and online original identi
 it('dormant return review refuses retained-transport and benefit shortcuts before money effects',async()=>{
  const{readVisitServiceReturnReview}=await import('../../lib/visit-service-return-review.js');await db.collection('jobs').doc('wash').update({status:'VEHICLE_RECEIVED'});await db.collection('carVisits').doc('v').update({transportJobId:'wash'});await expect(db.runTransaction(tx=>readVisitServiceReturnReview(tx,db,'v','wash',Date.now()))).rejects.toThrow();expect((await db.collection('refundRequests').get()).empty).toBe(true);
 });
+
+async function savedReturnFixture() {
+ const {r,b}=await receiptReady();await recordVisit(r,b);
+ const {readVisitServiceReturnReview}=await import('../../lib/visit-service-return-review.js');
+ const review=await db.runTransaction(tx=>readVisitServiceReturnReview(tx,db,'v','wash',Date.now()));
+ const {randomUUID}=await import('node:crypto');
+ const user={uid:'staff',claims:{role:'admin',tenantId:'t',studioId:'s'}}as any;
+ const command={visitId:'v',jobId:'wash',operationId:randomUUID(),reviewToken:review.reviewToken,reason:'Customer changed selected work',reviewed:true};
+ return{user,command,review};
+}
+it('dormant service-return journal persists one exact original-method review without cancellation or financial effects',async()=>{
+ const{user,command,review}=await savedReturnFixture(),{prepareVisitServiceReturnPlan,readCurrentVisitServiceReturnPlan}=await import('../../lib/visit-service-return-plan.js');
+ const job=(await db.collection('jobs').doc('wash').get()).data(),sibling=(await db.collection('jobs').doc('interior').get()).data(),visit=(await db.collection('carVisits').doc('v').get()).data(),receipt=(await db.collection('visitReceipts').get()).docs[0]!.data();
+ const first=await prepareVisitServiceReturnPlan(db,user,command);
+ expect(first).toMatchObject({alreadyPrepared:false,plan:{kind:'visit_service_return_review',status:'review_only',preparedBy:'staff',review}});
+ expect(await prepareVisitServiceReturnPlan(db,user,command)).toEqual({...first,alreadyPrepared:true});
+ expect(await db.runTransaction(tx=>readCurrentVisitServiceReturnPlan(tx,db,user,command))).toEqual(first.plan);
+ expect((await db.collection('visitServiceReturnPlans').get()).size).toBe(1);
+ expect((await db.collection('jobs').doc('wash').get()).data()).toEqual(job);expect((await db.collection('jobs').doc('interior').get()).data()).toEqual(sibling);expect((await db.collection('carVisits').doc('v').get()).data()).toEqual(visit);expect((await db.collection('visitReceipts').get()).docs[0]!.data()).toEqual(receipt);
+ for(const c of['refundRequests','visitServiceReturns','visitCancellationReceipts','visitInvoices'])expect((await db.collection(c).get()).empty,c).toBe(true);
+});
+it('dormant saved return remains an immutable recovery snapshot after change but cannot pass execution revalidation',async()=>{
+ const{user,command}=await savedReturnFixture(),{prepareVisitServiceReturnPlan,readCurrentVisitServiceReturnPlan}=await import('../../lib/visit-service-return-plan.js');
+ const first=await prepareVisitServiceReturnPlan(db,user,command);await db.collection('jobs').doc('interior').update({updatedAt:'later-work'});
+ expect(await prepareVisitServiceReturnPlan(db,user,command)).toEqual({...first,alreadyPrepared:true});
+ await expect(db.runTransaction(tx=>readCurrentVisitServiceReturnPlan(tx,db,user,command))).rejects.toThrow('changed');
+ expect((await db.collection('visitServiceReturnPlans').doc(first.plan.id).get()).data()).toEqual(first.plan);
+});
+it('dormant changed review or operation reason cannot overwrite or prepare a different saved return',async()=>{
+ const{user,command}=await savedReturnFixture(),{prepareVisitServiceReturnPlan}=await import('../../lib/visit-service-return-plan.js');
+ await prepareVisitServiceReturnPlan(db,user,command);await expect(prepareVisitServiceReturnPlan(db,user,{...command,reason:'Different decision'})).rejects.toThrow('checking');
+ const{randomUUID}=await import('node:crypto');await db.collection('jobs').doc('wash').update({updatedAt:'changed'});
+ await expect(prepareVisitServiceReturnPlan(db,user,{...command,operationId:randomUUID()})).rejects.toThrow('changed');
+ expect((await db.collection('visitServiceReturnPlans').get()).size).toBe(1);
+});
+it('dormant return journal rejects non-Admin, foreign tenant, extra fields and unreviewed input before any write',async()=>{
+ const{user,command}=await savedReturnFixture(),{prepareVisitServiceReturnPlan}=await import('../../lib/visit-service-return-plan.js');
+ for(const role of['customer','studio','accountant'])await expect(prepareVisitServiceReturnPlan(db,{...user,claims:{...user.claims,role}}as any,command)).rejects.toMatchObject({code:'permission-denied'});
+ await expect(prepareVisitServiceReturnPlan(db,{...user,claims:{...user.claims,tenantId:'other'}},command)).rejects.toMatchObject({code:'not-found'});
+ for(const patch of[{reviewed:false},{approveRefund:true},{reason:' x '},{operationId:'invalid'}])await expect(prepareVisitServiceReturnPlan(db,user,{...command,...patch})).rejects.toMatchObject({code:'invalid-argument'});
+ expect((await db.collection('visitServiceReturnPlans').get()).empty).toBe(true);
+});
+it('dormant concurrent return snapshot retries keep one journal identity and no duplicate money',async()=>{
+ const{user,command}=await savedReturnFixture(),{prepareVisitServiceReturnPlan}=await import('../../lib/visit-service-return-plan.js');
+ const results=await Promise.all([prepareVisitServiceReturnPlan(db,user,command),prepareVisitServiceReturnPlan(db,user,command)]);
+ expect(results.map(r=>r.alreadyPrepared).sort()).toEqual([false,true]);expect(results[0]!.plan).toEqual(results[1]!.plan);expect((await db.collection('visitServiceReturnPlans').get()).size).toBe(1);
+ expect((await db.collection('refundRequests').get()).empty).toBe(true);
+});
+it('dormant corrupt saved funding cannot be reused as a checked original-method decision',async()=>{
+ const{user,command}=await savedReturnFixture(),{prepareVisitServiceReturnPlan,readCurrentVisitServiceReturnPlan}=await import('../../lib/visit-service-return-plan.js');
+ const first=await prepareVisitServiceReturnPlan(db,user,command);await db.collection('visitServiceReturnPlans').doc(first.plan.id).update({'review.returnPaise':1});
+ await expect(prepareVisitServiceReturnPlan(db,user,command)).rejects.toThrow('checking');await expect(db.runTransaction(tx=>readCurrentVisitServiceReturnPlan(tx,db,user,command))).rejects.toThrow('checking');
+ expect((await db.collection('refundRequests').get()).empty).toBe(true);
+});
+it('dormant saved return cannot execute after another actor, benefit, ownership or transport scope replaces its reviewed state',async()=>{
+ const{user,command}=await savedReturnFixture(),{prepareVisitServiceReturnPlan,readCurrentVisitServiceReturnPlan}=await import('../../lib/visit-service-return-plan.js');await prepareVisitServiceReturnPlan(db,user,command);
+ await expect(db.runTransaction(tx=>readCurrentVisitServiceReturnPlan(tx,db,{...user,uid:'other-admin'},command))).rejects.toThrow('checking');
+ await db.collection('bookings').doc('b_wash').update({membershipId:'benefit'});await expect(db.runTransaction(tx=>readCurrentVisitServiceReturnPlan(tx,db,user,command))).rejects.toThrow();await db.collection('bookings').doc('b_wash').update({membershipId:null});
+ await db.collection('carVisits').doc('v').update({transportJobId:'wash'});await expect(db.runTransaction(tx=>readCurrentVisitServiceReturnPlan(tx,db,user,command))).rejects.toThrow();await db.collection('carVisits').doc('v').update({transportJobId:null});
+ await db.collection('vehicles').doc('car').update({ownerId:'other-customer'});await expect(db.runTransaction(tx=>readCurrentVisitServiceReturnPlan(tx,db,user,command))).rejects.toThrow();
+ expect((await db.collection('refundRequests').get()).empty).toBe(true);
+});
+
+it('dormant journal does not mistake stored map-key order for changed funding evidence',async()=>{
+ const{user,command}=await savedReturnFixture(),{prepareVisitServiceReturnPlan,readCurrentVisitServiceReturnPlan}=await import('../../lib/visit-service-return-plan.js');
+ const first=await prepareVisitServiceReturnPlan(db,user,command),reorder=(v:any):any=>Array.isArray(v)?v.map(reorder):v&&typeof v==='object'?Object.fromEntries(Object.entries(v).reverse().map(([k,value])=>[k,reorder(value)])):v;
+ await db.collection('visitServiceReturnPlans').doc(first.plan.id).set(reorder(first.plan));
+ expect((await prepareVisitServiceReturnPlan(db,user,command)).plan).toEqual(first.plan);
+ expect(await db.runTransaction(tx=>readCurrentVisitServiceReturnPlan(tx,db,user,command))).toEqual(first.plan);
+});
+it('dormant final-service fee-window change invalidates a saved review even without a source-document edit',async()=>{
+ await db.collection('jobs').doc('interior').update({status:'CANCELLED'});await db.collection('bookings').doc('b_interior').update({status:'CANCELLED'});
+ await db.collection('bookings').doc('b_wash').update({scheduledAt:new Date(Date.now()+8*3600000).toISOString()});
+ await db.collection('jobs').doc('wash').update({status:'VEHICLE_RECEIVED'});const r:any=await read(),b:any=await prepare(r.reviewToken);await recordVisit(r,b,{receivedPaise:20000});
+ const{readVisitServiceReturnReview}=await import('../../lib/visit-service-return-review.js'),{prepareVisitServiceReturnPlan,readCurrentVisitServiceReturnPlan}=await import('../../lib/visit-service-return-plan.js'),{randomUUID}=await import('node:crypto');
+ const review=await db.runTransaction(tx=>readVisitServiceReturnReview(tx,db,'v','wash',Date.now())),user={uid:'staff',claims:{role:'admin',tenantId:'t',studioId:'s'}}as any;
+ const command={visitId:'v',jobId:'wash',operationId:randomUUID(),reviewToken:review.reviewToken,reason:'Final booked work cancelled',reviewed:true};
+ expect(review.feePaise).toBe(0);await prepareVisitServiceReturnPlan(db,user,command);
+ // Freeze only the policy clock after the journal is written. Firestore still
+ // sees the exact original data. No service or receipt time is fabricated.
+ const{vi}=await import('vitest');vi.spyOn(Date,'now').mockReturnValue(Date.now()+7*3600000);
+ try{await expect(db.runTransaction(tx=>readCurrentVisitServiceReturnPlan(tx,db,user,command))).rejects.toThrow('changed');}finally{vi.restoreAllMocks();}
+ expect((await db.collection('refundRequests').get()).empty).toBe(true);
+});

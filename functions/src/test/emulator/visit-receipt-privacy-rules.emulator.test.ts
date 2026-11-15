@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { TEST_PROJECT_ID } from "../emulator-setup";
 
-const COLLECTIONS = ["visitReceiptAttempts", "visitReceipts", "visitInvoices", "visitProviderAttempts", "visitProviderHeads", "visitProviderEvents", "visitProviderCaptures", "visitOnlineReceipts", "visitOnlineApplications", "visitProviderIngressReviews"] as const;
+const COLLECTIONS = ["visitReceiptAttempts", "visitReceipts", "visitInvoices", "visitProviderAttempts", "visitProviderHeads", "visitProviderEvents", "visitProviderCaptures", "visitOnlineReceipts", "visitOnlineApplications", "visitProviderIngressReviews", "visitServiceReturnPlans"] as const;
 const fixture = { id: "private-fact", tenantId: "visit-money-tenant", studioId: "studio-one", customerId: "customer-one", visitId: "visit-one", state: "rejected", reason: "bill_changed", receivedPaise: 72000 };
 let env: RulesTestEnvironment;
 beforeAll(async () => {
