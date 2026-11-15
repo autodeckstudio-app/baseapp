@@ -99,3 +99,41 @@ Connected/privacy/Accountant/legacy-owed293cases pass on this tree. Functions
 types/build pass; full units1985pass,1skip,1same explicit staff-alert-label fail.
 No app/core/UI source changed. The remaining issued-charge/funding/own-staff/
 PDF/Accountant integration and partial-cancellation execution are not finished.
+
+## Distinct snapshot and preview PDF, not issuance
+
+`visit-retained-transport-invoice-snapshot.ts` defines a separate experimental
+`visit_retained_transport_invoice` kind. It validates the original breakdown,
+chosen legs and exact derived basis, source hash formats, scoped identifiers,
+issuer/customer/vehicle snapshots and whole-document digest. Its allowlisted
+projection contains invoice content only, no private source/request/obligation
+identity or full cancelled-service price. Self-consistent hashes are not proof
+of issuance, ownership, captured funds, tax approval or source authenticity.
+There is intentionally no writer, callable, access endpoint or creation trigger.
+
+The dormant `renderRetainedTransportInvoicePdf` reuses the existing house layout
+with that distinct exact-component/no-reround contract. Existing legacy/shared
+PDF amount/nearest-rupee checks are unchanged. Only its internal render input
+type is narrowed to the vehicle fields the renderer actually prints. Registered
+issuers and nonzero-tax retained snapshots still hold for review. No fake GST
+support or rewrite of the18% original fixture is introduced.
+
+Fourteen new snapshot/PDF cases pass;22with existing legacy/shared PDF cases.
+Functions types/build pass; full Functions1999pass,1skip,1same unchanged explicit
+staff-alert-label failure before the final fixture-only round-off adjustment,
+then all22focused cases pass again. The synthetic original now has its valid
+whole-service nearest-rupee round-off(-3at0%,-44at18%); that remains with the
+excluded service while retained zero-tax legs remain1001+2002=3003paise.
+The generated one-page synthetic preview was rendered to pixels and inspected:
+readable original-layout heading, clear local-preview/synthetic identities,
+two retained transport rows, exactINR30.03total, no cancelled service line,
+no overlap/clipping and complete footer. PDF+PNG transferred to parent as
+preview evidence only, not a real invoice or approval. Existing app/core/UI
+sources unchanged; prior369billing/293connected qualification is from6fbc269,
+not rerun for this dormant document preview branch.
+
+This is not the completed invoice workflow: original obligation writer,
+source/duplicate/captured-funding proof, own/staff authorization and bounded
+Accountant reconciliation are still required before creation or access. Partial
+cancellation remains held. Any later visible change still requires owner
+before/after review. The hosted review remains unchanged and undelivered.

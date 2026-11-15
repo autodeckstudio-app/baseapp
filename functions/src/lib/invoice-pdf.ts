@@ -1,9 +1,10 @@
+import {parseRetainedTransportInvoiceSnapshot} from './visit-retained-transport-invoice-snapshot.js';
 import PDFDocument from 'pdfkit';
 import {join} from 'node:path';
 import {invoiceIssuerProblem,nearestRupeePaise,parseVisitInvoiceRead,type Invoice} from '@autodeck/core';
 const money=(n:number)=>`INR ${(n/100).toFixed(2)}`;
 export class InvoicePdfReview extends Error {}
-type PdfRenderSnapshot=Pick<Invoice,'invoiceNumber'|'issuerSnapshot'|'customerSnapshot'|'vehicleSnapshot'|'status'|'issuedAt'|'lineItems'|'subtotal'|'discount'|'tax'|'total'|'roundOffPaise'|'settlementKind'|'membershipId'>;
+type PdfRenderSnapshot=Pick<Invoice,'invoiceNumber'|'issuerSnapshot'|'customerSnapshot'|'status'|'issuedAt'|'lineItems'|'subtotal'|'discount'|'tax'|'total'|'roundOffPaise'|'settlementKind'|'membershipId'>&{vehicleSnapshot?:{make:string;model:string;registrationNumber:string}|null};
 type PdfCheckSnapshot=PdfRenderSnapshot&Pick<Invoice,'currency'|'taxRatePercent'|'taxDescription'>;
 /** Issue-time snapshots only. Missing identity or inconsistent tax is held, never repaired from current data. */
 export function assertInvoicePdfReady(inv:PdfCheckSnapshot):void{
@@ -28,6 +29,22 @@ export async function renderVisitInvoicePdf(raw:unknown):Promise<Buffer>{
  const common={invoiceNumber:saved.invoiceNumber,issuerSnapshot:saved.issuerSnapshot,customerSnapshot:saved.customerSnapshot,vehicleSnapshot:vehicle,status:'issued' as const,issuedAt:saved.issuedAt};
  for(const c of saved.components)assertInvoicePdfReady({...common,currency:'INR',lineItems:c.lineItems,subtotal:c.subtotalPaise,discount:c.discountPaise,tax:c.taxPaise,total:c.amountPaise,roundOffPaise:c.roundOffPaise,taxRatePercent:c.taxRatePercent,taxDescription:c.taxDescription});
  return renderSnapshot({...common,lineItems:saved.components.flatMap(c=>c.lineItems),subtotal:saved.subtotalPaise,discount:saved.discountPaise,tax:saved.taxPaise,total:saved.totalPaise,roundOffPaise:saved.roundOffPaise});
+}
+/** DORMANT preview renderer for a distinct retained-journey snapshot. No
+ * production importer/trigger. Existing whole-service rounding stays unchanged.
+ * Current registered issuer/nonzero-tax review gates remain unchanged too. */
+export async function renderRetainedTransportInvoicePdf(raw:unknown):Promise<Buffer>{
+ const saved=parseRetainedTransportInvoiceSnapshot(raw),problem=invoiceIssuerProblem(saved.issuerSnapshot);
+ if(problem)throw new InvoicePdfReview(problem);
+ if(saved.taxPaise!==0||saved.taxRatePercent!==0)throw new InvoicePdfReview('Retained journey tax snapshot needs office review.');
+ const vehicle=saved.vehicleSnapshot;
+ const snapshot={invoiceNumber:saved.invoiceNumber,issuerSnapshot:saved.issuerSnapshot,customerSnapshot:saved.customerSnapshot,
+  vehicleSnapshot:{registrationNumber:vehicle['registrationNumber']!,make:vehicle['make']!,model:vehicle['model']!},status:'issued' as const,issuedAt:saved.issuedAt,
+  lineItems:saved.components.map(c=>({description:c.description,quantity:c.quantity,unitPrice:c.unitPrice,total:c.total})),
+  subtotal:saved.subtotalPaise,discount:0,tax:0,total:saved.totalPaise,roundOffPaise:0};
+ // Exact original component policy has already been checked by the strict
+ // parser. Do not apply full-service nearest-rupee validation to retained legs.
+ return renderSnapshot(snapshot);
 }
 async function renderSnapshot(inv:PdfRenderSnapshot):Promise<Buffer>{
  return new Promise((resolve,reject)=>{
