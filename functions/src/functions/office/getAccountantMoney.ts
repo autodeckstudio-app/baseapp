@@ -1,3 +1,4 @@
+import {readVisitReturnLedger,visitReturnLedgerTotals} from '../../lib/visit-return-ledger.js';
 import {readVisitOnlineLedger,visitOnlineLedgerTotals} from '../../lib/visit-online-ledger.js';
 import {parseVisitInvoiceRead} from '@autodeck/core';
 import {readOfflineLedger,offlineLedgerTotals} from "../../lib/offline-ledger.js";
@@ -48,7 +49,7 @@ export function projectExpense(e: Expense) {
   return { id: e.id, amount: e.amount, category: e.category, paidVia: e.paidVia, date: e.date, month: e.month };
 }
 const DAYCLOSE_KEYS = ["id", "date", "status", "expectedCashPaise", "upiPaise", "cardPaise", "bankTransferPaise", "totalRevenuePaise",
-  "expensesPaise", "paymentCount", "expenseCount", "countedCashPaise", "variancePaise", "closeCount", "closedAt"] as const;
+  "serviceReturnsPaise", "cashServiceReturnsPaise", "onlineServiceReturnsPaise", "expensesPaise", "paymentCount", "expenseCount", "countedCashPaise", "variancePaise", "closeCount", "closedAt"] as const;
 export function projectDayClose(d: Record<string, unknown>) {
   const o: Record<string, unknown> = {};
   for (const k of DAYCLOSE_KEYS) o[k] = d[k] ?? null;
@@ -131,7 +132,11 @@ export const getAccountantMoney = onCall({ region: "asia-south1" , enforceAppChe
       paymentCount: payments.filter(p=>!p.offlineReceiptSettlement).length+offline.paymentCount+online.paymentCount, expensesPaise: exp, expensesByCategory: byCat };
   }
 
+  const serviceReturns=visitReturnLedgerTotals(await readVisitReturnLedger(db,tenantId,data.studioId),data.month);
+
   return {
+    // Finite sanitized rows only. Manual due is already in refundsOwed.
+    serviceReturns,
     month: data.month,
     studioId: data.studioId,
     cap: ACCOUNTANT_CAP,

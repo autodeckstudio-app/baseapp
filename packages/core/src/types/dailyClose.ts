@@ -7,13 +7,17 @@ export type DailyCloseStatus = "CLOSED";
  * recorded expenses; the admin enters the counted cash drawer total.
  */
 export interface DailyClose {
+  /** Separate actual service-return flows, never a rewrite of gross receipts. */
+  serviceReturnsPaise?: number;
+  cashServiceReturnsPaise?: number;
+  onlineServiceReturnsPaise?: number;
   id: string;
   tenantId: string;
   studioId: string;
   date: string; // YYYY-MM-DD
   status: DailyCloseStatus;
   // Computed at close time
-  expectedCashPaise: number; // completed cash payments minus cash expenses
+  expectedCashPaise: number; // gross cash receipts minus cash expenses and actual cash returns
   upiPaise: number;
   cardPaise: number;
   bankTransferPaise: number;

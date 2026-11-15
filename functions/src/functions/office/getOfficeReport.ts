@@ -1,3 +1,4 @@
+import {readVisitReturnLedger,visitReturnLedgerTotals} from '../../lib/visit-return-ledger.js';
 import {readVisitOnlineLedger,visitOnlineLedgerTotals} from '../../lib/visit-online-ledger.js';
 import {readOfflineLedger,offlineLedgerTotals} from "../../lib/offline-ledger.js";
 import { onCall } from "firebase-functions/v2/https";
@@ -98,7 +99,12 @@ export const getOfficeReport = onCall({ region: "asia-south1" , enforceAppCheck:
     else if (j.status === "CANCELLED") jobsCancelled += 1;
   }
 
+  const serviceReturns=visitReturnLedgerTotals(await readVisitReturnLedger(db,tenantId,data.studioId),data.month);
+
   return {
+    // This manual due overlaps legacy refundsOwed. Online due is separate;
+    // neither is netted from original gross receipts or added twice.
+    serviceReturns,
     offlineReceivedPaise:offline.receivedPaise,
     offlineReturnsPaise:offline.returnedPaise,
     cashOfflineReturnsPaise:offline.cashReturnedPaise,
