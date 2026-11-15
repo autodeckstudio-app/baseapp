@@ -1,3 +1,4 @@
+import{parseRetainedTransportBatch}from'@autodeck/core';
 import type{Firestore}from'firebase-admin/firestore';import type{AuthorizedUser}from'@autodeck/auth';import{HttpsError}from'firebase-functions/v2/https';import{z}from'zod';import{assertRole}from'../middleware/auth.js';import{readScopedRetainedVisitTransportInTransaction}from'./visit-retained-transport-read.js';
 const id=z.string().regex(/^[A-Za-z0-9_-]{1,120}$/),schema=z.object({requestIds:z.array(id).min(1).max(20)}).strict();const fail=():never=>{throw new HttpsError('failed-precondition','Original journey list needs review. No partial list returned.');};
 /** DORMANT exact-row batch. One transaction and max20 unique rows; no implicit
@@ -31,6 +32,6 @@ export async function readScopedRetainedTransportBatch(db:Firestore,user:Authori
     if(physical.requestId!==requestId||physical.jobId!==jobId)return fail();rows.push({requestId,kind:'retained' as const,physical});
    }else rows.push({requestId,kind:'legacy' as const});
   }
-  return{rows};
+  return parseRetainedTransportBatch({rows},ids);
  });
 }

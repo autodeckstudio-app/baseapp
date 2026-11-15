@@ -169,3 +169,34 @@ request discovery/list pagination/count policy, real screen consumption and live
 invalidation evidence. The injected test reader is not that transport. Actual
 Customer/Admin/Studio routed before/after and owner acceptance remain missing.
 No claim of finished visible integration or release permission is made.
+
+## Exact response contract connected to source and dormant apps
+
+`parseRetainedTransportBatch` is now shared by the actual source batch output
+and each dormant app adapter's `retainedTransportBatchReader`. It accepts only
+exact requested ordered rows and physical-field allowlists. Missing/extra/
+duplicate/reordered identities, private fields, malformed legacy shape,
+conflicting leg partitions, invalid/extra completion stamps and false terminal
+states throw. Completed history requires real DONE and all completed legs;
+closed_unused history preserves non-DONE status and unused unstamped legs.
+Open state is active, and explicit unused closure remains separately required.
+This structural contract is not source authentication, action permission or a
+replacement for the server's original financial/physical proof.
+
+Twenty-eight new core contract cases pass, with11watch cases. Each app's real
+mounted hook uses the concrete validator against a valid closed-unused row,
+then source leak/missing-row failures:5cases per app,15total. The38selected
+source/read/signal/closure/actual-drop emulator cases pass with the server-side
+validator active. Full core557pass; source Customer1137/Admin327/Studio146pass;
+mounted Customer578/Admin167/Studio153pass. All five types and Functions build
+pass. Full Functions1999pass,1skip,1same unchanged explicit staff-alert-label
+failure. Existing harness act warnings remain. No new full427billing rerun is
+claimed; prior complete414/300run remains identified above.
+
+No authenticated callable transport, screen import, visible label/layout/count
+change, direct-rule change or production activation was added. The actual
+source-to-client network path, scoped request discovery/pagination, real screen
+consumption and routed owner before/after still remain to connect. The real
+validator replaces only the injected test validator, not the missing network
+route. All deployment/provider-money/UI-copy and broader funding/tax/online/
+final-fee holds remain; hosted review unchanged and undelivered.
