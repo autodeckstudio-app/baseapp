@@ -1,5 +1,4 @@
 import type { HandoverReview } from "../lib/visit-service";
-import type { then } from "../lib/visit-service";
 import {jobStageCommand} from "@autodeck/core";
 import type {VisitRead} from '@autodeck/core';
 import {ReviewNotice} from "./ReviewNotice";
@@ -130,7 +129,7 @@ export function DeliveryConfirmPane({ job, onDelivered, onCancel }: { job: Servi
     setLoading(true); setLoadError(false); setIntegrityError(false);setWork(null);setVisit(null);setVisitReviewed(false);handoverAttempt.current=null;
     const superseded = () => gen !== generation.current || liveSigRef.current !== startSig || invalidGen.current !== startGen;
     try {
-      const [records,recorded,shared] = await Promise.all([getCurrentProtections(ctx.vehicleId, ctx.tenantId),getStaffJobWorkCoverage(ctx.jobId),ctx.visitId?then(m=>m.getVisit(ctx.jobId)):Promise.resolve(null)]);
+      const [records,recorded,shared] = await Promise.all([getCurrentProtections(ctx.vehicleId, ctx.tenantId),getStaffJobWorkCoverage(ctx.jobId),ctx.visitId?import('../lib/visit-service').then(m=>m.getVisit(ctx.jobId)):Promise.resolve(null)]);
       if (superseded()) return; // superseded, invalidated, or unmounted
       // Integrity: every record must belong to the car this pane is about.
       if (records.some((r) => r.vehicleId !== ctx.vehicleId)) { setIntegrityError(true); setProtections([]); return; }
