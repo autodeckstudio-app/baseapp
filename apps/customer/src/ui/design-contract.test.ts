@@ -771,7 +771,7 @@ describe("no studio photo behind app pages; the page light is the orange lamp gl
 });
 
 it("gift-covered zero-total detail says no payment needed rather than offering payment (also actual route tested)",()=>{
-  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain("Boolean(booking.giftId) && booking.priceBreakdown.total === 0");expect(b).toContain("Included with your gift - no payment needed");expect(b).toContain("const canPay = !job?.cashReconciliationId&&!noPaymentDue");
+  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain("Boolean(booking.giftId) && booking.priceBreakdown.total === 0");expect(b).toContain("Included with your gift - no payment needed");expect(b).toContain("const canPay = !job?.visitId&&!job?.cashReconciliationId&&!noPaymentDue");
   const c=read("src/app/(tabs)/book/confirm.tsx");expect(c).toContain("gift:Boolean(giftCode)");expect(read("src/lib/booking-confirm-copy.ts")).toContain("Your gift covers the selected wash.");expect(c).not.toContain("Price may vary based on final work.");
 });
 

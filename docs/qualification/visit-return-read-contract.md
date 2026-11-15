@@ -45,3 +45,13 @@ Qualification on this tree:
 No visual verification is claimed: there are no new pixels in this slice. The
 complete before/after routed review, navigation steps and owner preview remain
 required before any live change.
+
+Follow-up source-fixture repair, separate from application behavior:
+Two Customer source-string tests still expected the payment guard before the
+recovered grouped-visit protection was added. The actual route already guarded
+`!job?.visitId`. The tests now require that guard too, and evaluate that grouped
+and cash-reconciliation-held work cannot use the individual pay path. No app
+component or condition changed. The complete Customer source suite now passes
+1137/1137; Studio146/146 and Admin326/326 source suites also pass.
+Mounted interaction suites freshly pass Customer573, Studio148 and Admin162.
+These prove mounted behavior, not live routed pixels or owner visual approval.
