@@ -6,6 +6,7 @@ import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { getAccountantMoney, type AccountantMoney } from "../../../lib/accountant-service";
 import{VisitReturnTotals}from"../../../components/VisitReturnTotals";
 import{useAdminAuth}from"../../../lib/auth-context";
+import { CONNECTED_VISIT_LOCAL } from "../../../lib/connected-visit-release";
 import { LOCAL_VISIT_MONEY_PREVIEW, ACCOUNTANT_MONEY_ENABLED } from "../../../lib/backend-features";
 import { formatDate, formatPaise } from "../../../lib/format";
 
@@ -20,7 +21,7 @@ function shiftMonth(m: string, delta: number): string {
 
 // Read-only Money for the accountant role. Every figure comes from the server projection (getAccountantMoney).
 export default function AccountantPage() {
-  const{claims}=useAdminAuth(),studioId=LOCAL_VISIT_MONEY_PREVIEW?claims?.studioId??null:FIRST_STUDIO_ID;
+  const{claims}=useAdminAuth(),studioId=CONNECTED_VISIT_LOCAL?claims?.studioId??null:FIRST_STUDIO_ID;
   const generation=useRef(0);
   const [month, setMonth] = useState(kolkataMonth());
   const [data, setData] = useState<AccountantMoney | null>(null);
