@@ -96,10 +96,18 @@ See visit-unused-transport-closure.md. Local dormant Admin-only terminal proof
 now handles a saved unused leg after all retained legs actually completed,
 without fake request DONE/DECLINED or any original-request/money/invoice edit.
 Final-service cancellation recognizes the exact validated proof and still
-applies its existing fee. Missing reciprocal proof/marker or request drift holds.
+invokes existing category/time-window policy, including zero fee in the free
+window. Missing reciprocal proof/marker or request drift holds.
 All358billing cases pass with unique full-name union checked in eight batches;
 connected/privacy/Accountant/legacy-owed293cases pass. Functions types/build pass;
 full Functions units1969pass,1skip,1same unchanged staff-alert-label failure.
 No app/core/UI sources changed. Legacy request-list projection is still missing,
 so unused-leg transport is NOT a finished visible workflow. All release, money
 and combined actual-routed before/after gates remain. Hosted r5 is unchanged.
+
+Policy wording qualification: final removal does not automatically charge a fee.
+The existing owner-correction case proves both late-fee and free-window review.
+A359th case now also completes actual final cancellation after the new closure
+in the free window, with zero fee and full final-service return. All17closure
+cases plus the existing owner-correction case pass together (18/18). This last
+follow-up changes tests/docs only, not production policy or implementation.

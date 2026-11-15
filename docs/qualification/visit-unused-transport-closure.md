@@ -23,20 +23,27 @@ by production callables or screens, and no deployment is included.
   stale physical reviews.
 - Final sibling cancellation accepts independently validated completed transport
   or this closure, not mere request status. DONE without all retained stamps is
-  rejected. Existing last-service fees and full funding/work checks still apply.
+  rejected. Final removal invokes existing category/time-window policy, including zero
+  fee in its free window. Full funding/work checks still apply.
 - Private closure facts remain inaccessible to direct clients, including Admin
   and superadmin. No provider call or money movement is added.
 
 ## Qualification
 
-Sixteen new billing emulator cases cover unchanged request/invoice/money/sibling,
+Seventeen new billing emulator cases cover unchanged request/invoice/money/sibling,
 exact stale choices, missing pickup, actual drop, active handover, tenant/role,
 reciprocal marker/hash/request drift, concurrent replay and changed actor/op.
-Actual final sibling cancellation retains its existing10000paise fee and leaves
-the original143963paise return separate from the final230000paise return. False
+Actual final sibling cancellation inside the late-fee window retains the
+existing10000paise fee and leaves the original143963paise return separate from
+the final230000paise return. Eight hours before the short-service slot, actual
+final cancellation after closure has zero fee and a full240000paise final-service
+return. Last service never means an automatic fee. False
 DONE without retained drop evidence holds both billing and final review.
 
-All358billing cases pass in eight exact-name disjoint batches (seven45, one43).
+The first358billing cases pass in eight exact-name disjoint batches (seven45,
+one43). The added359th free-window case and all17closure cases plus the existing
+owner-correction policy case pass in a focused18-case follow-up. Production
+implementation is unchanged by the test/documentation follow-up.
 Collected names and passing-name union checked for complete unique coverage.
 Connected/intake/schedule/work/covered/Accountant/legacy-owed/privacy293cases
 pass across10files, including169direct-client privacy cases. Functions types
