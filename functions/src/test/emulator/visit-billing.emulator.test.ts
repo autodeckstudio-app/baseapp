@@ -874,3 +874,41 @@ it('dormant covered final-service cancellation cannot silently waive its existin
 it('dormant covered cancellation permits later legitimate membership usage without pretending its own restored wash was reconsumed',async()=>{
  const f=await coveredCancelReady();await f.cancel();await db.collection('memberships').doc('covered_plan').update({washesUsed:1,status:'active'});expect((await f.billing()).review.balancePaise).toBe(240000);
 });
+
+async function giftCancelReady(patch:any={}){
+ const pb={vehicleCategory:'hatchback',basePrice:0,scopeAdjustment:0,addOns:[],subtotal:0,membershipDiscount:0,membershipDiscountPercent:null,pickupFee:0,dropFee:0,taxRatePercent:0,taxDescription:'No tax',tax:0,total:0,currency:'INR'};
+ await db.collection('jobs').doc('wash').update({totalAmount:0,priceBreakdown:pb});await db.collection('bookings').doc('b_wash').update({totalAmount:0,priceBreakdown:pb,giftId:'gift_wash'});
+ const gift={id:'gift_wash',tenantId:'t',buyerId:'buyer',serviceId:'wash',amountPaise:120000,status:'REDEEMED',claimedBy:'c',redeemedBy:'c',bookingId:'b_wash',paymentId:'gift_payment',purchasedAt:'2026-09-01T00:00:00.000Z',expiresAt:'2026-10-31T00:00:00.000Z',redeemedAt:'2026-10-01T00:00:00.000Z',refundRequested:false,...patch};
+ await db.collection('gifts').doc('gift_wash').set(gift);await db.collection('payments').doc('gift_payment').set({id:'gift_payment',tenantId:'t',studioId:null,customerId:'buyer',giftId:'gift_wash',targetType:'gift',bookingId:null,jobId:null,method:'razorpay_payment_link',razorpayPaymentId:'pay_gift',amount:120000,currency:'INR',status:patch.status==='REFUNDED'?'refunded':'completed',...(patch.status==='REFUNDED'?{refundAmount:120000}:{})});
+ const{readVisitGiftCancellationReview,cancelVisitGiftService}=await import('../../lib/visit-gift-cancellation.js'),{randomUUID}=await import('node:crypto');
+ const review=await db.runTransaction(tx=>readVisitGiftCancellationReview(tx,db,'v','wash')),user={uid:'staff',claims:{role:'admin',tenantId:'t',studioId:'s'}}as any;
+ const command={visitId:'v',jobId:'wash',operationId:randomUUID(),reviewToken:review.reviewToken,reason:'Gifted work no longer needed',cancelled:true,reviewedGift:true};
+ return{gift,review,user,command,read:()=>db.runTransaction(tx=>readVisitGiftCancellationReview(tx,db,'v','wash')),api:cancelVisitGiftService,cancel:()=>cancelVisitGiftService(db,user,command)};
+}
+it('dormant gift cancellation restores only the original gift identity without extending expiry, buyer refund or recipient money',async()=>{
+ const f=await giftCancelReady(),payment=(await db.collection('payments').doc('gift_payment').get()).data(),sibling=(await db.collection('jobs').doc('interior').get()).data();expect(f.review.decision).toBe('restore_original_gift');
+ expect(await f.cancel()).toMatchObject({restoredGift:true,returnedPaise:0,alreadyCancelled:false});expect(await f.cancel()).toMatchObject({alreadyCancelled:true});
+ expect((await db.collection('gifts').doc('gift_wash').get()).data()).toEqual({...f.gift,status:'ACTIVE',redeemedBy:null,redeemedAt:null,bookingId:null});
+ expect((await db.collection('payments').doc('gift_payment').get()).data()).toEqual(payment);expect((await db.collection('jobs').doc('interior').get()).data()).toEqual(sibling);expect(await read()).toMatchObject({balancePaise:240000});
+ expect((await db.collection('payments').get()).size).toBe(1);expect((await db.collection('refundRequests').get()).empty).toBe(true);expect((await db.collection('visitGiftCancellations').get()).size).toBe(1);
+});
+it.each(['REFUNDED','VOID'])('dormant %s gift stays dead, never revived by cancelling its old service',async status=>{
+ const f=await giftCancelReady({status});if(status==='REFUNDED'){await db.collection('payments').doc('gift_payment').update({status:'refunded',refundAmount:120000});}
+ const review=await f.read();expect(await f.api(db,f.user,{...f.command,reviewToken:review.reviewToken})).toMatchObject({restoredGift:false,returnedPaise:0});expect((await db.collection('gifts').doc('gift_wash').get()).data()!.status).toBe(status);
+});
+it('dormant changed gift payment refund evidence invalidates the old review and fresh cancellation keeps credit refunded',async()=>{
+ const f=await giftCancelReady();await db.collection('payments').doc('gift_payment').update({status:'refunded',refundAmount:120000,refundedAt:new Date().toISOString()});await expect(f.cancel()).rejects.toThrow();
+ const review=await f.read();expect(review.decision).toBe('keep_refunded');expect(await f.api(db,f.user,{...f.command,reviewToken:review.reviewToken})).toMatchObject({restoredGift:false});expect((await db.collection('gifts').doc('gift_wash').get()).data()!.status).toBe('REFUNDED');
+});
+it.each(['pending-refund','legacy-claim','wrong-buyer','wrong-amount','duplicate-payment','hidden-pickup','source-missing'])('dormant gift cancellation %s needs review before any revival',async kind=>{
+ const f=await giftCancelReady();if(kind==='pending-refund')await db.collection('refundRequests').doc('r').set({paymentId:'gift_payment',status:'submitting'});if(kind==='legacy-claim')await db.collection('paymentEvents').doc('refund_gift_payment').set({kind:'external_return_hold'});if(kind==='wrong-buyer')await db.collection('payments').doc('gift_payment').update({customerId:'other'});if(kind==='wrong-amount')await db.collection('payments').doc('gift_payment').update({amount:119999});if(kind==='duplicate-payment')await db.collection('payments').doc('duplicate').set({giftId:'gift_wash'});if(kind==='hidden-pickup')await db.collection('pickupRequests').doc('b_wash').set({tenantId:'t',customerId:'c',bookingId:'b_wash',status:'DECLINED'});if(kind==='source-missing')await db.collection('payments').doc('gift_payment').delete();
+ await expect(f.cancel()).rejects.toThrow();expect((await db.collection('gifts').doc('gift_wash').get()).data()!.status).toBe('REDEEMED');expect((await db.collection('visitGiftCancellations').get()).empty).toBe(true);
+});
+it('dormant gift restore exact concurrent retry cannot create a second credit and does not follow a later new redemption',async()=>{
+ const f=await giftCancelReady(),results=await Promise.all([f.cancel(),f.cancel()]);expect(results.map(r=>r.alreadyCancelled).sort()).toEqual([false,true]);
+ await db.collection('gifts').doc('gift_wash').update({status:'REDEEMED',bookingId:'later_booking',redeemedBy:'c',redeemedAt:new Date().toISOString()});expect(await f.cancel()).toMatchObject({alreadyCancelled:true});expect((await db.collection('gifts').doc('gift_wash').get()).data()!.bookingId).toBe('later_booking');
+});
+it('dormant gift cancellation requires Admin, exact confirmation and existing final-service fee review',async()=>{
+ const f=await giftCancelReady();for(const role of['studio','customer','accountant'])await expect(f.api(db,{...f.user,claims:{...f.user.claims,role}},f.command)).rejects.toMatchObject({code:'permission-denied'});await expect(f.api(db,f.user,{...f.command,reviewedGift:false})).rejects.toMatchObject({code:'invalid-argument'});
+ await db.collection('jobs').doc('interior').update({status:'CANCELLED'});await db.collection('bookings').doc('b_interior').update({status:'CANCELLED'});await expect(f.read()).rejects.toThrow();expect((await db.collection('gifts').doc('gift_wash').get()).data()!.status).toBe('REDEEMED');
+});
