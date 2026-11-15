@@ -43,3 +43,9 @@ corrupted original receipt rejection. Wider regression remains pending at this
 checkpoint. Provider credentials/HTTP transport/factory and actual production
 routing remain held and unfinished. This adds no UI or copy; the combined
 actual-routed before/after owner preview is still required before live changes.
+
+Follow-up regression: see current-local-checkpoint-2026-11-15.md. All329billing
+cases and286connected/privacy/Accountant/legacy-owed cases pass on d732917.
+Actual HTTP routing, journal resolution after independent fetched proof, and
+unresolved-ingress report hold integration are still unfinished, not implied by
+the journal's durable review status. Do not activate or report them as complete.

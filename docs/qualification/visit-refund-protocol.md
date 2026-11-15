@@ -55,3 +55,6 @@ fields, lost response, empty/full/duplicate/conflicting discovery,409/429/500,
 exact retry and unchanged original invoice. Functions type check passes. Wider
 current-tree regression is pending at this checkpoint. Actual routed combined
 owner preview is still required before live changes.
+
+Follow-up regression: see current-local-checkpoint-2026-11-15.md. All329billing
+cases and286connected/privacy/Accountant/legacy-owed cases pass on d732917.
