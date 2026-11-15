@@ -61,6 +61,7 @@ const ENFORCED = [
   "visit/cancelVisitService.ts",
   "visit/getVisitBill.ts",
   "visit/getVisitInvoice.ts",
+  "visit/getVisitSeparateInvoicePdf.ts",
   "visit/prepareVisitBill.ts",
   "visit/recordVisitReceipt.ts",
   "visit/recordVisitCancellationCharge.ts",

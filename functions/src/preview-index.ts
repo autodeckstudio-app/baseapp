@@ -30,3 +30,4 @@ export{getVisitFeedback}from'./functions/booking/getVisitFeedback.js';
 export{recordVisitCancellationCharge}from'./functions/visit/recordVisitCancellationCharge.js';
 
 export{cancelVisitService}from"./functions/visit/cancelVisitService.js";
+export {getVisitSeparateInvoicePdf} from './functions/visit/getVisitSeparateInvoicePdf.js';

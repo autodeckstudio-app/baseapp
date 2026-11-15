@@ -276,3 +276,4 @@ export{reviewRetainedTransport,executeRetainedTransport}from'./functions/visit/r
 export{reviewVisitService,executeVisitService,reconcileVisitService}from'./functions/visit/visitServiceOperations.js';
 
 export{recordVisitCancellationCharge}from'./functions/visit/recordVisitCancellationCharge.js';
+export {getVisitSeparateInvoicePdf} from './functions/visit/getVisitSeparateInvoicePdf.js';
