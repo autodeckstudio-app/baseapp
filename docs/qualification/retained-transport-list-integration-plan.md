@@ -131,3 +131,41 @@ e4004d3, not relabeled as a full427run. This step is source batching only.
 Subscribe-before-fetch app lifecycle, signal delivery, overlapping requests,
 principal switches and visible list/count integration still need mounted proof
 and actual routed owner before/after. No rules/routes/UI/copy/activation changed.
+
+## Concrete app data adapters and mounted lifecycle, inactive
+
+Customer/Admin/Studio each now contain `retained-transport-watch.ts`, a concrete
+Firebase request+booking subscription adapter, and `use-retained-transport.ts`,
+an inactive-by-default mounted hook. No screen imports either. The shared core
+watch lifecycle installs all subscriptions before initial batch read, collapses
+synchronous initial callbacks, clears ready data immediately on invalidation,
+rejects stale generations, resets on principal/row/reader changes and removes
+all subscriptions on unmount. The hook gates every returned value by its exact
+scope and reader, including render-before-effect changes. Null scope signs out.
+
+Latest read/validation failure is unavailable, never a ready empty/history
+result. A failed source subscription stays unavailable until resubscription,
+rejecting pending successes and late events. The data adapter requires an
+explicit authenticated reader and strict validator port; there is no missing
+backend fallback, implicit callable, automatic activation or physical/action
+truth in revision signals. Caller scope must contain verified uid/role/tenant/
+studio and exact rows, not an arbitrary account label.
+
+Eleven shared lifecycle cases and twelve mounted cases (four per real app
+adapter with Firebase mocked at its boundary) pass. They prove subscription
+order, booking-only closure invalidation, row/principal replacement, signout,
+unmount, old success/failure, overlapping refresh, source denial, malformed
+response validation and inactive default. These are mounted data-flow tests,
+not live Firebase delivery or visual pixels. Full current core529pass; source
+Customer1137/Admin327/Studio146pass; mounted Customer577/Admin166/Studio152pass.
+All five type checks pass. Full Functions1999pass,1skip,1same unchanged explicit
+staff-alert-label failure. Existing act-environment harness warnings remain.
+No visible UI/layout/copy, production route or direct rule changed. Prior batch
+source-focused qualification remains separate; not a new full427billing run.
+
+Still required: strict retained batch response-contract implementation, actual
+source-authenticated callable transport in a coordinated inactive release path,
+request discovery/list pagination/count policy, real screen consumption and live
+invalidation evidence. The injected test reader is not that transport. Actual
+Customer/Admin/Studio routed before/after and owner acceptance remain missing.
+No claim of finished visible integration or release permission is made.

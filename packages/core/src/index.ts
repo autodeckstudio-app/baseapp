@@ -95,3 +95,5 @@ export * from "./visit-receipt-command";
 export * from "./visit-cancel-command";
 
 export * from "./visit-invoice-read";
+
+export * from './retained-transport-watch';
