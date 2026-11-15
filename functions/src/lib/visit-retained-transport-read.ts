@@ -1,4 +1,4 @@
-import type{Firestore}from'firebase-admin/firestore';import type{AuthorizedUser}from'@autodeck/auth';import{HttpsError}from'firebase-functions/v2/https';import{assertRole}from'../middleware/auth.js';import{readVisitBilling}from'./visit-billing.js';import{readRetainedTransportProof}from'./visit-transport-retention-state.js';
+import type{Firestore,Transaction}from'firebase-admin/firestore';import type{AuthorizedUser}from'@autodeck/auth';import{HttpsError}from'firebase-functions/v2/https';import{assertRole}from'../middleware/auth.js';import{readVisitBilling}from'./visit-billing.js';import{readRetainedTransportProof}from'./visit-transport-retention-state.js';
 const unavailable=():never=>{throw new HttpsError('not-found','Original retained journey unavailable.');};
 /** DORMANT authenticated read seam for future visit/request-list adapters. No
  * callable, direct-client rule change or UI importer. Original request status
@@ -6,7 +6,12 @@ const unavailable=():never=>{throw new HttpsError('not-found','Original retained
  * Never interprets absence of a stamp as permission to remove a future trip. */
 export async function readScopedRetainedVisitTransport(db:Firestore,user:AuthorizedUser,visitId:string){
  assertRole(user,'customer','studio','admin','superadmin');if(!/^[A-Za-z0-9_-]{1,120}$/.test(visitId))return unavailable();
- return db.runTransaction(async tx=>{
+ return db.runTransaction(tx=>readScopedRetainedVisitTransportInTransaction(tx,db,user,visitId));
+}
+/** Internal transaction seam so bounded list reads share one consistent snapshot. */
+export async function readScopedRetainedVisitTransportInTransaction(tx:Transaction,db:Firestore,user:AuthorizedUser,visitId:string){
+ assertRole(user,'customer','studio','admin','superadmin');
+ if(!/^[A-Za-z0-9_-]{1,120}$/.test(visitId))return unavailable();
   const visit=(await tx.get(db.collection('carVisits').doc(visitId))).data();
   if(!visit||visit['id']!==visitId||visit['tenantId']!==user.claims.tenantId||user.claims.role==='studio'&&visit['studioId']!==user.claims.studioId)return unavailable();
   const customer=(await tx.get(db.collection('customers').doc(visit['customerId']))).data();
@@ -23,5 +28,4 @@ export async function readScopedRetainedVisitTransport(db:Firestore,user:Authori
    placement:proof.physicalState==='open'?'active' as const:'history' as const,
    neededLegs:needed,completedLegs:completed,unusedLegs:[...unused],requiresExplicitUnusedClosure:proof.physicalState==='open'&&unused.length>0,
    pickupCompletedAt:typeof r['pickupCompletedAt']==='string'?r['pickupCompletedAt'] as string:null,dropCompletedAt:typeof r['dropCompletedAt']==='string'?r['dropCompletedAt'] as string:null};
- });
 }

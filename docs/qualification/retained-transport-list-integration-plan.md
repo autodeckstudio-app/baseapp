@@ -109,3 +109,25 @@ units1999pass,1skip,1same unchanged explicit staff-alert-label failure. No app/
 core/UI source changes. This closes only the source invalidation-signal gap,
 not listener delivery, batching, stale-result handling, actual mounted screens
 or owner preview. Production routing/rules/activation remain unchanged.
+
+## Exact-row authenticated source batch, dormant
+
+`readScopedRetainedTransportBatch` now handles at most20unique exact request IDs
+in one Firestore transaction. It validates every request/booking/customer and
+the whole audience before private source retrieval. Grouped rows require exact
+job/booking/visit/physical anchor and scope, never guessed anchors. It returns
+one row per supplied ID in the same order: retained with the validated physical
+allowlist, or explicit legacy only when no retained marker/evidence exists.
+Missing row, bad scope, orphan private proof, signal without closure, conflicting
+visit/job or changed anchor rejects the whole batch. No partial green rows,
+implicit pagination, tenant-wide scan or not-found fallback is returned.
+The single-visit reader was refactored to a shared transaction seam, preserving
+its exact audience/source checks. No callable or app imports this batch.
+
+Thirteen new batch cases plus existing read/signal/closure/actual original-drop
+cases pass38/38. Types/build pass; full Functions1999pass,1skip,1same unchanged
+alert-label failure. Prior414billing/300connected full qualification is from
+e4004d3, not relabeled as a full427run. This step is source batching only.
+Subscribe-before-fetch app lifecycle, signal delivery, overlapping requests,
+principal switches and visible list/count integration still need mounted proof
+and actual routed owner before/after. No rules/routes/UI/copy/activation changed.
