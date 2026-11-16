@@ -136,7 +136,7 @@ export function toServicePayload(d: ServiceDraft): { ok: true; payload: ServiceP
     ok: true,
     payload: {
       ...(d.catalogueEntryKind?{catalogueEntryKind:d.catalogueEntryKind,referenceKey:d.referenceKey!,referenceGroup:d.referenceGroup!,...(d.referenceSurface?{referenceSurface:d.referenceSurface}:{})}:{}),
-      ...(d.priceEstimate!==undefined?{priceEstimate:d.priceEstimate}:{}),
+      ...(d.priceMode==='fixed'||d.priceMode==='inspection'?{priceEstimate:false}:d.priceEstimate!==undefined?{priceEstimate:d.priceEstimate}:{}),
       name: customerServiceName(d.name.trim()),
       ...(d.customerMenu?{customerMenu:{...d.customerMenu,...(d.originalPriceMode!==undefined&&d.originalPriceMode===d.priceMode?{}:{priceMode:d.priceMode==='consult'?'quote':d.priceMode}),...(d.priceMode==='fixed'?{priceNote:'',priceCondition:''}:{})}}:{}),
       ...(d.ratingChanged ? {internalRating: d.internalRating ?? null} : {}),
