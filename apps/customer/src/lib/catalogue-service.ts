@@ -43,7 +43,11 @@ const store = (): { getItem(k: string): string | null; setItem(k: string, v: str
 export function peekCatalogue(): Service[] | null {
   try {
     const raw = store()?.getItem(KEY);
-    if(!raw)return null;const cached=JSON.parse(raw)as Service[]|{services:Service[];references?:BrandEnquiry[]};setCatalogueReferences(Array.isArray(cached)?undefined:cached.references);return(Array.isArray(cached)?cached:cached.services).filter(previewEligible).map(customerRatingPrivacy);
+    if(!raw)return null;
+    const cached=JSON.parse(raw)as Service[]|{services:Service[];references?:BrandEnquiry[]};
+    // Device references can belong to an older publication. Only a fresh response
+    // may populate the current reference registry; cached services may paint while loading.
+    return(Array.isArray(cached)?cached:cached.services).filter(previewEligible).map(customerRatingPrivacy);
   } catch { return null; }
 }
 
