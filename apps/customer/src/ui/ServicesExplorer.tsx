@@ -1,3 +1,4 @@
+import {ServiceProductSelection} from './ServiceProductSelection';
 import{catalogueReferences}from'../lib/catalogue-references';
 import { Image, View, Pressable, useWindowDimensions, type ImageSourcePropType } from "react-native";
 import { useExperienceTheme } from "@autodeck/ui/native";
@@ -150,7 +151,7 @@ export function ReferencePackageCard({
             {item.note}
           </T>
           <T role="bodyStrong" tone="accent">
-            Quote to confirm
+            Inspection first
           </T>
           <T role="caption">{item.level === "brand" ? "View details" : item.brand ? "View range" : "View details"}</T>
         </View>
@@ -175,7 +176,7 @@ function BrandQuoteOption({
       <Row title={service.brand ?? "Brand product"} detail={service.name} last />
       <Button
         kind="quiet"
-        label="Get quote"
+        label="Studio inspection"
         onPress={() => (onQuote ?? onOpen)(service)}
       />
     </Pane>
@@ -323,7 +324,7 @@ export function ServicesExplorer({
           selected,
           path.work as (typeof PPF_CUSTOMER_OPTIONS)[number]["key"],
         )
-      : [];
+      : ppfWorkServices(selected,"full_body");
   // "Add-ons" is a service type (optional extras added along with a main service),
   // not a brand: keep them out of the brand list and show them in their own section.
   const ADDON_BRAND = "Add-ons";
@@ -345,7 +346,22 @@ export function ServicesExplorer({
   const workLabel = PPF_CUSTOMER_OPTIONS.find(
     (w) => w.key === path.work,
   )?.label;
-  // Work-first detailing pages (owner-approved model, 12 Nov): the page is the service.
+  // Keep the existing brand cards. Priced options appear only inside the
+  // selected brand; service-wide choices remain for detailing with no brand step.
+  const nestedBrandProducts = home.key === "paint" && (activeBrand || brands.length === 0)
+    && (family !== "PPF" || path.work === "full_body");
+  if (family && (home.key === "detailing" || nestedBrandProducts) && shown.length > 0) {
+    const title = activeBrand ?? (family === "Glass" ? "Glass coating" : family === "Ceramic" ? "Ceramic coating" : family);
+    return <View style={{gap:20}}>
+      <ServicePageHeader title={title} crumbs={[
+        {title:"All services",onPress:()=>onPath({})},
+        {title:home.label,onPress:()=>onPath({home:home.key})},
+        ...(activeBrand ? [{title:family,onPress:()=>onPath(parentPath(path))}] : []),
+      ]}/>
+      <ServiceProductSelection key={`${family}:${activeBrand??"all"}`} title={activeBrand ? `${activeBrand} products` : title} description={FAMILY_COPY[family]} services={shown} priceLabel={priceLabel} onOpen={onOpen}/>
+    </View>;
+  }
+  // Legacy work-first detailing renderer. Current nested selections return above.
   // AutoDeck's fixed price is primary; brand products that apply to the service are part
   // of the same page as Get quote options until the owner sets brand prices. Priced
   // records keep their own price and booking target; nothing merges records or prices.
@@ -432,7 +448,7 @@ export function ServicesExplorer({
               key={w.key}
               title={w.label}
               photo={serviceTypeImage(home.key, "PPF")}
-              detail="Confirm the film, covered areas and quote"
+              detail="Confirm the film, covered areas and price"
               onPress={() => onPath({ home: home.key, family, work: w.key })}
             />
           ))}
@@ -477,7 +493,7 @@ export function ServicesExplorer({
                 Ask the studio about {askLabel}
               </T>
               <T tone="secondary">
-                The studio confirms the work, time and quote for your car
+                The studio confirms the work, time and price for your car
                 before you book.
               </T>
               <Button

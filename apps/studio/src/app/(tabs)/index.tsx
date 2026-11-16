@@ -144,7 +144,6 @@ export default function TodaysJobsScreen() {
             ...(day.actions.in?[{key:'in',label:'Check in',icon:'check' as const,busy:day.busy==='in',disabled:day.busy!==null,onPress:()=>void day.run('in')}]:[]),
             ...(day.actions.out?[{key:'out',label:'Check out',accessibilityLabel:day.onBreak?'End break & check out':'Check out',icon:'close' as const,busy:day.busy==='out',disabled:day.busy!==null,onPress:()=>void day.run('out')}]:[]),
           ]:[]),
-          {key:'inspection',label:'Inspect',icon:'wrench',onPress:()=>router.push('/(tabs)/service-quotes')},
           {key:'pickups',label:'Pickups',icon:'car',onPress:()=>router.push('/(tabs)/pickups')},
           {key:'account',label:'Account',icon:'profile',onPress:()=>router.push('/(tabs)/account')},
         ] as MyDayAction[]}/>

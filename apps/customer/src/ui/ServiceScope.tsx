@@ -1,4 +1,5 @@
 import{useEffect,useState}from'react';
+import {productHighlight} from './ServiceProductSelection';
 import {serviceManufacturerFacts} from '../lib/service-manufacturer-facts';
 import {ProductFactRows} from './ProductFactRows';
 import {Linking,View} from 'react-native';
@@ -9,10 +10,11 @@ import {Button,Kicker,Notice,Pane,Row,T} from './kit';
 import {serviceScopeItems} from '../lib/service-scope-items';
 import {manufacturerInfo} from '../lib/manufacturer-info';
 /** Only catalogue-authored scope; confirmation questions never become promises. One visual scope section on the service page: Includes, one care tip and a single Ask-the-studio row - booking FAQ questions are no longer listed on the page. */
-export function ServiceScope({service,onAsk,careTip,placement="combined",showContactAndTip=true}:{placement?:"combined"|"description"|"details";showContactAndTip?:boolean;service:Pick<Service,'name'|'description'|'category'> & Partial<Pick<Service,'brand'>>;onAsk:()=>void;careTip?:string|null}) {
+export function ServiceScope({service,onAsk,careTip,placement="combined",showContactAndTip=true}:{placement?:"combined"|"description"|"details";showContactAndTip?:boolean;service:Pick<Service,'name'|'description'|'category'> & Partial<Pick<Service,'brand'|'customerMenu'>>;onAsk:()=>void;careTip?:string|null}) {
  const {colors}=useExperienceTheme();const[productOpen,setProductOpen]=useState(false);
  useEffect(()=>setProductOpen(false),[service.name,service.brand,service.description]);
  const productFacts=serviceManufacturerFacts({...service,brand:service.brand??null});
+ if(service.customerMenu)return placement==='details'?null:<View style={{gap:0}}>{service.description.split("\n").filter(Boolean).map((text,i)=>{const fact=productHighlight(text);return <View key={i} style={{flexDirection:"row",gap:11,alignItems:"flex-start",paddingVertical:12,borderBottomWidth:1,borderBottomColor:colors.borderSubtle}}><View style={{paddingTop:2}}><Icon mono name={i?'check':'inspect'} size={15} color={colors.textSecondary}/></View><View style={{flex:1}}><T role="caption">{fact.text}</T></View></View>})}</View>;
  if(service.brand&&['ceramic','coating','ppf'].includes(service.category))return placement==='details'?null:productFacts?<ProductFactRows facts={productFacts}/>:null;
  const maker=manufacturerInfo({...service,brand:service.brand??null});
  const scope=serviceScopeItems(service);

@@ -478,7 +478,7 @@ describe("Price-on-request quote flow", () => {
   });
 });
 
-it("new enquiry offer and customer acceptance create one immutable booking receipt", async () => {
+it.each([false,true])("historical enquiry acceptance keeps one immutable receipt across inspection transition=%s", async (inspectionMode) => {
   const { requestServiceQuote, updateServiceQuote } =
     await import("../../functions/booking/serviceQuoteJourney.js");
   const { readConsultPaymentBinding } =
@@ -530,6 +530,7 @@ it("new enquiry offer and customer acceptance create one immutable booking recei
     },
     auth: own,
   } as never);
+  if(inspectionMode)await db.collection('services').doc(service.id).update({customerMenu:{home:'ceramic',family:'Inspection',priceMode:'inspection',priceNote:'',priceCondition:''},basePrice:0,estimatedDurationMinutes:0});
   const req = {
     data: {
       serviceId: service.id,
@@ -575,4 +576,19 @@ it("new enquiry offer and customer acceptance create one immutable booking recei
     .where("quote.bookingId", "==", booking.id)
     .get();
   expect(rows.size).toBe(1);
+});
+
+it('published inspection mode blocks new requests, prices, slots and bookings but preserves exact historical request replay',async()=>{
+ const {requestServiceQuote}=await import('../../functions/booking/serviceQuoteJourney.js');
+ const {calculateServicePrice}=await import('../../functions/service/calculatePrice.js');
+ const studio=await seedStudio(uid('transition-studio'),TENANT_A,2),service=await seedService('menu-coat-kovalent-graphene',TENANT_A,60),customer=uid('transition-customer');await seedCustomer(customer,TENANT_A);const car=await seedVehicle(uid('transition-car'),customer,TENANT_A),auth=customerAuth(customer);
+ const data={requestId:uid('prior-request'),studioId:studio.id,scope:{serviceId:service.id,productKey:null,vehicleId:car.id,coverage:'Full body'}};
+ const prior=await requestServiceQuote.run({data,auth}as never);
+ await db.collection('services').doc(service.id).update({customerMenu:{home:'ceramic',family:'Inspection',priceMode:'inspection',priceNote:'',priceCondition:''},basePrice:0,estimatedDurationMinutes:0});
+ expect(await requestServiceQuote.run({data,auth}as never)).toEqual(prior);
+ await expect(requestServiceQuote.run({data:{...data,requestId:uid('blocked-new')},auth}as never)).rejects.toMatchObject({code:'failed-precondition'});
+ await expect(requestServiceQuote.run({data:{...data,scope:{...data.scope,coverage:'Different work'}},auth}as never)).rejects.toMatchObject({code:'already-exists'});
+ await expect(calculateServicePrice.run({data:{serviceId:service.id,vehicleCategory:'suv'},auth}as never)).rejects.toMatchObject({code:'failed-precondition'});
+ await expect(getAvailability.run({data:{serviceId:service.id,studioId:studio.id,startDate:nextMonday()},auth}as never)).rejects.toMatchObject({code:'failed-precondition'});
+ await expect(createBooking.run({data:{serviceId:service.id,vehicleId:car.id,vehicleCategory:'suv',studioId:studio.id,scheduledDate:nextMonday(),scheduledTime:'11:00',idempotencyKey:uid('blocked-book')},auth}as never)).rejects.toMatchObject({code:'failed-precondition'});
 });

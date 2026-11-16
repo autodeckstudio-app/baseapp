@@ -217,7 +217,7 @@ export default function CatalogueScreen() {
             priceLabel={(s) =>
               careEntryPrice(
                 servicePriceText(s, pricingVehicle.category, prices),
-                !!pricingVehicle.category,
+                s.customerMenu?.priceMode==="fixed"||!!pricingVehicle.category,
               )
             }
           />

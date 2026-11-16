@@ -32,7 +32,7 @@ export function ServicePrice(p: ServicePriceProps) {
   return (
     <>
           {p.priceOnRequest ? (p.compactQuote?null:
-            <Pane pad="gap">{p.category === "garage" || p.category === "modifications"?<FactHighlights facts={[{value:"Free",label:"Walk-in inspection"},{value:"You approve",label:"Work and price before service"}]}/>:null}<Row title="Quote on request" detail={p.category === "garage" || p.category === "modifications" ? undefined : <T role="caption" tone="secondary">The studio confirms the price for your car. You approve it before any work starts.</T>} last /></Pane>
+            <Pane pad="gap">{p.category === "garage" || p.category === "modifications"?<FactHighlights facts={[{value:"Free",label:"Walk-in inspection"},{value:"You approve",label:"Work and price before service"}]}/>:null}<Row title="Studio inspection" detail={p.category === "garage" || p.category === "modifications" ? undefined : <T role="caption" tone="secondary">Bring your car to the studio. Agree the work and final price before service starts.</T>} last /></Pane>
           ) : p.needsCarType ? (
             <Pane pad="gap">
               <Row title={p.hasCar ? "Car type needed" : "Add your car"} detail={<T role="caption" tone="secondary">{p.hasCar ? "This price depends on your car's type. Add the type once in Garage, edit car." : "This price depends on your car's type. Add your car in Garage to see it."}</T>} />

@@ -5,7 +5,7 @@ import { SECTIONS, MORE_LINKS, GROUPS } from "./nav";
 
 const appDir = join(__dirname, "../app/(admin)");
 /** Pages kept in the code but taken off every menu (owner, 20 Oct): Gallery. */
-const RETIRED = ["/gallery"];
+const RETIRED = ["/gallery", "/service-quotes"];
 /** Role-only page: reached through homeFor("accountant"), deliberately on no staff menu. */
 const ROLE_ONLY = ["/accountant"];
 const routes = readdirSync(appDir).filter((n) => statSync(join(appDir, n)).isDirectory()).map((n) => `/${n}`).filter((r) => !RETIRED.includes(r) && !ROLE_ONLY.includes(r));

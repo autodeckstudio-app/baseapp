@@ -7,7 +7,7 @@ vi.mock("../../middleware/audit.js", () => ({ writeAuditLog: vi.fn() }));
 vi.mock("firebase-admin/storage", () => ({ getStorage: vi.fn() }));
 vi.mock("firebase-admin/firestore", () => {
   const ref = (path: string): any => ({ path, id: path.split("/").pop(), get: async () => snap(path) });
-  const snap = (path: string): any => ({ exists: !!h.docs[path], data: () => h.docs[path] });
+  const snap = (path: string): any => ({ ref:ref(path), exists: !!h.docs[path], data: () => h.docs[path] });
   const db: any = { collection: (path: string) => { const q: any = { where: () => q, limit: () => q, doc: (id?: string) => ref(`${path}/${id ?? `new-${++h.next}`}`), get: async () => ({ docs: [], empty: true }) };return q; },
     runTransaction: async (fn: any) => fn({ get: async (r: any) => r.path ? snap(r.path) : { docs: [], empty: true }, set: (r: any, value: any) => h.writes.push({ path: r.path, value }), update: (r: any, value: any) => h.writes.push({ path: r.path, value }) }) };
   return { getFirestore: () => db };

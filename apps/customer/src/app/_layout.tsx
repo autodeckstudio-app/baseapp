@@ -23,7 +23,7 @@ installWebFonts();
 // production export folds this to null and the strip can never render there.
 const LOCAL_TEST_NOTICE: string | null =
   process.env["EXPO_PUBLIC_USE_FIREBASE_EMULATOR"] === "true" || process.env["USE_FIREBASE_EMULATOR"] === "true"
-    ? "Local test build. Emulator data; sample content and prices."
+    ? (process.env["EXPO_PUBLIC_SERVICE_MENU_REVIEW"] === "true" ? "Local preview. Fictional account; confirmed menu prices. Not live." : "Local test build. Emulator data; sample content and prices.")
     : null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const bodyDoc = (globalThis as any).document;

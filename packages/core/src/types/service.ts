@@ -44,7 +44,7 @@ export type WarrantyDurationUnit = "days" | "months" | "years" | "lifetime";
 export interface CustomerMenuPresentation {
   home: 'paint'|'detailing'|'washing'|'garage'|'modifications';
   family: string;
-  priceMode: 'fixed'|'from'|'quote';
+  priceMode: 'fixed'|'from'|'quote'|'inspection';
   priceNote: string;
   priceCondition: string;
 }

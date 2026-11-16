@@ -1,3 +1,4 @@
+vi.mock('../lib/catalogue-assets',()=>({catalogueAsset:()=>undefined,hasCataloguePhoto:()=>false,spotlightProductPhoto:()=>undefined}));
 import {describe,it,expect,vi} from 'vitest';
 import {create,act} from 'react-test-renderer';
 import {createElement} from 'react';

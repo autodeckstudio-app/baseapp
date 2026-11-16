@@ -1,3 +1,4 @@
+vi.mock('../lib/catalogue-assets',()=>({catalogueAsset:()=>undefined,hasCataloguePhoto:()=>false,spotlightProductPhoto:()=>undefined}));
 import React, { useState } from "react";
 import { it, expect, vi } from "vitest";
 import { act, create } from "react-test-renderer";
@@ -9,6 +10,7 @@ vi.mock("./ServicePhoto", () => ({ ServicePhoto: () => null }));
 vi.mock("../lib/service-home-images", () => ({ serviceHomeImages: {} }));
 vi.mock("../lib/brand-logos", () => ({ BRAND_LOGOS: {} }));
 vi.mock("./kit", () => ({
+  useScreenScrollToTop:()=>()=>{},
   Button: ({ label, onPress }: any) => (
     <Pressable accessibilityLabel={label} onPress={onPress}>
       {label}
@@ -68,7 +70,7 @@ const press = async (r: any, label: string) => {
   expect(p, label).toBeTruthy();
   await act(async () => p.props.onPress());
 };
-it("connected home -> ceramic -> brand -> exact service, PPF/PPS honest empty states, no unknown products or double reference", async () => {
+it("connected home -> ceramic -> nested product selection -> exact service, PPF/PPS honest empty states", async () => {
   const opened = vi.fn(),
     help = vi.fn();
   let r: any;
@@ -93,6 +95,8 @@ it("connected home -> ceramic -> brand -> exact service, PPF/PPS honest empty st
   await press(r, "Paint Protection");
   await press(r, "Ceramic");
   await press(r, "Kovalent");
+  await press(r, "Select Kovalent Graphene Matrix");
+  expect(opened).not.toHaveBeenCalled();
   const cards = r.root
     .findAllByType(Pressable)
     .filter(
@@ -102,7 +106,6 @@ it("connected home -> ceramic -> brand -> exact service, PPF/PPS honest empty st
   expect(cards).toHaveLength(1);
   await press(r, "View Kovalent Graphene Matrix");
   expect(opened).toHaveBeenCalledWith(rows[0]);
-  await press(r, "Change brand");
   expect(JSON.stringify(r.toJSON())).not.toContain("GSWF");
   await act(async () => r.unmount());
   // PPF removal: film ranges belong to full-body fitting only, so removal and
@@ -222,7 +225,7 @@ it("connected home -> ceramic -> brand -> exact service, PPF/PPS honest empty st
   const ppsText = JSON.stringify(r.toJSON());
   expect(ppsText).toContain("PPS - spray-on paint protection");
   expect(ppsText).toContain("Ask the studio about product and coverage");
-  expect(ppsText).toContain("Quote to confirm");
+  expect(ppsText).toContain("Inspection first");
   expect(ppsText).not.toContain("No confirmed current product");
   expect(ppsText).not.toContain("\u20b9");
   await press(r, "View PPS - spray-on paint protection");
@@ -263,7 +266,7 @@ it("Washing presents interior once, exact record on action, and search uses the 
 });
 it('pickup is never a standalone catalogue card, including search, without editing the original record',async()=>{const pickup={id:'svc-pickup',name:'Pickup and drop',category:'pickup',description:'Old flat rate within the city',basePrice:10000,active:true};const source=[...rows,pickup];for(const query of['','pickup']){let r:any;await act(async()=>{r=create(<ServicesExplorer services={source as any} path={{}} query={query} onPath={vi.fn()} onOpen={vi.fn()} onReference={vi.fn()} onHelp={vi.fn()} priceLabel={()=>'₹100'}/>)});expect(JSON.stringify(r.toJSON())).not.toContain('Old flat rate');expect(r.root.findAllByType(Pressable).some((p:any)=>p.props.accessibilityLabel==='View Pickup and drop')).toBe(false);await act(async()=>r.unmount())}expect(pickup.active).toBe(true);expect(pickup.basePrice).toBe(10000);expect(source).toContain(pickup)});
 
-it("work-first detailing page: fixed price primary, brand product inside as Get quote option", async () => {
+it("detailing service owns product choices with small details controls, no quote button", async () => {
   const leatherRows = [
     {
       id: "svc_fd82917361ed1bbcac06ae7a0d3e256d",
@@ -311,19 +314,29 @@ it("work-first detailing page: fixed price primary, brand product inside as Get 
   const text = JSON.stringify(r.toJSON());
   // The service is the page: the fixed-price AutoDeck application is primary.
   expect(text).toContain("Leather coating");
-  expect(text).toContain("DETAILING · LEATHER");
+  expect(text).toContain("Leather products");
   expect(text).toContain("₹6,000");
   expect(text).not.toContain("Choose a brand");
   // The brand product is part of the same service page as a Get quote option.
   expect(text).toContain("CarPro");
   expect(text).toContain("CarPro CQUARTZ Leather 2.0");
   expect(text).not.toContain("Also available at a fixed price");
-  // Quote goes to the quote action for the brand product's own record.
-  await press(r, "Get quote");
-  expect(quoted).toHaveBeenCalledWith(leatherRows[0]);
+  // Product selection has no effect beyond selecting. A small details control
+  // opens the exact record; it never routes through a remote quote action.
+  expect(text).not.toContain("Get quote");
+  await press(r, "Select CarPro CQUARTZ Leather 2.0");
+  expect(quoted).not.toHaveBeenCalled();
   expect(opened).not.toHaveBeenCalled();
-  // The priced application opens its own service target.
+  await press(r, "View CarPro CQUARTZ Leather 2.0");
+  expect(opened).toHaveBeenCalledWith(leatherRows[0]);
+  await press(r, "Select Leather coating");
   await press(r, "View Leather coating");
   expect(opened).toHaveBeenCalledWith(leatherRows[1]);
   await act(async () => r.unmount());
+});
+
+it('preserves Ceramic brand cards and nests only the tapped brand products',async()=>{
+ const source=[{id:'brand-k1',name:'Kovalent Prolong',brand:'Kovalent',category:'ceramic',customerMenu:{home:'paint',family:'Ceramic'},active:true,basePrice:1200000},{id:'brand-k2',name:'Kovalent Matrix',brand:'Kovalent',category:'ceramic',customerMenu:{home:'paint',family:'Ceramic'},active:true,basePrice:2000000},{id:'brand-c1',name:'CarPro SiC',brand:'CarPro',category:'ceramic',customerMenu:{home:'paint',family:'Ceramic'},active:true,basePrice:1700000}] as any;
+ const opened=vi.fn();let r:any;function App(){const[path,set]=useState<ServicesPath>({home:'paint',family:'Ceramic'});return <ServicesExplorer services={source} path={path} query="" onPath={set} onOpen={opened} onReference={vi.fn()} onHelp={vi.fn()} priceLabel={s=>s.brand==='Kovalent'?'₹12,000':'₹17,000'}/>}
+ await act(async()=>{r=create(<App/>)});expect(JSON.stringify(r.toJSON())).toContain('Choose a brand');expect(JSON.stringify(r.toJSON())).not.toContain('Kovalent Prolong');await press(r,'Kovalent');expect(JSON.stringify(r.toJSON())).toContain('Kovalent products');expect(JSON.stringify(r.toJSON())).not.toContain('CarPro SiC');await press(r,'Select Kovalent Prolong');expect(opened).not.toHaveBeenCalled();await press(r,'View Kovalent Prolong');expect(opened).toHaveBeenCalledWith(source[0]);await press(r,'Ceramic');await press(r,'CarPro');expect(JSON.stringify(r.toJSON())).not.toContain('Kovalent Prolong');await press(r,'Select CarPro SiC');await press(r,'View CarPro SiC');expect(opened).toHaveBeenLastCalledWith(source[2]);await act(async()=>r.unmount());
 });

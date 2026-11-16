@@ -1,0 +1,3 @@
+/** A reviewed priced service promoted from an enquiry must not keep enquiry-only fields. */
+export function clearsEnquiryMetadata(source:Record<string,any>|undefined,payload:Record<string,any>):boolean{return source?.catalogueEntryKind==='enquiry'&&payload.catalogueEntryKind!=='enquiry'&&payload.active!==false&&payload.customerMenu?.priceMode==='fixed';}
+export function promoteReviewedService(source:Record<string,any>|undefined,payload:Record<string,any>):Record<string,any>{const merged={...source,...payload};if(clearsEnquiryMetadata(source,payload))for(const k of ['catalogueEntryKind','referenceKey','referenceGroup','referenceSurface'])delete merged[k];return merged;}

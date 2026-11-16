@@ -48,8 +48,8 @@ export default function ServiceDetailScreen() {
   const pricingVehicle = usePricingVehicle();
   // The size comes only from the selected car's saved type (edited in Garage). Flat-priced services do not depend on size, so the server
   // only needs a valid value there; size-priced (PPF) with no saved type has no price until the type is saved. Never a guessed size.
-  const selectedCategory: VehicleCategory | null = pricingVehicle.category ?? (service && !isSizePriced(service.category) ? "hatchback" : null);
-  const needsCarType = !!service && isSizePriced(service.category) && !pricingVehicle.category;
+  const selectedCategory: VehicleCategory | null = pricingVehicle.category ?? (service && (service.customerMenu?.priceMode==="fixed"||!isSizePriced(service.category)) ? "hatchback" : null);
+  const needsCarType = !!service && service.customerMenu?.priceMode!=="fixed" && isSizePriced(service.category) && !pricingVehicle.category;
   const [priceBreakdown, setPriceBreakdown] = useState<PriceBreakdownData | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
@@ -72,7 +72,7 @@ export default function ServiceDetailScreen() {
 
   useEffect(() => {
     setPriceBreakdown(null);
-    if (!id || !service || !selectedCategory) {setPriceLoading(false);return;}
+    if (!id || !service || service.priceOnRequest===true || !selectedCategory) {setPriceLoading(false);return;}
     const category=selectedCategory;
     setPriceLoading(true);
     setPriceError(null);
@@ -97,7 +97,7 @@ export default function ServiceDetailScreen() {
     let alive=true;void getServiceReviews(service.id).then(r=>{if(alive)setReviews(r)}).catch(()=>{if(alive)setReviews(null)});return()=>{alive=false};
   }, [service]);
 
-  if(sourceHold) return <Screen appBar="Service enquiry"><T role="title">Ask the studio</T><T>Confirm the product and options for your car before booking.</T><Button label="Ask for a quote" onPress={()=>router.navigate("/(tabs)/help")} /></Screen>;
+  if(sourceHold) return <Screen appBar="Service enquiry"><T role="title">Ask the studio</T><T>Confirm the product and options for your car before booking.</T><Button label="Studio inspection" onPress={()=>router.navigate("/(tabs)/help")} /></Screen>;
   return (
     <ServiceDetailView
       id={id}
@@ -177,6 +177,8 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         <>
         {!reviewedStartingPrice(service)||service.description?.trim()||(service.brand&&["ceramic","coating","ppf"].includes(service.category))?<ServiceScope placement="description" showContactAndTip={false} service={service} onAsk={()=>router.push({pathname:"/(tabs)/help",params:{service:service.name}})}/>:null}
 
+        {service.customerMenu&&service.warrantyLabel?<Pane pad="gap"><T role="caption" tone="secondary">{service.warrantyLabel}</T><T role="caption" tone="secondary">Manufacturer statement. Ask the studio to confirm installer eligibility, cover and registration before booking.</T></Pane>:null}
+
         {service.priceEstimate ? <T role="caption" tone="tertiary">Estimated price. The studio confirms the final amount before work starts.</T> : null}
 
         {reviews && reviews.count > 0 ? (
@@ -219,7 +221,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         {!service.brand||!['ceramic','ppf','coating'].includes(service.category)?(()=>{const facts=[service.brand&&service.brand!=="Add-ons"?`Product brand: ${service.brand}`:null,service.warrantyLabel?`Listed warranty: ${service.warrantyLabel}`:null].filter(Boolean).join(" · ");return facts?<T role="caption" tone="secondary">{facts}</T>:null})():null}
         {reviewedStartingPrice(service)?<Pane pad="gap"><View style={{gap:14}}><View style={{gap:5}}><Kicker>Starting price</Kicker><T role="title" tone="accent">{reviewedStartingPrice(service)!.label}</T></View>{service.category!=="tinting"?<View style={{borderTopWidth:1,borderColor:colors.borderSubtle,paddingTop:12}}><T role="caption" tone="secondary">{reviewedStartingPrice(service)!.condition}</T></View>:null}</View></Pane>:<ServicePrice inlineBreakdown compactQuote {...{category:service.category,priceOnRequest:(service.priceOnRequest===true || reviewedQuoteRequired(service)),needsCarType,hasCar:!!pricingVehicle.vehicle,carSizeKnown:!!selectedCategory,loading:priceLoading,error:priceError,breakdown:priceBreakdown,onRetry,onHelp:()=>router.navigate("/(tabs)/help"),onGarage:()=>router.push(pricingVehicle.vehicle?`/(tabs)/garage/${pricingVehicle.vehicle.id}`:"/(tabs)/garage/add")}}/>}
 
-        {focused&&showBar?<Button style={(service.priceOnRequest || reviewedQuoteRequired(service))?undefined:{alignSelf:"stretch",width:"100%",marginTop:16,marginBottom:16}} kind={(service.priceOnRequest===true || reviewedQuoteRequired(service))?"quiet":"primary"} label={(service.priceOnRequest===true || reviewedQuoteRequired(service))?(service.category==="garage"||service.category==="modifications"?"Inspection":"Get quote"):"Book now"} disabled={!(service.priceOnRequest || reviewedQuoteRequired(service))&&priceBreakdown===null} onPress={()=>(service.priceOnRequest===true || reviewedQuoteRequired(service))&&SERVICE_QUOTE_JOURNEY_READY?router.push({pathname:"/(tabs)/quote-request",params:{serviceId:String(id)}}):router.push(`/(tabs)/book/${id}`)}/>:null}
+        {focused&&showBar?<Button style={(service.priceOnRequest || reviewedQuoteRequired(service))?undefined:{alignSelf:"stretch",width:"100%",marginTop:16,marginBottom:16}} kind={(service.priceOnRequest===true || reviewedQuoteRequired(service))?"quiet":"primary"} label={(service.priceOnRequest===true || reviewedQuoteRequired(service))?"Studio inspection":"Book now"} disabled={!(service.priceOnRequest || reviewedQuoteRequired(service))&&priceBreakdown===null} onPress={()=>(service.priceOnRequest===true || reviewedQuoteRequired(service))?router.navigate("/(tabs)/help"):router.push(`/(tabs)/book/${id}`)}/>:null}
 
         </>
 

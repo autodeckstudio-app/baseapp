@@ -232,3 +232,9 @@ html:root:root .ax-service-editor .ax-sub,html:root:root .ax-service-editor .ax-
 
 /* Pricing is one section followed by review, not a full-height stand-alone page. */
 html:root:root .ax-shell-frame > .ax-main > .ax-pricing-page{flex:0 0 auto;}
+
+/* Local candidate: Today uses its existing canvas without unused side columns. */
+html:root:root .ax-shell-frame > .ax-main > .ax-dash {max-width:none;width:100%;}
+@media(min-width:861px){
+ html:root:root .ax-shell-frame > .ax-main:has(> .ax-dash){padding-left:248px!important;padding-right:24px!important;}
+}

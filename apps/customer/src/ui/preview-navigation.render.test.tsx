@@ -1,3 +1,4 @@
+vi.mock('../lib/catalogue-assets',()=>({catalogueAsset:()=>undefined,hasCataloguePhoto:()=>false,spotlightProductPhoto:()=>undefined}));
 import React from'react';import{create,act}from'react-test-renderer';import{describe,it,expect,vi}from'vitest';
 vi.mock('./ServicePhoto',()=>({ServicePhoto:()=>null}));vi.mock('../lib/service-type-images',()=>({serviceTypeImage:()=>null}));vi.mock('../lib/service-home-images',()=>({serviceHomeImages:{}}));import{ServicePackageCard}from'./ServicePackageCard';import{ReferencePackageCard}from'./ServicesExplorer';import{StudioContactDetails}from'./StudioContactDetails';import{ProfileVisitLinks}from'./ProfileVisitLinks';import{ServicePageHeader}from'./ServicePageHeader';import{ServiceScope}from'./ServiceScope';import{manufacturerInfo}from'../lib/manufacturer-info';
 const text=(n:any):string=>!n?'':typeof n==='string'?n:Array.isArray(n)?n.map(text).join(' '):text(n.children);
