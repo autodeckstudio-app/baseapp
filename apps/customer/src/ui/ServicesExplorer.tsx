@@ -1,3 +1,5 @@
+import brandPlaceholder from '../../assets/imagery/brands/brand-placeholder.png';
+import{ProtectionFamilyIntro,type ProtectionFamily}from'./ProtectionFamilyIntro';
 import {ServiceProductSelection} from './ServiceProductSelection';
 import{catalogueReferences}from'../lib/catalogue-references';
 import { Image, View, Pressable, useWindowDimensions, type ImageSourcePropType } from "react-native";
@@ -49,7 +51,9 @@ export function ServiceChoiceCard({
   const { colors } = useExperienceTheme();
   const {width,fontScale}=useWindowDimensions();
   const compact=width<360||fontScale>1.15;
-  const logo = brand ? BRAND_LOGOS[title] : null;
+  const choiceImageSize=compact?56:64;
+  const [logoFailed,setLogoFailed]=useState(false);
+  const logo = brand&&!logoFailed ? BRAND_LOGOS[title] : null;
   return (
     <SceneCard
       label={title}
@@ -71,20 +75,21 @@ export function ServiceChoiceCard({
           alignItems: "center",
         }}
       >
-        {photo ? <TypePhoto source={photo} label={title} size={compact?64:88} /> : null}
-        {logo ? (
+        {photo ? <TypePhoto source={photo} label={title} size={choiceImageSize} /> : null}
+        {brand ? (
           <View
             style={{
-              width: 76,
-              height: 76,
+              width: choiceImageSize,
+              height: choiceImageSize,
               padding: 10,
               borderRadius: 16,
-              backgroundColor: logo.background,
+              backgroundColor: logo?.background??"#20252c",
             }}
           >
             <Image
-              accessibilityLabel={`${title} logo`}
-              source={logo.src}
+              accessibilityLabel={logo?`${title} logo`:`${title}: brand image unavailable`}
+              source={logo?.src??brandPlaceholder}
+              onError={()=>setLogoFailed(true)}
               resizeMode="contain"
               style={{ width: "100%", height: "100%" }}
             />
@@ -208,6 +213,9 @@ export function ServicesExplorer({
   const rows = currentServices(services).filter(s=>s.category!=="pickup"),
     refs = referenceChoices(rows,catalogueReferences());
   const home = SERVICE_HOMES.find((h) => h.key === path.home);
+  const careServiceId=path.family==='Ceramic'?'svc-coating-maintenance':path.family==='PPF'?'svc-brand-kovalent-overlay':null;
+  const careService=careServiceId?rows.find(s=>s.id===careServiceId):undefined;
+  const careAction=careService?{label:careService.name,onPress:()=>onOpen(careService)}:{label:path.family==='PPS'?'Ask about PPS care':'Ask about maintenance',onPress:()=>onHelp(`${path.family??''} aftercare and maintenance`)};
   const searching = !!query.trim();
   const products = (xs: Service[], rs: BrandEnquiry[]) => (
     <View style={{ gap: 12 }}>
@@ -349,7 +357,7 @@ export function ServicesExplorer({
   // Keep the existing brand cards. Priced options appear only inside the
   // selected brand; service-wide choices remain for detailing with no brand step.
   const nestedBrandProducts = home.key === "paint" && (activeBrand || brands.length === 0)
-    && (family !== "PPF" || path.work === "full_body");
+    && (family !== "PPF" || !path.work || path.work === "full_body");
   if (family && (home.key === "detailing" || nestedBrandProducts) && shown.length > 0) {
     const title = activeBrand ?? (family === "Glass" ? "Glass coating" : family === "Ceramic" ? "Ceramic coating" : family);
     return <View style={{gap:20}}>
@@ -427,6 +435,7 @@ export function ServicesExplorer({
         ...(family?[{title:family,onPress:()=>onPath({home:home.key,family})}]:[]),
         ...(workLabel?[{title:workLabel,onPress:()=>onPath({home:home.key,family:family??undefined,work:path.work})}]:[]),
       ]}/>
+      {home.key==="paint"&&!activeBrand&&["Ceramic","PPF","PPS"].includes(family??"")&&(!path.work||path.work==="full_body")?<ProtectionFamilyIntro family={family as ProtectionFamily} careAction={careAction}/>:null}
       {!family ? (
         <>
           {families.map((f) => {
@@ -441,7 +450,7 @@ export function ServicesExplorer({
             );
           })}
         </>
-      ) : family === "PPF" && !path.work ? (
+      ) : family === "PPF" && !path.work && !chooseBrands ? (
         <>
           {PPF_CUSTOMER_OPTIONS.map((w) => (
             <ServiceChoiceCard
@@ -468,7 +477,7 @@ export function ServicesExplorer({
                   key={b}
                   title={b}
                   brand
-                  detail={familySummary(family!)}
+                  detail={family==="PPF"?"Full-body paint protection":familySummary(family!)}
                   onPress={() => onPath({ ...path, brand: b })}
                 />
               ))}
@@ -484,6 +493,15 @@ export function ServicesExplorer({
                   {products(addonServices, addonRefs)}
                 </>
               ) : null}
+              {family === "PPF" && !path.work ? (
+                <View style={{gap:12,marginTop:10}}>
+                  <T role="bodyStrong">Other film work</T>
+                  {PPF_CUSTOMER_OPTIONS.filter(w=>w.key!=="full_body").map(w=>(
+                    <ServiceChoiceCard key={w.key} title={w.label} photo={serviceTypeImage(home.key,"PPF")} detail="Confirm the film, covered areas and price" onPress={()=>onPath({home:home.key,family,work:w.key})}/>
+                  ))}
+                </View>
+              ) : null}
+
             </>
           ) : shown.length + shownRefs.length ? (
             products(shown, shownRefs)

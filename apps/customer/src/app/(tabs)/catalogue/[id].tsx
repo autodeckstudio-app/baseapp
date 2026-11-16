@@ -11,7 +11,7 @@ import { customerRatingPrivacy } from "@autodeck/core";
 import { ServiceScope } from "../../../ui/ServiceScope";
 import { usePricingVehicle } from "../../../lib/vehicle-size";
 import { useState, useEffect } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, View, ScrollView } from "react-native";
 import type { ReactNode } from "react";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
@@ -35,8 +35,9 @@ import { getAvailability, todayIST } from "../../../lib/booking-service";
 import { applyBrandWarranty, getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
 
 
-export default function ServiceDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+export default function ServiceDetailScreen({serviceId,embedded=false}:{serviceId?:string;embedded?:boolean}={}) {
+  const { id:routeId } = useLocalSearchParams<{ id: string }>();
+  const id=serviceId??routeId;
   const router=useRouter();
   const [sourceHold, setSourceHold] = useState(false);
   const [service, setService] = useState<Service | null>(null);
@@ -101,6 +102,7 @@ export default function ServiceDetailScreen() {
   return (
     <ServiceDetailView
       id={id}
+      embedded={embedded}
       service={service}
       loading={loading}
       loadError={loadError}
@@ -117,6 +119,7 @@ export default function ServiceDetailScreen() {
 }
 
 export type ServiceDetailViewProps = {
+  embedded?:boolean;
   id: string | undefined;
   service: Service | null;
   loading: boolean;
@@ -133,7 +136,7 @@ export type ServiceDetailViewProps = {
 
 /** Everything on screen for one service. The screen above only gathers data, so this renders the same with fixed fixtures in the dev preview. */
 export function ServiceDetailView(props: ServiceDetailViewProps) {
-  const { id, service, loading, loadError, reviews, pricingVehicle, selectedCategory, needsCarType, priceLoading, priceError, priceBreakdown, onRetry } = props;
+  const { embedded=false,id, service, loading, loadError, reviews, pricingVehicle, selectedCategory, needsCarType, priceLoading, priceError, priceBreakdown, onRetry } = props;
   const router = useRouter();
   // Separate labelled booking action follows the price; duration stays informational.
   const origin=useLocalSearchParams<{returnTo?:string;homeEntry?:string;catalogueHome?:string;catalogueFamily?:string;catalogueBrand?:string;catalogueWork?:string}>();
@@ -160,12 +163,13 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
   );
   // Owner rule (12 Nov): catalogue pages never show the configured service time.
 
+  const DetailLayout=embedded?PopupDetailLayout:Screen;
   return (
     <View style={{ flex: 1 }}>
-      <Screen onBack={homeBack?()=>router.replace(homeBack as never):undefined}
+      <DetailLayout onBack={homeBack?()=>router.replace(homeBack as never):undefined}
         header={
           <View style={{ gap: space.hair }}>
-            <ServicePageHeader context={[SERVICE_HOMES.find(h=>h.key===servicePlacement(service)?.home)?.label,servicePlacement(service)?.family].filter(Boolean).join(" · ") || "Service"} title={service.name} crumbs={[{title:"All services",onPress:()=>router.navigate("/(tabs)/catalogue")}]} />
+            <ServicePageHeader context={[SERVICE_HOMES.find(h=>h.key===servicePlacement(service)?.home)?.label,servicePlacement(service)?.family].filter(Boolean).join(" · ") || "Service"} title={service.name} crumbs={embedded?[]:[{title:"All services",onPress:()=>router.navigate("/(tabs)/catalogue")}]} />
             {service.brand === "Add-ons" ? <T role="caption" tone="secondary">Optional extra, added along with a main service</T> : null}
           </View>
         }
@@ -245,8 +249,11 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         </>
 
         {COPY_IS_DRAFT ? <T role="caption" tone="tertiary">Draft text, pending studio review.</T> : null}
-      </Screen>
+      </DetailLayout>
 
     </View>
   );
 }
+
+/** Reuses the existing detail design without an AppBar or route animation inside the popup. */
+function PopupDetailLayout({children,header}:{children:ReactNode;header?:ReactNode;onBack?:(()=>void)|undefined}){return <ScrollView testID="popup-detail-scroll" contentContainerStyle={{padding:20,gap:20,paddingBottom:28}}>{header}{children}</ScrollView>}

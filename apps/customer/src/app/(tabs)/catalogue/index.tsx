@@ -1,3 +1,5 @@
+import ServiceDetailScreen from './[id]';
+import{ServiceDetailPopup}from'../../../ui/ServiceDetailPopup';
 import{useCataloguePublication}from'../../../hooks/useCataloguePublication';
 import {useAuth} from '../../../hooks/useAuth';
 import {useForegroundRefresh} from '../../../hooks/useForegroundRefresh';
@@ -66,6 +68,8 @@ export default function CatalogueScreen() {
   const pricingVehicle = usePricingVehicle(),
     prices = useVehiclePrices(all, pricingVehicle.category);
   const selfPath = usePathname();
+  const [detailId,setDetailId]=useState<string|null>(null);
+  useEffect(()=>setDetailId(null),[selfPath,ownerScope]);
   const navigate = (next: ServicesPath, replace = false) => {
     setQ("");
     // Stay on the current pathname so dev previews (e.g. /preview-catalogue) keep working,
@@ -190,13 +194,7 @@ export default function CatalogueScreen() {
             path={path}
             query={q}
             onPath={navigate}
-            onOpen={(s) =>
-              // Dev-only fixture chain: inside a preview route the real leaf is
-              // auth-gated, so open the equivalent fixture detail instead.
-              __DEV__ && selfPath.startsWith("/preview")
-                ? router.push({ pathname: "/preview-service" as never, params: { id: s.id } })
-                : router.push({pathname:`/(tabs)/catalogue/${s.id}` as never,params:params.returnTo==="home"?catalogueReturnParams(path,params.homeEntry):{}})
-            }
+            onOpen={(s)=>setDetailId(s.id)}
             onQuote={(s) =>
               SERVICE_QUOTE_JOURNEY_READY
                 ? router.push({
@@ -226,6 +224,7 @@ export default function CatalogueScreen() {
           <JourneySheet kind="services" />
         ) : null}
       </View>
+    <ServiceDetailPopup visible={detailId!==null} onClose={()=>setDetailId(null)}>{detailId?<ServiceDetailScreen key={detailId} serviceId={detailId} embedded/>:null}</ServiceDetailPopup>
     </Screen>
   );
 }
