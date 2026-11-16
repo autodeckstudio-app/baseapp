@@ -35,11 +35,30 @@ export function hoursAgreement(config:StudioConfig,now:number){
  return{version:`free-walkin-v1:${createHash('sha256').update(JSON.stringify({hoursText,timezone:config.timezone,feePaise:0})).digest('hex')}`,feePaise:0 as const,hoursText,hoursValidUntil:now+24*60*60*1000};
 }
 export const requestServiceQuote=onCall(options,async req=>{
- extractCustomerUser(req);throw new HttpsError('failed-precondition','Bring your car to the studio for inspection. Agree work and price before service.');
+ const user=extractCustomerUser(req);const d=parse(z.object({requestId:id,studioId:id,scope}).strict(),req.data);await enforceRateLimit(subjectFrom(user),'quote.create');const db=getFirestore();const customerId=await requireCustomerDocId(db,COLLECTIONS.customers(),user.claims.tenantId,user.uid);const ref=db.collection(collection).doc(d.requestId);
+ return db.runTransaction(async t=>{
+  const [prior,v,s,c]=await Promise.all([t.get(ref),t.get(db.collection(COLLECTIONS.vehicles()).doc(d.scope.vehicleId)),t.get(db.collection(COLLECTIONS.services()).doc(d.scope.serviceId)),t.get(db.collection(COLLECTIONS.studioConfig()).doc(d.studioId)),t.get(db.collection('catalogueCustomerSnapshots').doc(user.claims.tenantId))]);
+  if(!v.exists||v.data()?.['ownerId']!==customerId||v.data()?.['tenantId']!==user.claims.tenantId)throw new HttpsError('permission-denied','Choose a car on your profile.');
+  if(prior.exists){const q=prior.data()as QuoteJourney;if(q.customerId!==customerId||q.tenantId!==user.claims.tenantId||q.studioId!==d.studioId||JSON.stringify(q.scope)!==JSON.stringify(d.scope))throw new HttpsError('already-exists','Request ID already used.');return quoteCustomerView(q)}
+  if(!s.exists||s.data()?.['tenantId']!==user.claims.tenantId||s.data()?.['active']!==true||s.data()?.['catalogueEntryKind']==='enquiry'||!customerOfferingVisible({id:d.scope.serviceId,...s.data()})||!customerCatalogueEligible({id:d.scope.serviceId},process.env['CATALOGUE_IDENTITY_HOLD_PREVIEW']==='true')||!c.exists||c.data()?.['tenantId']!==user.claims.tenantId)throw new HttpsError('failed-precondition','This service is not available at that studio.');
+  // Product keys are not accepted as price authority. Exact product eligibility must be checked before any offer or booking.
+  // The published service mode activates inspection-only behavior, not endpoint rollout.
+  if(s.data()?.['customerMenu']?.priceMode==='inspection')throw new HttpsError('failed-precondition','Bring your car to the studio for inspection. Agree work and price before service.');
+  const q=createQuoteJourney({id:d.requestId,tenantId:user.claims.tenantId,customerId,studioId:d.studioId,scope:d.scope},{uid:customerId,tenantId:user.claims.tenantId,role:'customer',studioIds:[]});t.create(ref,{...q,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});return quoteCustomerView(q);
+ });
 });
 /** Reference enquiries cannot book until staff propose an exact active published service and the customer accepts it. */
 export const requestReferenceQuote=onCall(options,async req=>{
- extractCustomerUser(req);throw new HttpsError('failed-precondition','Bring your car to the studio for inspection. Agree work and price before service.');
+ const user=extractCustomerUser(req);const d=parse(z.object({requestId:id,studioId:id,referenceKey:z.string().min(1).max(160),requestedWork:z.string().trim().min(1).max(2000).optional(),vehicleId:id}).strict(),req.data);
+
+ await enforceRateLimit(subjectFrom(user),'quote.create');const db=getFirestore();const cid=await requireCustomerDocId(db,COLLECTIONS.customers(),user.claims.tenantId,user.uid);
+ return db.runTransaction(async t=>{const ref=db.collection(collection).doc(d.requestId);const[p,v,s,published]=await Promise.all([t.get(ref),t.get(db.collection(COLLECTIONS.vehicles()).doc(d.vehicleId)),t.get(db.collection(COLLECTIONS.studioConfig()).doc(d.studioId)),t.get(db.collection('catalogueCustomerSnapshots').doc(user.claims.tenantId))]);
+ if(!v.exists||v.data()?.['ownerId']!==cid||v.data()?.['tenantId']!==user.claims.tenantId||!s.exists||s.data()?.['tenantId']!==user.claims.tenantId)throw new HttpsError('permission-denied','Choose your car and studio.');
+ if(p.exists){const q=p.data()as QuoteJourney;if(q.tenantId!==user.claims.tenantId||q.customerId!==cid||q.studioId!==d.studioId||q.scope.vehicleId!==d.vehicleId||q.requestedReference?.key!==d.referenceKey||(q.requestedReference?.requestedWork??null)!==(d.requestedWork??null))throw new HttpsError('already-exists','Request ID already used.');return quoteCustomerView(q)}
+ const references=published.exists?(published.data()?.['references']??[]):REFERENCE_RANGES;const reference=(references as typeof REFERENCE_RANGES).find(r=>r.key===d.referenceKey);if(!reference||!customerOfferingVisible(reference))throw new HttpsError('invalid-argument','Choose a listed product reference.');
+ const q=createQuoteJourney({id:d.requestId,tenantId:user.claims.tenantId,studioId:d.studioId,customerId:cid,requestedReference:{...(reference.surface?{surface:reference.surface}:{}),...(d.requestedWork?{requestedWork:d.requestedWork}:{}),key:reference.key,brand:reference.brand,name:reference.name,group:reference.group},scope:{serviceId:null,productKey:null,vehicleId:d.vehicleId,coverage:reference.name}},{uid:cid,tenantId:user.claims.tenantId,role:'customer',studioIds:[]});
+ t.create(ref,{...q,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});return quoteCustomerView(q);
+ });
 });
 export const updateServiceQuote=onCall(options,async req=>{
  const u=extractUser(req);assertRole(u,'customer','studio','admin','superadmin');const d=parse(z.object({id,operationId:id,expectedVersion:z.number().int().positive(),command,customerContext:z.boolean().optional()}).strict(),req.data);await enforceRateLimit(subjectFrom(u),'quote.update');const db=getFirestore();const isCustomer=u.claims.role==='customer'||d.customerContext===true;const cid=isCustomer?await requireCustomerDocId(db,COLLECTIONS.customers(),u.claims.tenantId,u.uid):null;

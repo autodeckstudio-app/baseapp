@@ -99,7 +99,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
   if (vehicle.ownerId !== customerDocId) {
     throw new HttpsError("permission-denied", "Vehicle does not belong to this customer.");
   }
-  if (service.customerMenu?.priceMode==='inspection'||service.priceOnRequest===true&&!data.quoteJourneyId) throw new HttpsError('failed-precondition','Bring your car to the studio for inspection. Agree work and price before service.');
+  if (service.customerMenu?.priceMode==='inspection'&&!data.quoteJourneyId) throw new HttpsError('failed-precondition','Bring your car to the studio for inspection. Agree work and price before service.');
   if (!service.active || service.catalogueEntryKind==='enquiry') {
     throw new HttpsError("failed-precondition", "Service is not currently available.");
   }
