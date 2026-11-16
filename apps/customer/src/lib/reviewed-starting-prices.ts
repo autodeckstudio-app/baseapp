@@ -3,7 +3,7 @@ type Row={customerMenu?:{priceMode:string;priceNote:string;priceCondition:string
 // Display-only scope from the reviewed 12 Nov 58+4 price PDF. Never used for
 // booking calculations, quote eligibility on the server, or financial snapshots.
 const reviewed=scope as Record<string,{category:string;basePrice:number}>;
-export function reviewedQuoteRequired(s:{id?:string}):boolean{return !!s.id&&reviewed[s.id]?.category==='tinting'}
+export function reviewedQuoteRequired(s:{id?:string;customerMenu?:{priceMode:string}}):boolean{return s.customerMenu?s.customerMenu.priceMode==='inspection':!!s.id&&reviewed[s.id]?.category==='tinting'}
 export function reviewedStartingPrice(s:Row):{label:string;note:string;condition:string}|null{
  if(s.customerMenu){if(s.active===false||s.customerMenu.priceMode!=='from')return null;return {label:'From ₹'+(s.basePrice/100).toLocaleString('en-IN',{maximumFractionDigits:2}),note:s.customerMenu.priceNote,condition:s.customerMenu.priceCondition};}
  const match=s.id?reviewed[s.id]:undefined;

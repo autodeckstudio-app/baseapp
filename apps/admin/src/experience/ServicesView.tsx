@@ -10,7 +10,7 @@ import { formatDuration, alignedCustomerPriceLabel, alignedCustomerWarranty, SER
 import { PageHead, Toolbar, Segmented, Drawer } from "./Office";
 import { formatPaise } from "../lib/format";
 import { uploadServiceImage } from "../lib/service-image";
-import { EMPTY_SERVICE, draftFromService, toServicePayload, type ServiceDraft, type ServicePayload } from "./services-draft";
+import { EMPTY_SERVICE, draftFromService, toServicePayload, promoteEnquiryDraft, type ServiceDraft, type ServicePayload } from "./services-draft";
 
 export const CATEGORY_NAME: Record<ServiceCategory, string> = { washing: "Wash and care", ceramic: "Ceramic", ppf: "Paint film", coating: "Coatings", tinting: "Window film", inspection: "Inspection", other: "More", garage: "Garage", modifications: "Modifications and wraps", pickup: "Pickup and drop" };
 const CATEGORY_BLURB: Record<ServiceCategory, string> = { washing: "Quick, safe cleans", ceramic: "Deep gloss that lasts", ppf: "Stone-chip armour", coating: "Shine and easy upkeep", tinting: "Heat and privacy", inspection: "Know before you fix", other: "Extras", garage: "Health checks and repairs", modifications: "Consult only", pickup: "Flat-rate pickup and drop" };
@@ -74,7 +74,7 @@ export function ServicesView(p: {
 
   return (
     <div className="ax-page ax-pricing-page">
-      <style>{`@media(max-width:480px){.ax-service-fields{grid-template-columns:minmax(0,1fr)!important;}}`}</style>
+      <style>{`.ax-service-editor input:not([type="checkbox"]):not([type="file"]),.ax-service-editor select,.ax-service-editor textarea{color:#28251f!important;-webkit-text-fill-color:#28251f!important;}@media(max-width:480px){.ax-service-fields{grid-template-columns:minmax(0,1fr)!important;}}`}</style>
       <PageHead eyebrow="Office" title="Pricing" kpis={[{ value: menu.length+references.length, label: "On the menu", tone: "premium" }, { value: storedCount, label: "Stored only" }]}>
         <button type="button" className="ax-button ax-button--primary" onClick={() => {p.onOpenLive?.();setDraft(EMPTY_SERVICE)}}>New service</button>
       </PageHead>
@@ -146,6 +146,7 @@ export function ServicesView(p: {
       {draft && (
         <Drawer portal eyebrow={draft.serviceId ? "Edit service" : "New service"} title={draft.name || "Untitled service"} onClose={() => {setDraft(null);p.onCloseDraft?.()}}>
           <form className="ax-service-editor" onSubmit={async(e) => { e.preventDefault(); if (result?.ok) { const saved=await p.onSave(draft.serviceId, result.payload);if(saved!==false)setDraft(null); } }}>
+            {draft.catalogueEntryKind==='enquiry'?<div className="ax-status-msg"><p>This is an enquiry, with no booking price or time.</p><button type="button" className="ax-button" onClick={()=>setDraft(promoteEnquiryDraft(draft))}>Use as priced service draft</button><p>Existing quotes stay unchanged. Review and publish are still required.</p></div>:null}
             <label className="ax-form-row"><span>Customer menu section</span><select value={draft.customerMenu?.home??''} onChange={e=>set({customerMenu:{home:e.target.value as 'paint'|'detailing'|'washing'|'garage'|'modifications',family:draft.customerMenu?.family??'',priceMode:draft.customerMenu?.priceMode??'fixed',priceNote:draft.customerMenu?.priceNote??'',priceCondition:draft.customerMenu?.priceCondition??''}})}><option value="">Choose section</option>{SERVICE_HOMES.map(h=><option key={h.key} value={h.key}>{h.label}</option>)}</select></label>
             <label className="ax-form-row"><span>Service group</span><input value={draft.customerMenu?.family??''} onChange={e=>set({customerMenu:{home:draft.customerMenu?.home??'washing',family:e.target.value,priceMode:draft.customerMenu?.priceMode??'fixed',priceNote:draft.customerMenu?.priceNote??'',priceCondition:draft.customerMenu?.priceCondition??''}})} placeholder="For example, Exterior wash"/></label>
             {draft.customerMenu&&draft.priceMode!=='fixed'?<><label className="ax-form-row"><span>Price note shown to customers</span><textarea value={draft.customerMenu.priceNote} onChange={e=>set({customerMenu:{...draft.customerMenu!,priceNote:e.target.value}})} maxLength={700}/></label><label className="ax-form-row"><span>Price condition</span><input value={draft.customerMenu.priceCondition} onChange={e=>set({customerMenu:{...draft.customerMenu!,priceCondition:e.target.value}})} maxLength={200}/></label></>:null}
@@ -165,8 +166,8 @@ export function ServicesView(p: {
                 </select>
               </label>
               <label className="ax-form-row"><span>How the price shows</span>
-                <select disabled={draft.catalogueEntryKind==='enquiry'} value={draft.priceMode} onChange={(e) => set({ priceMode: e.target.value as ServiceDraft["priceMode"] })}>
-                  <option value="fixed">Exact price</option><option value="from">From price</option><option value="consult">Consult (no price shown)</option>
+                <select disabled={draft.catalogueEntryKind==='enquiry'} value={draft.priceMode} onChange={(e) => {const mode=e.target.value as ServiceDraft["priceMode"];set({priceMode:mode,...(mode==='inspection'?{priceRupees:'0',minutes:'0',sizes:[],washEligible:false,priceEstimate:false}:draft.priceMode==='inspection'?{priceRupees:'',minutes:'60'}:{})})}}>
+                  <option value="fixed">Exact price</option><option value="from">From price</option><option value="consult">Consult (no price shown)</option><option value="inspection">Studio inspection</option>
                 </select>
               </label>
             </div>
@@ -182,10 +183,10 @@ export function ServicesView(p: {
             <label className="ax-form-row"><span>Included work · customer-facing</span><textarea rows={5} placeholder="Describe the service, then list the included work on separate lines. Only include what the studio actually provides." value={draft.description} onChange={(e) => set({ description: e.target.value })} /></label>
             {draft.internalNotes ? <label className="ax-form-row"><span>Internal notes · staff only</span><textarea rows={3} value={draft.internalNotes} readOnly /></label> : null}
 
-            <p className="ax-label ax-form-section">Price and time</p>{draft.catalogueEntryKind!=='enquiry'?<label className="ax-form-row"><span style={{display:"flex",alignItems:"center",gap:8}}><input style={{width:16,height:16,margin:0,flexShrink:0}} type="checkbox" checked={draft.priceEstimate===true} onChange={e=>set({priceEstimate:e.target.checked})}/> Provisional estimate</span><small>Customers see that the studio must confirm the final amount.</small></label>:null}
+            <p className="ax-label ax-form-section">Price and time</p>{draft.priceMode==='inspection'?<p className="ax-note">Bring the car to the studio. No online booking, price or time is offered.</p>:null}{draft.catalogueEntryKind!=='enquiry'&&draft.priceMode!=='inspection'?<label className="ax-form-row"><span style={{display:"flex",alignItems:"center",gap:8}}><input style={{width:16,height:16,margin:0,flexShrink:0}} type="checkbox" checked={draft.priceEstimate===true} onChange={e=>set({priceEstimate:e.target.checked})}/> Provisional estimate</span><small>Customers see that the studio must confirm the final amount.</small></label>:null}
             <div className="ax-form-pair ax-service-fields">
-              <label className="ax-form-row"><span>{draft.priceMode === "consult" ? "Price reference (₹)" : "Starting price (₹)"}</span><input disabled={draft.catalogueEntryKind==='enquiry'} inputMode="decimal" value={draft.priceRupees} onChange={(e) => set({ priceRupees: e.target.value })} placeholder="1299" /></label>
-              <label className="ax-form-row"><span>Time needed (min)</span><input disabled={draft.catalogueEntryKind==='enquiry'} inputMode="numeric" value={draft.minutes} onChange={(e) => set({ minutes: e.target.value })} /></label>
+              <label className="ax-form-row"><span>{draft.priceMode === "consult" ? "Price reference (₹)" : "Starting price (₹)"}</span><input disabled={draft.catalogueEntryKind==='enquiry'||draft.priceMode==='inspection'} inputMode="decimal" value={draft.priceRupees} onChange={(e) => set({ priceRupees: e.target.value })} placeholder="1299" /></label>
+              <label className="ax-form-row"><span>Time needed (min)</span><input disabled={draft.catalogueEntryKind==='enquiry'||draft.priceMode==='inspection'} inputMode="numeric" value={draft.minutes} onChange={(e) => set({ minutes: e.target.value })} /></label>
             </div>
             {draft.category === "ppf" ? (
             <>

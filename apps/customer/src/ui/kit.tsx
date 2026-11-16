@@ -8,7 +8,7 @@ import { useReduceMotion } from "../lib/reduce-motion";
 import { backFallback } from "../lib/back-nav";
 import { AppBar } from "./AppBar";
 import { reportScroll, resetNavScroll } from "../lib/nav-scroll";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -138,6 +138,9 @@ export function SectionTitle({ children }: { children: ReactNode }) {
   return <T role="heading" style={{ fontSize: 18, fontWeight: "700" } as never}>{children}</T>;
 }
 
+const ScreenScrollContext=createContext<()=>void>(()=>{});
+export const useScreenScrollToTop=()=>useContext(ScreenScrollContext);
+
 export function Screen({
   children,
   scroll = true,
@@ -204,7 +207,7 @@ export function Screen({
     <Ambient>
       {canvas ? <CanvasBackdrop /> : null}
       {top ? <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: space.inset, gap: space.line, zIndex: 2 }}>{bar ? <AppBar title={bar.title} onBack={bar.back} /> : null}{top}</View> : null}
-      {scroll ? <ScrollView testID="screen-scroll" ref={scrollRef} scrollEventThrottle={16} onLayout={restoreOffset} onContentSizeChange={restoreOffset} onScrollBeginDrag={cancelRestore} onTouchStart={cancelRestore} {...(Platform.OS==='web'?{onWheel:cancelRestore}:{})} onScroll={(e) => {if(!scrollActive.current)return;const y=e.nativeEvent.contentOffset.y;const target=offsets.current.get(scrollIdentity)??0;if(restorePending.current){if(Math.abs(y-target)>1)return;restorePending.current=false;}offsets.current.set(scrollIdentity,y);reportScroll(y)}} contentContainerStyle={{ flexGrow: 1 }}>{content}</ScrollView> : content}
+      {scroll ? <ScrollView testID="screen-scroll" ref={scrollRef} scrollEventThrottle={16} onLayout={restoreOffset} onContentSizeChange={restoreOffset} onScrollBeginDrag={cancelRestore} onTouchStart={cancelRestore} {...(Platform.OS==='web'?{onWheel:cancelRestore}:{})} onScroll={(e) => {if(!scrollActive.current)return;const y=e.nativeEvent.contentOffset.y;const target=offsets.current.get(scrollIdentity)??0;if(restorePending.current){if(Math.abs(y-target)>1)return;restorePending.current=false;}offsets.current.set(scrollIdentity,y);reportScroll(y)}} contentContainerStyle={{ flexGrow: 1 }}><ScreenScrollContext.Provider value={()=>{restorePending.current=false;offsets.current.set(scrollIdentity,0);scrollRef.current?.scrollTo({y:0,animated:true})}}>{content}</ScreenScrollContext.Provider></ScrollView> : content}
     </Ambient>
   );
 }

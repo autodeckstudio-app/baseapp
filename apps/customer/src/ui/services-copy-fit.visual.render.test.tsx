@@ -1,3 +1,4 @@
+vi.mock('../lib/catalogue-assets',()=>({catalogueAsset:()=>undefined,hasCataloguePhoto:()=>false,spotlightProductPhoto:()=>undefined}));
 import React from 'react';
 import { it, expect, vi } from 'vitest';
 // Visual harness: renders the REAL ServicesExplorer and ServiceScope with the

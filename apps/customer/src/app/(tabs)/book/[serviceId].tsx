@@ -67,7 +67,7 @@ export default function BookServiceScreen() {
 
   useEffect(() => {
     setTotal(null);
-    if (!serviceId || !selectedCategory || !service || !customerOfferingVisible(service)) return;
+    if (!serviceId || !selectedCategory || !service || service.priceOnRequest===true || !customerOfferingVisible(service)) return;
     let current=true;
     void calculateServicePrice(serviceId, selectedCategory).then(({ breakdown }) => {if(current)setTotal(breakdown.total);}).catch(() => {if(current)setTotal(null);});
     return ()=>{current=false;};
@@ -90,7 +90,7 @@ export default function BookServiceScreen() {
   useEffect(()=>{setSelectedCategory(normalizeSegment(selectedVehicle?.category));setSizeError(null);},[selectedVehicle?.id,selectedVehicle?.category]);
 
   useEffect(() => {
-    if (!serviceId || !service) return;
+    if (!serviceId || !service || service.priceOnRequest===true) return;
     const ids: string[] = [];
     const warm = peekAvailability(serviceId, FIRST_STUDIO_ID, todayIST(), 7, ids);
     if (warm) setSlots(warm.filter(s=>Date.parse(s.startAt)>Date.now()));
@@ -155,8 +155,9 @@ export default function BookServiceScreen() {
     return acc;
   }, {});
 
+  if(service.priceOnRequest===true||service.customerMenu?.priceMode==="inspection")return <Screen appBar="Studio inspection"><T role="title">Bring your car for inspection</T><T>Agree the work and final price at the studio before service.</T><Button label="Studio details" onPress={()=>router.navigate("/(tabs)/help")}/></Screen>;
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{service.name}</T>{service.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : total !== null ? <T role="bodyStrong" tone="accent">{rupees(total)} · {durationText(service.estimatedDurationMinutes)}</T> : null}</View>}>
+    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{service.name}</T>{total !== null ? <T role="bodyStrong" tone="accent">{rupees(total)} · {durationText(service.estimatedDurationMinutes)}</T> : null}</View>}>
       <View style={{ borderRadius: 24, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}><ServicePhoto service={service} aspect={3} radius={0} /><View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0) 50%, rgba(5,5,6,0.7) 100%)" } as object) }} /></View>
       <View style={{ gap: space.line }}>
         <Kicker>Booking for</Kicker>

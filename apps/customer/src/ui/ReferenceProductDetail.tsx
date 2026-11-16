@@ -16,6 +16,6 @@ export function ReferenceProductDetail({item,quoteReady:_quoteReady,onAllService
   <MediaFrame>{hasCataloguePhoto(product)?<ServicePhoto service={product} aspect={16/9}/>:<View style={{aspectRatio:16/9,overflow:'hidden'}}><Image source={serviceTypeImage('paint',product.category==='ppf'?'PPF':'Ceramic')} resizeMode="cover" style={{width:'100%',height:'100%'}}/></View>}</MediaFrame>
   {!hasCataloguePhoto(product)?<T role="caption" tone="tertiary">Service illustration, not this brand's product or studio work.</T>:null}
   {facts?<ProductFactRows facts={facts}/>:item.source?<Row title="Product details" detail="Manufacturer's website" onPress={()=>void Linking.openURL(item.source!)} last/>:null}
-  <Button label="Get quote" kind="quiet" onPress={onRequest}/>
+  <Button label="Studio inspection" kind="quiet" onPress={onRequest}/>
  </Screen>;
 }

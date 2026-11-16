@@ -9,7 +9,7 @@ export interface ServiceDraft {
   catalogueEntryKind?:'enquiry';referenceKey?:string;referenceGroup?:'ppf'|'coatings';referenceSurface?:string;
   priceEstimate?:boolean;
   customerMenu?: NonNullable<Service["customerMenu"]>;
-  originalPriceMode?:"fixed"|"from"|"consult";
+  originalPriceMode?:"fixed"|"from"|"consult"|"inspection";
   serviceId: string | null;
   internalRating?: "A" | "B" | "C" | "D" | null;
   ratingChanged?: boolean;
@@ -31,7 +31,7 @@ export interface ServiceDraft {
   imageUrl: string;
   imageChanged?: boolean;
   coverageLevel: "" | "high_impact" | "full_front" | "full_body";
-  priceMode: "fixed" | "from" | "consult";
+  priceMode: "fixed" | "from" | "consult" | "inspection";
 }
 
 export const EMPTY_SERVICE: ServiceDraft = {
@@ -45,7 +45,7 @@ export function draftFromService(s: Service): ServiceDraft {
     ...(s.priceEstimate!==undefined?{priceEstimate:s.priceEstimate}:{}),
     ...(s.catalogueEntryKind?{catalogueEntryKind:s.catalogueEntryKind,referenceKey:s.referenceKey,referenceGroup:s.referenceGroup,...(s.referenceSurface?{referenceSurface:s.referenceSurface}:{})}:{}),
     ...(servicePlacement(s)?{customerMenu:s.customerMenu??{...servicePlacement(s)!,priceMode:reviewedStartingPrice(s)?'from':s.priceOnRequest?'quote':s.priceFrom?'from':'fixed',priceNote:reviewedStartingPrice(s)?.note??'',priceCondition:reviewedStartingPrice(s)?.condition??''}}:{}),
-    originalPriceMode:s.priceOnRequest?'consult':s.priceFrom?'from':'fixed',
+    originalPriceMode:s.customerMenu?.priceMode==='inspection'?'inspection':s.priceOnRequest?'consult':s.priceFrom?'from':'fixed',
     name: customerServiceName(s.name),
     ...(s.internalRating !== undefined ? {internalRating:s.internalRating} : {}),
     ratingChanged: false,
@@ -64,7 +64,7 @@ export function draftFromService(s: Service): ServiceDraft {
     washEligible: s.membershipWashEligible,
     imageUrl: s.imageUrl ?? "",
     coverageLevel: s.coverageLevel ?? "",
-    priceMode: s.priceOnRequest === true ? "consult" : s.priceFrom === true ? "from" : "fixed",
+    priceMode: s.customerMenu?.priceMode==='inspection'?'inspection':s.priceOnRequest === true ? "consult" : s.priceFrom === true ? "from" : "fixed",
     sizes: s.vehicleCategoryPricing.map((r) => ({ vehicleCategory: r.vehicleCategory, extraRupees: String(r.additionalPricePaise / 100), extraMinutes: String(r.additionalMinutes) })),
   };
 }
@@ -102,10 +102,11 @@ export function toServicePayload(d: ServiceDraft): { ok: true; payload: ServiceP
   if (!d.name.trim()) return { ok: false, problem: "Give the service a name." };
   if (!d.description.trim()) return { ok: false, problem: "Add a short description customers will read." };
   if(d.catalogueEntryKind==='enquiry'&&(d.priceMode!=='consult'||Number(d.priceRupees)!==0||Number(d.minutes)!==0))return{ok:false,problem:'An enquiry has no booking price or duration.'};
+  if(d.priceMode==='inspection'&&(!d.customerMenu||Number(d.priceRupees)!==0||Number(d.minutes)!==0||d.sizes.length))return{ok:false,problem:'Studio inspection has no booking price, duration or car-size rules.'};
   const price = Number(d.priceRupees);
-  if (!Number.isFinite(price) || price < 0 || (d.priceMode !== "consult" && (!d.priceRupees.trim() || price <= 0))) return { ok: false, problem: "Starting price must be more than ₹0." };
+  if (!Number.isFinite(price) || price < 0 || (d.priceMode !== "consult" && d.priceMode !== "inspection" && (!d.priceRupees.trim() || price <= 0))) return { ok: false, problem: "Starting price must be more than ₹0." };
   const minutes = Number(d.minutes);
-  if (!Number.isInteger(minutes) || (d.catalogueEntryKind==='enquiry'?minutes!==0:minutes<=0)) return { ok: false, problem: "Time needed must be a whole number of minutes." };
+  if (!Number.isInteger(minutes) || (d.catalogueEntryKind==='enquiry'||d.priceMode==='inspection'?minutes!==0:minutes<=0)) return { ok: false, problem: "Time needed must be a whole number of minutes." };
   const order = Number(d.displayOrder || "0");
   if (!Number.isInteger(order)) return { ok: false, problem: "Position must be a whole number." };
 
@@ -154,8 +155,11 @@ export function toServicePayload(d: ServiceDraft): { ok: true; payload: ServiceP
       vehicleCategoryPricing,
       coverageLevel: d.coverageLevel || null,
       priceFrom: d.priceMode === "from",
-      priceOnRequest: d.priceMode === "consult",
+      priceOnRequest: d.priceMode === "consult" || d.priceMode === "inspection",
       ...(d.imageChanged ? { imageUrl: d.imageUrl || null } : d.imageUrl ? { imageUrl: d.imageUrl } : {}),
     },
   };
 }
+
+/** Explicit draft conversion only. Live records and quote history stay unchanged. */
+export function promoteEnquiryDraft(d:ServiceDraft):ServiceDraft{const {catalogueEntryKind:_kind,referenceKey:_key,referenceGroup:_group,referenceSurface:_surface,...rest}=d;return{...rest,priceMode:'fixed',originalPriceMode:'consult',minutes:'60',priceRupees:'',...(rest.customerMenu?{customerMenu:{...rest.customerMenu,priceMode:'fixed',priceNote:'',priceCondition:''}}:{})};}

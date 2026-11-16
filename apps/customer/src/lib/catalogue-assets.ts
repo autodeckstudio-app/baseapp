@@ -119,5 +119,33 @@ const BY_ID:Record<string,Asset>={
   "svc-brand-kovalent-prolong-light": {source: require("../../assets/imagery/optimized/catalogue/kovalent-prolong-light-detail.jpg"), thumbnail: require("../../assets/imagery/optimized/catalogue/kovalent-prolong-light-card.jpg"), product: true },
   "svc-brand-kovalent-restore": {source: require("../../assets/imagery/optimized/catalogue/kovalent-restore-detail.jpg"), thumbnail: require("../../assets/imagery/optimized/catalogue/kovalent-restore-card.jpg"), product: true },
 };
-export function catalogueAsset(s:{id?:string}):Asset|undefined{return s.id?BY_ID[s.id]:undefined;}
+const MENU_REVIEW_BY_ID:Record<string,Asset>={
+ "svc_879cf358637bb0c83db9bbc7136c8d02": {source:require("../../assets/imagery/service-menu-review/fireball-wizard-graphene_RETAILER-detailingessentials.jpg"),product:true},
+ "menu-coat-kovalent-prolong": {source:require("../../assets/imagery/service-menu-review/kovalent-prolong_OFFICIAL.jpg"),product:true},
+ "svc-brand-kovalent-revive": {source:require("../../assets/imagery/service-menu-review/kovalent-revive_OFFICIAL.jpg"),product:true},
+ "svc-brand-kovalent-graphene-matrix": {source:require("../../assets/imagery/service-menu-review/kovalent-graphene-matrix_OFFICIAL.jpg"),product:true},
+ "menu-coat-kovalent-borophene": {source:require("../../assets/imagery/service-menu-review/kovalent-borophene_OFFICIAL.jpg"),product:true},
+ "svc-brand-kovalent-matte": {source:require("../../assets/imagery/service-menu-review/kovalent-matte_OFFICIAL.jpg"),product:true},
+ "svc_0f12c93578df97c5468c9cadfd0ed363": {source:require("../../assets/imagery/service-menu-review/gswf-defender-ultra-lite_OFFICIAL.jpg"),product:false},
+ "svc_1caf9b40a8bd6c116ab44a5d63a3cf13": {source:require("../../assets/imagery/service-menu-review/gswf-defender-ultra_OFFICIAL.jpg"),product:false},
+ "svc_d3eb8f0556126ca518090d0f9f3e4c29": {source:require("../../assets/imagery/service-menu-review/gswf-defender-platinum_OFFICIAL.jpg"),product:false},
+ "svc_70c40f0ae18728d8b552a3af7db03aa0": {source:require("../../assets/imagery/service-menu-review/cosmo-gold-ppf_OFFICIAL.jpg"),product:false},
+ "svc_3e1f0e6c96116b636af2dced21a52ef8": {source:require("../../assets/imagery/service-menu-review/cosmo-platinum-ppf_OFFICIAL.jpg"),product:false},
+ "svc-ppf-llumar-valor": {source:require("../../assets/imagery/service-menu-review/llumar-valor-lifestyle_OFFICIAL.jpg"),product:false},
+ "svc-brand-kovalent-glass": {source:require("../../assets/imagery/service-menu-review/kovalent-glass_OFFICIAL.jpg"),product:true},
+ "svc-brand-kovalent-fabric": {source:require("../../assets/imagery/service-menu-review/kovalent-fabric_OFFICIAL.jpg"),product:true},
+ "svc_0ea93d4076be3fea78ce7311fb0e3979": {source:require("../../assets/imagery/service-menu-review/kovalent-restore_OFFICIAL.jpg"),product:true},
+ "svc-brand-kovalent-overlay": {source:require("../../assets/imagery/service-menu-review/kovalent-overlay_OFFICIAL.jpg"),product:true},
+ "svc_57564b783ee465d5aeefe9a6fd286e74": {source:require("../../assets/imagery/service-menu-review/kovalent-restore_OFFICIAL.jpg"),product:true},
+};
+export function catalogueAsset(s:{id?:string}):Asset|undefined{return s.id?(MENU_REVIEW_BY_ID[s.id]??BY_ID[s.id]):undefined;}
 export function hasCataloguePhoto(s:{id?:string;imageUrl?:string|null}):boolean{return !!catalogueAsset(s)||!!s.imageUrl;}
+
+const BOTTLES:Record<string,number>={
+ 'menu-coat-kovalent-prolong':require('../../assets/imagery/brands/kovalent-prolong.png'),
+ 'svc-brand-kovalent-revive':require('../../assets/imagery/brands/kovalent-revive.png'),
+ 'svc-brand-kovalent-graphene-matrix':require('../../assets/imagery/brands/kovalent-graphene-matrix.png'),
+ 'menu-coat-kovalent-borophene':require('../../assets/imagery/brands/kovalent-borophene.png'),
+ 'svc-brand-kovalent-matte':require('../../assets/imagery/brands/kovalent-matte.png'),
+};
+export function spotlightProductPhoto(s:{id:string}){const a=catalogueAsset(s);return BOTTLES[s.id]??(a?.product?a.source:undefined);}
