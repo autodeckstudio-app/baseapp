@@ -112,14 +112,16 @@ export default function HomeScreen() {
   const [open, setOpen] = useState<StoryGroup | null>(null);
   const [seen, setSeen] = useState<Set<string>>(new Set());
   const [retryTick,setRetryTick]=useState(0);
-  const [publicSource,setPublicSource]=useState<{owner:string|null;catalogue:Service[];stories:Awaited<ReturnType<typeof getStories>>;offers:OfferView[];cars:CarListingView[]|null;info:Awaited<ReturnType<typeof getStudioInfo>>|null;failed:string[];lastSuccess:number|null}>({owner:null,catalogue:[],stories:[],offers:[],cars:null,info:null,failed:[],lastSuccess:null});
+  const [catalogueTick,setCatalogueTick]=useState(0);
+  const [catalogueSource,setCatalogueSource]=useState<{owner:string|null;rows:Service[];failed:boolean}>({owner:null,rows:[],failed:false});
+  const [publicSource,setPublicSource]=useState<{owner:string|null;stories:Awaited<ReturnType<typeof getStories>>;offers:OfferView[];cars:CarListingView[]|null;info:Awaited<ReturnType<typeof getStudioInfo>>|null;failed:string[];lastSuccess:number|null}>({owner:null,stories:[],offers:[],cars:null,info:null,failed:[],lastSuccess:null});
   const usable=publicSource.owner===owner;
-  const catalogue=usable?publicSource.catalogue:EMPTY_HOME_CATALOGUE;
+  const catalogue=catalogueSource.owner===owner?catalogueSource.rows:EMPTY_HOME_CATALOGUE;
   const offers=usable?publicSource.offers:[];
   const stories=usable?publicSource.stories:[];
   const carListings=usable?publicSource.cars:null;
   const liveInfo=usable?publicSource.info:null;
-  const catalogueFailed=usable&&publicSource.failed.includes('catalogue');
+  const catalogueFailed=catalogueSource.owner===owner&&catalogueSource.failed;
   const now=useContentClock(owner,[...offers.flatMap(o=>[o.startsAt,o.endsAt]),...stories.map(s=>s.expiresAt)]);
   const groups=homeStoryGroups(stories,now);
   const playableGroups=groups.filter(g=>g.items.length>0);
@@ -127,17 +129,29 @@ export default function HomeScreen() {
   const pricingVehicle = {category:normalizeSegment(home.model?.activeVehicle?.category)};
   const vehiclePrices = useVehiclePrices(catalogue, pricingVehicle.category);
   const publicFocusOwner=useRef<string|null>(null);
-  useCataloguePublication(()=>setRetryTick(t=>t+1));
+  // Publication invalidates catalogue only. Do not restart four unrelated
+  // discovery requests (or discard their pending results) on initial version delivery.
+  useCataloguePublication(()=>setCatalogueTick(t=>t+1));
   useForegroundRefresh(()=>{if(publicFocusOwner.current!==owner){publicFocusOwner.current=owner;return;}setRetryTick(t=>t+1)},owner);
   useEffect(()=>{setOpen(null);setSeen(new Set())},[owner]);
   useEffect(()=>{
     if(!ready||!owner)return;
     let active=true;
-    const tasks=[['catalogue',()=>getServiceCatalogue(undefined,{fresh:true})],['stories',()=>getStories({throwOnError:true})],['offers',()=>getOffers({throwOnError:true})],['cars',()=>getCarListings(false)],['info',()=>getStudioInfo(FIRST_STUDIO_ID)]] as const;
+    void withReadDeadline(()=>getServiceCatalogue(undefined,{fresh:true})).then(rows=>{
+      if(active)setCatalogueSource({owner,rows,failed:false});
+    }).catch(()=>{
+      if(active)setCatalogueSource(previous=>({owner,rows:previous.owner===owner?previous.rows:[],failed:true}));
+    });
+    return()=>{active=false};
+  },[owner,retryTick,catalogueTick]);
+  useEffect(()=>{
+    if(!ready||!owner)return;
+    let active=true;
+    const tasks=[['stories',()=>getStories({throwOnError:true})],['offers',()=>getOffers({throwOnError:true})],['cars',()=>getCarListings(false)],['info',()=>getStudioInfo(FIRST_STUDIO_ID)]] as const;
     void Promise.allSettled(tasks.map(async([key,read])=>({key,value:await withReadDeadline<unknown>(read)}))).then(results=>{
       if(!active)return;
       setPublicSource(previous=>{
-        const next=previous.owner===owner?{...previous}:{owner,catalogue:[],stories:[],offers:[],cars:null,info:null,failed:[],lastSuccess:null} as typeof previous;
+        const next=previous.owner===owner?{...previous}:{owner,stories:[],offers:[],cars:null,info:null,failed:[],lastSuccess:null} as typeof previous;
         next.failed=[];
         results.forEach((result,index)=>{
           const key=tasks[index]![0];
@@ -280,7 +294,7 @@ export default function HomeScreen() {
         live={live}
         rebook={(() => { const b = lastCompletedService(selectedPast); const sv = b ? catalogue.find((x) => x.id === b.serviceId) : undefined; return b && sv && !sv.priceOnRequest ? { serviceName: sv.name, onPress: () => router.push(`/(tabs)/book/${sv.id}`) } : null; })()}
         stories={groups.length > 0 ? <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, seenKeyOf(g)])); }} /> : null}
-        banner={<>{usable&&publicSource.failed.length?<Notice title="Some studio details could not refresh" body="Showing the last loaded details where available. Retry to check for updates." action={<Button kind="quiet" icon="refresh" label="Retry" onPress={()=>{home.refresh();setRetryTick(t=>t+1)}} />} />:null}{home.error ? <Notice title="Some details are unavailable" body={home.error} action={<Button kind="quiet" icon="refresh" label="Retry" onPress={()=>{home.refresh();setRetryTick(t=>t+1)}} />} /> : null}{rateB ? <RateCard key={rateB.id} bookingId={rateB.id} serviceName={catalogue.find((x) => x.id === rateB.serviceId)?.name ?? "visit"} /> : null}</>}
+        banner={<>{((usable&&publicSource.failed.length)||catalogueFailed)?<Notice title="Some studio details could not refresh" body="Showing the last loaded details where available. Retry to check for updates." action={<Button kind="quiet" icon="refresh" label="Retry" onPress={()=>{home.refresh();setRetryTick(t=>t+1)}} />} />:null}{home.error ? <Notice title="Some details are unavailable" body={home.error} action={<Button kind="quiet" icon="refresh" label="Retry" onPress={()=>{home.refresh();setRetryTick(t=>t+1)}} />} /> : null}{rateB ? <RateCard key={rateB.id} bookingId={rateB.id} serviceName={catalogue.find((x) => x.id === rateB.serviceId)?.name ?? "visit"} /> : null}</>}
         onSearch={() => router.navigate("/(tabs)/catalogue")}
         onBell={() => router.navigate("/(tabs)/notifications")}
         onAllServices={() => router.navigate("/(tabs)/catalogue")}
