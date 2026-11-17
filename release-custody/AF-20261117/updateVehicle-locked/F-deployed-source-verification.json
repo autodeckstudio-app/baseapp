@@ -1,0 +1,14 @@
+[
+  {
+    "name": "updateVehicle",
+    "revision": "updatevehicle-00011-woy",
+    "source": {
+      "bucket": "gcf-v2-sources-24903853329-asia-south1",
+      "object": "updateVehicle/function-source.zip",
+      "generation": "1794898350496982"
+    },
+    "deployed_zip_sha256": "f8a8674fe9a6e24363f0d30e9b3ba20f08659b5ae9aa756eaa925638dec62218",
+    "expected_zip_sha256": "f8a8674fe9a6e24363f0d30e9b3ba20f08659b5ae9aa756eaa925638dec62218",
+    "bundle_bytes_equal": true
+  }
+]

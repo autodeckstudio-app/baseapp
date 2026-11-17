@@ -1,0 +1,11 @@
+{
+  "zip_sha256": "f8a8674fe9a6e24363f0d30e9b3ba20f08659b5ae9aa756eaa925638dec62218",
+  "index_sha256": "c5ab55376ad8074260c93850dce8eb68054c2eec0e3c359060319fb699883b88",
+  "package_lock_sha256": "633da861dd18dd3ae8b40f9715df513280421ad71c046baf6822e0d77892c84a",
+  "changes_vs_reviewed_prepared_zip": [
+    "package-lock.json added; all original entries byte-identical"
+  ],
+  "node_test_version": "22.23.5",
+  "runtime_tests": "4/4pass",
+  "parity_claim": "Unchanged declared ranges, exact tested closure pinned; old image dependency parity NOT established"
+}

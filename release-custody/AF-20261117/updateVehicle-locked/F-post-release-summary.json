@@ -1,0 +1,15 @@
+[
+  {
+    "name": "updateVehicle",
+    "done": true,
+    "error": null,
+    "state": "ACTIVE",
+    "revision": "updatevehicle-00011-woy",
+    "updateTime": "2026-11-17T06:53:42.746910228Z",
+    "serviceConfig_equal": true,
+    "runtime_equal": true,
+    "entrypoint_equal": true,
+    "trigger_equal": true,
+    "iam_equal": true
+  }
+]
