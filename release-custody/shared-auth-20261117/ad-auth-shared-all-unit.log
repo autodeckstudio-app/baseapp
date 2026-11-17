@@ -1,0 +1,358 @@
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v2.1.9 /tmp/ad-startup-release-20261117/apps/customer
+
+ ✓ src/ui/design-contract.test.ts (118 tests) 45ms
+ ✓ src/lib/auth-service.identity.test.ts (25 tests) 9ms
+ ✓ src/lib/protection-display.test.ts (17 tests) 5ms
+ ✓ src/lib/back-nav.navtree.test.ts (9 tests) 7ms
+ ✓ src/lib/services-tree.test.ts (14 tests) 13ms
+stderr | src/hooks/useCustomerHome.claimPending.test.tsx > useCustomerHome claim-pending guard > resolves the empty model with no customer doc, never a skeleton hang
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useCustomerHome.claimPending.test.tsx > useCustomerHome claim-pending guard > keeps the normal listener path once a customer doc exists
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useCustomerHome.claimPending.test.tsx > useCustomerHome claim-pending guard > keeps the normal listener path once a customer doc exists
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useCustomerHome.claimPending.test.tsx > clears prior account model and ignores late listeners and errors after same-ready account switch
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useCustomerHome.claimPending.test.tsx > passes live issued invoices into the model and reprojects when only invoices change
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useCustomerHome.claimPending.test.tsx > passes live issued invoices into the model and reprojects when only invoices change
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useCustomerHome.claimPending.test.tsx > changes the canonical preferred vehicle immediately, rejects non-owned IDs and ignores deleted cars
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useCustomerHome.claimPending.test.tsx > changes the canonical preferred vehicle immediately, rejects non-owned IDs and ignores deleted cars
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useCustomerHome.claimPending.test.tsx > clears a failed listener notice only when all failed sources recover
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+[home] listener failed: visits Error: offline
+    at /tmp/ad-startup-release-20261117/apps/customer/src/hooks/useCustomerHome.claimPending.test.tsx:109:99
+    at Proxy.process.env.NODE_ENV.exports.act (/tmp/ad-startup-release-20261117/node_modules/.pnpm/react@19.0.0/node_modules/react/cjs/react.development.js:1081:22)
+    at /tmp/ad-startup-release-20261117/apps/customer/src/hooks/useCustomerHome.claimPending.test.tsx:109:42
+    at file:///tmp/ad-startup-release-20261117/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5
+    at runTest (file:///tmp/ad-startup-release-20261117/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)
+    at runSuite (file:///tmp/ad-startup-release-20261117/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///tmp/ad-startup-release-20261117/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)
+    at startTests (file:///tmp/ad-startup-release-20261117/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)
+    at file:///tmp/ad-startup-release-20261117/node_modules/.pnpm/vitest@2.1.9_@types+node@22.20.1_lightningcss@1.27.0_terser@5.50.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11
+    at withEnv (file:///tmp/ad-startup-release-20261117/node_modules/.pnpm/vitest@2.1.9_@types+node@22.20.1_lightningcss@1.27.0_terser@5.50.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:90:5)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+[home] listener failed: bills Error: offline
+    at /tmp/ad-startup-release-20261117/apps/customer/src/hooks/useCustomerHome.claimPending.test.tsx:109:173
+    at Proxy.process.env.NODE_ENV.exports.act (/tmp/ad-startup-release-20261117/node_modules/.pnpm/react@19.0.0/node_modules/react/cjs/react.development.js:1081:22)
+    at /tmp/ad-startup-release-20261117/apps/customer/src/hooks/useCustomerHome.claimPending.test.tsx:109:42
+    at file:///tmp/ad-startup-release-20261117/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5
+    at runTest (file:///tmp/ad-startup-release-20261117/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)
+    at runSuite (file:///tmp/ad-startup-release-20261117/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///tmp/ad-startup-release-20261117/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)
+    at startTests (file:///tmp/ad-startup-release-20261117/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)
+    at file:///tmp/ad-startup-release-20261117/node_modules/.pnpm/vitest@2.1.9_@types+node@22.20.1_lightningcss@1.27.0_terser@5.50.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11
+    at withEnv (file:///tmp/ad-startup-release-20261117/node_modules/.pnpm/vitest@2.1.9_@types+node@22.20.1_lightningcss@1.27.0_terser@5.50.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:90:5)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+ ✓ src/hooks/useCustomerHome.claimPending.test.tsx (6 tests) 24ms
+ ✓ src/lib/add-car-journal.test.ts (14 tests) 8ms
+ ✓ src/lib/garage-live.test.ts (25 tests) 17ms
+ ✓ src/lib/booking-ideas.test.ts (13 tests) 11ms
+ ✓ src/lib/protection-save-flow.test.ts (14 tests) 6ms
+ ✓ src/lib/cancel-rules.test.ts (15 tests) 7ms
+ ✓ src/lib/services-navigation.test.ts (10 tests) 14ms
+ ✓ src/lib/advance-booking.test.ts (16 tests) 5ms
+ ✓ src/lib/catalogue-local-polish.test.ts (13 tests) 6ms
+ ✓ src/lib/pickup-slots.test.ts (24 tests) 56ms
+ ✓ src/lib/membership-wash.test.ts (18 tests) 15ms
+ ✓ src/lib/category-imagery.test.ts (7 tests) 11ms
+ ✓ src/lib/invoice-display.test.ts (11 tests) 8ms
+ ✓ src/lib/private-photo-service.test.ts (9 tests) 7ms
+grep: src/app: No such file or directory
+ ✓ src/lib/back-nav.test.ts (12 tests) 7ms
+ ✓ src/ui/round8-pickup.test.ts (14 tests) 4ms
+ ✓ src/lib/visit-extras.test.ts (14 tests) 5ms
+ ✓ src/lib/bookings-view.test.ts (16 tests) 16ms
+ ✓ src/ui/round7-ui.test.ts (10 tests) 7ms
+ ✓ src/lib/existing-job-payment.test.ts (7 tests) 4ms
+ ✓ src/lib/service-size-guard.test.ts (8 tests) 4ms
+ ✓ src/lib/car-timeline.test.ts (10 tests) 15ms
+ ✓ src/lib/emulator-flag.test.ts (12 tests) 4ms
+ ✓ src/lib/catalogue-overview.test.ts (9 tests) 5ms
+ ✓ src/lib/story-groups.test.ts (12 tests) 10ms
+ ✓ src/lib/segment-swipe.test.ts (9 tests) 4ms
+ ✓ src/lib/site-guards.test.ts (6 tests) 6ms
+ ✓ src/lib/native-image-pick.test.ts (7 tests) 6ms
+ ✓ src/lib/vehicle-native-photo.test.ts (7 tests) 7ms
+ ✓ src/lib/protection-readback.test.ts (6 tests) 4ms
+ ✓ src/lib/documents.test.ts (5 tests) 3ms
+ ✓ src/ui/top-services.test.ts (9 tests) 4ms
+ ✓ src/lib/native-payment-runtime.test.ts (8 tests) 6ms
+ ✓ src/lib/round2-contract.test.ts (8 tests) 4ms
+ ✓ src/ui/uc-review-contract.test.ts (7 tests) 3ms
+ ✓ src/lib/paper-service.test.ts (4 tests) 6ms
+ ✓ src/lib/backend-features.test.ts (7 tests) 3ms
+ ✓ src/lib/gift.test.ts (10 tests) 14ms
+ ✓ src/lib/upload-vehicle-photo-retry.test.ts (2 tests) 4ms
+ ✓ src/lib/reschedule-entry.test.ts (7 tests) 3ms
+ ✓ src/lib/customer-night.test.ts (1 test) 3ms
+ ✓ src/lib/catalogue-initial-reference-diagnostic.test.ts (8 tests) 4ms
+ ✓ src/lib/home-service-navigation.test.ts (7 tests) 3ms
+ ✓ src/lib/native-google-flow.test.ts (10 tests) 7ms
+ ✓ src/lib/carsale-native-photo.test.ts (6 tests) 7ms
+ ✓ src/lib/invoice-export.test.ts (6 tests) 7ms
+ ✓ src/lib/browser.test.ts (7 tests) 3ms
+ ✓ src/lib/waiting-cancel-display.test.ts (2 tests) 3ms
+ ✓ src/lib/mock-write-guard.test.ts (6 tests) 13ms
+ ✓ src/lib/contrast.test.ts (17 tests) 5ms
+ ✓ src/lib/auth-return.test.ts (7 tests) 3ms
+ ✓ src/lib/paper-owner-listeners.test.ts (2 tests) 4ms
+ ✓ src/lib/service-journey.test.ts (4 tests) 9ms
+ ✓ src/lib/home-scene-routes.test.ts (3 tests) 4ms
+ ✓ src/lib/content-md5.test.ts (5 tests) 4ms
+ ✓ src/lib/catalogue-publication-cache.test.ts (1 test) 3ms
+ ✓ src/lib/price-cache.test.ts (6 tests) 2ms
+ ✓ src/lib/care-plan.test.ts (4 tests) 3ms
+ ✓ src/lib/customer-job-read.test.ts (4 tests) 6ms
+ ✓ src/lib/owner-key.test.ts (5 tests) 3ms
+ ✓ src/lib/vercel-ignore.test.ts (7 tests) 3ms
+ ✓ src/lib/rate-card.test.ts (5 tests) 12ms
+ ✓ src/lib/drawer-items.test.ts (5 tests) 3ms
+ ✓ src/lib/referral.test.ts (7 tests) 5ms
+ ✓ src/lib/connected-visit-release.test.ts (3 tests) 8ms
+ ✓ src/ui/job-stage-late.test.ts (7 tests) 3ms
+ ✓ src/lib/login-stage.test.ts (5 tests) 3ms
+ ✓ src/lib/hosted-web-navigation.test.ts (7 tests) 5ms
+ ✓ src/lib/vercel-confirm-fix-guard.test.ts (1 test) 458ms
+   ✓ exact confirm-CTA/pickup-note fix branch and direct main landing build only Customer, refusing path/parent/diff drift 458ms
+ ✓ src/lib/manual-refund-notice.test.ts (4 tests) 12ms
+ ✓ src/lib/vercel-second-batch-guard.test.ts (1 test) 364ms
+   ✓ exact second-batch branch and direct main landing build only Customer, refusing path/parent/diff drift 363ms
+ ✓ src/lib/vercel-correction-guard.test.ts (1 test) 406ms
+   ✓ exact correction branch and direct main landing build only Customer, refusing path/parent/diff drift 405ms
+ ✓ src/lib/cars-pending.test.ts (4 tests) 3ms
+ ✓ src/lib/vercel-gauri-ui-guard.test.ts (1 test) 454ms
+   ✓ exact Gauri payment UI branch and direct main landing build only Customer, refusing path/parent/diff drift 453ms
+ ✓ src/lib/sell-validation.test.ts (5 tests) 13ms
+ ✓ src/lib/car-filters.test.ts (7 tests) 8ms
+ ✓ src/lib/visit-services.test.ts (7 tests) 3ms
+ ✓ src/lib/catalogue-sole-redirect.test.ts (4 tests) 2ms
+ ✓ src/lib/offer-service.test.ts (4 tests) 4ms
+ ✓ src/lib/upgrade-copy.test.ts (5 tests) 3ms
+ ✓ src/lib/catalogue-dev-sample.test.ts (4 tests) 6ms
+ ✓ src/lib/membership-listener.test.ts (2 tests) 3ms
+ ✓ src/lib/calendar-link.test.ts (5 tests) 3ms
+ ✓ src/ui/home-merged.test.ts (5 tests) 4ms
+ ✓ src/lib/sticky-price.test.ts (3 tests) 2ms
+ ✓ src/lib/text-repair.test.ts (3 tests) 64ms
+ ✓ src/lib/save-separate-invoice-pdf.test.ts (3 tests) 6ms
+ ✓ src/lib/pending-payment-copy.test.ts (4 tests) 2ms
+ ✓ src/lib/policy-copy.test.ts (3 tests) 2ms
+ ✓ src/lib/booking-sections.test.ts (4 tests) 8ms
+ ✓ src/lib/foreground-refresh.test.ts (4 tests) 3ms
+ ✓ src/lib/membership-view.test.ts (7 tests) 3ms
+ ✓ src/lib/pickup-legs.test.ts (4 tests) 2ms
+ ✓ src/lib/shop-concepts.test.ts (5 tests) 3ms
+ ✓ src/lib/services-image-derivatives.test.ts (2 tests) 27ms
+ ✓ src/lib/material-contract.test.ts (3 tests) 4ms
+ ✓ src/lib/shop-copy.test.ts (5 tests) 3ms
+ ✓ src/ui/job-stage.test.ts (4 tests) 3ms
+ ✓ src/lib/refund-copy-guard.test.ts (3 tests) 3ms
+ ✓ src/ui/job-timeline.test.ts (5 tests) 8ms
+ ✓ src/lib/share-story.test.ts (5 tests) 2ms
+ ✓ src/lib/pickup-zone.test.ts (4 tests) 2ms
+ ✓ src/lib/home-studio-groups.test.ts (4 tests) 2ms
+ ✓ src/lib/prod-bundle-guard.test.ts (3 tests) 3ms
+ ✓ src/lib/service-manufacturer-facts.test.ts (3 tests) 8ms
+ ✓ src/lib/member-save.test.ts (3 tests) 2ms
+ ✓ src/lib/day-surfaces.test.ts (5 tests) 2ms
+ ✓ src/lib/care-due.test.ts (3 tests) 2ms
+ ✓ src/lib/reviewed-starting-prices.test.ts (2 tests) 15ms
+ ✓ src/lib/service-scope-items.test.ts (6 tests) 3ms
+ ✓ src/lib/booking-advance-listener.test.ts (1 test) 2ms
+ ✓ src/lib/car-story.test.ts (4 tests) 12ms
+ ✓ src/lib/work-coverage-service.test.ts (3 tests) 3ms
+ ✓ src/lib/combo-fixed.test.ts (2 tests) 3ms
+ ✓ src/lib/visit-invoice-service.test.ts (7 tests) 5ms
+ ✓ src/ui/route-state-safety.test.ts (3 tests) 2ms
+ ✓ src/lib/paper-evidence-failure.test.ts (2 tests) 2ms
+ ✓ src/lib/native-photo-wiring.test.ts (7 tests) 3ms
+ ✓ src/lib/client-update.test.ts (7 tests) 2ms
+ ✓ src/lib/document-validation.test.ts (4 tests) 2ms
+ ✓ src/lib/home-needs.test.ts (6 tests) 3ms
+ ✓ src/lib/pickup-entitlement.test.ts (4 tests) 7ms
+ ✓ src/lib/catalogue-references.test.ts (3 tests) 2ms
+ ✓ src/ui/profile-glass.test.ts (3 tests) 2ms
+ ✓ src/ui/identity-spacing.test.ts (3 tests) 2ms
+ ✓ src/lib/warranty-labels.test.ts (3 tests) 2ms
+ ✓ src/lib/cancellation-error.test.ts (14 tests) 3ms
+ ✓ src/lib/garage-due.test.ts (3 tests) 2ms
+ ✓ src/lib/image-badges.test.ts (1 test) 2ms
+ ✓ src/lib/car-detail-layout.test.ts (2 tests) 2ms
+ ✓ src/lib/open-status.test.ts (6 tests) 13ms
+ ✓ src/lib/car-photo-source.test.ts (3 tests) 2ms
+ ✓ src/lib/combined-checkout.test.ts (2 tests) 3ms
+ ✓ src/lib/active-vehicle.test.ts (2 tests) 2ms
+ ✓ src/lib/notification-hidden.test.ts (3 tests) 3ms
+ ✓ src/lib/profile-licence.test.ts (3 tests) 2ms
+ ✓ src/lib/car-timeline-spacing.test.ts (3 tests) 2ms
+ ✓ src/lib/duration.test.ts (5 tests) 2ms
+ ✓ src/lib/booking-next-step.test.ts (5 tests) 2ms
+ ✓ src/lib/imagery-generated.test.ts (3 tests) 2ms
+ ✓ src/lib/home-watchdog.test.ts (4 tests) 2ms
+ ✓ src/lib/auth-proxy-guard.test.ts (4 tests) 2ms
+ ✓ src/lib/kit-button.test.ts (3 tests) 2ms
+ ✓ src/lib/history-report.test.ts (3 tests) 2ms
+ ✓ src/lib/saved-size.test.ts (3 tests) 4ms
+ ✓ src/ui/pickup-preference-contract.test.ts (3 tests) 2ms
+ ✓ src/lib/vehicle-size.test.ts (2 tests) 2ms
+ ✓ src/lib/pickup-draft.test.ts (1 test) 2ms
+ ✓ src/lib/detailing-family-images.test.ts (1 test) 3ms
+ ✓ src/lib/showcase.test.ts (4 tests) 2ms
+ ✓ src/lib/product-imagery.test.ts (2 tests) 2ms
+ ✓ src/lib/faq-search.test.ts (5 tests) 3ms
+ ✓ src/lib/sell-prefill.test.ts (3 tests) 2ms
+ ✓ src/lib/car-next-due.test.ts (4 tests) 2ms
+ ✓ src/lib/garage-brands.test.ts (3 tests) 2ms
+ ✓ src/lib/imagery-garage.test.ts (2 tests) 3ms
+ ✓ src/lib/booking-confirm-copy.test.ts (1 test) 2ms
+ ✓ src/lib/studio-open.test.ts (4 tests) 12ms
+ ✓ src/lib/manufacturer-info.test.ts (2 tests) 2ms
+ ✓ src/ui/photo-state.test.ts (3 tests) 2ms
+ ✓ src/lib/native-permission-config.test.ts (2 tests) 2ms
+ ✓ src/ui/nav-centre.test.ts (1 test) 2ms
+ ✓ src/lib/notification-origin-back.test.ts (1 test) 2ms
+ ✓ src/lib/waiting-cancel-runtime.test.ts (1 test) 2ms
+ ✓ src/lib/amount-words.test.ts (5 tests) 2ms
+ ✓ src/lib/product-display-name.test.ts (8 tests) 3ms
+ ✓ src/ui/service-placement56.test.ts (1 test) 2ms
+ ✓ src/lib/help-policy-guard.test.ts (1 test) 2ms
+ ✓ src/lib/membership-replay.test.ts (2 tests) 2ms
+ ✓ src/lib/pickup-map.test.ts (2 tests) 2ms
+ ✓ src/lib/faq-facts.test.ts (1 test) 2ms
+ ✓ src/lib/auth-domain.test.ts (2 tests) 2ms
+ ✓ src/lib/service-detail-scope.test.ts (1 test) 2ms
+ ✓ src/lib/reschedule-extras.test.ts (2 tests) 2ms
+ ✓ src/lib/no-sparkle.test.ts (1 test) 2ms
+ ✓ src/lib/native-payment-outcomes.test.ts (1 test) 1ms
+ ✓ src/lib/notification-groups.test.ts (2 tests) 2ms
+ ✓ src/lib/social-links.test.ts (2 tests) 2ms
+ ✓ src/lib/story-refresh.test.ts (2 tests) 2ms
+ ✓ src/lib/car-hero-contrast.test.ts (1 test) 2ms
+ ✓ src/lib/service-video-policy.test.ts (1 test) 2ms
+ ✓ src/lib/google-ios-config.test.ts (5 tests) 2ms
+ ✓ src/lib/garage-date.test.ts (2 tests) 12ms
+ ✓ src/lib/approval-facts.test.ts (6 tests) 2ms
+ ✓ src/lib/car-type-edit.test.ts (1 test) 1ms
+ ✓ src/lib/service-names.test.ts (1 test) 2ms
+ ✓ src/lib/ceramic-type-image.test.ts (1 test) 1ms
+ ✓ src/lib/notifications-hang.test.ts (1 test) 2ms
+ ✓ src/lib/money.test.ts (3 tests) 13ms
+ ✓ src/lib/service-questions.test.ts (1 test) 2ms
+ ✓ src/lib/add-car-photo-remove.test.ts (1 test) 1ms
+ ✓ src/lib/size-copy.test.ts (1 test) 1ms
+ ✓ src/lib/plan-monthly-label.test.ts (1 test) 1ms
+ ✓ src/lib/short-date.test.ts (1 test) 2ms
+ ✓ src/lib/live-step.test.ts (1 test) 2ms
+
+ Test Files  200 passed (200)
+      Tests  1161 passed (1161)
+   Start at  15:56:02
+   Duration  30.80s (transform 1.36s, setup 0ms, collect 5.25s, tests 2.73s, environment 24ms, prepare 7.24s)
+

@@ -1,0 +1,98 @@
+diff --git a/apps/customer/src/app/_layout.tsx b/apps/customer/src/app/_layout.tsx
+index 1adb612d..ac6576ba 100644
+--- a/apps/customer/src/app/_layout.tsx
++++ b/apps/customer/src/app/_layout.tsx
+@@ -7,7 +7,7 @@ import { setSurfaceMode, glassSurface } from "../lib/glass";
+ import { Stack } from "expo-router";
+ import { StatusBar } from "expo-status-bar";
+ import { AutoExperienceThemeProvider, useExperienceTheme, installWebFonts } from "@autodeck/ui/native";
+-import { useAuth } from "../hooks/useAuth";
++import { CustomerAuthProvider, useAuth } from "../hooks/useAuth";
+ import { NavigationGuard } from "../ui/NavigationGuard";
+ import { onForegroundPush, syncPushRegistration } from "../lib/push";
+ import { installWebVitals } from "../lib/web-vitals";
+@@ -109,7 +109,7 @@ function ThemedRoot() {
+ export default function RootLayout() {
+   return (
+     <AutoExperienceThemeProvider>
+-      <ThemedRoot />
++      <CustomerAuthProvider><ThemedRoot /></CustomerAuthProvider>
+     </AutoExperienceThemeProvider>
+   );
+ }
+diff --git a/apps/customer/src/app/root-boundary.render.test.tsx b/apps/customer/src/app/root-boundary.render.test.tsx
+index 89345b3b..5f650c42 100644
+--- a/apps/customer/src/app/root-boundary.render.test.tsx
++++ b/apps/customer/src/app/root-boundary.render.test.tsx
+@@ -1,2 +1,2 @@
+-import React,{useEffect}from'react';import{it,expect,vi}from'vitest';import{create,act}from'react-test-renderer';const h=vi.hoisted(()=>({auth:{status:'ready',customerDocId:'one',user:{uid:'auth-one'},claims:{tenantId:'t'}},gate:'pass',mounts:0,stops:0}));vi.mock('../lib/boot-theme',()=>({}));vi.mock('../lib/webAlert',()=>({}));vi.mock('../lib/web-vitals',()=>({installWebVitals:()=>{}}));vi.mock('../lib/push',()=>({syncPushRegistration:async()=>{},onForegroundPush:()=>()=>{}}));vi.mock('../hooks/useAuth',()=>({useAuth:()=>h.auth}));vi.mock('expo-status-bar',()=>({StatusBar:'StatusBar'}));vi.mock('../ui/ConnectionBanner',()=>({ConnectionBanner:'ConnectionBanner'}));vi.mock('../ui/ErrorBoundary',()=>({ErrorBoundary:({children}:any)=>children}));vi.mock('../ui/NativeUpdateGate',()=>({NativeUpdateGate:({children}:any)=>h.gate==='pass'?children:<div>UPDATE HOLD</div>}));vi.mock('@autodeck/ui/native',()=>({installWebFonts:()=>{},AutoExperienceThemeProvider:({children}:any)=>children,useExperienceTheme:()=>({name:'night',colors:{canvas:'#000'}})}));vi.mock('expo-router',()=>{function Stack({children}:any){useEffect(()=>{h.mounts++;return()=>{h.stops++}},[]);return <section>{children}</section>};Stack.Screen=()=>null;return{Stack,useSegments:()=>[],useRouter:()=>({replace:vi.fn()})}});vi.mock('../ui/kit',()=>({T:'T'}));import Root from'./_layout';
++import React,{useEffect}from'react';import{it,expect,vi}from'vitest';import{create,act}from'react-test-renderer';const h=vi.hoisted(()=>({auth:{status:'ready',customerDocId:'one',user:{uid:'auth-one'},claims:{tenantId:'t'}},gate:'pass',mounts:0,stops:0}));vi.mock('../lib/boot-theme',()=>({}));vi.mock('../lib/webAlert',()=>({}));vi.mock('../lib/web-vitals',()=>({installWebVitals:()=>{}}));vi.mock('../lib/push',()=>({syncPushRegistration:async()=>{},onForegroundPush:()=>()=>{}}));vi.mock('../hooks/useAuth',()=>({useAuth:()=>h.auth,CustomerAuthProvider:({children}:any)=>children}));vi.mock('expo-status-bar',()=>({StatusBar:'StatusBar'}));vi.mock('../ui/ConnectionBanner',()=>({ConnectionBanner:'ConnectionBanner'}));vi.mock('../ui/ErrorBoundary',()=>({ErrorBoundary:({children}:any)=>children}));vi.mock('../ui/NativeUpdateGate',()=>({NativeUpdateGate:({children}:any)=>h.gate==='pass'?children:<div>UPDATE HOLD</div>}));vi.mock('@autodeck/ui/native',()=>({installWebFonts:()=>{},AutoExperienceThemeProvider:({children}:any)=>children,useExperienceTheme:()=>({name:'night',colors:{canvas:'#000'}})}));vi.mock('expo-router',()=>{function Stack({children}:any){useEffect(()=>{h.mounts++;return()=>{h.stops++}},[]);return <section>{children}</section>};Stack.Screen=()=>null;return{Stack,useSegments:()=>[],useRouter:()=>({replace:vi.fn()})}});vi.mock('../ui/kit',()=>({T:'T'}));import Root from'./_layout';
+ it('actual root wiring gates route mount before navigation, then real session boundary remounts on canonical identity change',async()=>{let r:any;h.gate='block';await act(async()=>{r=create(<Root/>)});expect(h.mounts).toBe(0);expect(r.root.findAllByType('section')).toHaveLength(0);h.gate='pass';await act(async()=>r.update(<Root/>));expect(h.mounts).toBe(1);h.auth={...h.auth,customerDocId:'two'};await act(async()=>r.update(<Root/>));expect(h.mounts).toBe(2);expect(h.stops).toBe(1);h.gate='block';await act(async()=>r.update(<Root/>));expect(r.root.findAllByType('section')).toHaveLength(0);expect(h.stops).toBe(2);await act(async()=>r.unmount())});
+diff --git a/apps/customer/src/hooks/auth-shared-startup.render.test.tsx b/apps/customer/src/hooks/auth-shared-startup.render.test.tsx
+new file mode 100644
+index 00000000..5a247117
+--- /dev/null
++++ b/apps/customer/src/hooks/auth-shared-startup.render.test.tsx
+@@ -0,0 +1,15 @@
++import React from 'react';
++import {beforeEach,it,expect,vi} from 'vitest';
++import {act,create} from 'react-test-renderer';
++const h=vi.hoisted(()=>({callbacks:[]as Array<(u:any)=>Promise<void>>,resolve:vi.fn(),staff:vi.fn(),stop:vi.fn()}));
++vi.mock('../lib/auth-service',()=>({onIdTokenChanged:(cb:any)=>{h.callbacks.push(cb);return h.stop},resolveMyCustomerDocResolution:()=>h.resolve(),resolveExistingCustomerDocId:()=>h.staff()}));
++vi.mock('../lib/price-cache',()=>({priceCache:{setScope:()=>{}}}));
++import {CustomerAuthProvider,useAuth} from './useAuth';
++import {CustomerSessionBoundary} from '../ui/CustomerSessionBoundary';
++const customer=(uid:string)=>({uid,getIdTokenResult:vi.fn(async()=>({claims:{role:'customer',tenantId:'fictional'}}))});
++function Consumer(){const a=useAuth();return <div>{a.status==='ready'?`${a.user.uid}:${a.customerDocId}`:a.status}</div>}
++function Fixture(){return <CustomerAuthProvider><CustomerSessionBoundary><Consumer/><Consumer/><Consumer/></CustomerSessionBoundary></CustomerAuthProvider>}
++beforeEach(()=>{h.callbacks=[];h.resolve.mockReset();h.staff.mockReset();h.stop.mockReset();h.resolve.mockResolvedValue({outcome:'resolved',customerDocId:'canonical'})});
++it('one subscription and one resolution serve boundary plus three nested consumers; warm rerender adds none',async()=>{let r:any;await act(async()=>{r=create(<Fixture/>)});expect(h.callbacks).toHaveLength(1);expect(JSON.stringify(r.toJSON())).toContain('Loading your session');const u=customer('A');await act(async()=>h.callbacks[0]!(u));expect(u.getIdTokenResult).toHaveBeenCalledTimes(1);expect(h.resolve).toHaveBeenCalledTimes(1);expect(h.callbacks).toHaveLength(1);expect(JSON.stringify(r.toJSON()).match(/A:canonical/g)).toHaveLength(3);await act(async()=>r.update(<Fixture/>));expect(h.callbacks).toHaveLength(1);expect(h.resolve).toHaveBeenCalledTimes(1);await act(async()=>r.unmount());expect(h.stop).toHaveBeenCalledTimes(1)});
++it('token event drops old private children immediately; stale A result cannot replace newer B; no persistent ownership cache',async()=>{let r:any;await act(async()=>{r=create(<Fixture/>)});const u=customer('A');await act(async()=>h.callbacks[0]!(u));let finish:any;h.resolve.mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve}));let old:any;await act(async()=>{old=h.callbacks[0]!(u);await Promise.resolve();await Promise.resolve()});expect(JSON.stringify(r.toJSON())).not.toContain('A:canonical');expect(JSON.stringify(r.toJSON())).toContain('Loading your session');h.resolve.mockResolvedValue({outcome:'resolved',customerDocId:'B-record'});await act(async()=>h.callbacks[0]!(customer('B')));await act(async()=>{finish({outcome:'resolved',customerDocId:'old-A'});await old});expect(JSON.stringify(r.toJSON())).toContain('B:B-record');expect(JSON.stringify(r.toJSON())).not.toContain('old-A');expect(h.resolve).toHaveBeenCalledTimes(3);await act(async()=>h.callbacks[0]!(null));expect(JSON.stringify(r.toJSON())).not.toContain('B:B-record');await act(async()=>r.unmount())});
++it('staff root takes only read-only resolution and an unmounted pending root cannot reuse a late result',async()=>{let r:any;h.staff.mockResolvedValue({outcome:'absent'});await act(async()=>{r=create(<Fixture/>)});await act(async()=>h.callbacks[0]!({uid:'staff',getIdTokenResult:async()=>({claims:{role:'staff',tenantId:'fictional'}})}));expect(h.staff).toHaveBeenCalledTimes(1);expect(h.resolve).not.toHaveBeenCalled();await act(async()=>r.unmount());await act(async()=>{r=create(<Fixture/>)});expect(h.callbacks).toHaveLength(2);expect(JSON.stringify(r.toJSON())).toContain('Loading your session');await act(async()=>r.unmount())});
+diff --git a/apps/customer/src/hooks/useAuth.ts b/apps/customer/src/hooks/useAuth.ts
+index 7d06c233..071031ef 100644
+--- a/apps/customer/src/hooks/useAuth.ts
++++ b/apps/customer/src/hooks/useAuth.ts
+@@ -1,4 +1,4 @@
+-import { useEffect, useState } from "react";
++import { createContext, createElement, useContext, useEffect, useState, type ReactNode } from "react";
+ import type { User } from "firebase/auth";
+ import type { AutoDeckClaims } from "@autodeck/auth";
+ import { onIdTokenChanged, resolveExistingCustomerDocId, resolveMyCustomerDocResolution, type CustomerDocResolution } from "../lib/auth-service";
+@@ -30,10 +30,27 @@ type AuthState =
+  * After Google sign-in, the app calls setupCustomerProfile + refreshAuthToken,
+  * which fires onIdTokenChanged again with updated claims.
+  */
++const SharedAuth = createContext<AuthState | null>(null);
++
++/** One live subscription per app root. No persisted ownership result or timeout bypass. */
++export function CustomerAuthProvider({ children }: { children: ReactNode }) {
++  const state = useAuthSubscription(true);
++  return createElement(SharedAuth.Provider, { value: state }, children);
++}
++
+ export function useAuth(): AuthState {
++  const shared = useContext(SharedAuth);
++  // Standalone fixtures/embedders retain the original hook. Root consumers read
++  // the same live state without creating duplicate Firebase listeners/probes.
++  const standalone = useAuthSubscription(shared === null);
++  return shared ?? standalone;
++}
++
++function useAuthSubscription(enabled: boolean): AuthState {
+   const [state, setState] = useState<AuthState>({ status: "loading" });
+ 
+   useEffect(() => {
++    if (!enabled) return undefined;
+     // Stale-async guard: a newer auth event (sign-out, account switch, token
+     // refresh) supersedes any resolution still in flight.
+     let generation = 0;
+@@ -111,7 +128,7 @@ export function useAuth(): AuthState {
+       generation += 1;
+       unsubscribe();
+     };
+-  }, []);
++  }, [enabled]);
+ 
+   return state;
+ }

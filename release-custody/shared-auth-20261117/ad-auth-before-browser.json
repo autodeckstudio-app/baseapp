@@ -1,0 +1,16 @@
+{
+  "navigation": [
+    {
+      "domContentLoaded": 2799.199999999997,
+      "loadEnd": 4007.9000000000015,
+      "responseStart": 1126.7999999999956,
+      "transferSize": 1169
+    }
+  ],
+  "nowMs": 7945.699999999997,
+  "scripts": [
+    "https://app.autodeck.in/_expo/static/js/web/entry-eaf3fb78034c36c751ac600b849e1584.js"
+  ],
+  "text": "LOADING YOUR SESSION",
+  "url": "https://app.autodeck.in/"
+}

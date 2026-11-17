@@ -1,0 +1,18 @@
+{
+  "commit": "6d97ec10d42647b1dd90f6b48d332224d4fbec46",
+  "parent": "2ea364e87f7d7af1c58369c9fef866a07d4ab435",
+  "deployment": "https://vercel.com/autodeckstudio-9370/baseapp-customer/AyNrmPPs4AFPEUfKMzHJdXiHkUG4",
+  "alias": "https://app.autodeck.in/",
+  "state": "Ready Production Current",
+  "config": "Existing customer Vercel project;Production rebuild;Basic2vCPU8GB;Node24.x;iad1;FluidCompute enabled;no settings changes. Existing Firebase autodeck-studio config.",
+  "timing": "Old session loader present7.946s,Home present by40.389s;new Home present by8.635s. Upper bounds from one navigation each,not exact transitions or repeatable speedup estimate.",
+  "acceptance": "Actual saved session loads Home without manual login/reload/storage changes. Unit1161,render601,focused18,types,export/prodguard pass.",
+  "limits": "Not universal cold-start latency fix. Native/private/staff/provider tests not performed live. Home car-photo/title mismatch already present before release;read-only attribution points to same saved record object,not stock fallback. No repair.",
+  "bundle": [
+    {
+      "url": "https://app.autodeck.in/_expo/static/js/web/entry-7ba2f3d4dde441c0fd9823c5dc50e637.js",
+      "sha256": "43c5d78dd48e7d395dca02e7be52f7e29646eae2216018082ad31c2287c4960b",
+      "bytes": 2988779
+    }
+  ]
+}

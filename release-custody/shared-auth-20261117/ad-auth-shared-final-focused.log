@@ -1,0 +1,197 @@
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v2.1.9 /tmp/ad-startup-release-20261117/apps/customer
+
+stderr | src/hooks/useAuth.render.test.tsx > useAuth terminal + stale-async behavior > claims read failure lands terminal unauthenticated, not a hang
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useAuth.render.test.tsx > useAuth terminal + stale-async behavior > claims read failure lands terminal unauthenticated, not a hang
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useAuth.render.test.tsx > useAuth terminal + stale-async behavior > resolver throw still ends ready with null customerDocId and error outcome
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useAuth.render.test.tsx > useAuth terminal + stale-async behavior > normal resolution: ready carries the canonical id
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useAuth.render.test.tsx > useAuth terminal + stale-async behavior > normal resolution: ready carries the canonical id
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useAuth.render.test.tsx > useAuth terminal + stale-async behavior > customer claim-required resolves to null id with its own outcome
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useAuth.render.test.tsx > useAuth terminal + stale-async behavior > staff role resolves an existing verified record read-only
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useAuth.render.test.tsx > useAuth terminal + stale-async behavior > staff with no record is absent, and a staff resolution error stays truthful
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useAuth.render.test.tsx > useAuth terminal + stale-async behavior > a superseded resolution never overwrites the newer principal
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useAuth.render.test.tsx > useAuth terminal + stale-async behavior > sign-out during resolution never lands ready for the old account
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useAuth.render.test.tsx > useAuth unmount > a resolution still in flight at unmount never lands
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useAuth.render.test.tsx > actual session boundary immediately drops former private route while replacement token/identity is unresolved, then remounts cleanly
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useAuth.render.test.tsx > actual session boundary immediately drops former private route while replacement token/identity is unresolved, then remounts cleanly
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useAuth.render.test.tsx > actual session boundary immediately drops former private route while replacement token/identity is unresolved, then remounts cleanly
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useAuth.render.test.tsx > refresh with revoked/missing claims clears canonical customer and reaches setup state, never prior ready identity
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/useAuth.render.test.tsx > restored signed-out session becomes terminal unauthenticated; restored customer resolves its canonical identity
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+ ✓ src/hooks/useAuth.render.test.tsx (12 tests) 29ms
+stderr | src/hooks/auth-shared-startup.render.test.tsx > one subscription and one resolution serve boundary plus three nested consumers; warm rerender adds none
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/auth-shared-startup.render.test.tsx > one subscription and one resolution serve boundary plus three nested consumers; warm rerender adds none
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/auth-shared-startup.render.test.tsx > one subscription and one resolution serve boundary plus three nested consumers; warm rerender adds none
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/auth-shared-startup.render.test.tsx > token event drops old private children immediately; stale A result cannot replace newer B; no persistent ownership cache
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/auth-shared-startup.render.test.tsx > token event drops old private children immediately; stale A result cannot replace newer B; no persistent ownership cache
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/auth-shared-startup.render.test.tsx > token event drops old private children immediately; stale A result cannot replace newer B; no persistent ownership cache
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/auth-shared-startup.render.test.tsx > token event drops old private children immediately; stale A result cannot replace newer B; no persistent ownership cache
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/auth-shared-startup.render.test.tsx > staff root takes only read-only resolution and an unmounted pending root cannot reuse a late result
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+
+stderr | src/hooks/auth-shared-startup.render.test.tsx > staff root takes only read-only resolution and an unmounted pending root cannot reuse a late result
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+ ✓ src/hooks/auth-shared-startup.render.test.tsx (3 tests) 23ms
+stderr | src/hooks/auth-shared-startup.render.test.tsx > staff root takes only read-only resolution and an unmounted pending root cannot reuse a late result
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/ui/customer-session-boundary.render.test.tsx > remounts all private route state for auth UID, tenant, canonical profile or sign-out changes; same identity keeps state
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/ui/customer-session-boundary.render.test.tsx > remounts all private route state for auth UID, tenant, canonical profile or sign-out changes; same identity keeps state
+The current testing environment is not configured to support act(...)
+
+stderr | src/ui/customer-session-boundary.render.test.tsx > remounts all private route state for auth UID, tenant, canonical profile or sign-out changes; same identity keeps state
+The current testing environment is not configured to support act(...)
+
+stderr | src/ui/customer-session-boundary.render.test.tsx > remounts all private route state for auth UID, tenant, canonical profile or sign-out changes; same identity keeps state
+The current testing environment is not configured to support act(...)
+
+stderr | src/ui/customer-session-boundary.render.test.tsx > remounts all private route state for auth UID, tenant, canonical profile or sign-out changes; same identity keeps state
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/ui/customer-session-boundary.render.test.tsx > remounts all private route state for auth UID, tenant, canonical profile or sign-out changes; same identity keeps state
+The current testing environment is not configured to support act(...)
+
+stderr | src/ui/customer-session-boundary.render.test.tsx > shows neutral feedback while loading, never mounts private children, then drops feedback on a ready session
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+
+ ✓ src/ui/customer-session-boundary.render.test.tsx (2 tests) 16ms
+stderr | src/ui/customer-session-boundary.render.test.tsx > shows neutral feedback while loading, never mounts private children, then drops feedback on a ready session
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/app/root-boundary.render.test.tsx > actual root wiring gates route mount before navigation, then real session boundary remounts on canonical identity change
+react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/app/root-boundary.render.test.tsx > actual root wiring gates route mount before navigation, then real session boundary remounts on canonical identity change
+The current testing environment is not configured to support act(...)
+
+stderr | src/app/root-boundary.render.test.tsx > actual root wiring gates route mount before navigation, then real session boundary remounts on canonical identity change
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+ ✓ src/app/root-boundary.render.test.tsx (1 test) 15ms
+
+ Test Files  4 passed (4)
+      Tests  18 passed (18)
+   Start at  15:56:48
+   Duration  1.74s (transform 226ms, setup 0ms, collect 1.14s, tests 83ms, environment 0ms, prepare 159ms)
+

@@ -1,0 +1,17 @@
+{
+  "navigation": [
+    {
+      "domContentLoaded": 1697.5999999999767,
+      "loadEnd": 1753.2999999999884,
+      "responseStart": 911.0999999999768,
+      "transferSize": 1169
+    }
+  ],
+  "observedAtMs": 8634.599999999977,
+  "observerStartedAtMs": 8634.099999999977,
+  "scripts": [
+    "https://app.autodeck.in/_expo/static/js/web/entry-7ba2f3d4dde441c0fd9823c5dc50e637.js"
+  ],
+  "state": "home-already-present",
+  "text": "A\nGOOD AFTERNOON, AUTODECK\nComplete car care.\nAll under one roof.\nWashing\nDetailing\nProtection\nGarage\nModifications\nToyota Land Cruiser\nGJ 01 AB 1234\nSUV\nServic"
+}

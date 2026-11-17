@@ -1,0 +1,15 @@
+{
+  "module_count_local": 1432,
+  "module_count_served": 1432,
+  "different_module_indices": [
+    811,
+    1153
+  ],
+  "only_difference_is_build_environment_config": true,
+  "identical_non_config_module_count": 1430,
+  "production_firebase_project_present": true,
+  "production_connected_visit_config_present": true,
+  "local_entry_sha256": "89b2e19314c175463f64cb99289860c9c9199f6e570f7b15b4d7d47967862291",
+  "served_entry_sha256": "43c5d78dd48e7d395dca02e7be52f7e29646eae2216018082ad31c2287c4960b",
+  "caveat": "Local export used no production environment substitution. Deployment source commit and all1430nonconfig modules establish source identity;2config modules differ as expected. No exact whole-file local/served hash claim."
+}
