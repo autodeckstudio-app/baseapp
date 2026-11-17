@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from "react";
+import { Loading } from "./kit";
 import { useAuth } from "../hooks/useAuth";
 /** A different signed-in principal, tenant or canonical customer must never reuse the previous account's route state. */
 export function CustomerSessionBoundary({ children }: { children: ReactNode }) {
@@ -12,6 +13,8 @@ export function CustomerSessionBoundary({ children }: { children: ReactNode }) {
           auth.customerDocId,
         ])
       : auth.status;
-  if (auth.status === "loading") return null;
+  // Keep private routes unmounted while identity resolves, but never leave the
+  // returning customer staring at an unexplained blank screen.
+  if (auth.status === "loading") return <Loading label="Loading your session" />;
   return <Fragment key={identity}>{children}</Fragment>;
 }
