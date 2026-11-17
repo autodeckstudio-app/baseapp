@@ -104,7 +104,7 @@ export default function MembershipScreen() {
   return (
     <Screen onBack={originBack}
       header={
-        <PageHeader kicker="Membership" title={current ? "Your membership" : "Regular washes at a better rate"} sub={current ? null : "Pick a plan and pay online."} />
+        <PageHeader kicker="Membership" title={current ? "Your membership" : "Choose your wash plan"} sub={current ? null : "Pick a plan and pay online."} />
       }
     >
       {current ? (

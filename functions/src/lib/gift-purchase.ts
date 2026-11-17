@@ -26,8 +26,8 @@ export function slotReusable(slot: GiftPurchaseSlot, gift: Gift | undefined, pay
 
 export interface GiftPurchaseStart { giftId: string; paymentId: string; amountPaise: number; reused: boolean }
 
-export async function createGiftPurchase(db: Firestore, user: AuthorizedUser, amountPaise: number): Promise<GiftPurchaseStart> {
-  const slotRef = db.collection(COLLECTIONS.giftPurchaseSlots()).doc(user.uid);
+export async function createGiftPurchase(db: Firestore, user: AuthorizedUser, customerDocId: string, amountPaise: number): Promise<GiftPurchaseStart> {
+  const slotRef = db.collection(COLLECTIONS.giftPurchaseSlots()).doc(customerDocId);
   return db.runTransaction(async (tx) => {
     const nowMs = Date.now();
     const nowIso = new Date(nowMs).toISOString();
@@ -46,7 +46,7 @@ export async function createGiftPurchase(db: Firestore, user: AuthorizedUser, am
     }
 
     // 2. A recent unpaid gift with no slot yet (started before slots existed) is adopted, not duplicated.
-    const recent = await tx.get(db.collection(COLLECTIONS.gifts()).where("buyerId", "==", user.uid).limit(25));
+    const recent = await tx.get(db.collection(COLLECTIONS.gifts()).where("buyerId", "==", customerDocId).limit(25));
     const candidates = recent.docs
       .map((d) => d.data() as Gift)
       .filter((g) => g.status === "PENDING_PAYMENT" && g.amountPaise === amountPaise && nowMs - Date.parse(g.createdAt) <= GIFT_PURCHASE_REUSE_MS)
@@ -66,20 +66,20 @@ export async function createGiftPurchase(db: Firestore, user: AuthorizedUser, am
     const ref = db.collection(COLLECTIONS.gifts()).doc();
     const payRef = db.collection(COLLECTIONS.payments()).doc();
     const gift: Gift = {
-      id: ref.id, tenantId: user.claims.tenantId, buyerId: user.uid, serviceId: GIFT_SERVICE_ID, amountPaise, codeHash, codeTail: code.slice(-4),
+      id: ref.id, tenantId: user.claims.tenantId, buyerId: customerDocId, serviceId: GIFT_SERVICE_ID, amountPaise, codeHash, codeTail: code.slice(-4),
       status: "PENDING_PAYMENT", createdAt: nowIso, purchasedAt: null, expiresAt: null, claimedBy: null, redeemedBy: null, redeemedAt: null,
       bookingId: null, voidedAt: null, voidReason: null, refundRequested: false, paymentId: null,
     };
     const payment: Payment = {
       id: payRef.id, tenantId: user.claims.tenantId, studioId: null, targetType: "gift", jobId: null, bookingId: null, membershipId: null, giftId: ref.id,
-      customerId: user.uid, amount: amountPaise, currency: "INR", method: "razorpay_payment_link", status: "pending",
+      customerId: customerDocId, amount: amountPaise, currency: "INR", method: "razorpay_payment_link", status: "pending",
       razorpayPaymentLinkId: null, razorpayPaymentId: null, razorpayOrderId: null, razorpayRefundId: null, refundAmount: null,
       manualReference: null, recordedBy: null, invoiceId: null, providerEventId: null, completedAt: null, failedAt: null, cancelledAt: null,
       refundedAt: null, createdAt: nowIso, updatedAt: nowIso,
     };
     tx.create(ref, gift);
     tx.create(payRef, payment);
-    tx.create(db.collection(COLLECTIONS.giftSecrets()).doc(ref.id), { giftId: ref.id, buyerId: user.uid, tenantId: user.claims.tenantId, code, createdAt: nowIso });
+    tx.create(db.collection(COLLECTIONS.giftSecrets()).doc(ref.id), { giftId: ref.id, buyerId: customerDocId, tenantId: user.claims.tenantId, code, createdAt: nowIso });
     tx.set(slotRef, { giftId: ref.id, paymentId: payRef.id, amountPaise, updatedAt: nowIso } satisfies GiftPurchaseSlot);
     writeAuditLog(tx, { action: "gift.created", entityType: "Gift", entityId: ref.id, user, studioId: null, after: { amountPaise, tail: gift.codeTail } });
     return { giftId: ref.id, paymentId: payRef.id, amountPaise, reused: false };

@@ -148,4 +148,25 @@ const BOTTLES:Record<string,number>={
  'menu-coat-kovalent-borophene':require('../../assets/imagery/brands/kovalent-borophene.png'),
  'svc-brand-kovalent-matte':require('../../assets/imagery/brands/kovalent-matte.png'),
 };
-export function spotlightProductPhoto(s:{id:string}){const a=catalogueAsset(s);return BOTTLES[s.id]??(a?.product?a.source:undefined);}
+const EXACT_PREVIEW_BY_NAME:Record<string,number>={
+"Koch Chemie Ceramic Body Cb0.01":require("../../assets/imagery/exact-product-preview/koch-chemie-ceramic-body-cb0-01.png"),
+"Car Pro CQ.UK 3.0":require("../../assets/imagery/exact-product-preview/car-pro-cq-uk-3-0.png"),
+"Car Pro CQ SiC":require("../../assets/imagery/exact-product-preview/car-pro-cq-sic.png"),
+"Keramik 9H Nano":require("../../assets/imagery/exact-product-preview/keramik-9h-nano.png"),
+"Keramic 9H Nano":require("../../assets/imagery/exact-product-preview/keramik-9h-nano.png"),
+"Keramik PPC":require("../../assets/imagery/exact-product-preview/keramik-ppc.png"),
+"Keramic PPC":require("../../assets/imagery/exact-product-preview/keramik-ppc.png"),
+"Fireball Devils Blood":require("../../assets/imagery/exact-product-preview/fireball-devils-blood.png"),
+"Fireball Butterfly":require("../../assets/imagery/exact-product-preview/fireball-butterfly.png"),
+"Fireball Butterfly Graphene":require("../../assets/imagery/exact-product-preview/fireball-butterfly-graphene.png"),
+"Fireball DOK DO":require("../../assets/imagery/exact-product-preview/fireball-dok-do.png"),
+"Koch Chemie Ceramic Neo C0.03":require("../../assets/imagery/exact-product-preview/koch-chemie-ceramic-neo-c0-03.png"),
+"Kovalent Prolong":require("../../assets/imagery/exact-product-preview/kovalent-prolong.png"),
+"Kovalent Revive":require("../../assets/imagery/exact-product-preview/kovalent-revive.png"),
+"Kovalent Graphene Matrix":require("../../assets/imagery/exact-product-preview/kovalent-graphene-matrix.png"),
+"Kovalent Borophene":require("../../assets/imagery/exact-product-preview/kovalent-borophene.png"),
+"Kovalent Matte":require("../../assets/imagery/exact-product-preview/kovalent-matte.png"),
+};
+const EXACT_IMAGE_REVIEW_NAMES=new Set(["Koch Chemie Ceramic Body Cb0.01", "Car Pro CQ.UK 3.0", "Car Pro CQ SiC", "Keramik 9H Nano", "Keramik PPC", "Fireball Devils Blood", "Fireball Butterfly", "Fireball Butterfly Graphene", "Fireball DOK DO", "Koch Chemie Ceramic Neo C0.03", "GSWF Platinum", "GSWF Ultra", "GSWF Ultra lite", "Kovalent Prolong", "Kovalent Revive", "Kovalent Graphene Matrix", "Kovalent Borophene", "Kovalent Matte", "Fireball Nano Coat V3", "Fireball Wizard Graphene", "Keramic 10H Graphene", "NAR M1", "NAR M190", "NAR E190", "AVVYX Prime", "Cosmo Gold", "Cosmo Platinum", "LLumar Platinum Gloss", "LLumar Platinum Extra", "LLumar Valor", "Garware Plus", "Garware Premium", "AVVYX Shield", "Garware Titanium", "Keramic 9H Nano", "Keramic PPC"]);
+export function spotlightProductPhoto(s:{id:string;name?:string}){if(s.name&&EXACT_IMAGE_REVIEW_NAMES.has(s.name))return EXACT_PREVIEW_BY_NAME[s.name];const a=catalogueAsset(s);return BOTTLES[s.id]??(a?.product?a.source:undefined);}
+export function spotlightProductImageCaption(_s:{name?:string}){return undefined;}

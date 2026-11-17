@@ -1,0 +1,356 @@
+[
+  {
+    "name": "Koch Chemie Ceramic Body Cb0.01",
+    "page": "https://www.koch-chemie.com/en/products/ceramic_body_cb001",
+    "url": "https://media.koch-chemie.com/Mockups/1248x1248/807001_807999__1794883316.png",
+    "alt": "Ceramic Body Cb0.01",
+    "path": "/tmp/ad-product-image-research/candidate-0.png",
+    "size": [
+      1248,
+      1248
+    ],
+    "localAsset": "apps/customer/assets/imagery/exact-product-preview/koch-chemie-ceramic-body-cb0-01.png",
+    "rights": "Maker-owned product/catalogue asset. No separate redistribution licence verified; private preview only, confirm commercial-use permission before deployment.",
+    "treatment": "Actual product only; transparent outer background, no added white display well. Koch outer guide removed; Fireball outer silhouette masked while preserving package face and labels."
+  },
+  {
+    "name": "Car Pro CQ.UK 3.0",
+    "page": "https://carpro.global/product/cq_uk/",
+    "url": "https://carpro.nyc3.digitaloceanspaces.com/CARPRO_CQ_UK_3_01_143731939e.png",
+    "alt": "",
+    "path": "/tmp/ad-product-image-research/candidate-6.png",
+    "size": [
+      1000,
+      1100
+    ],
+    "localAsset": "apps/customer/assets/imagery/exact-product-preview/car-pro-cq-uk-3-0.png",
+    "rights": "Maker-owned product/catalogue asset. No separate redistribution licence verified; private preview only, confirm commercial-use permission before deployment.",
+    "treatment": "Actual product only; transparent outer background, no added white display well. Koch outer guide removed; Fireball outer silhouette masked while preserving package face and labels."
+  },
+  {
+    "name": "Car Pro CQ SiC",
+    "page": "https://www.carpro.global/product/cq_sic/",
+    "url": "https://carpro.nyc3.digitaloceanspaces.com/CARPRO_Si_C_01_8eb0038e8e.png",
+    "alt": "",
+    "path": "/tmp/ad-product-image-research/candidate-7.png",
+    "size": [
+      1000,
+      1100
+    ],
+    "localAsset": "apps/customer/assets/imagery/exact-product-preview/car-pro-cq-sic.png",
+    "rights": "Maker-owned product/catalogue asset. No separate redistribution licence verified; private preview only, confirm commercial-use permission before deployment.",
+    "treatment": "Actual product only; transparent outer background, no added white display well. Koch outer guide removed; Fireball outer silhouette masked while preserving package face and labels."
+  },
+  {
+    "name": "Keramik 9H Nano",
+    "page": "https://keramikcarcare.com/products.html#nano-9h",
+    "url": "https://keramikcarcare.com/images/keramik-9h-kit.webp",
+    "alt": "Keramik 9H NANO",
+    "path": "/tmp/ad-product-image-research/candidate-8.png",
+    "size": [
+      1000,
+      1000
+    ],
+    "localAsset": "apps/customer/assets/imagery/exact-product-preview/keramik-9h-nano.png",
+    "rights": "Maker-owned product/catalogue asset. No separate redistribution licence verified; private preview only, confirm commercial-use permission before deployment.",
+    "treatment": "Actual product only; transparent outer background, no added white display well. Koch outer guide removed; Fireball outer silhouette masked while preserving package face and labels."
+  },
+  {
+    "name": "Keramik PPC",
+    "page": "https://keramikcarcare.com/products.html",
+    "url": "https://keramikcarcare.com/images/keramik-ppc-kit.webp",
+    "alt": "Keramik PPC",
+    "path": "/tmp/ad-product-image-research/candidate-9.png",
+    "size": [
+      1100,
+      894
+    ],
+    "localAsset": "apps/customer/assets/imagery/exact-product-preview/keramik-ppc.png",
+    "rights": "Maker-owned product/catalogue asset. No separate redistribution licence verified; private preview only, confirm commercial-use permission before deployment.",
+    "treatment": "Actual product only; transparent outer background, no added white display well. Koch outer guide removed; Fireball outer silhouette masked while preserving package face and labels."
+  },
+  {
+    "name": "Fireball Devils Blood",
+    "page": "https://www.fireballkorea.com/ceramic-coating/devilsblood",
+    "url": "https://static.wixstatic.com/media/fe7082_396656b5bf2c446ca1aaca7c771ce29e~mv2.jpg/v1/fill/w_392,h_392,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/Image-empty-state.jpg",
+    "alt": "DEVIL",
+    "path": "/tmp/ad-product-image-research/extra-1.png",
+    "localAsset": "apps/customer/assets/imagery/exact-product-preview/fireball-devils-blood.png",
+    "rights": "Maker-owned product/catalogue asset. No separate redistribution licence verified; private preview only, confirm commercial-use permission before deployment.",
+    "treatment": "Actual product only; transparent outer background, no added white display well. Koch outer guide removed; Fireball outer silhouette masked while preserving package face and labels."
+  },
+  {
+    "name": "Fireball Butterfly",
+    "page": "https://www.fireballkorea.com/ceramic-coating/butterfly",
+    "url": "https://static.wixstatic.com/media/fe7082_208e272c1e2a4ea68020476e766c5437~mv2.jpg/v1/fill/w_392,h_392,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/Image-empty-state.jpg",
+    "alt": "BUTTERFLY",
+    "path": "/tmp/ad-product-image-research/extra-2.png",
+    "localAsset": "apps/customer/assets/imagery/exact-product-preview/fireball-butterfly.png",
+    "rights": "Maker-owned product/catalogue asset. No separate redistribution licence verified; private preview only, confirm commercial-use permission before deployment.",
+    "treatment": "Actual product only; transparent outer background, no added white display well. Koch outer guide removed; Fireball outer silhouette masked while preserving package face and labels."
+  },
+  {
+    "name": "Fireball Butterfly Graphene",
+    "page": "https://www.fireballkorea.com/ceramic-coating/butterfly-graphene",
+    "url": "https://static.wixstatic.com/media/fe7082_91a582fa6ad84d27a5973e827d754c49~mv2.jpg/v1/fill/w_392,h_392,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/Image-empty-state.jpg",
+    "alt": "BUTTERFLY GRAPHENE",
+    "path": "/tmp/ad-product-image-research/extra-3.png",
+    "localAsset": "apps/customer/assets/imagery/exact-product-preview/fireball-butterfly-graphene.png",
+    "rights": "Maker-owned product/catalogue asset. No separate redistribution licence verified; private preview only, confirm commercial-use permission before deployment.",
+    "treatment": "Actual product only; transparent outer background, no added white display well. Koch outer guide removed; Fireball outer silhouette masked while preserving package face and labels."
+  },
+  {
+    "name": "Fireball DOK DO",
+    "page": "https://www.fireballkorea.com/ceramic-coating/dok-do",
+    "url": "https://static.wixstatic.com/media/fe7082_ea1e5bf388e5439fb306de276be5b708~mv2.jpg/v1/fill/w_392,h_392,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/Image-empty-state.jpg",
+    "alt": "DOK DO",
+    "path": "/tmp/ad-product-image-research/extra-4.png",
+    "localAsset": "apps/customer/assets/imagery/exact-product-preview/fireball-dok-do.png",
+    "rights": "Maker-owned product/catalogue asset. No separate redistribution licence verified; private preview only, confirm commercial-use permission before deployment.",
+    "treatment": "Actual product only; transparent outer background, no added white display well. Koch outer guide removed; Fireball outer silhouette masked while preserving package face and labels."
+  },
+  {
+    "name": "Koch Chemie Ceramic Neo C0.03",
+    "page": "https://www.koch-chemie.com/en/products/ceramic_neo_c003",
+    "url": "https://media.koch-chemie.com/Mockups/1248x1248/699-S75-01_1__1794883521.png",
+    "path": "/tmp/ad-product-image-research/extra-5.png",
+    "localAsset": "apps/customer/assets/imagery/exact-product-preview/koch-chemie-ceramic-neo-c0-03.png",
+    "rights": "Maker-owned product/catalogue asset. No separate redistribution licence verified; private preview only, confirm commercial-use permission before deployment.",
+    "treatment": "Actual product only; transparent outer background, no added white display well. Koch outer guide removed; Fireball outer silhouette masked while preserving package face and labels."
+  },
+  {
+    "name": "GSWF Platinum",
+    "page": "https://www.gswf.in/clear-ppf",
+    "url": "https://www.gswf.in/clear-ppf/platinum.png",
+    "path": "/tmp/ad-product-image-research/extra-6.png",
+    "kind": "manufacturer tier artwork, not packaging",
+    "rights": "Maker-owned product/catalogue asset. No separate redistribution licence verified; private preview only, confirm commercial-use permission before deployment.",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  },
+  {
+    "name": "GSWF Ultra",
+    "page": "https://www.gswf.in/clear-ppf",
+    "url": "https://www.gswf.in/clear-ppf/ultra.png",
+    "path": "/tmp/ad-product-image-research/extra-7.png",
+    "kind": "manufacturer tier artwork, not packaging",
+    "rights": "Maker-owned product/catalogue asset. No separate redistribution licence verified; private preview only, confirm commercial-use permission before deployment.",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  },
+  {
+    "name": "GSWF Ultra lite",
+    "page": "https://www.gswf.in/clear-ppf",
+    "url": "https://www.gswf.in/clear-ppf/ultra-lite.png",
+    "path": "/tmp/ad-product-image-research/extra-8.png",
+    "kind": "manufacturer tier artwork, not packaging",
+    "rights": "Maker-owned product/catalogue asset. No separate redistribution licence verified; private preview only, confirm commercial-use permission before deployment.",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  },
+  {
+    "name": "Kovalent Prolong",
+    "path": "/tmp/ad-startup-release-20261117/apps/customer/assets/imagery/brands/kovalent-prolong.png",
+    "page": "https://kovalentcoatings.com/products/prolong-9h-ceramic-coating/",
+    "kind": "existing maker product cutout",
+    "localAsset": "apps/customer/assets/imagery/exact-product-preview/kovalent-prolong.png",
+    "rights": "Maker-owned product/catalogue asset. No separate redistribution licence verified; private preview only, confirm commercial-use permission before deployment.",
+    "treatment": "Actual product only; transparent outer background, no added white display well. Koch outer guide removed; Fireball outer silhouette masked while preserving package face and labels."
+  },
+  {
+    "name": "Kovalent Revive",
+    "path": "/tmp/ad-startup-release-20261117/apps/customer/assets/imagery/brands/kovalent-revive.png",
+    "page": "https://kovalentcoatings.com/products/revive/",
+    "kind": "existing maker product cutout",
+    "localAsset": "apps/customer/assets/imagery/exact-product-preview/kovalent-revive.png",
+    "rights": "Maker-owned product/catalogue asset. No separate redistribution licence verified; private preview only, confirm commercial-use permission before deployment.",
+    "treatment": "Actual product only; transparent outer background, no added white display well. Koch outer guide removed; Fireball outer silhouette masked while preserving package face and labels."
+  },
+  {
+    "name": "Kovalent Graphene Matrix",
+    "path": "/tmp/ad-startup-release-20261117/apps/customer/assets/imagery/brands/kovalent-graphene-matrix.png",
+    "page": "https://kovalentcoatings.com/products/graphene-matrix/",
+    "kind": "existing maker product cutout",
+    "localAsset": "apps/customer/assets/imagery/exact-product-preview/kovalent-graphene-matrix.png",
+    "rights": "Maker-owned product/catalogue asset. No separate redistribution licence verified; private preview only, confirm commercial-use permission before deployment.",
+    "treatment": "Actual product only; transparent outer background, no added white display well. Koch outer guide removed; Fireball outer silhouette masked while preserving package face and labels."
+  },
+  {
+    "name": "Kovalent Borophene",
+    "path": "/tmp/ad-startup-release-20261117/apps/customer/assets/imagery/brands/kovalent-borophene.png",
+    "page": "https://kovalentcoatings.com/products/borophene-coating/",
+    "kind": "existing maker product cutout",
+    "localAsset": "apps/customer/assets/imagery/exact-product-preview/kovalent-borophene.png",
+    "rights": "Maker-owned product/catalogue asset. No separate redistribution licence verified; private preview only, confirm commercial-use permission before deployment.",
+    "treatment": "Actual product only; transparent outer background, no added white display well. Koch outer guide removed; Fireball outer silhouette masked while preserving package face and labels."
+  },
+  {
+    "name": "Kovalent Matte",
+    "path": "/tmp/ad-startup-release-20261117/apps/customer/assets/imagery/brands/kovalent-matte.png",
+    "page": "https://kovalentcoatings.com/products/matte/",
+    "kind": "existing maker product cutout",
+    "localAsset": "apps/customer/assets/imagery/exact-product-preview/kovalent-matte.png",
+    "rights": "Maker-owned product/catalogue asset. No separate redistribution licence verified; private preview only, confirm commercial-use permission before deployment.",
+    "treatment": "Actual product only; transparent outer background, no added white display well. Koch outer guide removed; Fireball outer silhouette masked while preserving package face and labels."
+  },
+  {
+    "name": "Fireball Nano Coat V3",
+    "page": "https://www.fireballkorea.com/coatings/nanocoatv3",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  },
+  {
+    "name": "Fireball Wizard Graphene",
+    "page": "",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  },
+  {
+    "name": "Keramic 10H Graphene",
+    "page": "",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  },
+  {
+    "name": "NAR M1",
+    "page": "https://plushmydrive.com/products/nar-classic-series-m1-matte-056788",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  },
+  {
+    "name": "NAR M190",
+    "page": "https://www.narppf.com/?show=8",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  },
+  {
+    "name": "NAR E190",
+    "page": "https://www.narppf.com/?show=35",
+    "url": "https://www.narppf.com/data/upload/20250901/2684cfb0ce6dea1b6c85aee3f8fb8da2.jpg",
+    "alt": "",
+    "path": "/tmp/ad-product-image-research/candidate-10.png",
+    "size": [
+      1081,
+      1080
+    ],
+    "kind": "Manufacturer product-page application imagery, not a packshot",
+    "rights": "No separate commercial reuse licence verified. Private review only.",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  },
+  {
+    "name": "AVVYX Prime",
+    "page": "https://avvyx.com/clear-ppf/",
+    "url": "https://avvyx.com/wp-content/uploads/2025/11/Untitled-design-29.webp",
+    "alt": "",
+    "path": "/tmp/ad-product-image-research/candidate-13.png",
+    "size": [
+      1600,
+      1067
+    ],
+    "kind": "Manufacturer product-page application imagery, not a packshot",
+    "rights": "No separate commercial reuse licence verified. Private review only.",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  },
+  {
+    "name": "Cosmo Gold",
+    "page": "https://www.cosmoconsumer.com/cosmoppf/automotive/paint-protection-film/cosmo-gold-ppf",
+    "url": "https://www.cosmoconsumer.com/uploads/images/1739184888129530744.webp",
+    "alt": "",
+    "path": "/tmp/ad-product-image-research/candidate-15.png",
+    "size": [
+      1367,
+      642
+    ],
+    "kind": "Manufacturer product-page application imagery, not a packshot",
+    "rights": "No separate commercial reuse licence verified. Private review only.",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  },
+  {
+    "name": "Cosmo Platinum",
+    "page": "https://www.cosmoconsumer.com/cosmoppf/automotive/paint-protection-film/cosmo-platinum-ppf",
+    "url": "https://www.cosmoconsumer.com/uploads/images/17410894671189874037.webp",
+    "alt": "",
+    "path": "/tmp/ad-product-image-research/candidate-18.png",
+    "size": [
+      1367,
+      642
+    ],
+    "kind": "Manufacturer product-page application imagery, not a packshot",
+    "rights": "No separate commercial reuse licence verified. Private review only.",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  },
+  {
+    "name": "LLumar Platinum Gloss",
+    "page": "https://llumar.com/en/paint-protection-film/platinum-gloss/",
+    "url": "https://media.eastman.com/is/image/eastman/Audi-RS6_hero-t2_mobile:hero-banner-mobile?qlt=100&resMode=sharp2&op_usm=1.5,0.65,6,0&fmt=png-alpha",
+    "kind": "Manufacturer product-page vehicle imagery, not a packshot",
+    "path": "/tmp/ad-product-image-research/expanded-4.png",
+    "rights": "No separate commercial reuse licence verified. Private review only.",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  },
+  {
+    "name": "LLumar Platinum Extra",
+    "page": "https://llumar.com/en/paint-protection-film/platinum-extra/",
+    "url": "https://media.eastman.com/is/image/eastman/Ford-Raptor_hero-t2_mobile:hero-banner-mobile?qlt=100&resMode=sharp2&op_usm=1.5,0.65,6,0&fmt=png-alpha",
+    "kind": "Manufacturer product-page vehicle imagery, not a packshot",
+    "path": "/tmp/ad-product-image-research/expanded-5.png",
+    "rights": "No separate commercial reuse licence verified. Private review only.",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  },
+  {
+    "name": "LLumar Valor",
+    "page": "https://llumar.com/en/paint-protection-film/valor/",
+    "url": "https://media.eastman.com/is/image/eastman/Porsche-Cayman-GT4_hero-t2_mobile:hero-banner-mobile?qlt=100&resMode=sharp2&op_usm=1.5,0.65,6,0&fmt=png-alpha",
+    "kind": "Manufacturer product-page vehicle imagery, not a packshot",
+    "path": "/tmp/ad-product-image-research/expanded-6.png",
+    "rights": "No separate commercial reuse licence verified. Private review only.",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  },
+  {
+    "name": "Garware Plus",
+    "page": "https://www.garwarehitechfilms.com/paint-protection-films/plus-ppf",
+    "url": "https://www.garwarehitechfilms.com/front_assets/ppf/img/products/pluse-ppf.gif",
+    "kind": "Manufacturer product-page vehicle/application imagery, not a packshot",
+    "path": "/tmp/ad-product-image-research/application-7.png",
+    "rights": "No separate commercial reuse licence verified. Private review only.",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  },
+  {
+    "name": "Garware Premium",
+    "page": "https://www.garwarehitechfilms.com/paint-protection-films/premium-ppf",
+    "url": "https://www.garwarehitechfilms.com/public/storage/files/1759749964_Premium-PPF-compress.gif",
+    "kind": "Manufacturer product-page vehicle/application imagery, not a packshot",
+    "path": "/tmp/ad-product-image-research/application-8.png",
+    "rights": "No separate commercial reuse licence verified. Private review only.",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  },
+  {
+    "name": "AVVYX Shield",
+    "url": "https://avvyx.com/wp-content/uploads/2025/09/young-mechanics-doing-car-inspection.webp",
+    "page": "https://avvyx.com/clear-ppf/",
+    "kind": "Manufacturer Shield-section service imagery, not a packshot",
+    "path": "/tmp/ad-product-image-research/expanded-9.png",
+    "rights": "No separate commercial reuse licence verified. Private review only.",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  },
+  {
+    "name": "Garware Titanium",
+    "page": "https://www.garwarehitechfilms.com/paint-protection-films/titanium-ppf",
+    "url": "https://www.garwarehitechfilms.com/front_assets/ppf/img/products/Titanium PPF Gif.gif",
+    "kind": "Manufacturer product-page vehicle/application imagery, not a packshot",
+    "path": "/tmp/ad-product-image-research/expanded-10.png",
+    "rights": "No separate commercial reuse licence verified. Private review only.",
+    "status": "Placeholder - actual product image not verified or not available",
+    "reason": "User rejected car/application imagery and requested actual product photos only. No substitute packaging."
+  }
+]

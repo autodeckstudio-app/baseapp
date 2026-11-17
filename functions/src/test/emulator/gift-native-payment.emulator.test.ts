@@ -20,7 +20,7 @@ let n = 0;
 const auth = (uid: string, tenantId = "gift-native", role = "customer") => ({ uid, token: { role, tenantId, studioId: null } });
 async function seed() {
   const uid = `gift-native-${Date.now()}-${n++}`;
-  const r = await createGiftPurchase(db, { uid, claims: { role: "customer", tenantId: "gift-native", studioId: null }, phone: null, email: null, displayName: null } as never, 90000);
+  const r = await createGiftPurchase(db, { uid, claims: { role: "customer", tenantId: "gift-native", studioId: null }, phone: null, email: null, displayName: null } as never, uid, 90000);
   return { ...r, uid };
 }
 async function link(s: Awaited<ReturnType<typeof seed>>) { return await requestGiftPaymentLink.run({ data: { paymentId: s.paymentId }, auth: auth(s.uid) } as never) as { paymentUrl: string; status: string }; }

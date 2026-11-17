@@ -113,7 +113,7 @@ describe("gift purchase guardrails (source)", () => {
   it("the plain code lives only in the server-only giftSecrets collection, and is returned only to the buyer of an unused gift", () => {
     expect(src).toContain("COLLECTIONS.giftSecrets()");
     expect(src).toContain('giftState(g, Date.now()) !== "unused"');
-    expect(src).toContain("g.buyerId !== user.uid");
+    expect(src).toContain("g.buyerId !== customerDocId");
     const rules = readFileSync(`${__dirname}/../../../../firestore.rules`, "utf8");
     expect(rules).not.toMatch(/giftSecrets/);
     expect(rules).toMatch(/match \/\{document=\*\*\}\s*\{\s*allow read, write: if false/);

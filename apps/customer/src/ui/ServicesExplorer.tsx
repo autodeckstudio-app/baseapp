@@ -258,7 +258,7 @@ export function ServicesExplorer({
             />
           </Pane>
         )}
-        <T role="caption" tone="tertiary">Service visuals are illustrative, not product or completed-job photos.</T>
+        <T role="caption" tone="tertiary">Illustrations, not product/past-job photos.</T>
       </View>
     );
   }
@@ -413,7 +413,7 @@ export function ServicesExplorer({
         ) : null}
         {selectedRefs.length > 0 ? products([], selectedRefs) : null}
         <T role="caption" tone="tertiary">
-          Service visuals are illustrative, not product or completed-job photos.
+          Illustrations, not product/past-job photos.
         </T>
       </View>
     );
@@ -536,7 +536,7 @@ export function ServicesExplorer({
           onPress={() => onPath(parentPath(path))}
         />
       ) : null}
-      <T role="caption" tone="tertiary">Service visuals are illustrative, not product or completed-job photos.</T>
+      <T role="caption" tone="tertiary">Illustrations, not product/past-job photos.</T>
     </View>
   );
 }

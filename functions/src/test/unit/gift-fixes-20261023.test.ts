@@ -16,7 +16,7 @@ const user = (uid = "c1") => ({ uid, displayName: null, phone: null, email: null
 describe("createGiftPurchase", () => {
   it("creates gift, payment, secret and slot together", async () => {
     const { db, data } = fakeFirestore({});
-    const r = await createGiftPurchase(db as never, user(), 90000);
+    const r = await createGiftPurchase(db as never, user(), "c1", 90000);
     expect(r.reused).toBe(false);
     const g = data["gifts"]![r.giftId]!;
     const p = data["payments"]![r.paymentId]!;
@@ -32,8 +32,8 @@ describe("createGiftPurchase", () => {
 
   it("a second start (double-tap / retry / reload) returns the same purchase, no duplicates", async () => {
     const { db, data } = fakeFirestore({});
-    const first = await createGiftPurchase(db as never, user(), 90000);
-    const second = await createGiftPurchase(db as never, user(), 90000);
+    const first = await createGiftPurchase(db as never, user(), "c1", 90000);
+    const second = await createGiftPurchase(db as never, user(), "c1", 90000);
     expect(second).toMatchObject({ giftId: first.giftId, paymentId: first.paymentId, reused: true });
     expect(Object.keys(data["gifts"]!)).toHaveLength(1);
     expect(Object.keys(data["payments"]!)).toHaveLength(1);
@@ -41,12 +41,12 @@ describe("createGiftPurchase", () => {
 
   it("a paid (processing) purchase is still reused; a closed one is not", async () => {
     const { db, data } = fakeFirestore({});
-    const first = await createGiftPurchase(db as never, user(), 90000);
+    const first = await createGiftPurchase(db as never, user(), "c1", 90000);
     data["payments"]![first.paymentId]!["status"] = "processing";
-    const again = await createGiftPurchase(db as never, user(), 90000);
+    const again = await createGiftPurchase(db as never, user(), "c1", 90000);
     expect(again.giftId).toBe(first.giftId);
     data["payments"]![first.paymentId]!["status"] = "failed";
-    const fresh = await createGiftPurchase(db as never, user(), 90000);
+    const fresh = await createGiftPurchase(db as never, user(), "c1", 90000);
     expect(fresh.reused).toBe(false);
     expect(fresh.giftId).not.toBe(first.giftId);
   });
@@ -55,7 +55,7 @@ describe("createGiftPurchase", () => {
     const old = { id: "g-old", tenantId: "t", buyerId: "c1", serviceId: "menu-wash-foam", amountPaise: 90000, codeHash: "h", codeTail: "1", status: "PENDING_PAYMENT", createdAt: new Date().toISOString(), purchasedAt: null, expiresAt: null, claimedBy: null, redeemedBy: null, redeemedAt: null, bookingId: null, voidedAt: null, voidReason: null, refundRequested: false, paymentId: null };
     const oldPay = { id: "p-old", status: "pending", giftId: "g-old" };
     const { db, data } = fakeFirestore({ gifts: { "g-old": old }, payments: { "p-old": oldPay } } as never);
-    const r = await createGiftPurchase(db as never, user(), 90000);
+    const r = await createGiftPurchase(db as never, user(), "c1", 90000);
     expect(r).toMatchObject({ giftId: "g-old", paymentId: "p-old", reused: true });
     expect(Object.keys(data["gifts"]!)).toHaveLength(1);
     expect(data["giftPurchaseSlots"]!["c1"]).toBeTruthy();
@@ -63,8 +63,8 @@ describe("createGiftPurchase", () => {
 
   it("another buyer gets their own purchase", async () => {
     const { db, data } = fakeFirestore({});
-    const a = await createGiftPurchase(db as never, user("c1"), 90000);
-    const b = await createGiftPurchase(db as never, user("c2"), 90000);
+    const a = await createGiftPurchase(db as never, user("c1"), "c1", 90000);
+    const b = await createGiftPurchase(db as never, user("c2"), "c2", 90000);
     expect(b.giftId).not.toBe(a.giftId);
     expect(Object.keys(data["gifts"]!)).toHaveLength(2);
   });

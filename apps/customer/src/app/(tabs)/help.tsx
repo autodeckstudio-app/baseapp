@@ -62,7 +62,7 @@ export default function HelpScreen() {
           {shown.map((f, i) => (
             <View key={f.q}>
               <Row title={f.q} onPress={() => setOpen(open === i ? null : i)} last={i === shown.length - 1 && open !== i} />
-              {open === i ? <View style={{ paddingHorizontal: space.line, paddingBottom: space.line }}><View style={{gap:space.line}}>{f.facts.map(fact=><View key={fact.label} style={{gap:4}}><T role="caption" tone="tertiary">{fact.label}</T><T tone="secondary">{fact.detail}</T></View>)}</View></View> : null}
+              {open === i ? <View style={{ paddingHorizontal: space.line, paddingBottom: space.line }}><View style={{gap:space.line}}>{f.facts.map((fact,index)=><View key={fact.label} style={{gap:6,paddingVertical:12,borderBottomWidth:index<f.facts.length-1?1:0,borderBottomColor:colors.borderSubtle}}><T role="caption" tone="tertiary">{fact.label}</T><T tone="secondary">{fact.detail}</T></View>)}</View></View> : null}
             </View>
           ))}
         </Pane>

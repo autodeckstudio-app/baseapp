@@ -4,7 +4,7 @@ import{useCataloguePublication}from'../../hooks/useCataloguePublication';
 import {useForegroundRefresh,useContentClock} from '../../hooks/useForegroundRefresh';
 import {withReadDeadline} from '../../lib/foreground-refresh';
 import { invoiceHref } from "../../lib/invoice-display";
-import {homeServiceTarget} from "../../lib/home-service-navigation";
+import {homeServiceTarget,homeCategoryTarget} from "../../lib/home-service-navigation";
 import { RateCard } from "../../ui/RateCard";
 import { listOwnerKey } from "../../lib/owner-key";
 import { rateCandidate } from "../../lib/rate-card";
@@ -148,19 +148,29 @@ export default function HomeScreen() {
     if(!ready||!owner)return;
     let active=true;
     const tasks=[['stories',()=>getStories({throwOnError:true})],['offers',()=>getOffers({throwOnError:true})],['cars',()=>getCarListings(false)],['info',()=>getStudioInfo(FIRST_STUDIO_ID)]] as const;
-    void Promise.allSettled(tasks.map(async([key,read])=>({key,value:await withReadDeadline<unknown>(read)}))).then(results=>{
+    let pending=tasks.length;
+    const failed=new Set<string>();
+    // Render each public section as soon as its own read settles. A slower car
+    // listing must not hold back studio hours, stories, or offers.
+    const settle=(key:typeof tasks[number][0],ok:boolean,value?:unknown)=>{
       if(!active)return;
+      pending-=1;
+      if(!ok)failed.add(key);
+      const allSucceeded=pending===0&&failed.size===0;
       setPublicSource(previous=>{
         const next=previous.owner===owner?{...previous}:{owner,stories:[],offers:[],cars:null,info:null,failed:[],lastSuccess:null} as typeof previous;
-        next.failed=[];
-        results.forEach((result,index)=>{
-          const key=tasks[index]![0];
-          if(result.status==='fulfilled'){Object.assign(next,{[key]:result.value.value});}
-          else{next.failed.push(key);if(key==='stories'||key==='offers')Object.assign(next,{[key]:[]});}
-        });
-        if(!next.failed.length)next.lastSuccess=Date.now();
+        next.failed=next.failed.filter(source=>source!==key);
+        if(ok)Object.assign(next,{[key]:value});
+        else{
+          next.failed.push(key);
+          if(key==='stories'||key==='offers')Object.assign(next,{[key]:[]});
+        }
+        if(allSucceeded)next.lastSuccess=Date.now();
         return next;
       });
+    };
+    tasks.forEach(([key,read])=>{
+      void withReadDeadline<unknown>(read).then(value=>settle(key,true,value),()=>settle(key,false));
     });
     return()=>{active=false};
   },[owner,retryTick]);
@@ -298,7 +308,7 @@ export default function HomeScreen() {
         onSearch={() => router.navigate("/(tabs)/catalogue")}
         onBell={() => router.navigate("/(tabs)/notifications")}
         onAllServices={() => router.navigate("/(tabs)/catalogue")}
-        onCategory={() => undefined}
+        onCategory={(category) => router.push(homeCategoryTarget(category) as never)}
         onService={(sv, key) => router.push(homeServiceTarget(sv, key) as never)}
         onCar={(c) => router.push({ pathname: "/(tabs)/garage/[id]", params: { id: c.id, returnTo: "home" } })}
         onAddCar={() => router.push("/(tabs)/garage/add")}

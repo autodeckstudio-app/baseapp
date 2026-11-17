@@ -1,7 +1,7 @@
 import type { TopSvc } from './top-services';
 import {parentPath,type ServicesPath} from './services-navigation';
-export type HomeEntry='wash'|'coat'|'garage'|'inspect';
-export const homeEntryPath=(entry:unknown):ServicesPath|null=>entry==='wash'?{home:'washing',family:'Exterior wash'}:entry==='coat'?{home:'paint',family:'Ceramic'}:entry==='garage'?{home:'garage'}:entry==='inspect'?{home:'garage',family:'Inspection'}:null;
+export type HomeEntry='wash'|'coat'|'garage'|'inspect'|'mods';
+export const homeEntryPath=(entry:unknown):ServicesPath|null=>entry==='wash'?{home:'washing',family:'Exterior wash'}:entry==='coat'?{home:'paint',family:'Ceramic'}:entry==='garage'?{home:'garage'}:entry==='inspect'?{home:'garage',family:'Inspection'}:entry==='mods'?{home:'modifications'}:null;
 /** A generic Home label opens choices, never the cheapest product used to show a starting price. */
 export function homeServiceTarget(service:TopSvc,cardKey?:string){
  const entry=homeEntryPath(cardKey)?cardKey:service.category==='washing'?'wash':service.category==='ceramic'||(service.category==='coating'&&/ceramic/i.test(service.name))?'coat':null;
@@ -19,3 +19,6 @@ export function detailHomeBack(params:Record<string,string|undefined>){
  const home=params.catalogueHome;
  return home?{pathname:'/(tabs)/catalogue',params:{returnTo:'home',homeEntry:params.homeEntry??'',home,family:params.catalogueFamily??'',brand:params.catalogueBrand??'',work:params.catalogueWork??''}}:{pathname:'/(tabs)',params:{}};
 }
+
+/** Home category shortcut opens existing choices without fabricating a catalogue row. */
+export function homeCategoryTarget(category:string|null){return category==='modifications'?{pathname:'/(tabs)/catalogue',params:{home:'modifications',returnTo:'home',homeEntry:'mods'}}:{pathname:'/(tabs)/catalogue',params:{}}}

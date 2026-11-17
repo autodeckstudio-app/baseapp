@@ -31,3 +31,21 @@ it('publication failure preserves same-owner catalogue with notice, retry refres
  const counts=[h.catalogue,h.stories,h.offers,h.cars,h.info].map(f=>f.mock.calls.length);h.catalogue.mockResolvedValue([{id:'retry',name:'Retry',category:'washing'}]);await act(async()=>p.banner.props.children[0].props.action.props.onPress());
  [h.catalogue,h.stories,h.offers,h.cars,h.info].forEach((f,i)=>expect(f.mock.calls.length).toBe(counts[i]!+1));expect(r.root.findByType('HomeView').props.services.map((s:any)=>s.id)).toEqual(['retry']);await act(async()=>r.unmount());
 });
+
+it('renders studio hours and stories before a slower car listing settles',async()=>{
+ h.auth={...h.auth,customerDocId:'progressive',user:{uid:'progressive',displayName:'Test'}};
+ let resolveCars:any,resolveStories:any;h.cars.mockImplementationOnce(()=>new Promise(r=>resolveCars=r));h.stories.mockImplementationOnce(()=>new Promise(r=>resolveStories=r));
+ h.info.mockResolvedValueOnce({operatingHours:[{day:2,open:'09:00',close:'18:00'}]} as any);let r:any;await act(async()=>{r=create(<Home/>)});
+ let p=r.root.findByType('HomeView').props;expect(p.studio.hours).not.toBe('Opening hours unavailable');expect(p.carsList).toEqual([]);
+ await act(async()=>resolveStories([{id:'quick-story',hidden:false,pinned:false,createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+86400000).toISOString(),mediaType:'image',url:'https://example.test/story.jpg'}]));
+ p=r.root.findByType('HomeView').props;expect(p.stories.props.groups.some((g:any)=>g.items.some((i:any)=>i.id==='quick-story'))).toBe(true);expect(p.carsList).toEqual([]);
+ await act(async()=>resolveCars([{id:'late-car',status:'live',source:'studio',photoUrls:['https://example.test/car.jpg']}]));expect(r.root.findByType('HomeView').props.carsList.map((c:any)=>c.id)).toEqual(['late-car']);await act(async()=>r.unmount());
+});
+
+it('keeps fast-source failure visible when another source succeeds and blocks all late old-owner public reads',async()=>{
+ h.auth={...h.auth,customerDocId:'old-public',user:{uid:'old-public',displayName:'Old'}};let oldCars:any,oldInfo:any;h.cars.mockImplementationOnce(()=>new Promise(r=>oldCars=r));h.info.mockImplementationOnce(()=>new Promise(r=>oldInfo=r));h.offers.mockRejectedValueOnce(Error('offline'));let r:any;await act(async()=>{r=create(<Home/>)});
+ expect(r.root.findByType('HomeView').props.banner.props.children[0].props.title).toBe('Some studio details could not refresh');
+ h.auth={...h.auth,customerDocId:'new-public',user:{uid:'new-public',displayName:'New'}};h.info.mockResolvedValue({});h.cars.mockResolvedValue([]);await act(async()=>r.update(<Home/>));
+ await act(async()=>{oldCars([{id:'old-car',status:'live',source:'studio',photoUrls:['https://example.test/old.jpg']}]);oldInfo({operatingHours:[{day:2,open:'09:00',close:'18:00'}]});});
+ const p=r.root.findByType('HomeView').props;expect(p.carsList).toEqual([]);expect(p.studio.hours).toBe('Opening hours unavailable');expect(p.banner.props.children[0]).toBeNull();await act(async()=>r.unmount());
+});

@@ -22,6 +22,8 @@ import { hashGiftCode } from "../../lib/gift-code.js";
 import { assertNotLocked, attemptKeys, findGiftByHash, giftBlockReason, recordFailure } from "../../lib/gift-store.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
+
 const empty = z.object({}).strict();
 const codeSchema = z.object({ code: z.string().min(1).max(40) }).strict();
 const idSchema = z.object({ giftId: z.string().min(1) }).strict();
@@ -58,8 +60,9 @@ export const createGift = onCall({ region: "asia-south1" , enforceAppCheck: shou
   validate(empty, request.data ?? {});
   await enforceRateLimit(subjectFrom(user), "gift.create");
   const db = getFirestore();
+  const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
   const amountPaise = await giftPricePaise(db, user.claims.tenantId);
-  const { giftId, paymentId } = await createGiftPurchase(db, user, amountPaise);
+  const { giftId, paymentId } = await createGiftPurchase(db, user, customerDocId, amountPaise);
   return { giftId, paymentId, amountPaise };
 });
 
@@ -71,9 +74,10 @@ export const getGiftCode = onCall({ region: "asia-south1" , enforceAppCheck: sho
   const data = validate(idSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "gift.read");
   const db = getFirestore();
+  const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
   const snap = await db.collection(COLLECTIONS.gifts()).doc(data.giftId).get();
   const g = snap.exists ? (snap.data() as Gift) : null;
-  if (!g || g.buyerId !== user.uid || g.tenantId !== user.claims.tenantId) throw new HttpsError("not-found", "Gift not found.");
+  if (!g || g.buyerId !== customerDocId || g.tenantId !== user.claims.tenantId) throw new HttpsError("not-found", "Gift not found.");
   if (giftState(g, Date.now()) !== "unused") throw new HttpsError("failed-precondition", "This gift has no code to show.");
   const sec = await db.collection(COLLECTIONS.giftSecrets()).doc(g.id).get();
   const code = sec.exists ? ((sec.data() as { code?: string }).code ?? null) : null;
@@ -86,7 +90,8 @@ export const listMyGifts = onCall({ region: "asia-south1" , enforceAppCheck: sho
   assertRole(user, "customer");
   await enforceRateLimit(subjectFrom(user), "gift.read");
   const db = getFirestore();
-  const snap = await db.collection(COLLECTIONS.gifts()).where("buyerId", "==", user.uid).orderBy("createdAt", "desc").limit(50).get();
+  const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
+  const snap = await db.collection(COLLECTIONS.gifts()).where("buyerId", "==", customerDocId).orderBy("createdAt", "desc").limit(50).get();
   const now = Date.now();
   const offer = await giftPricePaise(db, user.claims.tenantId).then((amountPaise) => ({ amountPaise })).catch(() => null);
   return { gifts: snap.docs.map((d) => d.data() as Gift).filter((g) => g.status !== "PENDING_PAYMENT" || now - Date.parse(g.createdAt) <= 24 * 3_600_000).map((g) => view(g, now)), offer };
@@ -100,6 +105,7 @@ export const redeemGift = onCall({ region: "asia-south1" , enforceAppCheck: shou
   const data = validate(codeSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "gift.redeem");
   const db = getFirestore();
+  const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
   const keys = attemptKeys(user.uid, request);
   const now = Date.now();
   await assertNotLocked(db, keys, now);
@@ -111,13 +117,13 @@ export const redeemGift = onCall({ region: "asia-south1" , enforceAppCheck: shou
     if (!doc) return { error: "missing" as const };
     const g = doc.data() as Gift;
     if (g.tenantId !== user.claims.tenantId) return { error: "missing" as const };
-    const reason = giftBlockReason(g, user.uid, now);
+    const reason = giftBlockReason(g, customerDocId, now);
     if (reason) return { error: reason };
     if (!g.claimedBy) {
-      tx.update(doc.ref, { claimedBy: user.uid });
+      tx.update(doc.ref, { claimedBy: customerDocId });
       writeAuditLog(tx, { action: "gift.claimed", entityType: "Gift", entityId: g.id, user, studioId: null, after: { tail: g.codeTail } });
     }
-    return { ok: view({ ...g, claimedBy: user.uid }, now) };
+    return { ok: view({ ...g, claimedBy: customerDocId }, now) };
   });
   if ("error" in result) {
     if (result.error === "missing") { await recordFailure(db, keys, now); throw bad; }

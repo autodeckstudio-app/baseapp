@@ -216,10 +216,9 @@ export default function GarageScreen() {
       ) : null}
       <JourneySheet kind="garage"/>
       {archived.length > 0 ? (
-        <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.line }}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Archived cars" onPress={() => setShowArchived((v) => !v)} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <T role="heading">Archived cars ({archived.length})</T>
-            <T tone="secondary">{showArchived ? "Hide" : "Show"}</T>
+        <View style={{ gap: space.line }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Archived cars" onPress={() => setShowArchived((v) => !v)} style={{ minHeight:48, alignSelf:"flex-start", justifyContent:"center" }}>
+            <T role="caption" tone="secondary" style={{textDecorationLine:"underline"}}>Archived ({archived.length}){showArchived ? " - Hide" : ""}</T>
           </Pressable>
           {showArchived ? archived.map((v) => (
             <View key={v.id} style={{ gap: 6, paddingVertical: 6, borderTopWidth: 1, borderTopColor: "rgba(128,128,128,0.18)" }}>

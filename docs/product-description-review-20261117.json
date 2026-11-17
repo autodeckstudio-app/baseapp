@@ -1,0 +1,377 @@
+{
+  "inventoryCapturedAt": "2026-11-17T22:47:39+05:30",
+  "liveSourceUrl": "https://app.autodeck.in/catalogue?home=paint",
+  "scope": "Manufacturer catalogue/website factual descriptions only. No invented suitability or price-tier comparisons. Wizard Graphene,10HGraphene,NARM1 held.",
+  "rows": [
+    {
+      "name": "Koch Chemie Ceramic Body Cb0.01",
+      "summary": "A chemically bonded ceramic sealant for painted surfaces, with resistance to acidic and alkaline cleaners, road salt and insect residue.",
+      "keyPoints": [
+        "Ultra-thin bonded layer",
+        "Lotus-effect water beading"
+      ],
+      "sourceUrl": "https://www.koch-chemie.com/en/products/ceramic_body_cb001",
+      "status": "verified",
+      "note": ""
+    },
+    {
+      "name": "Koch Chemie Ceramic Neo C0.03",
+      "summary": "A ceramic sealant that adds colour depth and a smooth surface, with protection against bird droppings and road salt.",
+      "keyPoints": [
+        "Strong water repellency",
+        "UV and road-salt resistance"
+      ],
+      "sourceUrl": "https://www.koch-chemie.com/pdf/datasheet/Ceramic_Neo_C003_en.pdf",
+      "status": "verified",
+      "note": ""
+    },
+    {
+      "name": "Fireball Nano Coat V3",
+      "summary": "A ceramic coating for painted surfaces, plastic, wheels, headlights and other exterior parts, with a smooth feel and deep gloss.",
+      "keyPoints": [
+        "Paint, plastic, wheels and headlights",
+        "Deep gloss and slick finish"
+      ],
+      "sourceUrl": "https://www.fireballkorea.com/coatings/nanocoatv3",
+      "status": "verified",
+      "note": ""
+    },
+    {
+      "name": "Fireball Wizard Graphene",
+      "summary": "",
+      "keyPoints": [],
+      "sourceUrl": "",
+      "status": "held",
+      "note": "Maker-only rule: exact Wizard Graphene manufacturer source not established. Retailer claims are not applied."
+    },
+    {
+      "name": "Fireball Devils Blood",
+      "summary": "A ceramic coating formulated for strong water repellency, using polysilazane and siloxane compounds.",
+      "keyPoints": [
+        "Cross-linked polysilazane formula",
+        "Hybrid siloxane abrasion resistance"
+      ],
+      "sourceUrl": "https://www.fireballkorea.com/ceramic-coating/devilsblood",
+      "status": "verified",
+      "note": ""
+    },
+    {
+      "name": "Fireball Butterfly",
+      "summary": "A single-layer ceramic coating formulated for use in changing weather conditions.",
+      "keyPoints": [
+        "Single-layer application",
+        "All-weather formula"
+      ],
+      "sourceUrl": "https://www.fireballkorea.com/ceramic-coating/butterfly",
+      "status": "verified",
+      "note": "Current live product is plain Butterfly, not Butterfly Graphene."
+    },
+    {
+      "name": "Fireball Butterfly Graphene",
+      "summary": "A ceramic coating containing graphene oxides and oils, with more than 80% solids according to Fireball.",
+      "keyPoints": [
+        "Graphene-enriched formula",
+        "Over 80% solids, per maker"
+      ],
+      "sourceUrl": "https://www.fireballkorea.com/ceramic-coating/butterfly-graphene",
+      "status": "sheet-only",
+      "note": "Distinct sheet identity, not an approved rename of current plain Butterfly."
+    },
+    {
+      "name": "Fireball DOK DO",
+      "summary": "A two-layer ceramic coating with a hard base layer and a chemical-resistant, glossy top coat.",
+      "keyPoints": [
+        "Hard base + protective top coat",
+        "Requires a brand-selected installer"
+      ],
+      "sourceUrl": "https://www.fireballkorea.com/ceramic-coating/dok-do",
+      "status": "verified",
+      "note": ""
+    },
+    {
+      "name": "Kovalent Prolong",
+      "summary": "A ceramic coating using silica and silicon carbide, with resistance to UV exposure, bird droppings and chemicals.",
+      "keyPoints": [
+        "UV and chemical resistance",
+        "Can be layered"
+      ],
+      "sourceUrl": "https://kovalentcoatings.com/products/prolong-9h-ceramic-coating/",
+      "status": "verified",
+      "note": ""
+    },
+    {
+      "name": "Kovalent Revive",
+      "summary": "A marine ceramic coating for boats, yachts and watercraft, compatible with gel coat, aluminium and clear coat.",
+      "keyPoints": [
+        "High-gloss, slick finish",
+        "Saltwater and UV resistance"
+      ],
+      "sourceUrl": "https://kovalentcoatings.com/products/revive/",
+      "status": "verified",
+      "note": "Marine product. Existing not-an-automotive-warranty restriction retained; no coastal-car suitability recommendation."
+    },
+    {
+      "name": "Kovalent Graphene Matrix",
+      "summary": "A ceramic coating for glossy paint, with heat-activated repair of minor surface marks at about 100\u00b0C.",
+      "keyPoints": [
+        "Minor-mark repair at about 100\u00b0C",
+        "Not for matte paint"
+      ],
+      "sourceUrl": "https://kovalentcoatings.com/products/graphene-matrix/",
+      "status": "verified",
+      "note": "Do not imply normal sunlight reaches the activation temperature or that deep damage heals."
+    },
+    {
+      "name": "Kovalent Borophene",
+      "summary": "A boron-nitride ceramic coating with silica nanoparticles, heat resistance and protection against oxidation, UV and chemicals.",
+      "keyPoints": [
+        "Single layer up to 10 microns, per maker",
+        "Heat and chemical resistance"
+      ],
+      "sourceUrl": "https://kovalentcoatings.com/products/borophene-coating/",
+      "status": "verified",
+      "note": ""
+    },
+    {
+      "name": "Kovalent Matte",
+      "summary": "A ceramic coating made for matte and satin paint, preserving the matte appearance without gloss enhancers.",
+      "keyPoints": [
+        "No gloss enhancers",
+        "Water-repellent surface"
+      ],
+      "sourceUrl": "https://kovalentcoatings.com/products/matte/",
+      "status": "verified",
+      "note": ""
+    },
+    {
+      "name": "Car Pro CQ.UK 3.0",
+      "summary": "A ceramic coating with resistance to salt buildup and chemicals, designed for application between 3\u00b0C and 40\u00b0C.",
+      "keyPoints": [
+        "Salt-buildup resistance",
+        "Chemical-resistant finish"
+      ],
+      "sourceUrl": "https://carpro.global/product/cq_uk/",
+      "status": "verified",
+      "note": "Maker page has conflicting pH3-14 prose versus pH3-13 key features; no exact pH range added to this short copy."
+    },
+    {
+      "name": "Car Pro CQ SiC",
+      "summary": "A silicon-carbide ceramic coating with a smooth surface, deep gloss and improved resistance to water spotting.",
+      "keyPoints": [
+        "Silicon-carbide formula",
+        "Chemical resistance: pH 3-12"
+      ],
+      "sourceUrl": "https://www.carpro.global/product/cq_sic/",
+      "status": "verified",
+      "note": "Replaces generic CQUARTZ reseller specifications with exact SiC maker claims. Not water-spot proof."
+    },
+    {
+      "name": "Keramik 9H Nano",
+      "summary": "A 9H-rated ceramic coating described by Keramik as adding gloss and making regular washing easier.",
+      "keyPoints": [
+        "9H hardness claim",
+        "Gloss-focused finish"
+      ],
+      "sourceUrl": "https://keramikcarcare.com/products.html#nano-9h",
+      "status": "new-preparation",
+      "note": ""
+    },
+    {
+      "name": "Keramik PPC",
+      "summary": "A two-part clear coating using Base A and Active B, with a wet-look finish and about 20 microns of coating thickness.",
+      "keyPoints": [
+        "Base A + Active B system",
+        "About 20 microns, per maker"
+      ],
+      "sourceUrl": "https://keramikcarcare.com/products.html",
+      "status": "new-preparation",
+      "note": ""
+    },
+    {
+      "name": "Keramic 10H Graphene",
+      "summary": "",
+      "keyPoints": [
+        ""
+      ],
+      "sourceUrl": "",
+      "status": "held",
+      "note": "Exact studio 10H Graphene identity not established against maker documentation. Seller Graphene listing does not establish 10H; generic Professional 10H is not equivalent. No substitute technical claims."
+    },
+    {
+      "name": "NAR M1",
+      "summary": "A matte-finish NAR film listed for owners who want protection without a high-gloss look. Confirm the exact M1 roll and finish with the studio before choosing.",
+      "keyPoints": [
+        "Matte finish, per retailer",
+        "TPU film, per retailer"
+      ],
+      "sourceUrl": "https://plushmydrive.com/products/nar-classic-series-m1-matte-056788",
+      "status": "identity-check",
+      "note": "Exact M1 secondary listing found; maker current range does not establish M1. Do not confuse M1 with M190. Hold application until studio roll is matched."
+    },
+    {
+      "name": "NAR E190",
+      "summary": "A glossy, 190-micron paint protection film with heat-activated repair of light surface scratches.",
+      "keyPoints": [
+        "190-micron film",
+        "Heat-activated light-scratch repair"
+      ],
+      "sourceUrl": "https://www.narppf.com/?show=35",
+      "status": "verified",
+      "note": ""
+    },
+    {
+      "name": "NAR M190",
+      "summary": "A 190-micron paint protection film with a matte or satin appearance and 30-38% gloss according to NAR.",
+      "keyPoints": [
+        "190-micron film",
+        "30-38% gloss, per maker"
+      ],
+      "sourceUrl": "https://www.narppf.com/?show=8",
+      "status": "verified",
+      "note": "Maker page contradicts itself on heat/no-heat repair. No heat-free healing claim in new copy."
+    },
+    {
+      "name": "AVVYX Prime",
+      "summary": "A clear paint protection film that preserves the original colour and shine, with resistance to scratches, stains, UV and chemicals.",
+      "keyPoints": [
+        "Scratch and stain resistance",
+        "UV and chemical protection"
+      ],
+      "sourceUrl": "https://avvyx.com/clear-ppf/",
+      "status": "verified",
+      "note": "Lower price is editorial positioning from current AutoDeck pair, not a durability or impact superiority claim."
+    },
+    {
+      "name": "AVVYX Shield",
+      "summary": "A clear TPU paint protection film with a glossy, water-repellent surface and self-healing properties.",
+      "keyPoints": [
+        "High-gloss finish",
+        "UV and chemical resistance"
+      ],
+      "sourceUrl": "https://avvyx.com/avvyx-shield-clear-ppf/",
+      "status": "verified",
+      "note": ""
+    },
+    {
+      "name": "GSWF Ultra lite",
+      "summary": "A glossy Defender paint protection film with heat-activated repair of fine scratches and a repositionable adhesive.",
+      "keyPoints": [
+        "Heat-activated fine-scratch repair",
+        "Mid-tack repositionable adhesive"
+      ],
+      "sourceUrl": "https://www.gswf.in/clear-ppf/",
+      "status": "verified",
+      "note": "Ultra Lite/Ultra share claims; no invented difference in thickness or impact performance. Price position from current AutoDeck range."
+    },
+    {
+      "name": "GSWF Ultra",
+      "summary": "A high-gloss Defender paint protection film with heat-activated fine-scratch repair and resistance to water and stains.",
+      "keyPoints": [
+        "Heat-activated fine-scratch repair",
+        "Water-repellent surface"
+      ],
+      "sourceUrl": "https://www.gswf.in/clear-ppf/",
+      "status": "verified",
+      "note": "Middle price position, not an unsupported thicker-film claim. Manufacturer duration statements conflict; no new duration added."
+    },
+    {
+      "name": "GSWF Platinum",
+      "summary": "A Defender paint protection film with high optical clarity and gloss enhancement, plus heat-activated fine-scratch repair.",
+      "keyPoints": [
+        "Up to 45% gloss enhancement, per maker",
+        "Heat-activated fine-scratch repair"
+      ],
+      "sourceUrl": "https://www.gswf.in/clear-ppf/",
+      "status": "verified",
+      "note": ""
+    },
+    {
+      "name": "Cosmo Gold",
+      "summary": "A glossy TPU paint protection film with a 7.5-mil thickness, self-healing properties and protection against stone chips and stains.",
+      "keyPoints": [
+        "7.5-mil film",
+        "Self-healing surface"
+      ],
+      "sourceUrl": "https://www.cosmoconsumer.com/cosmoppf/automotive/paint-protection-film/cosmo-gold-ppf",
+      "status": "verified",
+      "note": ""
+    },
+    {
+      "name": "Cosmo Platinum",
+      "summary": "An 8.5-mil, ultra-gloss TPU paint protection film with high tensile strength and resistance to chemicals, UV and yellowing.",
+      "keyPoints": [
+        "8.5-mil film",
+        "Water and chemical resistance"
+      ],
+      "sourceUrl": "https://www.cosmoconsumer.com/cosmoppf/automotive/paint-protection-film/cosmo-platinum-ppf",
+      "status": "verified",
+      "note": ""
+    },
+    {
+      "name": "LLumar Platinum Gloss",
+      "summary": "A glossy paint protection film with a HydroGard barrier, heat-activated repair of minor scratches and protection against road debris.",
+      "keyPoints": [
+        "Heat-activated minor-scratch repair",
+        "HydroGard stain barrier"
+      ],
+      "sourceUrl": "https://llumar.com/en/paint-protection-film/platinum-gloss/",
+      "status": "verified",
+      "note": ""
+    },
+    {
+      "name": "LLumar Platinum Extra",
+      "summary": "A thick, clear paint protection film designed for high-impact chip resistance, including track and gravel-road conditions.",
+      "keyPoints": [
+        "High-impact chip resistance",
+        "HydroGard moisture and stain barrier"
+      ],
+      "sourceUrl": "https://llumar.com/en/paint-protection-film/platinum-extra/",
+      "status": "verified",
+      "note": ""
+    },
+    {
+      "name": "LLumar Valor",
+      "summary": "A paint protection film with a Tetrashield ceramic-style topcoat, a high-gloss finish and self-healing properties.",
+      "keyPoints": [
+        "Tetrashield water-repellent topcoat",
+        "High-gloss, self-healing film"
+      ],
+      "sourceUrl": "https://llumar.com/en/paint-protection-film/valor/",
+      "status": "verified",
+      "note": ""
+    },
+    {
+      "name": "Garware Plus",
+      "summary": "A glossy, clear paint protection film with self-healing properties and resistance to water, stains and chemicals.",
+      "keyPoints": [
+        "Self-healing surface",
+        "Water and chemical resistance"
+      ],
+      "sourceUrl": "https://www.garwarehitechfilms.com/paint-protection-films/plus-ppf",
+      "status": "verified",
+      "note": "Price positioning from current AutoDeck range; no invented relative film thickness."
+    },
+    {
+      "name": "Garware Premium",
+      "summary": "A clear paint protection film with high gloss and optical clarity, self-healing properties and resistance to stains and yellowing.",
+      "keyPoints": [
+        "High gloss and optical clarity",
+        "Self-healing, stain-resistant surface"
+      ],
+      "sourceUrl": "https://www.garwarehitechfilms.com/paint-protection-films/premium-ppf",
+      "status": "verified",
+      "note": "Do not imply a stronger impact rating than Plus from tier name alone."
+    },
+    {
+      "name": "Garware Titanium",
+      "summary": "A clear paint protection film with high optical clarity, gloss, mechanical strength and an easy-clean surface.",
+      "keyPoints": [
+        "High optical clarity and gloss",
+        "Water-repellent, easy-clean surface"
+      ],
+      "sourceUrl": "https://www.garwarehitechfilms.com/paint-protection-films/titanium-ppf",
+      "status": "verified",
+      "note": ""
+    }
+  ]
+}

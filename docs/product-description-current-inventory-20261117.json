@@ -1,0 +1,332 @@
+{
+  "capturedAt": "2026-11-17T22:47:00+05:30",
+  "note": "Authenticated live catalogue read. Manually reviewed all original descriptions for restrictions. Three explicit restrictions found; all retained by adapter. Brand duration/reseller spec paragraphs are not reproduced as new short-description claims; warranty fields are unchanged. Full cure and application-temperature details were not carried into short selection copy; operational preparation instructions remain a later service-stage concern, not a new warranty. Do not infer universal future warning detection from this check.",
+  "rows": [
+    {
+      "id": "svc_81d1a5eef928b0408b41cce3d4d4b2ad",
+      "name": "Koch Chemie Ceramic Body Cb0.01",
+      "category": "ceramic",
+      "originalDescription": "Ceramic sealant for painted surfaces.\nChemically bonded, ultra-thin layer\nLotus-effect water beading\nEasy-clean surface\nAcidic and alkaline cleaner resistance\nOxidation, salt and insect protection\nUp to 2 coating layers\nBrand durability: upwards of 36 months",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A chemically bonded paint coating that makes regular hand washing easier. Suits owners looking for protection against oxidation, road salt and insect residue."
+    },
+    {
+      "id": "svc_f8fea2cba9e0397a45cb644656bd67e8",
+      "name": "Koch Chemie Ceramic Neo C0.03",
+      "category": "ceramic",
+      "originalDescription": "Next-generation ceramic sealant.\nStrong water repellency\nDeep gloss and colour depth\nSmooth surface feel\nUV and road-salt protection\nBird-dropping and rust-film resistance\nEasy-clean surface\nBrand durability: several years, depending on wear",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "Koch-Chemie's colour-depth-focused coating for a richer, smoother-looking finish. A choice for glossy paint where appearance and easier cleaning matter together."
+    },
+    {
+      "id": "svc_592abf1a979f4f8d6a8e998dbfce13a5",
+      "name": "Fireball Nano Coat V3",
+      "category": "ceramic",
+      "originalDescription": "Easy-application ceramic for exterior surfaces.\nPaint, plastic, wheels and headlights\nSmooth, slick finish\nDeep gloss\nEasy coating workability\nFull cure: about 1 week",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A value-focused ceramic that adds shine and a smooth feel across exterior surfaces. Suits everyday cars when you want more than paint-only protection."
+    },
+    {
+      "id": "svc_51ac65707000d30261ac87ec17b2c853",
+      "name": "Fireball Wizard Graphene",
+      "category": "ceramic",
+      "originalDescription": "Graphene hybrid coating for paint and PPF; distributor specifications.\nGraphene-infused nanoceramic\nGloss and matte PPF compatibility\nSlick, high-gloss finish\nEnhanced colour depth\nWater beading and self-cleaning\nUV and oxidation resistance\nBird-dropping and chemical resistance\nEasy-to-level application\nFlexible coating; easier maintenance",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A flexible hybrid coating for painted panels or PPF, with a slick finish that makes cleaning easier. Suits owners wanting one coating option for either surface."
+    },
+    {
+      "id": "svc-brand-fireball-devil-s-blood",
+      "name": "Fireball Devils Blood",
+      "category": "ceramic",
+      "originalDescription": "Ceramic formulated for strong water repellency.\nStrong water repellency\nCross-linked polysilazane durability\nSiloxane abrasion resistance\nEnvironmental protection\n6 synergistic SiO2 compounds",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "Fireball's water-repellency-focused ceramic, made to shed water while adding a reflective finish. Suits owners who put strong beading ahead of a layered coating system."
+    },
+    {
+      "id": "svc-brand-fireball-butterfly",
+      "name": "Fireball Butterfly",
+      "category": "ceramic",
+      "originalDescription": "Single-layer ceramic coating.\nSingle-layer application\nAll-weather formula",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A single-layer ceramic designed to perform through changing weather. Suits owners who want Fireball protection without moving to the two-part DOK DO system."
+    },
+    {
+      "id": "svc-brand-fireball-dok-do",
+      "name": "Fireball DOK DO",
+      "category": "ceramic",
+      "originalDescription": "Dual-layer flagship ceramic coating.\nHard base + chemical-resistant top coat\nGloss finish\nHardness exceeds 9H\nHigh SiO2 formulation\nRequires a brand-selected installer",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [
+        "Requires a brand-selected installer"
+      ],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A two-layer ceramic pairing a hard foundation with a glossy, chemical-resistant top coat. Suits owners choosing a more involved protection system rather than a single coating."
+    },
+    {
+      "id": "menu-coat-kovalent-prolong",
+      "name": "Kovalent Prolong",
+      "category": "ceramic",
+      "originalDescription": "9H ceramic coating with silica and silicon carbide.\n9H hardness; SGS-certified\n5nm silica for gloss and water repellency\n20nm silica for a protective crystal layer\nSilicon carbide for scratch resistance\nUV, bird-dropping and chemical resistance\nHeat-resistant; suited to hot climates\nCan be layered for durability",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A silica-and-silicon-carbide coating for daily-driven paint exposed to sun and road grime. Suits owners wanting a glossy finish with resistance to common contaminants."
+    },
+    {
+      "id": "svc-brand-kovalent-revive",
+      "name": "Kovalent Revive",
+      "category": "ceramic",
+      "originalDescription": "Marine ceramic for boats, yachts and watercraft.\n20nm silica fills gel-coat pores\n50nm silica protective crystal layer\nSalt-water, UV and biofouling resistance\nVOC-free formula\nHigh-gloss, slick finish\nGel coat, aluminium and clear coat\nNot an automotive warranty",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [
+        "Not an automotive warranty"
+      ],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A marine-developed coating focused on salt exposure and demanding outdoor conditions. Worth discussing for coastal use, with the studio checking the surface and application first."
+    },
+    {
+      "id": "svc-brand-kovalent-graphene-matrix",
+      "name": "Kovalent Graphene Matrix",
+      "category": "ceramic",
+      "originalDescription": "Graphene ceramic coating for gloss paint.\nHeat-activated minor-scratch repair \u00b7 ~100\u00b0C\nHardness over 9H\nSilica nanoparticles for gloss\nStrong water repellency\nChemical and pollutant resistance\nUV protection\nNot for matte paint",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [
+        "Not for matte paint"
+      ],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A gloss-paint coating with heat-activated repair of minor marks. Suits owners seeking that added feature, rather than a conventional ceramic with no repair claim."
+    },
+    {
+      "id": "menu-coat-kovalent-borophene",
+      "name": "Kovalent Borophene",
+      "category": "ceramic",
+      "originalDescription": "Boron-nitride ceramic coating.\n9H+ hardness\nHeat resistance\nSingle layer up to 10 microns\n5nm + 10nm silica for deep gloss\nStrong water repellency\nOxidation, UV and chemical resistance\nStronger paint adhesion than conventional ceramic\nBrand durability: up to 9 years",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A boron-nitride coating that builds a dense protective layer in one application. Suits glossy paint when you want Kovalent's higher-build coating approach."
+    },
+    {
+      "id": "svc-brand-kovalent-matte",
+      "name": "Kovalent Matte",
+      "category": "ceramic",
+      "originalDescription": "Ceramic made for matte and satin paint.\nPreserves the factory matte look\nNo gloss enhancers\n5nm + 20nm silica in silicon carbide\nStrong water repellency\nMinor-scratch and contaminant resistance\nOxidation and UV protection\nProlong-derived formula",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "Protection made to preserve a matte or satin appearance rather than add shine. The right finish-specific option when a glossy coating would change the look you want."
+    },
+    {
+      "id": "svc_852ed684301e188f572797265d7b106e",
+      "name": "Keramic 10H Graphene",
+      "category": "ceramic",
+      "originalDescription": "Keramic 10H Graphene. Product details will be confirmed by the studio.",
+      "displayState": "unchanged",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": null
+    },
+    {
+      "id": "svc_bb4445b597ce369d1b175058d57999b8",
+      "name": "Car Pro CQ.UK 3.0",
+      "category": "ceramic",
+      "originalDescription": "Consumer-grade ceramic coating.\nChemical resistance: pH 3\u201313\nSalt-buildup resistance\nApplication temperature: 3\u201340\u00b0C\nWipe-on, wipe-off application\nBrand durability: 18\u201324 months",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A paint coating built for salt and chemical exposure, with a broad application-temperature range. Suits owners looking for straightforward CQUARTZ protection against road grime and changing seasons."
+    },
+    {
+      "id": "svc_b25d851d8e5d7dd89e73f357459bd05d",
+      "name": "Car Pro CQ SiC",
+      "category": "ceramic",
+      "originalDescription": "Silica-carbide ceramic; specifications from the reseller.\nHard, glass-like layer\nMinor-scratch and acid-rain resistance\nBird-dropping, traffic-film and tar resistance\nUV protection\nDeep gloss and self-cleaning finish\nReseller: 50% less light wash marring\nReseller: 0.7\u20131.5 microns coating layer\nReseller durability: more than 2 years",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "Silicon-carbide ceramic focused on a smoother feel, deeper gloss and improved water-spot resistance. Suits owners who value easier maintenance and a particularly slick finish."
+    },
+    {
+      "id": "svc_3f918e528b4ec951e8dc52111a8b7a47",
+      "name": "NAR M1",
+      "category": "ppf",
+      "originalDescription": "NAR M1. Product details will be confirmed by the studio.",
+      "displayState": "unchanged",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": null
+    },
+    {
+      "id": "svc_7af0d5382d18a18390c32f52c76e3203",
+      "name": "NAR E190",
+      "category": "ppf",
+      "originalDescription": "High-gloss paint protection film.\nGloss at least 92%\nHeat-activated light-scratch repair\n190 microns thickness\nElongation at break at least 95%\nColour stability: delta E at most 1.5\nDust and yellowing resistance\nScratch resistance\nWater repellency",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A high-gloss film that keeps the original paint visible under a physical protective layer. Choose E190 for a shiny finish rather than M190's muted appearance."
+    },
+    {
+      "id": "svc_bdd71da81a8d9f5284def5eea932218b",
+      "name": "NAR M190",
+      "category": "ppf",
+      "originalDescription": "Matte/satin paint protection film.\nMatte/satin finish: 30\u201338% gloss\nLight-scratch repair without heat\nHeat-activated light-scratch repair\n190 microns thickness\nElongation at least 95%\nColour stability: delta E at most 1.5\nRemoval without residue\nBrand durability: 7 years",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A low-gloss film for a matte or satin look, rather than E190's shine. Suits owners who want paint protection without a reflective finish."
+    },
+    {
+      "id": "svc_45b1ff748dfd2b604af02d6b051d35e2",
+      "name": "AVVYX Prime",
+      "category": "ppf",
+      "originalDescription": "Clear PPF for everyday protection.\nPreserves original colour and shine\nScratch and stain resistance\nUV protection\nChemical resistance\nSeamless, glossy finish",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "AVVYX's everyday clear-film option, designed to preserve the car's original colour and shine. Suits owners starting with physical paint protection at the lower price in this pair."
+    },
+    {
+      "id": "svc_97ff13e674678728853e5651e04ba9b7",
+      "name": "AVVYX Shield",
+      "category": "ppf",
+      "originalDescription": "AVVYX step-up clear PPF tier.\nPreserves original colour and shine\nScratch and stain resistance\nUV protection\nChemical resistance\nSeamless, glossy finish",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A step-up clear TPU film with a water-repellent, self-healing surface. Suits owners who want easier film care while keeping the original paint colour visible."
+    },
+    {
+      "id": "svc_f662ab1a4a630f9b2ccdd790813e3f8d",
+      "name": "GSWF Ultra lite",
+      "category": "ppf",
+      "originalDescription": "Entry Defender paint protection film.\nHigh-gloss finish\nFine-scratch repair with heat\nMid-tack, repositionable adhesive\nWater and dirt repellency",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "The lower-priced Defender option here for everyday driving, combining a glossy look with repair of fine surface marks. A starting point when you want GSWF film without the Platinum focus on extra shine."
+    },
+    {
+      "id": "svc_d99a4d2a7f8fb8942d7afc387970dd30",
+      "name": "GSWF Ultra",
+      "category": "ppf",
+      "originalDescription": "Defender paint protection film.\nHigh-gloss finish\nFine-scratch repair with heat\nMid-tack, repositionable adhesive\nWater repellency\nStain resistance",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A high-gloss Defender film positioned for daily driving and clear, lasting appearance. Suits owners choosing the middle option between Ultra Lite and Platinum in this range."
+    },
+    {
+      "id": "svc_1df385cdf3103b951327820229be6a0d",
+      "name": "GSWF Platinum",
+      "category": "ppf",
+      "originalDescription": "Top Defender paint protection film.\nUp to 45% more gloss\nHigh optical clarity\nFine-scratch repair with heat\nWater and dirt repellency",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "Defender's gloss-enhancing film for owners who put paint depth and clarity first. Choose it over the other displayed GSWF options when a richer shine is the priority."
+    },
+    {
+      "id": "svc_963267aa9a4c81f8b9fc92a0e4ea1ea5",
+      "name": "Cosmo Gold",
+      "category": "ppf",
+      "originalDescription": "Gloss paint protection film.\nLubrizol TPU film\nAshland Advance PS adhesive\n7.5 mil thickness\nLight-scratch self-healing\nStone-chip and bird-dropping protection\nUV, fade and discolouration resistance\nStain resistance\nEasy maintenance",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A glossy TPU film for everyday protection against minor scratches and road debris. Suits owners wanting Cosmo protection without stepping up to Platinum's heavier film."
+    },
+    {
+      "id": "svc_75c8c36565f41b60d58ba8bc3a8b663f",
+      "name": "Cosmo Platinum",
+      "category": "ppf",
+      "originalDescription": "Ultra-gloss paint protection film.\nLubrizol TPU film\nAshland Advance PS adhesive\n8.5 mil thickness\nHigh tensile strength\nLight-scratch self-healing\nChemical resistance\nUV and yellowing resistance\nWater repellency",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A thicker, ultra-gloss Cosmo film with added emphasis on strength and surface care. Suits owners comparing a heavier film with Gold's lighter construction."
+    },
+    {
+      "id": "svc-brand-llumar-platinum-gloss",
+      "name": "LLumar Platinum Gloss",
+      "category": "ppf",
+      "originalDescription": "Gloss PPF with a HydroGard barrier.\nHigh-shine topcoat\nSwirl and minor-scratch repair with heat\nHydroGard water and stain barrier\nBlends with paint on partial coverage\nStone, salt and sand protection\nBug and oil protection",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A high-shine film that blends with factory paint, including on partial coverage. Suits owners who want protection while keeping the car's original glossy appearance."
+    },
+    {
+      "id": "svc-brand-llumar-platinum-extra",
+      "name": "LLumar Platinum Extra",
+      "category": "ppf",
+      "originalDescription": "LLumar's thickest PPF for higher-impact use.\nThickest film in the LLumar range\nHigh-impact chip resistance\nBuilt for track and gravel-road conditions\nLight-scratch repair with heat\nHydroGard moisture and stain resistance\nOptically clear gloss",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "LLumar's thicker, higher-impact film for gravel roads, track use and vulnerable panels. Choose it when chip resistance matters more than simply adding a glossy finish."
+    },
+    {
+      "id": "svc-ppf-llumar-valor",
+      "name": "LLumar Valor",
+      "category": "ppf",
+      "originalDescription": "PPF with a Tetrashield ceramic-style topcoat.\nTetrashield water repellency\nEasy washing\nUltra-gloss finish without orange peel\nUp to 25% more environmental resistance than typical PPF\nAcid-rain, bird-dropping and tree-sap resistance\nLight-scratch self-healing",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A protective film with a ceramic-style surface built in, rather than a separate coating step. Suits owners wanting PPF protection with a slick, easier-wash finish."
+    },
+    {
+      "id": "svc-ppf-garware-plus",
+      "name": "Garware Plus",
+      "category": "ppf",
+      "originalDescription": "Garware clear paint protection film.\nLight-scratch self-healing\nStain resistance\nWater repellency\nChemical resistance\nConforms to curved surfaces\nOptical clarity\nGloss finish\nYellowing resistance",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A clear-film starting point in the Garware range for everyday chips, marks and stains. Suits owners wanting to keep the original glossy paint visible at the lower Garware price here."
+    },
+    {
+      "id": "svc-ppf-garware-premium",
+      "name": "Garware Premium",
+      "category": "ppf",
+      "originalDescription": "Garware higher-tier clear paint protection film.\nLight-scratch self-healing\nChemical resistance\nStain resistance\nWater repellency\nHigh gloss\nHigher-tier optical clarity\nYellowing resistance\nConforms to curved surfaces",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "A gloss-focused clear film for owners who place extra weight on paint clarity and finish. Sits between Plus and Titanium in the displayed Garware range."
+    },
+    {
+      "id": "svc-brand-garware-titanium",
+      "name": "Garware Titanium",
+      "category": "ppf",
+      "originalDescription": "Garware top-tier clear PPF.\nLight-scratch self-healing\nWater repellency\nMechanical strength\nTop-tier Garware gloss\nYellowing resistance\nEnhanced longevity\nTop-tier Garware optical clarity\nChemical resistance\nEasy cleaning\nStain resistance\nConforms to curved surfaces\nHigh stretchability",
+      "displayState": "reviewed exact name",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": "Garware's clarity-and-gloss-focused top option, with an easy-clean surface and emphasis on mechanical strength. Suits owners prioritising the finish as well as physical paint protection."
+    },
+    {
+      "id": "enquiry_pps-spray",
+      "name": "Standard PPS",
+      "category": "ppf",
+      "originalDescription": "Spray-on protective film.",
+      "displayState": "unchanged",
+      "originalRestrictions": [],
+      "allRestrictionsRetained": true,
+      "reviewedSummary": null
+    }
+  ]
+}

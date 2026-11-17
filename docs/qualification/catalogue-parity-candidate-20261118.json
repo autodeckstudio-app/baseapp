@@ -1,0 +1,272 @@
+{
+  "mode": "LOCAL_PREPARATION_NOT_PUBLISHED",
+  "sourcePublication": "catalogue_4f6ed52e3c126e71d1b3b9c81ea6c42d3c354349",
+  "changes": [
+    {
+      "serviceId": "svc-brand-fireball-devil-s-blood",
+      "expectedServiceUpdatedAt": "2026-11-16T18:19:34.376Z",
+      "before": {
+        "basePrice": 2500000
+      },
+      "payload": {
+        "basePrice": 2000000
+      }
+    },
+    {
+      "serviceId": "svc_b25d851d8e5d7dd89e73f357459bd05d",
+      "expectedServiceUpdatedAt": "2026-11-16T18:19:34.376Z",
+      "before": {
+        "basePrice": 2000000
+      },
+      "payload": {
+        "basePrice": 2400000
+      }
+    },
+    {
+      "serviceId": "svc_bb4445b597ce369d1b175058d57999b8",
+      "expectedServiceUpdatedAt": "2026-11-16T18:19:34.376Z",
+      "before": {
+        "basePrice": 1500000
+      },
+      "payload": {
+        "basePrice": 1900000
+      }
+    },
+    {
+      "serviceId": "menu-coat-glass",
+      "expectedServiceUpdatedAt": "2026-11-16T18:19:34.376Z",
+      "before": {
+        "basePrice": 350000,
+        "name": "Glass coating",
+        "brand": "Standard"
+      },
+      "payload": {
+        "basePrice": 300000,
+        "name": "Keramic Glass coating",
+        "brand": "Keramic"
+      }
+    },
+    {
+      "serviceId": "svc-brand-fireball-dok-do",
+      "expectedServiceUpdatedAt": "2026-11-16T18:19:34.376Z",
+      "before": {
+        "basePrice": 0,
+        "priceOnRequest": true,
+        "priceFrom": false,
+        "priceEstimate": false,
+        "estimatedDurationMinutes": 0,
+        "customerMenu": {
+          "home": "paint",
+          "family": "Ceramic",
+          "priceNote": "",
+          "priceMode": "inspection",
+          "priceCondition": ""
+        }
+      },
+      "payload": {
+        "basePrice": 3000000,
+        "priceOnRequest": false,
+        "priceFrom": false,
+        "priceEstimate": false,
+        "estimatedDurationMinutes": 300,
+        "customerMenu": {
+          "home": "paint",
+          "family": "Ceramic",
+          "priceNote": "",
+          "priceMode": "fixed",
+          "priceCondition": ""
+        }
+      }
+    },
+    {
+      "serviceId": "svc-brand-fireball-butterfly",
+      "expectedServiceUpdatedAt": "2026-11-16T18:19:34.376Z",
+      "before": {
+        "active": true
+      },
+      "payload": {
+        "active": false
+      }
+    },
+    {
+      "serviceId": "svc-brand-fireball-butterfly-graphene",
+      "expectedServiceUpdatedAt": "2026-11-16T18:19:34.376Z",
+      "before": {
+        "active": false,
+        "basePrice": 2999900,
+        "priceOnRequest": true,
+        "priceFrom": false,
+        "priceEstimate": false,
+        "customerMenu": {
+          "home": "paint",
+          "family": "Ceramic",
+          "priceMode": "from",
+          "priceCondition": "Paint correction: extra, by condition",
+          "priceNote": "Starting treatment price. Paint correction is billed separately based on condition. The studio confirms the final price before you approve."
+        },
+        "estimatedDurationMinutes": 480
+      },
+      "payload": {
+        "active": true,
+        "basePrice": 2400000,
+        "priceOnRequest": false,
+        "priceFrom": false,
+        "priceEstimate": false,
+        "customerMenu": {
+          "priceCondition": "",
+          "priceNote": "",
+          "home": "paint",
+          "priceMode": "fixed",
+          "family": "Ceramic"
+        },
+        "estimatedDurationMinutes": 300
+      }
+    },
+    {
+      "serviceId": "menu-garage-alignment",
+      "expectedServiceUpdatedAt": "2026-11-16T18:19:34.376Z",
+      "before": {
+        "active": true
+      },
+      "payload": {
+        "active": false
+      }
+    },
+    {
+      "serviceId": "svc-wash-regular",
+      "expectedServiceUpdatedAt": "2026-11-16T18:19:34.376Z",
+      "before": {
+        "description": "Exterior foam wash and drying."
+      },
+      "payload": {
+        "description": "Foam wash and vacuum cleaning."
+      }
+    },
+    {
+      "serviceId": "svc-wash-premium",
+      "expectedServiceUpdatedAt": "2026-11-16T18:19:34.376Z",
+      "before": {
+        "description": "Premium exterior wash."
+      },
+      "payload": {
+        "description": "Foam wash with Koch-Chemie shampoo, vacuum cleaning, dashboard polishing and tyre polishing."
+      }
+    },
+    {
+      "serviceId": "menu-wash-exterior",
+      "expectedServiceUpdatedAt": "2026-11-16T18:19:34.376Z",
+      "before": {
+        "description": "Exterior wash with spray-sealant finish."
+      },
+      "payload": {
+        "description": "Foam wash with Koch-Chemie ceramic spray, vacuum cleaning and ceramic sealant."
+      }
+    },
+    {
+      "serviceId": "menu-wash-interior",
+      "expectedServiceUpdatedAt": "2026-11-16T18:19:34.376Z",
+      "before": {
+        "description": "Interior deep-cleaning service."
+      },
+      "payload": {
+        "description": "Interior deep cleaning with detailed vacuum cleaning and seat removal. Includes the dashboard, seats, seat belts and AC vents."
+      }
+    },
+    {
+      "serviceId": "svc-wash-detail-spa",
+      "expectedServiceUpdatedAt": "2026-11-16T18:19:34.376Z",
+      "before": {
+        "description": "Interior deep clean and exterior detail wash together."
+      },
+      "payload": {
+        "description": "Interior deep clean, exterior ceramic wash and polishing."
+      }
+    },
+    {
+      "serviceId": null,
+      "proposedNewServiceId": "svc_69f42ee0accdc276497a3507ff6060e0",
+      "expectedServiceUpdatedAt": null,
+      "payload": {
+        "id": "svc_69f42ee0accdc276497a3507ff6060e0",
+        "tenantId": "automodz",
+        "name": "Keramic PPC",
+        "category": "ceramic",
+        "brand": "Keramic",
+        "description": "A two-part clear coating using Base A and Active B, with a wet-look finish and about 20 microns of coating thickness.\nBase A + Active B system\nAbout 20 microns, per maker",
+        "basePrice": 3500000,
+        "currency": "INR",
+        "active": true,
+        "estimatedDurationMinutes": 300,
+        "warrantyLabel": null,
+        "warrantyDurationValue": null,
+        "warrantyDurationUnit": null,
+        "vehicleCategoryPricing": [],
+        "requiredBayType": "protection",
+        "membershipWashEligible": false,
+        "priceOnRequest": false,
+        "priceFrom": false,
+        "priceEstimate": false,
+        "coverageLevel": null,
+        "displayOrder": 125,
+        "customerMenu": {
+          "priceCondition": "",
+          "priceNote": "",
+          "home": "paint",
+          "priceMode": "fixed",
+          "family": "Ceramic"
+        },
+        "createdAt": "LOCAL_PREPARATION",
+        "updatedAt": "LOCAL_PREPARATION"
+      }
+    },
+    {
+      "serviceId": null,
+      "proposedNewServiceId": "svc_67425fd6fe54a4d10084b1c11cffef31",
+      "expectedServiceUpdatedAt": null,
+      "payload": {
+        "id": "svc_67425fd6fe54a4d10084b1c11cffef31",
+        "tenantId": "automodz",
+        "name": "Keramic 9H Nano",
+        "category": "ceramic",
+        "brand": "Keramic",
+        "description": "A 9H-rated ceramic coating described by Keramik as adding gloss and making regular washing easier.\n9H hardness claim\nGloss-focused finish",
+        "basePrice": 1000000,
+        "currency": "INR",
+        "active": true,
+        "estimatedDurationMinutes": 300,
+        "warrantyLabel": null,
+        "warrantyDurationValue": null,
+        "warrantyDurationUnit": null,
+        "vehicleCategoryPricing": [],
+        "requiredBayType": "protection",
+        "membershipWashEligible": false,
+        "priceOnRequest": false,
+        "priceFrom": false,
+        "priceEstimate": false,
+        "coverageLevel": null,
+        "displayOrder": 126,
+        "customerMenu": {
+          "priceCondition": "",
+          "priceNote": "",
+          "home": "paint",
+          "priceMode": "fixed",
+          "family": "Ceramic"
+        },
+        "createdAt": "LOCAL_PREPARATION",
+        "updatedAt": "LOCAL_PREPARATION"
+      }
+    }
+  ],
+  "held": [
+    {
+      "kind": "membership",
+      "choice": "Financial ladder remains paused pending owner"
+    }
+  ],
+  "excludedExistingDraft": "Full detail wash",
+  "currentSheetRecheck": "2026-11-18T00:44:18+05:30",
+  "identityNote": "Owner phonemsg-01M7NF6FB55SQE8SVV8Z5PF7Q4 confirms the existing Standard glass option is Keramic. Rename and brand corrected on existing menu-coat-glass ID, price3000, history preserved.",
+  "dokdoAuthority": "phonemsg-01M7NDDDTVZE72MQMSYZ7S0ADP in reply to explicit bookable30000-vs-inspection question",
+  "durationAuthority": "phonemsg-01M7GHN0SZ1192XSNZTFYVV58A: ceramic services five hours",
+  "expectedActiveCount": 68
+}

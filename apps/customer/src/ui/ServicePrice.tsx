@@ -47,7 +47,7 @@ export function ServicePrice(p: ServicePriceProps) {
             </View>
           ) : priceBreakdown !== null ? (
             <View style={{gap:12}}>
-              <View style={{flexDirection:"row",alignItems:"baseline",justifyContent:"space-between",gap:16,paddingVertical:8}}><T role="body" tone="secondary">For your car</T><T role="title">{rupees(priceBreakdown.total)}</T></View>
+              <View style={{flexDirection:"row",alignItems:"baseline",justifyContent:"space-between",gap:16,paddingVertical:8}}><T role="title">{rupees(priceBreakdown.total)}</T></View>
               {p.inlineBreakdown||!hasBreakdown?null:<Row title={detailsOpen?"Hide price breakdown":"View price breakdown"} onPress={()=>setDetailsOpen(!detailsOpen)} last/>}
               {hasBreakdown&&(p.inlineBreakdown||detailsOpen)?<View><Row title="Base" trailing={<T role="data">{rupees(priceBreakdown.basePrice)}</T>} />
               {priceBreakdown.scopeAdjustment > 0 ? (

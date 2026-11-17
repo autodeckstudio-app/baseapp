@@ -8,4 +8,3 @@ export function productDisplayName(item:Pick<Service,'name'|'brand'>){
  const prefix=new RegExp('^'+escaped.join('[\\s\\p{P}]*')+'(?:[\\s\\p{P}]+|$)','iu');
  return item.name.replace(prefix,'')||item.name;
 }
-

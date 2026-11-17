@@ -4,7 +4,7 @@ import { customerOfferingVisible } from '../../../lib/customer-offering-visibili
 import { CarThumb } from "../../../ui/CarThumb";
 import {useVehiclePreference} from "../../../lib/active-vehicle";
 import { useState, useEffect, useRef } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { collapseStaleBookEntries } from "../../../lib/back-nav";
 import { doc, getDoc} from "firebase/firestore";
@@ -161,7 +161,7 @@ export default function BookServiceScreen() {
       <View style={{ borderRadius: 24, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}><ServicePhoto service={service} aspect={3} radius={0} /><View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0) 50%, rgba(5,5,6,0.7) 100%)" } as object) }} /></View>
       <View style={{ gap: space.line }}>
         <Kicker>Booking for</Kicker>
-        {selectedVehicle ? <Pane pad="inset"><View style={{flexDirection:"row",alignItems:"center",gap:14}}>{selectedVehicle.photoUrl?<CarThumb car={selectedVehicle} height={60} width={84} radius={12}/>:null}<View style={{flex:1,gap:6}}><T role="heading">{selectedVehicle.make} {selectedVehicle.model}</T><Plate value={selectedVehicle.registrationNumber}/></View></View>{vehicles.length>1&&!choosingVehicle?<Button kind="quiet" label="Change car" onPress={()=>setChoosingVehicle(true)}/>:null}</Pane> : null}
+        {selectedVehicle ? <Pane pad="inset"><View style={{flexDirection:"row",alignItems:"center",gap:14}}>{selectedVehicle.photoUrl?<CarThumb car={selectedVehicle} height={60} width={84} radius={12}/>:null}<View style={{flex:1,minWidth:0,gap:6}}><T role="heading">{selectedVehicle.make} {selectedVehicle.model}</T><Plate value={selectedVehicle.registrationNumber}/></View></View>{vehicles.length>1&&!choosingVehicle?<Pressable accessibilityRole="button" accessibilityLabel="Change car" onPress={()=>setChoosingVehicle(true)} style={{alignSelf:"flex-start",minHeight:44,justifyContent:"center",paddingHorizontal:2,marginTop:4}}><T role="caption" tone="secondary" style={{textDecorationLine:"underline"}}>Change car</T></Pressable>:null}</Pane> : null}
         {vehiclesError ? <Notice title="Can't load your cars" body="Try again before choosing a time." action={<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>}/> : vehicles.length === 0 ? (
           <Notice title="Add your car first" body="We price and plan the work around it." action={<Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} />} />
         ) : selectedVehicle && !choosingVehicle ? null : (

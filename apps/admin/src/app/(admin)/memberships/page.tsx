@@ -21,6 +21,8 @@ import {
   normalizePhone,
   type PendingMembershipRow,
 } from "../../../lib/membership-service";
+import {GiftVerification} from '../../../experience/GiftVerification';
+import {verifyEnteredGift} from '../../../lib/gift-verification-service';
 import { useAdminAuth } from "../../../lib/auth-context";
 
 const box: React.CSSProperties = {
@@ -393,6 +395,7 @@ export default function MembershipPlansPage() {
         <>
           <PendingQueue tenantId={tenantId} plans={plans} onChanged={() => void refresh()} tick={members.map((m) => `${m.id}:${m.status}`).join("|")} />
           <MembersPanel members={members} plans={plans} />
+          <GiftVerification lookup={verifyEnteredGift} />
           <WalkinSale tenantId={tenantId} plans={plans} onChanged={() => void refresh()} />
         </>
       )}
