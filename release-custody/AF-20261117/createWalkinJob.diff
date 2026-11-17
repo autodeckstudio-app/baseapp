@@ -1,0 +1,35 @@
+--- createWalkinJob/current/index.js
++++ createWalkinJob/prepared/index.js
+@@ -1650,6 +1650,7 @@
+         "Bay is currently occupied. Please select a different bay."
+       );
+     }
++    const lines = [{ serviceId: data.serviceId, name: customerServiceName(service.name), price: priceBreakdown.subtotal, durationMinutes: service.estimatedDurationMinutes }];
+     const walkinJob = {
+       id: jobRef.id,
+       tenantId: user.claims.tenantId,
+@@ -1658,6 +1659,7 @@
+       customerId: data.customerId,
+       vehicleId: data.vehicleId,
+       serviceId: data.serviceId,
++      lines,
+       bayId: data.bayId,
+       assignedEmployeeId: user.uid,
+       status: "VEHICLE_RECEIVED",
+@@ -1685,7 +1687,7 @@
+       sealedAt: null
+     };
+     if (quoteBookingRef) {
+-      const b = { id: quoteBookingRef.id, tenantId: user.claims.tenantId, studioId: data.studioId, customerId: data.customerId, vehicleId: data.vehicleId, serviceId: data.serviceId, vehicleCategory: data.vehicleCategory, scheduledAt: nowIso, scheduledDate, scheduledTime: utcToLocalTime(now, config.timezone), estimatedEndAt: estimatedEndAt.toISOString(), estimatedEndDate, estimatedEndTime: utcToLocalTime(estimatedEndAt, config.timezone), durationMinutes: service.estimatedDurationMinutes, bayId: data.bayId, assignedEmployeeId: user.uid, status: "ACTIVE", priceOnRequest: true, quoteStatus: "requested", priceBreakdown, totalAmount: priceBreakdown.total, membershipId: null, membershipDiscountApplied: false, membershipWashUsed: false, paymentStatus: "unpaid", payMode: "studio", holdExpiresAt: null, notes: data.notes ?? null, idempotencyKey: "walkin-" + jobRef.id, rescheduleCount: 0, confirmedAt: nowIso, cancelledAt: null, cancellationReason: null, createdAt: nowIso, updatedAt: nowIso };
++      const b = { id: quoteBookingRef.id, tenantId: user.claims.tenantId, studioId: data.studioId, customerId: data.customerId, vehicleId: data.vehicleId, serviceId: data.serviceId, lines, vehicleCategory: data.vehicleCategory, scheduledAt: nowIso, scheduledDate, scheduledTime: utcToLocalTime(now, config.timezone), estimatedEndAt: estimatedEndAt.toISOString(), estimatedEndDate, estimatedEndTime: utcToLocalTime(estimatedEndAt, config.timezone), durationMinutes: service.estimatedDurationMinutes, bayId: data.bayId, assignedEmployeeId: user.uid, status: "ACTIVE", priceOnRequest: true, quoteStatus: "requested", priceBreakdown, totalAmount: priceBreakdown.total, membershipId: null, membershipDiscountApplied: false, membershipWashUsed: false, paymentStatus: "unpaid", payMode: "studio", holdExpiresAt: null, notes: data.notes ?? null, idempotencyKey: "walkin-" + jobRef.id, rescheduleCount: 0, confirmedAt: nowIso, cancelledAt: null, cancellationReason: null, createdAt: nowIso, updatedAt: nowIso };
+       tx.set(quoteBookingRef, b);
+     }
+     tx.set(jobRef, walkinJob);
+@@ -1717,3 +1719,7 @@
+   createWalkinJob
+ });
+ //# sourceMappingURL=index.cjs.map
++
++function customerServiceName(name) {
++  return /^(?:PPF (?:Full Body|Full Front|High-Impact Kit)|Ceramic Coating(?: \d+-Year)?) [A-Z]$/.test(name) ? name.slice(0, -2) : name;
++}

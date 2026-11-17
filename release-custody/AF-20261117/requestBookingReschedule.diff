@@ -1,0 +1,18 @@
+--- requestBookingReschedule/current/index.js
++++ requestBookingReschedule/prepared/index.js
+@@ -3239,8 +3239,13 @@
+   "commercial",
+   "van"
+ ]);
+-var dateStr = import_zod4.z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD");
+-var timeStr = import_zod4.z.string().regex(/^\d{2}:\d{2}$/, "Must be HH:mm");
++var dateStr = import_zod4.z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD").refine((value) => {
++  const [year = 0, month = 0, day = 0] = value.split("-").map(Number);
++  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
++  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
++  return month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1];
++}, "Must be a real calendar date");
++var timeStr = import_zod4.z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, "Must be a valid HH:mm time");
+ var getAvailabilitySchema = import_zod4.z.object({
+   quoteJourneyId: import_zod4.z.string().min(1).max(120).regex(/^[A-Za-z0-9_-]+$/).optional(),
+   quoteRevision: import_zod4.z.number().int().positive().optional(),

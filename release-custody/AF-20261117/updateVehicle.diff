@@ -1,0 +1,15 @@
+--- updateVehicle/current/index.js
++++ updateVehicle/prepared/index.js
+@@ -21028,9 +21028,10 @@
+     if (data.category !== void 0) updates["category"] = data.category;
+     if (data.registrationNumber !== void 0 && data.registrationNumber !== existing.registrationNumber) {
+       const clash = await tx.get(
+-        db.collection(COLLECTIONS.vehicles()).where("tenantId", "==", existing.tenantId).where("ownerId", "==", existing.ownerId).where("registrationNumber", "==", data.registrationNumber).limit(10)
++        db.collection(COLLECTIONS.vehicles()).where("tenantId", "==", existing.tenantId).where("ownerId", "==", existing.ownerId)
+       );
+-      if (clash.docs.some((d) => d.id !== data.vehicleId && d.data().deletedAt === null)) {
++      const matching = matchingVehicles(clash.docs.filter((d) => d.id !== data.vehicleId).map((d) => d.data()), data.registrationNumber);
++      if (matching.some((vehicle) => !vehicle.deletedAt)) {
+         throw new import_https8.HttpsError("already-exists", "This car is already added.", { field: "registrationNumber", reason: "duplicate" });
+       }
+     }

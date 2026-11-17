@@ -1,0 +1,48 @@
+--- createBooking/current/index.js
++++ createBooking/prepared/index.js
+@@ -2082,8 +2082,13 @@
+   "commercial",
+   "van"
+ ]);
+-var dateStr = import_zod3.z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD");
+-var timeStr = import_zod3.z.string().regex(/^\d{2}:\d{2}$/, "Must be HH:mm");
++var dateStr = import_zod3.z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD").refine((value) => {
++  const [year = 0, month = 0, day = 0] = value.split("-").map(Number);
++  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
++  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
++  return month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1];
++}, "Must be a real calendar date");
++var timeStr = import_zod3.z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, "Must be a valid HH:mm time");
+ var getAvailabilitySchema = import_zod3.z.object({
+   quoteJourneyId: import_zod3.z.string().min(1).max(120).regex(/^[A-Za-z0-9_-]+$/).optional(),
+   quoteRevision: import_zod3.z.number().int().positive().optional(),
+@@ -2448,7 +2453,19 @@
+     let minJobs = Infinity;
+     for (const bay of compatibleBays) {
+       const occupied = bayOccupancy.get(bay.id) ?? [];
+-      if (!hasConflict(requestedStart, estimatedEndAt, occupied)) {
++      const localDay = (/* @__PURE__ */ new Date(`${data.scheduledDate}T12:00:00Z`)).getUTCDay();
++      const hours = config.operatingHours.find((h) => h.dayOfWeek === localDay);
++      const offered = hours && !hours.closed && !config.holidays.includes(data.scheduledDate) ? generateDaySlots({
++        date: data.scheduledDate,
++        openTime: hours.open,
++        closeTime: hours.close,
++        serviceDurationMinutes: visitMinutes,
++        occupiedIntervals: occupied,
++        timezone: config.timezone,
++        operatingHours: config.operatingHours,
++        holidays: config.holidays
++      }) : [];
++      if (offered.some((slot) => slot.startAt === requestedStart.toISOString())) {
+         if (occupied.length < minJobs) {
+           minJobs = occupied.length;
+           assignedBayId = bay.id;
+@@ -2554,7 +2571,7 @@
+     })() : null;
+     if (combined) finalBreakdown = combined.breakdown;
+     if (reservedPickup) tx.update(reservedPickup.ref, { pickupsUsed: (reservedPickup.membership.pickupsUsed ?? 0) + 1, updatedAt: nowIso });
+-    const lines = extraLines.length ? [{ serviceId: data.serviceId, name: customerServiceName(service.name), price: breakdown.subtotal, durationMinutes: service.estimatedDurationMinutes }, ...extraLines] : void 0;
++    const lines = [{ serviceId: data.serviceId, name: customerServiceName(service.name), price: breakdown.subtotal, durationMinutes: acceptedOffer?.workingMinutes ?? service.estimatedDurationMinutes }, ...extraLines];
+     if (!combined && advancePaymentEnabled() && user.claims.role === "customer" && (data.payMode ?? "studio") === "studio" && finalBreakdown.total > 0 && (acceptedOffer !== null || service.priceOnRequest !== true) && data.advanceFlowVersion !== 1) {
+       throw new import_https10.HttpsError("failed-precondition", "Online advance payments are now available. Refresh or update AutoDeck before booking so you can pay the 20% advance.");
+     }

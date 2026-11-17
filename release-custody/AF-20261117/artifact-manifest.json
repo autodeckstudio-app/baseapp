@@ -1,0 +1,51 @@
+[
+  {
+    "name": "createBooking",
+    "old_bundle_sha256": "18d014d2a08afbc5768bc8980183344981eb3432c1829fd52749f4115ba0b35c",
+    "new_bundle_sha256": "11c9f62f81c3623a495bb65931b27e88387c85db5c12c0e8bb41a53fb528580b",
+    "zip_sha256": "02d49715d8d5ac1bad17ca5db81515c3ca134dd93f6b6f025fa4aa574020d223",
+    "diff_lines": 48
+  },
+  {
+    "name": "createWalkinJob",
+    "old_bundle_sha256": "1f7473183d695865c4d924b0658e414e76ecce492dbd853956e9f64051ac264b",
+    "new_bundle_sha256": "4fe3d714786fb3d9898ddafcb364cb6e26e4642e6987f4a095e70573a1baccbe",
+    "zip_sha256": "49aeec63b7b441ea67b70466c9aa4e4d936fe2f916b3e85cd6511fbad53cba6e",
+    "diff_lines": 35
+  },
+  {
+    "name": "restoreVehicle",
+    "old_bundle_sha256": "a3d2854ac059149452ff6349f5aeaee0f1b29ce266f9d6abb1e7bab4f863bacf",
+    "new_bundle_sha256": "a3d2854ac059149452ff6349f5aeaee0f1b29ce266f9d6abb1e7bab4f863bacf",
+    "zip_sha256": "6672d20c8856284bd4ae81e030a5837ff9e0602e665eff8a97d2d40ce5e83078",
+    "diff_lines": 0
+  },
+  {
+    "name": "updateVehicle",
+    "old_bundle_sha256": "18f6aab9d28ad8c91611cf9fb072c9927f33e12df0e939ed9414338df82bf4e7",
+    "new_bundle_sha256": "c5ab55376ad8074260c93850dce8eb68054c2eec0e3c359060319fb699883b88",
+    "zip_sha256": "641c59fd942daf489ac7a98377756562aaa3216089661b221946166af471c13d",
+    "diff_lines": 15
+  },
+  {
+    "name": "getAvailability",
+    "old_bundle_sha256": "f3c632fcc35afb6b7b0b01e4fc5f6f761a38d1a5d7dfccb971f55b755d5c3245",
+    "new_bundle_sha256": "79d2dc79a5d159cc55b0e50f4d376b8f8d3596ca90d49ea4772b85d087edea44",
+    "zip_sha256": "29769b269bac3106211a373df978f6d3b9969b033a49e56ef3c475dccb71d672",
+    "diff_lines": 18
+  },
+  {
+    "name": "rescheduleBooking",
+    "old_bundle_sha256": "386677abf5ba69719f462f3730531e28dd99d2fbd26bb4325d6d72d626273439",
+    "new_bundle_sha256": "b373761f2ae14734590eca62b76f915774faeaf16995c2e29ed125ef390df994",
+    "zip_sha256": "2e1c1da41b61e468680c103c24bcb550e285d70cb431fdaca597229d0d0db5bb",
+    "diff_lines": 18
+  },
+  {
+    "name": "requestBookingReschedule",
+    "old_bundle_sha256": "2a09d4306579c81ca5ff177fe232a9d1f733cbfe749ca21e0800923d1b095e67",
+    "new_bundle_sha256": "2e71bfa0c83d0082a887fa78deaeed6eecad5ce0a2efcb2674114394987778cc",
+    "zip_sha256": "790f68f4cbfce2df13f2e9862e3cef43a013f26af65b5c30b07136af94814195",
+    "diff_lines": 18
+  }
+]
