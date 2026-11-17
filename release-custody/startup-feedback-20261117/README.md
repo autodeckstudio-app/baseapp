@@ -1,0 +1,5 @@
+# Pending startup feedback candidate
+
+Status: technically reviewed, NOT UI-approved or deployed. Only two Customer source paths change: CustomerSessionBoundary and its focused render regression. Existing Loading component replaces a null return while auth is loading. Private children remain unmounted, identity key unchanged. Feedback only, no speed-fix claim. Source and logs retained on deployment-suppressed backup branch only. To deploy after visual approval, derive these exact two source paths onto released Customer f9289378, never deploy this backup branch wholesale.
+
+Tests: before new test fails on null. After auth+boundary14/14pass, Customer typecheck pass. Local 390x844 actual component screenshots reviewed separately; mocked authloading, actual kit/theme, no live data. Measured live isolated returning startup20.6sec auto-mount and earlier roughly one minute plus reload, cause not fully established. Entry asset/auth/backend read durations overlap. No auth/provider behavior, ownership gates or timeout changes.

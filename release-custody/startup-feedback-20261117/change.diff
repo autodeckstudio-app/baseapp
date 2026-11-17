@@ -1,0 +1,29 @@
+diff --git a/apps/customer/src/ui/CustomerSessionBoundary.tsx b/apps/customer/src/ui/CustomerSessionBoundary.tsx
+index f4f248e3..9bc83da0 100644
+--- a/apps/customer/src/ui/CustomerSessionBoundary.tsx
++++ b/apps/customer/src/ui/CustomerSessionBoundary.tsx
+@@ -1,4 +1,5 @@
+ import { Fragment, type ReactNode } from "react";
++import { Loading } from "./kit";
+ import { useAuth } from "../hooks/useAuth";
+ /** A different signed-in principal, tenant or canonical customer must never reuse the previous account's route state. */
+ export function CustomerSessionBoundary({ children }: { children: ReactNode }) {
+@@ -12,6 +13,8 @@ export function CustomerSessionBoundary({ children }: { children: ReactNode }) {
+           auth.customerDocId,
+         ])
+       : auth.status;
+-  if (auth.status === "loading") return null;
++  // Keep private routes unmounted while identity resolves, but never leave the
++  // returning customer staring at an unexplained blank screen.
++  if (auth.status === "loading") return <Loading label="Loading your session" />;
+   return <Fragment key={identity}>{children}</Fragment>;
+ }
+diff --git a/apps/customer/src/ui/customer-session-boundary.render.test.tsx b/apps/customer/src/ui/customer-session-boundary.render.test.tsx
+index dc6b927c..dac8cc72 100644
+--- a/apps/customer/src/ui/customer-session-boundary.render.test.tsx
++++ b/apps/customer/src/ui/customer-session-boundary.render.test.tsx
+@@ -1,2 +1,4 @@
+ import React,{useEffect,useState}from'react';import{it,expect,vi}from'vitest';import{act,create}from'react-test-renderer';const h=vi.hoisted(()=>({auth:{status:'ready',customerDocId:'profile',user:{uid:'auth'},claims:{tenantId:'t'}},callbacks:[]as any[],stops:vi.fn()}));vi.mock('../hooks/useAuth',()=>({useAuth:()=>h.auth}));import{CustomerSessionBoundary}from'./CustomerSessionBoundary';function PrivateRoute(){const[value,setValue]=useState('EMPTY');useEffect(()=>{h.callbacks.push(setValue);return h.stops},[]);return <div>{value}</div>}
+ it('remounts all private route state for auth UID, tenant, canonical profile or sign-out changes; same identity keeps state',async()=>{let r:any;const tree=()=> <CustomerSessionBoundary><PrivateRoute/></CustomerSessionBoundary>;await act(async()=>{r=create(tree())});await act(async()=>h.callbacks[0]('PRIVATE-OLD'));expect(JSON.stringify(r.toJSON())).toContain('PRIVATE-OLD');await act(async()=>r.update(tree()));expect(JSON.stringify(r.toJSON())).toContain('PRIVATE-OLD');for(const change of [{customerDocId:'next'},{user:{uid:'next-auth'}},{claims:{tenantId:'next-tenant'}},{status:'unauthenticated'}]){const old=h.callbacks.at(-1);h.auth={...h.auth,...change};await act(async()=>r.update(tree()));expect(JSON.stringify(r.toJSON())).not.toContain('PRIVATE-OLD');await act(async()=>old('PRIVATE-OLD'));expect(JSON.stringify(r.toJSON())).not.toContain('PRIVATE-OLD')}expect(h.stops).toHaveBeenCalledTimes(4);await act(async()=>r.unmount())});
++
++it('shows neutral feedback while loading, never mounts private children, then drops feedback on a ready session',async()=>{h.auth={...h.auth,status:'loading'};let r:any;await act(async()=>{r=create(<CustomerSessionBoundary><div>PRIVATE CHILD</div></CustomerSessionBoundary>)});expect(JSON.stringify(r.toJSON())).toContain('Loading your session');expect(JSON.stringify(r.toJSON())).not.toContain('PRIVATE CHILD');h.auth={...h.auth,status:'ready'};await act(async()=>r.update(<CustomerSessionBoundary><div>PRIVATE CHILD</div></CustomerSessionBoundary>));expect(JSON.stringify(r.toJSON())).toContain('PRIVATE CHILD');expect(JSON.stringify(r.toJSON())).not.toContain('Loading your session');await act(async()=>r.unmount())});
