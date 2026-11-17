@@ -143,5 +143,10 @@
       ]
     }
   ],
-  "ignoreCommand": "bash ../../scripts/vercel-ignore.sh site"
+  "ignoreCommand": "bash ../../scripts/vercel-ignore.sh site",
+  "git": {
+    "deploymentEnabled": {
+      "backup/qualified-backend-AF-20261117": false
+    }
+  }
 }

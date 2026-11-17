@@ -87,5 +87,10 @@
         }
       ]
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "backup/qualified-backend-AF-20261117": false
+    }
+  }
 }
