@@ -1,3 +1,4 @@
+import { matchingVehicles } from "../../domain/vehicleIdentity.js";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Vehicle } from "@autodeck/core";
@@ -54,11 +55,10 @@ export const updateVehicle = onCall({ region: "asia-south1" , enforceAppCheck: s
         db
           .collection(COLLECTIONS.vehicles())
           .where("tenantId", "==", existing.tenantId)
-          .where("ownerId", "==", existing.ownerId)
-          .where("registrationNumber", "==", data.registrationNumber)
-          .limit(10),
+          .where("ownerId", "==", existing.ownerId),
       );
-      if (clash.docs.some((d) => d.id !== data.vehicleId && (d.data() as Vehicle).deletedAt === null)) {
+      const matching = matchingVehicles(clash.docs.filter(d => d.id !== data.vehicleId).map(d => d.data() as Vehicle), data.registrationNumber);
+      if (matching.some(vehicle => !vehicle.deletedAt)) {
         throw new HttpsError("already-exists", "This car is already added.", { field: "registrationNumber", reason: "duplicate" });
       }
     }

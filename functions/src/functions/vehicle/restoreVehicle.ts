@@ -1,3 +1,4 @@
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
 import { matchingVehicles } from "../../domain/vehicleIdentity.js";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
@@ -18,13 +19,14 @@ export const restoreVehicle = onCall({ region: "asia-south1" , enforceAppCheck: 
   await enforceRateLimit(subjectFrom(user), "vehicle.restore");
 
   const db = getFirestore();
+  const customerDocId = user.claims.role === "customer" ? await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid) : null;
   const ref = db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId);
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists) throw new HttpsError("not-found", "Vehicle not found.");
     const v = snap.data() as Vehicle;
     assertTenant(user, v.tenantId);
-    if (user.claims.role === "customer" && v.ownerId !== user.uid) {
+    if (user.claims.role === "customer" && v.ownerId !== customerDocId) {
       throw new HttpsError("permission-denied", "You do not own this vehicle.");
     }
     if (!v.deletedAt) return;

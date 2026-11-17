@@ -35,7 +35,7 @@ import { createBookingSchema } from "../../schemas/booking.js";
 import { calculatePrice, applyMembershipBenefit, taxFor } from "../../lib/pricing.js";
 import {
   buildOccupiedInterval,
-  hasConflict,
+  generateDaySlots,
   type OccupiedInterval,
 } from "../../lib/availability.js";
 import { hashGiftCode } from "../../lib/gift-code.js";
@@ -289,7 +289,17 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
 
     for (const bay of compatibleBays) {
       const occupied = bayOccupancy.get(bay.id) ?? [];
-      if (!hasConflict(requestedStart, estimatedEndAt, occupied)) {
+      // A conflict-free bay is not sufficient: only accept a start the
+      // availability engine offers, including opening days, holidays, grid,
+      // turnover buffer and the existing multi-day rollover contract.
+      const localDay = new Date(`${data.scheduledDate}T12:00:00Z`).getUTCDay();
+      const hours = config.operatingHours.find(h => h.dayOfWeek === localDay);
+      const offered = hours && !hours.closed && !config.holidays.includes(data.scheduledDate) ? generateDaySlots({
+        date: data.scheduledDate, openTime: hours.open, closeTime: hours.close,
+        serviceDurationMinutes: visitMinutes, occupiedIntervals: occupied,
+        timezone: config.timezone, operatingHours: config.operatingHours, holidays: config.holidays,
+      }) : [];
+      if (offered.some(slot => slot.startAt === requestedStart.toISOString())) {
         if (occupied.length < minJobs) {
           minJobs = occupied.length;
           assignedBayId = bay.id;
@@ -420,7 +430,9 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
     const combined=data.combinedReview?(()=>{try{return reviewCombinedBooking(finalBreakdown,data.combinedReview,transportQuote,{tenantId:user.claims.tenantId,customerId:customerDocId,nowMs:Date.now()},reservedPickup!==null)}catch(e){throw new HttpsError('failed-precondition',e instanceof Error?e.message:'Review checkout again.')}})():null;
     if(combined)finalBreakdown=combined.breakdown;
     if(reservedPickup)tx.update(reservedPickup.ref,{pickupsUsed:(reservedPickup.membership.pickupsUsed??0)+1,updatedAt:nowIso});
-    const lines = extraLines.length ? [{ serviceId: data.serviceId, name: customerServiceName(service.name), price: breakdown.subtotal, durationMinutes: service.estimatedDurationMinutes }, ...extraLines] : undefined;
+    // Freeze even a single service: grouped visit, bill and work readers must
+    // not replace its name with "Service" or resolve a later catalogue edit.
+    const lines = [{ serviceId: data.serviceId, name: customerServiceName(service.name), price: breakdown.subtotal, durationMinutes: acceptedOffer?.workingMinutes ?? service.estimatedDurationMinutes }, ...extraLines];
 
     // R3: with the advance flag ON, pay-at-studio goes through the existing
     // verified PENDING hold (15 min, same sweep) - confirmed ONLY by the

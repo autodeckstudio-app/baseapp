@@ -9,8 +9,15 @@ const vehicleCategoryEnum = z.enum([
   "van",
 ]);
 
-const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD");
-const timeStr = z.string().regex(/^\d{2}:\d{2}$/, "Must be HH:mm");
+// A format match alone permits Date normalization (e.g. February 30 or
+// 25:00), leaving the stored input different from the scheduling instant.
+const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD").refine((value) => {
+  const [year = 0, month = 0, day = 0] = value.split("-").map(Number);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1]!;
+}, "Must be a real calendar date");
+const timeStr = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, "Must be a valid HH:mm time");
 
 export const getAvailabilitySchema = z.object({
   quoteJourneyId: z.string().min(1).max(120).regex(/^[A-Za-z0-9_-]+$/).optional(),
