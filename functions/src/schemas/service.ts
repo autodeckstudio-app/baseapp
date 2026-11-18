@@ -105,6 +105,7 @@ export const getServiceCatalogueSchema = z.object({
 }).strict();
 
 export const calculatePriceSchema = z.object({
+  extraServiceIds:z.array(z.string().min(1)).max(4).optional(),
   serviceId: z.string().min(1),
   vehicleCategory: vehicleCategoryEnum,
 }).strict();

@@ -1,3 +1,4 @@
+import{serviceOnlineBookingIssue}from'@autodeck/core';
 import{isDeepStrictEqual}from "node:util";
 import{combinedCheckoutEnabled,combinedGiftCheckoutEnabled,combinedWashCheckoutEnabled,combinedPickupBenefitEnabled,combinedQuoteCheckoutEnabled,reviewCombinedBooking,combinedReviewIdentity}from'../../lib/combined-booking.js';
 import { membershipForFreePickup } from "../../lib/pickup-benefit.js";
@@ -99,7 +100,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
   if (vehicle.ownerId !== customerDocId) {
     throw new HttpsError("permission-denied", "Vehicle does not belong to this customer.");
   }
-  if(service.customerMenu?.bookingMode)throw new HttpsError("failed-precondition","This service is walk-in or coordinated offline. No online slot or payment is created.");
+  if(serviceOnlineBookingIssue(service))throw new HttpsError('failed-precondition',service.customerMenu?.bookingMode==='walk_in'?'This check is walk-in only. No online slot is created.':'The studio must coordinate this service. Confirm timing before work.');
   if (service.customerMenu?.priceMode==='inspection'&&!data.quoteJourneyId) throw new HttpsError('failed-precondition','Bring your car to the studio for inspection. Agree work and price before service.');
   if (!service.active || service.catalogueEntryKind==='enquiry') {
     throw new HttpsError("failed-precondition", "Service is not currently available.");
@@ -116,9 +117,11 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
   let extraLines: BookingLine[] = [];
   // Categories of the whole visit, saved on the booking so the cancel band cannot change if a service is edited later.
   const cancelCategories: string[] = [String((service as { category?: string }).category ?? "")];
+  let selectedExtraPreimages:Array<{ref:FirebaseFirestore.DocumentReference;value:unknown}>=[];
   if (data.extraServiceIds?.length) {
     const extraSnaps = await Promise.all(data.extraServiceIds.map((id) => db.collection(COLLECTIONS.services()).doc(id).get()));
     if (extraSnaps.some((x) => !x.exists)) throw new HttpsError("not-found", "Service not found.");
+    selectedExtraPreimages=extraSnaps.map(s=>({ref:s.ref,value:s.data()}));
     const extras = extraSnaps.map((x) => ({ ...(x.data() as Service), id: x.id }));
     if (extras.some((e) => e.tenantId !== user.claims.tenantId)) throw new HttpsError("permission-denied", "Cross-tenant access denied.");
     const problem = extrasProblem({ ...service, id: serviceSnap.id }, extras, { gift: data.giftCode !== undefined });
@@ -220,7 +223,10 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       const existingSnap = await tx.get(
         db.collection(COLLECTIONS.bookings()).doc(existingBookingId),
       );
-      const existing=existingSnap.data() as Booking|undefined;if(!existing||existing.serviceId!==data.serviceId||existing.vehicleId!==data.vehicleId||existing.studioId!==data.studioId||existing.scheduledDate!==data.scheduledDate||existing.scheduledTime!==data.scheduledTime)throw new HttpsError("already-exists","This request already confirmed different booking details.");return { booking: existing };
+      const existing=existingSnap.data() as Booking|undefined;if(!existing||existing.serviceId!==data.serviceId||existing.vehicleId!==data.vehicleId||existing.studioId!==data.studioId||existing.scheduledDate!==data.scheduledDate||existing.scheduledTime!==data.scheduledTime)throw new HttpsError("already-exists","This request already confirmed different booking details.");
+      const bookedExtras=(existing.lines?.filter(line=>line.serviceId!==existing.serviceId).map(line=>line.serviceId)??existing.priceBreakdown?.addOns?.map(line=>line.id)??[]).sort();
+      if(!isDeepStrictEqual(bookedExtras,[...(data.extraServiceIds??[])].sort()))throw new HttpsError("already-exists","This request already confirmed different services.");
+      return { booking: existing };
     }
 
     if(data.combinedReview&&data.combinedReview.version!==3)throw new HttpsError('failed-precondition','Refresh the combined payment review before booking.');
@@ -239,6 +245,8 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
     let transportQuote:unknown=null;
     let reservedPickup:{ref:FirebaseFirestore.DocumentReference;membership:Membership}|null=null;
     const [freshService,freshConfig]=await Promise.all([tx.get(serviceSnap.ref),tx.get(configSnap.ref)]);
+    const freshExtras=await Promise.all(selectedExtraPreimages.map(p=>tx.get(p.ref)));
+    if(freshExtras.some((s,index)=>!isDeepStrictEqual(s.data(),selectedExtraPreimages[index]!.value)))throw new HttpsError('aborted','A selected extra service changed. Review again.');
     if(!isDeepStrictEqual(freshService.data(),service)||!isDeepStrictEqual(freshConfig.data(),config))throw new HttpsError('aborted','Service pricing or studio settings changed. Review again.');
     if(data.combinedReview){
       if(transportRef){

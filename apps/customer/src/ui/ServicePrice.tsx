@@ -7,6 +7,7 @@ import { Button, Notice, Pane, Row, T, rupees } from "./kit";
 
 export type ServicePriceProps = {
   inlineBreakdown?: boolean;
+  priceLabel?: string;
   compactQuote?: boolean;
   category: string;
   priceOnRequest: boolean;
@@ -46,7 +47,7 @@ export function ServicePrice(p: ServicePriceProps) {
             </View>
           ) : priceBreakdown !== null ? (
             <View style={{gap:12}}>
-              <View style={{flexDirection:"row",alignItems:"baseline",justifyContent:"flex-end",gap:16,paddingVertical:8}}><T role="title">{rupees(priceBreakdown.total)}</T></View>
+              <View testID="car-price-row" style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:12,paddingVertical:4}}>{p.priceLabel?<T role="caption" tone="secondary" style={{flex:1}}>{p.priceLabel}</T>:null}<T role="title" style={{flexShrink:0,textAlign:"right"}}>{rupees(priceBreakdown.total)}</T></View>
               {p.inlineBreakdown||!hasBreakdown?null:<Row title={detailsOpen?"Hide price breakdown":"View price breakdown"} onPress={()=>setDetailsOpen(!detailsOpen)} last/>}
               {hasBreakdown&&(p.inlineBreakdown||detailsOpen)?<View><Row title="Base" trailing={<T role="data">{rupees(priceBreakdown.basePrice)}</T>} />
               {priceBreakdown.scopeAdjustment > 0 ? (

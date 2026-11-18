@@ -1,3 +1,4 @@
+vi.mock('../../../ui/ServiceIdentityMedia',()=>({ServiceIdentityMedia:()=>null}));
 vi.mock('../../../hooks/useCataloguePublication',()=>({useCataloguePublication:()=>0}));
 import React from'react';import{it,expect,vi,beforeEach,afterEach}from'vitest';import{create,act}from'react-test-renderer';
 // Regression: a signed-in staff/admin account (no customerDocId by design) used

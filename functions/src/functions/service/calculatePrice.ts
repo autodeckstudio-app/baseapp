@@ -1,3 +1,4 @@
+import{addExtrasToBreakdown,extrasProblem,priceExtras,totalMinutes}from'../../lib/booking-lines.js';
 import { customerServiceName } from "@autodeck/core";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
@@ -37,13 +38,12 @@ export const calculateServicePrice = onCall({ region: "asia-south1" , enforceApp
   // Cross-tenant access denied — client cannot request pricing from another tenant's catalogue
   assertTenant(user, service.tenantId);
 
-  if(service.customerMenu?.bookingMode)throw new HttpsError("failed-precondition","This service is walk-in or coordinated offline. No online slot or payment is created.");
   if (service.customerMenu?.priceMode==='inspection')throw new HttpsError('failed-precondition','Studio inspection required before pricing.');
   if (!service.active || service.catalogueEntryKind==='enquiry') {
     throw new HttpsError("failed-precondition", "Service is not currently available.");
   }
 
-  const breakdown = calculatePrice({
+  let breakdown = calculatePrice({
     basePrice: service.basePrice,
     serviceCategory: service.category,
     vehicleCategory: data.vehicleCategory,
@@ -52,6 +52,16 @@ export const calculateServicePrice = onCall({ region: "asia-south1" , enforceApp
     ...taxFor(null),
   });
 
+  let lines:ReturnType<typeof priceExtras>=[];
+  if(data.extraServiceIds?.length){
+    const snapshots=await Promise.all(data.extraServiceIds.map(id=>db.collection(COLLECTIONS.services()).doc(id).get()));
+    if(snapshots.some(s=>!s.exists))throw new HttpsError('not-found','Selected service is unavailable.');
+    const extras=snapshots.map(s=>({...s.data(),id:s.id})as Service);
+    for(const extra of extras)assertTenant(user,extra.tenantId);
+    const issue=extrasProblem(service,extras,{gift:false});if(issue)throw new HttpsError('failed-precondition',issue);
+    lines=priceExtras(extras,{vehicleCategory:data.vehicleCategory,tax:taxFor(null),currency:service.currency});
+    breakdown=addExtrasToBreakdown(breakdown,lines);
+  }
   // PriceSnapshot — immutable record of this calculation; written into bookings at creation.
   const snapshot: PriceSnapshot = {
     serviceId: service.id,
@@ -69,5 +79,5 @@ export const calculateServicePrice = onCall({ region: "asia-south1" , enforceApp
     snapshotAt: new Date().toISOString(),
   };
 
-  return { breakdown, snapshot };
+  return { breakdown, snapshot,...(lines.length?{extraLines:lines,durationMinutes:totalMinutes(service.estimatedDurationMinutes,lines)}:{}) };
 });

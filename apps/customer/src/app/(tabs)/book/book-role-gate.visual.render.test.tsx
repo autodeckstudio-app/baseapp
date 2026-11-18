@@ -1,3 +1,4 @@
+vi.mock('../../../ui/ServiceIdentityMedia',()=>({ServiceIdentityMedia:()=>null}));
 import React from 'react';
 import { it, expect, vi } from 'vitest';
 // Visual harness: renders the REAL BookingRoleGate (same component the booking

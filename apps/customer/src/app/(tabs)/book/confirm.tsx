@@ -1,3 +1,5 @@
+import{bookingExtras}from'../../../lib/booking-selection';
+import{serviceOnlineBookingIssue}from'@autodeck/core';
 import {PickupLocation} from '../../../ui/PickupLocation';
 import {PaymentChoiceSummary} from "../../../ui/PaymentChoiceSummary";
 import{BookingTerms}from'../../../ui/BookingTerms';
@@ -53,6 +55,7 @@ import { useAuth } from "../../../hooks/useAuth";
 export default function BookingConfirmScreen() {
   const params = useLocalSearchParams<{
     serviceId: string;
+    extras?:string;
     vehicleId: string;
     vehicleCategory: VehicleCategory;
     scheduledDate: string;
@@ -62,11 +65,13 @@ export default function BookingConfirmScreen() {
     estimatedEndDate: string;
     endTime: string;
   }>();
+  const extraIds=bookingExtras(params.extras),extrasKey=extraIds?.join(",")??"invalid";
   const router = useRouter();
   const auth = useAuth();
   const [friendCode, setFriendCode] = useState("");
   const [giftCode] = useState(() => (GIFT_LIVE ? takePendingGiftCode() : null));
 
+  const[selectionMinutes,setSelectionMinutes]=useState<number|null>(null);
   const [service, setService] = useState<Service | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [breakdown, setBreakdown] = useState<PriceBreakdownData | null>(null);
@@ -104,8 +109,8 @@ export default function BookingConfirmScreen() {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, [held]);
-  // One booking is one service: no extra-service selection (combos stay their own catalogue choices).
-  const scopeKey=JSON.stringify([auth.status,auth.status==='ready'?auth.user.uid:null,auth.status==='ready'?auth.customerDocId:null,params.serviceId,params.vehicleId,params.vehicleCategory,params.scheduledDate,params.scheduledTime]);
+  // Optional selected extras carry exact IDs. Server verifies scope, price and slot again.
+  const scopeKey=JSON.stringify([auth.status,auth.status==='ready'?auth.user.uid:null,auth.status==='ready'?auth.customerDocId:null,params.serviceId,extrasKey,params.vehicleId,params.vehicleCategory,params.scheduledDate,params.scheduledTime]);
   const scopeRef=useRef(scopeKey);scopeRef.current=scopeKey;const actionGeneration=useRef(0),confirmBusy=useRef(false);
   const idempotencyKey=useRef(generateIdempotencyKey());
   const [pickupPlans,setPickupPlans]=useState<{scope:string;status:'ready'|'error';list:Membership[]}|null>(null);
@@ -113,31 +118,33 @@ export default function BookingConfirmScreen() {
   useEffect(()=>{actionGeneration.current++;confirmBusy.current=false;payBusy.current=false;idempotencyKey.current=generateIdempotencyKey();setBooking(false);setHeld(null);setFriendCode('');setUseWash(false);setWash(null);setPayAtStudio(false);setCombinedChoice(null);setPickupSlot('');setPickupQuoteError(null);setLocating(false);setAdvanceSheet(false);return()=>{actionGeneration.current++}},[scopeKey]);
 
   useEffect(() => {
-    let alive=true;setService(null);setVehicle(null);setBreakdown(null);setBookError(null);setHeld(null);if (!params.serviceId || !params.vehicleId || !params.vehicleCategory) {setLoading(false);setLoadError(true);return;}
+    let alive=true;setService(null);setVehicle(null);setBreakdown(null);setSelectionMinutes(null);setBookError(null);setHeld(null);if (!extraIds || giftCode&&extraIds.length || !params.serviceId || !params.vehicleId || !params.vehicleCategory) {setLoading(false);setLoadError(true);return;}
     setLoading(true);setLoadError(false);
     void (async () => {
       try {
-        const [serviceSnap, vehicleSnap, priceResult] = await Promise.all([
+        const [serviceSnap, vehicleSnap] = await Promise.all([
           getDoc(doc(db, COLLECTIONS.services(), params.serviceId)),
           getDoc(doc(db, COLLECTIONS.vehicles(), params.vehicleId)),
-          calculateServicePrice(params.serviceId, params.vehicleCategory),
         ]);
         if(!alive)return;if (!serviceSnap.exists() || !vehicleSnap.exists()) throw new Error("Booking details unavailable");
-        if((serviceSnap.data() as Service).customerMenu?.bookingMode)throw new Error("This service is handled offline.");
-        setService(serviceSnap.data() as Service);
+        const currentService=serviceSnap.data() as Service;
+        if(serviceOnlineBookingIssue(currentService))throw new Error('This service is not available for online booking. Open its service details.');
+        const priceResult=await calculateServicePrice(params.serviceId,params.vehicleCategory,extraIds);
+        if(!alive)return;
+        setService(currentService);
         setVehicle(vehicleSnap.data() as Vehicle);
-        setBreakdown(priceResult.breakdown);
+        setBreakdown(priceResult.breakdown);setSelectionMinutes(priceResult.durationMinutes??currentService.estimatedDurationMinutes);
       } catch {
         if(alive)setLoadError(true);
       } finally {
         if(alive)setLoading(false);
       }
     })();return()=>{alive=false};
-  }, [params.serviceId, params.vehicleId, params.vehicleCategory, retryTick]);
+  }, [params.serviceId, params.vehicleId, params.vehicleCategory, retryTick,extrasKey,scopeKey]);
 
   // One included wash per booking, offered only when every rule passes (see lib/membership-wash.ts). Dark until the server can record it.
   useEffect(() => {
-    if (!MEMBERSHIP_WASH_LIVE || !service) return;
+    if (!MEMBERSHIP_WASH_LIVE || !service || extraIds?.length) return;
     let alive = true;
     void getMyMemberships().then((list) => { if (alive) setWash(pickWash(list, service, COMBINED_CHECKOUT_ENABLED?params.scheduledDate??todayInIndia():todayInIndia())); }).catch(() => { if (alive) setWash(null); });
     return () => { alive = false; };
@@ -338,7 +345,7 @@ export default function BookingConfirmScreen() {
   }
 
   async function handleConfirm() {
-    if(booking || !service || !vehicle || !breakdown) return;
+    if(booking || !extraIds || !service || !vehicle || !breakdown || serviceOnlineBookingIssue(service)) return;
     if(confirmBusy.current)return;
     // A selected pickup/drop needs its real address on EVERY path (booking create,
     // review sheet, payment open) - never a silent skip after the fact.
@@ -354,6 +361,7 @@ export default function BookingConfirmScreen() {
     try {
       const result = await createBooking({
         serviceId: params.serviceId,
+        ...(extraIds.length?{extraServiceIds:extraIds}:{}),
         vehicleId: params.vehicleId,
         vehicleCategory: params.vehicleCategory,
         studioId: FIRST_STUDIO_ID,
@@ -421,7 +429,7 @@ export default function BookingConfirmScreen() {
     params.estimatedEndDate &&
     new Date(`${params.estimatedEndDate}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
 
-  const durationLabel = service ? formatServiceTime(service.estimatedDurationMinutes) : "-";
+  const durationLabel = service ? formatServiceTime(selectionMinutes??service.estimatedDurationMinutes) : "-";
   // Pickup/drop fee rides inside the shown total once the server quote exists; the fee
   // itself is still paid at the studio (PICKUP_POLICY), never added to the online charge.
   const pickupFeePaise = pickupQuoteInfo ? pickupQuoteInfo.feePaise : null;
@@ -431,7 +439,7 @@ export default function BookingConfirmScreen() {
   return (
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Confirm</Kicker><T role="title">Review booking</T>{service?.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : null}</View>}>
       <Sheet>
-        <SheetLine small label="Service" value={service?.name ?? "-"} />
+        <SheetLine small label={extraIds?.length?"Primary service":"Service"} value={service?.name ?? "-"} />
         <SheetLine small label="Car" value={vehicle ? `${vehicle.make} ${vehicle.model} · ${vehicle.registrationNumber}` : "-"} />
         <SheetLine small label="Date" value={displayDate ?? "-"} />
         <SheetLine small label="Time" value={params.scheduledTime ? `${params.scheduledTime}` : "-"} />
@@ -513,8 +521,9 @@ export default function BookingConfirmScreen() {
           {combinedMode&&combinedReview?.breakdown.roundOffPaise?<SheetLine small label="Round off" value={rupees(combinedReview.breakdown.roundOffPaise)}/>:null}
           {combinedMode&&giftCode?<SheetLine small label="Gifted service" value="Included"/>:combinedMode&&washOn?<SheetLine small label="Membership wash" value="Included"/>:null}
           <SheetDivider />
-          {combinedMode&&(giftCode||washOn)?null:<SheetLine small label="Base" value={rupees(breakdown.basePrice)} />}
+          {combinedMode&&(giftCode||washOn)?null:<SheetLine small label={extraIds?.length?service?.name??"Primary service":"Base"} value={rupees(breakdown.basePrice)} />}
           {!(combinedMode&&(giftCode||washOn))&&breakdown.scopeAdjustment > 0 ? <SheetLine small label="Vehicle size adjustment" value={`+${rupees(breakdown.scopeAdjustment)}`} /> : null}
+          {(breakdown.addOns??[]).map(line=><SheetLine key={line.id} small label={line.name} value={rupees(line.price)}/>)}
           {breakdown.membershipDiscount !== null && breakdown.membershipDiscount > 0 ? <SheetLine small label="Membership discount" value={`-${rupees(breakdown.membershipDiscount)}`} /> : null}
           {(shownBreakdown?.tax??0) > 0 ? <SheetLine small label={shownBreakdown?.taxDescription??breakdown.taxDescription} value={rupees(shownBreakdown?.tax??0)} /> : null}
           {pickupKind ? <SheetLine small label="Pickup/drop" value={freePickupMembership?"Included with your plan":pickupFeePaise === null ? "After location check" : pickupFeePaise === 0 ? "Free" : combinedMode?rupees(pickupFeePaise):`${rupees(pickupFeePaise)} · paid at the studio`} /> : null}

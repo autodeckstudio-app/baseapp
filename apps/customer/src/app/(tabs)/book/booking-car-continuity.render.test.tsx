@@ -1,3 +1,4 @@
+vi.mock('../../../ui/ServiceIdentityMedia',()=>({ServiceIdentityMedia:()=>null}));
 vi.mock('../../../hooks/useCataloguePublication',()=>({useCataloguePublication:()=>0}));
 import React from'react';import{it,expect,vi,beforeEach}from'vitest';import{create,act}from'react-test-renderer';
 const h=vi.hoisted(()=>({params:{serviceId:'svc-wash-regular',vehicleId:'car-a'}as any,owner:'profile',preference:'car-b',deliver:null as any,old:null as any,push:vi.fn(),stop:vi.fn()}));

@@ -47,6 +47,7 @@ export default function StudioTabsLayout() {
         name="lookup"
         options={{ title: "Lookup", tabBarLabel: "Lookup", headerShown: false }}
       />
+      <Tabs.Screen name="visit-requests" options={{ title: "Visit requests", href: null, headerShown: false }} />
       <Tabs.Screen name="service-quotes" options={{ title: "Walk-in inspections", href: null, headerShown: false }} />
       <Tabs.Screen
         name="jobs"

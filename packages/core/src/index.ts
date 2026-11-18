@@ -105,3 +105,4 @@ export * from './retained-transport-presentation.js';
 export * from './service-booking-mode';
 
 export{selectionScopeIssue}from'./service-selection-scope';
+export type{CoordinationRequestRead}from'./types/coordination-request.js';

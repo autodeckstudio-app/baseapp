@@ -142,13 +142,14 @@ export { applyBrandWarranty } from "./warranty-labels";
 export async function calculateServicePrice(
   serviceId: string,
   vehicleCategory: VehicleCategory,
-): Promise<{ breakdown: PriceBreakdown; snapshot: PriceSnapshot }> {
+  extraServiceIds:string[]=[],
+): Promise<{ breakdown: PriceBreakdown; snapshot: PriceSnapshot;durationMinutes?:number }> {
   const fn = httpsCallable<
-    { serviceId: string; vehicleCategory: VehicleCategory },
-    { breakdown: PriceBreakdown; snapshot: PriceSnapshot }
+    { serviceId: string; vehicleCategory: VehicleCategory;extraServiceIds?:string[] },
+    { breakdown: PriceBreakdown; snapshot: PriceSnapshot;durationMinutes?:number }
   >(functions, "calculateServicePrice");
-  const result = await fn({ serviceId, vehicleCategory });
-  priceCache.set(auth.currentUser?.uid ?? null, serviceId, vehicleCategory, result.data.breakdown.total);
+  const result = await fn({ serviceId, vehicleCategory,...(extraServiceIds.length?{extraServiceIds}:{}) });
+  if(!extraServiceIds.length)priceCache.set(auth.currentUser?.uid ?? null, serviceId, vehicleCategory, result.data.breakdown.total);
   return result.data;
 }
 

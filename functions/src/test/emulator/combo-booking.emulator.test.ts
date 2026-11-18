@@ -131,3 +131,15 @@ describe("Full detail wash booked as the combo itself (no extras)", () => {
     expect((await db.collection("bookings").where("customerId", "==", y.cust).get()).size).toBe(0);
   });
 });
+
+// A quoted extra must still match the record inside the booking transaction.
+it.each([{active:false},{basePrice:999999},{customerMenu:{bookingMode:'coordination'}}])('changed extra aborts before booking/job effects: %s',async change=>{
+ const suffix=uid('race'),main=`${suffix}-main`,extra=`${suffix}-extra`;const x=await seed([main,extra],suffix);
+ const run=db.runTransaction.bind(db);const spy=vi.spyOn(db,'runTransaction');
+ spy.mockImplementation((async(...args:any[])=>{if(String(args[0]).includes('selectedExtraPreimages'))await db.collection('services').doc(extra).update(change);return (run as any)(...args)})as any);
+ try{await expect(book(x,main,[extra])).rejects.toMatchObject({code:'aborted'});expect(await count(x.cust)).toEqual({bookings:0,jobs:0})}finally{spy.mockRestore()}
+});
+
+ it("preserves deployed unconditional primary itemization without extras",async()=>{const x=await seed(["single-line-main"],"single-line");const{booking}=await book(x,"single-line-main",[]);expect(booking.lines).toEqual([expect.objectContaining({serviceId:"single-line-main",durationMinutes:45})]);const job=(await db.collection("jobs").where("bookingId","==",booking.id).get()).docs[0]!.data();expect(job["lines"]).toEqual(booking.lines)});
+ for(const time of["08:30","19:00","09:10"])it("preserves deployed working-calendar slot enforcement at "+time,async()=>{const x=await seed(["outside-hours-"+time.replace(":","")],"hours-"+time.replace(":",""));await expect(createBooking.run({data:{serviceId:"outside-hours-"+time.replace(":",""),vehicleId:x.veh,vehicleCategory:"suv",studioId:x.studio,scheduledDate:monday,scheduledTime:time,idempotencyKey:uid("idem")},auth:{uid:x.cust,token:{role:"customer",tenantId:T,studioId:null}}}as never)).rejects.toMatchObject({code:"resource-exhausted"});expect(await count(x.cust)).toEqual({bookings:0,jobs:0})});
+ it("preserves deployed holiday rejection",async()=>{const x=await seed(["holiday-service"],"holiday");await db.collection("studioConfig").doc(x.studio).update({holidays:[monday]});await expect(book(x,"holiday-service",[])).rejects.toMatchObject({code:"resource-exhausted"});expect(await count(x.cust)).toEqual({bookings:0,jobs:0})});

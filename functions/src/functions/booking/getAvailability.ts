@@ -1,3 +1,4 @@
+import{serviceOnlineBookingIssue}from'@autodeck/core';
 import {acceptedServiceQuote} from "../../lib/accepted-service-quote.js";
 import type {QuoteJourney} from "@autodeck/core";
 import {hasReleasedBay} from "@autodeck/core";
@@ -39,7 +40,7 @@ export const getAvailability = onCall({ region: "asia-south1" , enforceAppCheck:
   if (service.tenantId !== user.claims.tenantId) {
     throw new HttpsError("permission-denied", "Cross-tenant access denied.");
   }
-  if(service.customerMenu?.bookingMode)throw new HttpsError("failed-precondition","This service is walk-in or coordinated offline. No online slot or payment is created.");
+  if(serviceOnlineBookingIssue(service))throw new HttpsError('failed-precondition',service.customerMenu?.bookingMode==='walk_in'?'This check is walk-in only. No online slot is created.':'The studio must coordinate this service. Confirm timing before work.');
   if (service.customerMenu?.priceMode==='inspection'&&!data.quoteJourneyId) throw new HttpsError('failed-precondition','Bring your car to the studio for inspection. Agree work and price before service.');
   if (!service.active || service.catalogueEntryKind==='enquiry') {
     throw new HttpsError("failed-precondition", "Service is not currently available.");
