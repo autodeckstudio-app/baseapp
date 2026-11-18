@@ -23,8 +23,8 @@ describe("soleServiceRedirect: single-service category opens its service directl
     expect(src).not.toContain("soleServiceRedirect(");expect(src).not.toContain("soleId");
     expect(src).toContain("setServices(rows)");
     // User-requested details stay inside the comparison popup, without a route push.
-    expect(src).toContain("router.push({pathname:`/(tabs)/catalogue/${s.id}` as never");
-    expect(src).toContain("onOpen={(s)=>setDetailId(s.id)}");
+    expect(src).not.toContain("router.push({pathname:`/(tabs)/catalogue/${s.id}` as never");
+    expect(src).toContain("onOpen={s=>setDetailId(s.id)}");
     expect(src).toContain("<ServiceDetailScreen key={detailId} serviceId={detailId} embedded/>");
   });
 });

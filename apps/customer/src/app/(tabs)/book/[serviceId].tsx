@@ -67,7 +67,7 @@ export default function BookServiceScreen() {
 
   useEffect(() => {
     setTotal(null);
-    if (!serviceId || !selectedCategory || !service || service.priceOnRequest===true || !customerOfferingVisible(service)) return;
+    if (!serviceId || !selectedCategory || !service || service.customerMenu?.bookingMode || service.priceOnRequest===true || !customerOfferingVisible(service)) return;
     let current=true;
     void calculateServicePrice(serviceId, selectedCategory).then(({ breakdown }) => {if(current)setTotal(breakdown.total);}).catch(() => {if(current)setTotal(null);});
     return ()=>{current=false;};
@@ -90,7 +90,7 @@ export default function BookServiceScreen() {
   useEffect(()=>{setSelectedCategory(normalizeSegment(selectedVehicle?.category));setSizeError(null);},[selectedVehicle?.id,selectedVehicle?.category]);
 
   useEffect(() => {
-    if (!serviceId || !service || service.priceOnRequest===true) return;
+    if (!serviceId || !service || service.customerMenu?.bookingMode || service.priceOnRequest===true) return;
     const ids: string[] = [];
     const warm = peekAvailability(serviceId, FIRST_STUDIO_ID, todayIST(), 7, ids);
     if (warm) setSlots(warm.filter(s=>Date.parse(s.startAt)>Date.now()));
@@ -149,6 +149,8 @@ export default function BookServiceScreen() {
     return <BookingRoleGate staff={auth.claims.role !== "customer"} onAccount={() => router.navigate("/(tabs)/profile")} onBrowse={() => router.navigate("/(tabs)/catalogue")} />;
   }
   if (!service || service.active === false) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." /></Screen>;
+
+  if(service.customerMenu?.bookingMode)return <Screen appBar="Service details"><T role="title">{service.name}</T><T>{service.customerMenu.bookingMode==='walk_in'?'Visit the studio for the free initial check. No online slot is created.':'Contact the studio to agree specialist timing. No online slot is created.'}</T><Button label="Studio details" onPress={()=>router.navigate("/(tabs)/help")}/></Screen>;
 
   const slotsByDate = slots.reduce<Record<string, AvailableSlot[]>>((acc, slot) => {
     (acc[slot.date] ??= []).push(slot);

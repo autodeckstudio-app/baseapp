@@ -344,25 +344,22 @@ describe("Notification system", () => {
   });
 
   describe("14. job events", () => {
-    it("job status advancing to IN_PROGRESS produces job_started; intermediate/no-op statuses produce nothing", async () => {
+    it("received and work-start stages remain silent", async () => {
       const cust = uid("cust-job");
       const vehicle = await seedVehicle(uid("veh"), TENANT_A, cust);
       const booking = await bookOnce(cust, vehicle.id, service);
       const jobDoc = await jobForBooking(booking.id);
       expect(jobDoc).toBeTruthy();
 
-      // PENDING_VEHICLE -> VEHICLE_RECEIVED: vehicle_received (the code notifies on this step now)
+      // App progress is retained; stage changes do not notify.
       await advanceJobStatus.run({ data: { jobId: jobDoc.id }, auth: studioAuth(studioUid) } as never);
       const afterReceived = await fireFor("job.status_advanced", jobDoc.id);
-      expect(afterReceived?.type).toBe("vehicle_received");
+      expect(afterReceived).toBeNull();
 
-      // VEHICLE_RECEIVED -> IN_PROGRESS: job_started
+      // Work started is also app-only.
       await advanceJobStatus.run({ data: { jobId: jobDoc.id }, auth: studioAuth(studioUid) } as never);
       const started = await fireFor("job.status_advanced", jobDoc.id);
-      expect(started?.type).toBe("job_started");
-      expect(started?.userId).toBe(cust);
-      expect(started?.entityType).toBe("Booking");
-      expect(started?.entityId).toBe(booking.id);
+      expect(started).toBeNull();
     });
 
     it("job status advancing to READY_FOR_DELIVERY produces job_completed", async () => {
@@ -375,7 +372,7 @@ describe("Notification system", () => {
       await advanceJobStatus.run({ data: { jobId: jobDoc.id }, auth: studioAuth(studioUid) } as never); // IN_PROGRESS
       await advanceJobStatus.run({ data: { jobId: jobDoc.id }, auth: studioAuth(studioUid) } as never); // QUALITY_CHECK
       const afterQC = await fireFor("job.status_advanced", jobDoc.id);
-      expect(afterQC?.type).toBe("quality_check"); // the code notifies on this step now
+      expect(afterQC).toBeNull();
 
       await advanceJobStatus.run({ data: { jobId: jobDoc.id }, auth: studioAuth(studioUid) } as never); // READY_FOR_DELIVERY
       const completed = await fireFor("job.status_advanced", jobDoc.id);

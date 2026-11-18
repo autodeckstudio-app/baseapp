@@ -1,4 +1,4 @@
-import { SERVICE_INCLUDES, bundleFor, conflictingPair, redundantPairs, type PriceBreakdown, type Service, type VehicleCategory } from "@autodeck/core";
+import { selectionScopeIssue,SERVICE_INCLUDES, bundleFor, conflictingPair, redundantPairs, type PriceBreakdown, type Service, type VehicleCategory } from "@autodeck/core";
 import { calculatePrice, calculateTax, type CalculatePriceInput } from "./pricing.js";
 
 /** Most extra services on top of the main one (so 5 lines in all). */
@@ -16,7 +16,9 @@ export type ExtrasProblem = string;
 
 /** Why these extras cannot ride in one slot with the main service, or null when they can. Plain words, shown to the customer. */
 export function extrasProblem(primary: Service, extras: Service[], opts: { gift: boolean }): ExtrasProblem | null {
+  if([primary,...extras].some(s=>s.customerMenu?.bookingMode))return 'Walk-in and coordinated work cannot be added to an online slot.';
   if (extras.length === 0) return null;
+  const scopeIssue=selectionScopeIssue([primary,...extras]);if(scopeIssue)return scopeIssue;
   if (extras.length > MAX_EXTRA_SERVICES) return "You can add up to 5 services to one booking.";
   if (opts.gift) return "A gift wash cannot be combined with other services. Book them separately.";
   if (new Set(extras.map((e) => e.id)).size !== extras.length || extras.some((e) => e.id === primary.id)) return "Each service can be added once.";

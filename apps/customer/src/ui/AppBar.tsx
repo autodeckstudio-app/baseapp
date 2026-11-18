@@ -11,7 +11,7 @@ import { raised } from "../lib/raised";
 import { NavIcon } from "./NavIcon";
 import { SideDrawer, type DrawerItem } from "./SideDrawer";
 
-export function AppBar({ title, onBack }: { title: string; onBack?: (() => void) | undefined }) {
+export function AppBar({ title, onBack, textBack=false }: { title: string;textBack?:boolean; onBack?: (() => void) | undefined }) {
   const { colors, name } = useExperienceTheme();
   const r = raised(name);
   const auth = useAuth();
@@ -34,7 +34,7 @@ export function AppBar({ title, onBack }: { title: string; onBack?: (() => void)
       <SideDrawer open={open} onClose={() => setOpen(false)} name={display} initial={initial} items={items} />
       {onBack ? (
         <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
-          <NavIcon name="back" color={colors.textPrimary} size={22} cut="#18181C" />
+          <>{textBack?<Text style={{color:colors.textPrimary,fontSize:11}}>Back</Text>:<NavIcon name="back" color={colors.textPrimary} size={22} cut="#18181C" />}</>
         </Pressable>
       ) : (
         <Pressable accessibilityRole="button" accessibilityLabel="Menu" onPress={() => setOpen(true)} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>

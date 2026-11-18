@@ -123,6 +123,7 @@ export default function BookingConfirmScreen() {
           calculateServicePrice(params.serviceId, params.vehicleCategory),
         ]);
         if(!alive)return;if (!serviceSnap.exists() || !vehicleSnap.exists()) throw new Error("Booking details unavailable");
+        if((serviceSnap.data() as Service).customerMenu?.bookingMode)throw new Error("This service is handled offline.");
         setService(serviceSnap.data() as Service);
         setVehicle(vehicleSnap.data() as Vehicle);
         setBreakdown(priceResult.breakdown);

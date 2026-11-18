@@ -156,7 +156,7 @@ export function ReferencePackageCard({
             {item.note}
           </T>
           <T role="bodyStrong" tone="accent">
-            Inspection first
+            Discuss your requirements
           </T>
           <T role="caption">{item.level === "brand" ? "View details" : item.brand ? "View range" : "View details"}</T>
         </View>
@@ -170,18 +170,20 @@ export function ReferencePackageCard({
 function BrandQuoteOption({
   service,
   onQuote,
+  onBook,
   onOpen,
 }: {
   service: Service;
   onQuote?: ((s: Service) => void) | undefined;
   onOpen: (s: Service) => void;
+  onBook?: ((s: Service) => void) | undefined;
 }) {
   return (
     <Pane pad="gap">
       <Row title={service.brand ?? "Brand product"} detail={service.name} last />
       <Button
         kind="quiet"
-        label="Studio inspection"
+        label="Discuss your requirements"
         onPress={() => (onQuote ?? onOpen)(service)}
       />
     </Pane>
@@ -194,6 +196,7 @@ export function ServicesExplorer({
   onPath,
   onOpen,
   onQuote,
+  onBook,
   onReference,
   onHelp,
   priceLabel,
@@ -203,6 +206,7 @@ export function ServicesExplorer({
   query: string;
   onPath: (p: ServicesPath) => void;
   onOpen: (s: Service) => void;
+  onBook?: ((s: Service) => void) | undefined;
   onQuote?: ((s: Service) => void) | undefined;
   onReference: (r: BrandEnquiry) => void;
   onHelp: (scope: string) => void;
@@ -340,8 +344,8 @@ export function ServicesExplorer({
   const addonRefs = selectedRefs.filter((r) => r.brand === ADDON_BRAND);
   const brands = [
     ...new Set([
-      ...selected.map((s) => s.brand).filter((b): b is string => !!b && b !== ADDON_BRAND),
-      ...selectedRefs.map((r) => r.brand).filter((b): b is string => !!b && b !== ADDON_BRAND),
+      ...selected.map((s) => s.brand).filter((b): b is string => !!b && b !== ADDON_BRAND && b !== "Standard"),
+      ...selectedRefs.map((r) => r.brand).filter((b): b is string => !!b && b !== ADDON_BRAND && b !== "Standard"),
     ]),
   ].sort();
   const chooseBrands = !!family && brands.length > 0 && !activeBrand;
@@ -358,7 +362,7 @@ export function ServicesExplorer({
   // selected brand; service-wide choices remain for detailing with no brand step.
   const nestedBrandProducts = home.key === "paint" && (activeBrand || brands.length === 0)
     && (family !== "PPF" || !path.work || path.work === "full_body");
-  if (family && (home.key === "detailing" || nestedBrandProducts) && shown.length > 0) {
+  if (family && (home.key === "detailing" || ["washing","garage","modifications"].includes(home.key) || nestedBrandProducts) && shown.length > 0) {
     const title = activeBrand ?? (family === "Glass" ? "Glass coating" : family === "Ceramic" ? "Ceramic coating" : family);
     return <View style={{gap:20}}>
       <ServicePageHeader title={title} crumbs={[
@@ -366,7 +370,7 @@ export function ServicesExplorer({
         {title:home.label,onPress:()=>onPath({home:home.key})},
         ...(activeBrand ? [{title:family,onPress:()=>onPath(parentPath(path))}] : []),
       ]}/>
-      <ServiceProductSelection key={`${family}:${activeBrand??"all"}`} title={activeBrand ? `${activeBrand} products` : title} description={FAMILY_COPY[family]} services={shown} priceLabel={priceLabel} onOpen={onOpen}/>
+      <ServiceProductSelection key={`${family}:${activeBrand??"all"}`} title={activeBrand ? `${activeBrand} products` : title} description={FAMILY_COPY[family]} services={shown} priceLabel={priceLabel} onOpen={onOpen} onBook={onBook} onInspect={s=>onHelp(s.name)} careAction={careAction}/>
     </View>;
   }
   // Legacy work-first detailing renderer. Current nested selections return above.
@@ -438,17 +442,7 @@ export function ServicesExplorer({
       {home.key==="paint"&&!activeBrand&&["Ceramic","PPF","PPS"].includes(family??"")&&(!path.work||path.work==="full_body")?<ProtectionFamilyIntro family={family as ProtectionFamily} careAction={careAction}/>:null}
       {!family ? (
         <>
-          {families.map((f) => {
-            return (
-              <ServiceChoiceCard
-                key={f}
-                title={f}
-                photo={serviceTypeImage(home.key, f)}
-                detail={familySummary(f)}
-                onPress={() => onPath({ home: home.key, family: f })}
-              />
-            );
-          })}
+          {(home.key==='detailing'?[{title:'Interior surfaces',names:['Fabric','Leather']},{title:'Exterior surfaces',names:['Glass','Lights & plastics','Tyres & rubber','Wheels & trim','Trim restoration']},{title:'Protection aftercare',names:['Film aftercare','Maintenance','Paint sealant','Surface care']},{title:'More surface care',names:families.filter(f=>!['Fabric','Leather','Glass','Lights & plastics','Tyres & rubber','Wheels & trim','Trim restoration','Film aftercare','Maintenance','Paint sealant','Surface care'].includes(f))}]:[{title:'',names:families}]).map(group=><View key={group.title} style={{gap:12}}>{group.title&&group.names.some(f=>families.includes(f))?<T role="bodyStrong">{group.title}</T>:null}{group.names.filter(f=>families.includes(f)).map(f=><ServiceChoiceCard key={f} title={f} photo={serviceTypeImage(home.key,f)} detail={familySummary(f)} onPress={()=>onPath({home:home.key,family:f})}/>)}</View>)}
         </>
       ) : family === "PPF" && !path.work && !chooseBrands ? (
         <>

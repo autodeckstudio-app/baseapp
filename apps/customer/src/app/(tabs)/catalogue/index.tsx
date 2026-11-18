@@ -1,3 +1,5 @@
+import{ServiceJourney}from'../../../ui/ServiceJourney';
+import {ServicePageHeader,ServiceHeaderHidden} from '../../../ui/ServicePageHeader';
 import ServiceDetailScreen from './[id]';
 import{ServiceDetailPopup}from'../../../ui/ServiceDetailPopup';
 import{useCataloguePublication}from'../../../hooks/useCataloguePublication';
@@ -5,14 +7,11 @@ import {useAuth} from '../../../hooks/useAuth';
 import {useForegroundRefresh} from '../../../hooks/useForegroundRefresh';
 import {homeCatalogueBack,catalogueReturnParams} from "../../../lib/home-service-navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { TextInput, View, useWindowDimensions } from "react-native";
+import { Text, Pressable, TextInput, View, useWindowDimensions } from "react-native";
 import { useLocalSearchParams, usePathname, useRouter } from "expo-router";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { SERVICE_HOMES, GST_ENABLED, type Service } from "@autodeck/core";
-import { FilterPills } from "../../../ui/FilterPills";
 import { Button, Notice, Screen, Skeleton, T } from "../../../ui/kit";
-import { JourneySheet } from "../../../ui/JourneySheet";
-import { ServicesExplorer } from "../../../ui/ServicesExplorer";
 import {
   getServiceCatalogue,
   peekCatalogue,
@@ -35,6 +34,7 @@ import { useSegmentSwipe } from "../../../lib/segment-swipe";
 import { glassInner } from "../../../lib/glass";
 
 export default function CatalogueScreen() {
+  const[reviewing,setReviewing]=useState(false);
   const router = useRouter(),
     params = useLocalSearchParams<{home?:string;family?:string;brand?:string;work?:string;cat?:string;need?:string;p?:string;mock?:string;theme?:string;returnTo?:string;homeEntry?:string}>();
   const { colors } = useExperienceTheme();
@@ -95,12 +95,13 @@ export default function CatalogueScreen() {
         true,
       ),
   );
+  const currentHome=SERVICE_HOMES.find(h=>h.key===path.home);
   const top = (
     <View
       style={{ gap: 14, paddingBottom: 16 }}
       testID="services-filter-header"
     >
-      <View
+      <><View
         style={{
           height: 48,
           borderRadius: 24,
@@ -137,24 +138,11 @@ export default function CatalogueScreen() {
           />
         ) : null}
       </View>
-      <FilterPills
-        items={[
-          { key: "all", label: "All" },
-          ...SERVICE_HOMES.map((h) => ({ key: h.key, label: h.label })),
-        ]}
-        value={path.home ?? "all"}
-        onChange={(key) =>
-          navigate(
-            key === "all" ? {} : { home: key as ServicesPath["home"] },
-            true,
-          )
-        }
-      />
-
+      </>
     </View>
   );
   return (
-    <Screen
+    <View style={{flex:1}}><Screen textBack
       scrollIdentity={JSON.stringify(path)}
       appBar="Services"
       top={top}
@@ -189,42 +177,10 @@ export default function CatalogueScreen() {
           </>
         ) : null}
         {services ? (
-          <ServicesExplorer
-            services={services}
-            path={path}
-            query={q}
-            onPath={navigate}
-            onOpen={(s)=>setDetailId(s.id)}
-            onQuote={(s) =>
-              SERVICE_QUOTE_JOURNEY_READY
-                ? router.push({
-                    pathname: "/(tabs)/quote-request",
-                    params: { serviceId: s.id },
-                  })
-                : router.push({pathname:`/(tabs)/catalogue/${s.id}` as never,params:params.returnTo==="home"?catalogueReturnParams(path,params.homeEntry):{}})
-            }
-            onReference={(r) =>
-              router.push({
-                pathname: "/(tabs)/catalogue/enquiry",
-                params: { id: r.key, ...(params.returnTo==="home"?catalogueReturnParams(path,params.homeEntry):{}) },
-              })
-            }
-            onHelp={(service) =>
-              router.push({ pathname: "/(tabs)/help", params: { service } })
-            }
-            priceLabel={(s) =>
-              careEntryPrice(
-                servicePriceText(s, pricingVehicle.category, prices),
-                s.customerMenu?.priceMode==="fixed"||!!pricingVehicle.category,
-              )
-            }
-          />
-        ) : null}
-        {services && !fromRoute && !searching ? (
-          <JourneySheet kind="services" />
+          <ServiceJourney selectionEnabled={false} services={services} path={path} query={q} onPath={next=>{setReviewing(false);navigate(next)}} onOpen={s=>setDetailId(s.id)} onHelp={text=>router.push({pathname:"/(tabs)/help",params:{service:text}})} priceLabel={s=>servicePriceText(s,pricingVehicle.category,prices)} reviewing={reviewing} onReview={setReviewing} onBookSelection={ids=>{if(ids.length)router.push({pathname:"/(tabs)/book/[serviceId]",params:{serviceId:ids[0]}})}}/>
         ) : null}
       </View>
     <ServiceDetailPopup visible={detailId!==null} onClose={()=>setDetailId(null)}>{detailId?<ServiceDetailScreen key={detailId} serviceId={detailId} embedded/>:null}</ServiceDetailPopup>
-    </Screen>
+    </Screen></View>
   );
 }

@@ -43,6 +43,7 @@ export const requestServiceQuote=onCall(options,async req=>{
   if(!s.exists||s.data()?.['tenantId']!==user.claims.tenantId||s.data()?.['active']!==true||s.data()?.['catalogueEntryKind']==='enquiry'||!customerOfferingVisible({id:d.scope.serviceId,...s.data()})||!customerCatalogueEligible({id:d.scope.serviceId},process.env['CATALOGUE_IDENTITY_HOLD_PREVIEW']==='true')||!c.exists||c.data()?.['tenantId']!==user.claims.tenantId)throw new HttpsError('failed-precondition','This service is not available at that studio.');
   // Product keys are not accepted as price authority. Exact product eligibility must be checked before any offer or booking.
   // The published service mode activates inspection-only behavior, not endpoint rollout.
+  if(s.data()?.['customerMenu']?.bookingMode)throw new HttpsError('failed-precondition','This service is handled offline. Open its service information instead.');
   if(s.data()?.['customerMenu']?.priceMode==='inspection')throw new HttpsError('failed-precondition','Bring your car to the studio for inspection. Agree work and price before service.');
   const q=createQuoteJourney({id:d.requestId,tenantId:user.claims.tenantId,customerId,studioId:d.studioId,scope:d.scope},{uid:customerId,tenantId:user.claims.tenantId,role:'customer',studioIds:[]});t.create(ref,{...q,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});return quoteCustomerView(q);
  });

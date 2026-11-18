@@ -103,10 +103,12 @@ export function toServicePayload(d: ServiceDraft): { ok: true; payload: ServiceP
   if (!d.description.trim()) return { ok: false, problem: "Add a short description customers will read." };
   if(d.catalogueEntryKind==='enquiry'&&(d.priceMode!=='consult'||Number(d.priceRupees)!==0||Number(d.minutes)!==0))return{ok:false,problem:'An enquiry has no booking price or duration.'};
   if(d.priceMode==='inspection'&&(!d.customerMenu||Number(d.priceRupees)!==0||Number(d.minutes)!==0||d.sizes.length))return{ok:false,problem:'Studio inspection has no booking price, duration or car-size rules.'};
+  const mode=d.customerMenu?.bookingMode;
+  if(mode&&(d.priceMode!=='fixed'||Number(d.minutes)!==0||d.sizes.length||d.washEligible||mode==='walk_in'&&Number(d.priceRupees)!==0||mode==='coordination'&&Number(d.priceRupees)<=0))return{ok:false,problem:'Non-online service needs its reviewed price, zero booking time and no size or benefit rules.'};
   const price = Number(d.priceRupees);
-  if (!Number.isFinite(price) || price < 0 || (d.priceMode !== "consult" && d.priceMode !== "inspection" && (!d.priceRupees.trim() || price <= 0))) return { ok: false, problem: "Starting price must be more than ₹0." };
+  if (!Number.isFinite(price) || price < 0 || (mode!=="walk_in" && d.priceMode !== "consult" && d.priceMode !== "inspection" && (!d.priceRupees.trim() || price <= 0))) return { ok: false, problem: "Starting price must be more than ₹0." };
   const minutes = Number(d.minutes);
-  if (!Number.isInteger(minutes) || (d.catalogueEntryKind==='enquiry'||d.priceMode==='inspection'?minutes!==0:minutes<=0)) return { ok: false, problem: "Time needed must be a whole number of minutes." };
+  if (!Number.isInteger(minutes) || (mode||d.catalogueEntryKind==='enquiry'||d.priceMode==='inspection'?minutes!==0:minutes<=0)) return { ok: false, problem: "Time needed must be a whole number of minutes." };
   const order = Number(d.displayOrder || "0");
   if (!Number.isInteger(order)) return { ok: false, problem: "Position must be a whole number." };
 

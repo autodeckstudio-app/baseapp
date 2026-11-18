@@ -1,4 +1,6 @@
+import {productDisplayName} from '../../../lib/product-display-name';
 import{useCataloguePublication}from'../../../hooks/useCataloguePublication';
+import {ServiceIdentityMedia} from '../../../ui/ServiceIdentityMedia';
 import {MediaFrame} from "../../../ui/MediaFrame";
 import{reviewedStartingPrice,reviewedQuoteRequired}from '../../../lib/reviewed-starting-prices';
 import {detailHomeBack} from "../../../lib/home-service-navigation";
@@ -73,7 +75,7 @@ export default function ServiceDetailScreen({serviceId,embedded=false}:{serviceI
 
   useEffect(() => {
     setPriceBreakdown(null);
-    if (!id || !service || service.priceOnRequest===true || !selectedCategory) {setPriceLoading(false);return;}
+    if (!id || !service || service.priceOnRequest===true || service.customerMenu?.bookingMode || !selectedCategory) {setPriceLoading(false);return;}
     const category=selectedCategory;
     setPriceLoading(true);
     setPriceError(null);
@@ -89,7 +91,7 @@ export default function ServiceDetailScreen({serviceId,embedded=false}:{serviceI
 
   // Warm the studio calendar so Book opens with times already there.
   useEffect(() => {
-    if (!service || (service.priceOnRequest === true || reviewedQuoteRequired(service))) return;
+    if (!service || (service.priceOnRequest === true || service.customerMenu?.bookingMode || reviewedQuoteRequired(service))) return;
     void getAvailability(service.id, FIRST_STUDIO_ID, todayIST(), 7).catch(() => undefined);
   }, [service]);
 
@@ -98,7 +100,7 @@ export default function ServiceDetailScreen({serviceId,embedded=false}:{serviceI
     let alive=true;void getServiceReviews(service.id).then(r=>{if(alive)setReviews(r)}).catch(()=>{if(alive)setReviews(null)});return()=>{alive=false};
   }, [service]);
 
-  if(sourceHold) return <Screen appBar="Service enquiry"><T role="title">Ask the studio</T><T>Confirm the product and options for your car before booking.</T><Button label="Studio inspection" onPress={()=>router.navigate("/(tabs)/help")} /></Screen>;
+  if(sourceHold) return <Screen appBar="Service enquiry"><T role="title">Ask the studio</T><T>Confirm the product and options for your car before booking.</T><Button label="Discuss your requirements" onPress={()=>router.navigate("/(tabs)/help")} /></Screen>;
   return (
     <ServiceDetailView
       id={id}
@@ -149,7 +151,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
   useEffect(()=>setBenefitsOpen(false),[id]);
   // Book now is offered only when there is a confirmed price to book against, or the service is a quote. With no car, no car type or no price the
   // price block above carries the one action (Garage / Try again), so there is no second, enabled-looking Book button.
-  const showBar = !!service && sheetBarVisible({ priceOnRequest: (service.priceOnRequest === true || reviewedQuoteRequired(service)), loading: priceLoading, hasTotal: priceBreakdown !== null, needsCarType, error: priceError !== null });
+  const showBar = !!service && !service.customerMenu?.bookingMode && sheetBarVisible({ priceOnRequest: (service.priceOnRequest === true || reviewedQuoteRequired(service)), loading: priceLoading, hasTotal: priceBreakdown !== null, needsCarType, error: priceError !== null });
   if (loading) return <Loading label="Opening the menu" />;
   if (loadError) return <Screen onBack={homeBack?()=>router.replace(homeBack as never):undefined}><Notice title="Can't load this service" body="Check your connection and try again." action={<Button icon="refresh" label="Try again" onPress={onRetry}/>} /></Screen>;
   if (!service) return <Screen onBack={homeBack?()=>router.replace(homeBack as never):undefined}><Notice title="Service not found" body="It may have been taken off the menu." action={<Button kind="quiet" label="Browse services" onPress={()=>router.navigate("/(tabs)/catalogue")}/>} /></Screen>;
@@ -167,16 +169,14 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
   return (
     <View style={{ flex: 1 }}>
       <DetailLayout onBack={homeBack?()=>router.replace(homeBack as never):undefined}
-        header={
+        top={
           <View style={{ gap: space.hair }}>
-            <ServicePageHeader context={[SERVICE_HOMES.find(h=>h.key===servicePlacement(service)?.home)?.label,servicePlacement(service)?.family].filter(Boolean).join(" · ") || "Service"} title={service.name} crumbs={embedded?[]:[{title:"All services",onPress:()=>router.navigate("/(tabs)/catalogue")}]} />
+            <ServicePageHeader context={[SERVICE_HOMES.find(h=>h.key===servicePlacement(service)?.home)?.label,servicePlacement(service)?.family,service.brand].filter(Boolean).join(" · ") || "Service"} title={service.brand==='Standard'?service.name:productDisplayName(service)} crumbs={embedded?[]:[{title:"All services",onPress:()=>router.navigate("/(tabs)/catalogue")}]} />
             {service.brand === "Add-ons" ? <T role="caption" tone="secondary">Optional extra, added along with a main service</T> : null}
           </View>
         }
       >
-        <MediaFrame>
-          <ServicePhoto service={service} aspect={16 / 9} />
-        </MediaFrame>
+        <ServiceIdentityMedia service={service}/>
 
         <>
         {!reviewedStartingPrice(service)||service.description?.trim()||(service.brand&&["ceramic","coating","ppf"].includes(service.category))?<ServiceScope placement="description" showContactAndTip={false} service={service} onAsk={()=>router.push({pathname:"/(tabs)/help",params:{service:service.name}})}/>:null}
@@ -221,11 +221,12 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
           <T role="caption" tone="tertiary">Illustrative photo, not studio work.</T>
         </View> : null}
 
+        {service.customerMenu?.bookingMode?<Pane><T role="bodyStrong">{service.customerMenu.bookingMode==='walk_in'?'Free initial walk-in check':'Confirm specialist timing'}</T><T>{service.customerMenu.bookingMode==='walk_in'?'No online slot. Further diagnosis or repairs are agreed separately.':`Reference price ₹${(service.basePrice/100).toLocaleString('en-IN')}. Timing and work are confirmed before service.`}</T><Button kind="quiet" label="Ask the studio" onPress={()=>router.push({pathname:'/(tabs)/help',params:{service:service.name}})}/></Pane>:null}
         {!(service.priceOnRequest || reviewedQuoteRequired(service))?<Kicker>{service.category==='garage'?'Price':'Price for your car'}</Kicker>:null}
         {!service.brand||!['ceramic','ppf','coating'].includes(service.category)?(()=>{const facts=[service.brand&&service.brand!=="Add-ons"?`Product brand: ${service.brand}`:null,service.warrantyLabel?`Listed warranty: ${service.warrantyLabel}`:null].filter(Boolean).join(" · ");return facts?<T role="caption" tone="secondary">{facts}</T>:null})():null}
         {reviewedStartingPrice(service)?<Pane pad="gap"><View style={{gap:14}}><View style={{gap:5}}><Kicker>Starting price</Kicker><T role="title" tone="accent">{reviewedStartingPrice(service)!.label}</T></View>{service.category!=="tinting"?<View style={{borderTopWidth:1,borderColor:colors.borderSubtle,paddingTop:12}}><T role="caption" tone="secondary">{reviewedStartingPrice(service)!.condition}</T></View>:null}</View></Pane>:<ServicePrice inlineBreakdown compactQuote {...{category:service.category,priceOnRequest:(service.priceOnRequest===true || reviewedQuoteRequired(service)),needsCarType,hasCar:!!pricingVehicle.vehicle,carSizeKnown:!!selectedCategory,loading:priceLoading,error:priceError,breakdown:priceBreakdown,onRetry,onHelp:()=>router.navigate("/(tabs)/help"),onGarage:()=>router.push(pricingVehicle.vehicle?`/(tabs)/garage/${pricingVehicle.vehicle.id}`:"/(tabs)/garage/add")}}/>}
 
-        {focused&&showBar?<Button style={(service.priceOnRequest || reviewedQuoteRequired(service))?undefined:{alignSelf:"stretch",width:"100%",marginTop:16,marginBottom:16}} kind={(service.priceOnRequest===true || reviewedQuoteRequired(service))?"quiet":"primary"} label={(service.priceOnRequest===true || reviewedQuoteRequired(service))?"Studio inspection":"Book now"} disabled={!(service.priceOnRequest || reviewedQuoteRequired(service))&&priceBreakdown===null} onPress={()=>(service.priceOnRequest===true || reviewedQuoteRequired(service))?router.navigate("/(tabs)/help"):router.push(`/(tabs)/book/${id}`)}/>:null}
+        {focused&&showBar?<Button style={(service.priceOnRequest || reviewedQuoteRequired(service))?undefined:{alignSelf:"stretch",width:"100%",marginTop:16,marginBottom:16}} kind={(service.priceOnRequest===true || reviewedQuoteRequired(service))?"quiet":"primary"} label={(service.priceOnRequest===true || reviewedQuoteRequired(service))?"Discuss your requirements":"Book now"} disabled={!(service.priceOnRequest || reviewedQuoteRequired(service))&&priceBreakdown===null} onPress={()=>(service.priceOnRequest===true || reviewedQuoteRequired(service))?router.push({pathname:"/(tabs)/help",params:{service:service.name}}):router.push(`/(tabs)/book/${id}`)}/>:null}
 
         </>
 
@@ -256,4 +257,4 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
 }
 
 /** Reuses the existing detail design without an AppBar or route animation inside the popup. */
-function PopupDetailLayout({children,header}:{children:ReactNode;header?:ReactNode;onBack?:(()=>void)|undefined}){return <ScrollView testID="popup-detail-scroll" contentContainerStyle={{padding:20,gap:20,paddingBottom:28}}>{header}{children}</ScrollView>}
+function PopupDetailLayout({children,top}:{children:ReactNode;top?:ReactNode;onBack?:(()=>void)|undefined}){return <><View style={{paddingHorizontal:20,paddingBottom:12}}>{top}</View><ScrollView testID="popup-detail-scroll" contentContainerStyle={{padding:20,gap:20,paddingBottom:28}}>{children}</ScrollView></>}

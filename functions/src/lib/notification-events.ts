@@ -200,7 +200,9 @@ export async function buildNotification(
 
     case "job.status_advanced": {
       const nextStatus = (log.after?.["status"] as string | undefined) ?? null;
-      if (!["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY", "DELIVERED"].includes(nextStatus ?? "")) return null;
+      // Owner-approved quiet job updates: all stages remain in the app,
+      // only ready status notifies. Delay needs its own customer-time source.
+      if (nextStatus !== "READY_FOR_DELIVERY") return null;
 
       const job = (await db.collection(COLLECTIONS.jobs()).doc(log.entityId).get()).data() as
         | ServiceJob
@@ -209,23 +211,6 @@ export async function buildNotification(
       const vehicle = await vehicleLabel(db, job.vehicleId);
       if(job.visitId)return visitNotification(db,job,nextStatus!,cap(vehicle));
 
-      const updates: Record<string, { type: NotificationType; title: string; body: string }> = {
-        VEHICLE_RECEIVED: { type: "vehicle_received", title: "Your car is in", body: `${cap(vehicle)} is checked in and in good hands.` },
-        QUALITY_CHECK: { type: "quality_check", title: "Final checks", body: `${cap(vehicle)} is getting its last inspection.` },
-        DELIVERED: { type: "vehicle_delivered", title: "Thank you", body: `Enjoy your ${vehicle}. See you next time.` },
-      };
-      const update = nextStatus ? updates[nextStatus] : undefined;
-      if (update) return { userId: job.customerId, ...update, entityType: job.bookingId ? "Booking" : null, entityId: job.bookingId };
-      if (nextStatus === "IN_PROGRESS") {
-        return {
-          userId: job.customerId,
-          type: "job_started",
-          title: "Work has begun",
-          body: `${cap(vehicle)} is on the bay now.`,
-          entityType: job.bookingId ? "Booking" : null,
-          entityId: job.bookingId,
-        };
-      }
       return {
         userId: job.customerId,
         type: "job_completed",

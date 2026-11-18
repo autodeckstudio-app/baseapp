@@ -1,0 +1,6 @@
+import{it,expect}from'vitest';
+import{checkPreparedCatalogue}from'./prepared-catalogue';
+const source={id:'s',updatedAt:'one'}as never;const draft={draftId:'batch_s',serviceId:'s',expectedServiceUpdatedAt:'one',expectedDraftVersion:0 as const,payload:{name:'Wash',basePrice:10000}}as any;
+it('accepts exact source versions and never includes unrelated drafts',()=>{expect(checkPreparedCatalogue({drafts:[draft]},[source],[{id:'older'}as never])).toEqual({inputs:[draft],existing:[]})});
+it.each([null,{}, {drafts:[]},{drafts:[draft,draft]},{drafts:[{...draft,expectedServiceUpdatedAt:'changed'}]},{drafts:[{...draft,payload:{...draft.payload,basePrice:-1}}]},{drafts:[{...draft,expectedDraftVersion:1}]}])('rejects malformed, duplicate, stale and invalid money input %j',raw=>expect(()=>checkPreparedCatalogue(raw,[source],[])).toThrow());
+it('resumes only an identical existing draft, never overwrites it',()=>{const existing={...draft,id:draft.draftId,state:'draft',version:1};expect(checkPreparedCatalogue({drafts:[draft]},[source],[existing]).existing).toHaveLength(1);expect(()=>checkPreparedCatalogue({drafts:[draft]},[source],[{...existing,payload:{name:'newer',basePrice:10000}}])).toThrow();expect(()=>checkPreparedCatalogue({drafts:[draft]},[source],[{...existing,state:'publishing'}])).toThrow()});

@@ -16,7 +16,7 @@ describe("unified product design contract",()=>{
   });
   it("makes critical booking load failures retryable without false rollback claims",()=>{
     const booking=read("src/app/(tabs)/book/[serviceId].tsx");expect(booking).toContain('setSelectedCategory(normalizeSegment(selectedVehicle?.category))');expect(booking).toContain('label="Retry"');expect(booking).toContain('<ServiceTimePicker');expect(booking).toContain('initialDate={selectedDate}');expect(booking).toContain('onDayChange={date=>{setSelectedDate(date);setPickedSlot(null)}}');expect(booking).toContain('onPick={slot=>{setPickedSlot(slot);setSizeError(null)}}');const picker=read('src/ui/ServiceTimePicker.tsx');expect(picker).toContain('s.date===active');expect(picker).toContain('onDayChange?.(date)');expect(picker).toContain('onPick(s)');
-    const confirm=read("src/app/(tabs)/book/confirm.tsx");expect(confirm).not.toContain("Nothing was booked");expect(confirm).toContain("Check your bookings first - if it reached the studio");expect(confirm).toContain("if(booking || !service || !vehicle || !breakdown)");
+    const confirm=read("src/app/(tabs)/book/confirm.tsx");expect(confirm).not.toContain("Nothing was booked");expect(confirm).toContain("Check your bookings first - if it reached the studio");expect(confirm).toContain("if(booking || !extraIds || !service || !vehicle || !breakdown || serviceOnlineBookingIssue(service))");
   });
   it("recovers missing-link reports and membership screens without endless loaders",()=>{
     expect(read("src/app/(tabs)/bookings/inspection.tsx")).toContain("setInspection(null)");
@@ -218,10 +218,10 @@ describe("booking flow guardrails", () => {
 });
 
 describe("Book shows the price and time picker early", () => {
-  it("price in the header, short photo, so times sit above the fold", () => {
+  it("price in the header and shared service identity media replace missing legacy photos", () => {
     const b = read("src/app/(tabs)/book/[serviceId].tsx");
     expect(b).toMatch(/total !== null \? <T role="bodyStrong" tone="accent">\{rupees\(total\)/);
-    expect(b).toMatch(/aspect=\{3\}/);
+    expect(b).toContain("<ServiceIdentityMedia service={service}/>");
   });
 });
 
@@ -289,11 +289,11 @@ describe("services filters", () => {
   it("Services has one home/family/brand/product journey; no 3D car or competing goal flow", () => {
     const src = read("src/app/(tabs)/catalogue/index.tsx");
     expect(src).toContain("routePath(params, all)");
-    expect(src).toContain("<FilterPills");
+    expect(src).toContain("<ServiceJourney");expect(read("src/ui/ServiceJourney.tsx")).toContain("<ScrollView horizontal showsHorizontalScrollIndicator={false}>");
     expect(read("src/app/(tabs)/garage/index.tsx")).toContain("<FilterPills");
     expect(src).not.toMatch(/What does your car need/);
     expect(src).not.toMatch(/ZoneCar|GOALS|zonesOf/);
-    expect(src).toMatch(/<Screen\s+(?:scrollIdentity=\{JSON.stringify\(path\)\}\s+)?appBar=/);
+    expect(src).toMatch(/<Screen\s+textBack\s+scrollIdentity=\{JSON.stringify\(path\)\}\s+appBar=/);
     expect(read("src/ui/ServicesExplorer.tsx")).toContain("serviceHomeImages[h.key]");
   });
   it("unmapped types keep an icon rather than unrelated stock; newly generated matching service subjects are allowed", () => {
@@ -412,8 +412,8 @@ describe("one tile size everywhere", () => {
     expect(h).not.toContain("compact?: boolean");
     expect((h.match(/aspectRatio: TILE_ASPECT/g) ?? []).length).toBe(1);
   });
-  it("Services and Home Top services use PhotoCard and TILE_GAP", () => {
-    expect(read("src/app/(tabs)/catalogue/index.tsx")).toContain("<ServicesExplorer");
+  it("Services uses quick-add rows while Home keeps its existing service entry", () => {
+    expect(read("src/app/(tabs)/catalogue/index.tsx")).toContain("<ServiceJourney");expect(read("src/ui/ServiceJourney.tsx")).toContain("testID={'quick-row-'+s.id}");
     expect(read("src/ui/ServicesExplorer.tsx")).toContain("<ServicePackageCard");
     expect(read("src/ui/HomeScene.tsx")).toContain("p.onService(s.service, s.key)");
   });
@@ -447,7 +447,7 @@ describe("nav order and drawer", () => {
   it("one header on every screen: Screen renders AppBar itself, Back lives inside it, no separate back bar", () => {
     const kit = read("src/ui/kit.tsx");
     expect(kit).not.toContain("function BackBar");
-    expect(kit).toContain("<AppBar title={bar.title} onBack={bar.back} />");
+    expect(kit).toContain("<AppBar title={bar.title} onBack={bar.back} textBack={textBack} />");
     expect(read("src/ui/AppBar.tsx")).toContain("onBack");
     for (const t of ["bookings", "catalogue", "garage", "profile", "membership", "notifications", "studio", "help", "cars", "book", "approvals", "invoice"]) expect(kit).toMatch(new RegExp(`\\b${t}: "`));
   });

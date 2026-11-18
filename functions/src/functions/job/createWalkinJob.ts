@@ -1,4 +1,4 @@
-import {hasReleasedBay} from "@autodeck/core";
+import {customerServiceName,hasReleasedBay} from "@autodeck/core";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Service, StudioConfig, ServiceJob, Vehicle, Customer, Booking } from "@autodeck/core";
@@ -59,6 +59,7 @@ export const createWalkinJob = onCall({ region: "asia-south1" , enforceAppCheck:
     throw new HttpsError("failed-precondition", "Vehicle does not belong to the given customer.");
   }
 
+  if(service.customerMenu?.bookingMode)throw new HttpsError('failed-precondition','This catalogue entry is informational or coordinated offline. It cannot create a scheduled bay job.');
   if (!service.active || service.catalogueEntryKind==='enquiry') {
     throw new HttpsError("failed-precondition", "Service is not currently available.");
   }
@@ -158,6 +159,7 @@ export const createWalkinJob = onCall({ region: "asia-south1" , enforceAppCheck:
       );
     }
 
+    const lines=[{serviceId:data.serviceId,name:customerServiceName(service.name),price:priceBreakdown.subtotal,durationMinutes:service.estimatedDurationMinutes}];
     const walkinJob: ServiceJob = {
       id: jobRef.id,
       tenantId: user.claims.tenantId,
@@ -166,6 +168,7 @@ export const createWalkinJob = onCall({ region: "asia-south1" , enforceAppCheck:
       customerId: data.customerId,
       vehicleId: data.vehicleId,
       serviceId: data.serviceId,
+      lines,
       bayId: data.bayId,
       assignedEmployeeId: user.uid,
       status: "VEHICLE_RECEIVED",
@@ -193,7 +196,7 @@ export const createWalkinJob = onCall({ region: "asia-south1" , enforceAppCheck:
       sealedAt: null,
     };
 
-    if(quoteBookingRef){const b:Booking={id:quoteBookingRef.id,tenantId:user.claims.tenantId,studioId:data.studioId,customerId:data.customerId,vehicleId:data.vehicleId,serviceId:data.serviceId,vehicleCategory:data.vehicleCategory,scheduledAt:nowIso,scheduledDate,scheduledTime:utcToLocalTime(now,config.timezone),estimatedEndAt:estimatedEndAt.toISOString(),estimatedEndDate,estimatedEndTime:utcToLocalTime(estimatedEndAt,config.timezone),durationMinutes:service.estimatedDurationMinutes,bayId:data.bayId,assignedEmployeeId:user.uid,status:'ACTIVE',priceOnRequest:true,quoteStatus:'requested',priceBreakdown,totalAmount:priceBreakdown.total,membershipId:null,membershipDiscountApplied:false,membershipWashUsed:false,paymentStatus:'unpaid',payMode:'studio',holdExpiresAt:null,notes:data.notes??null,idempotencyKey:'walkin-'+jobRef.id,rescheduleCount:0,confirmedAt:nowIso,cancelledAt:null,cancellationReason:null,createdAt:nowIso,updatedAt:nowIso};tx.set(quoteBookingRef,b);}
+    if(quoteBookingRef){const b:Booking={id:quoteBookingRef.id,tenantId:user.claims.tenantId,studioId:data.studioId,customerId:data.customerId,vehicleId:data.vehicleId,serviceId:data.serviceId,lines,vehicleCategory:data.vehicleCategory,scheduledAt:nowIso,scheduledDate,scheduledTime:utcToLocalTime(now,config.timezone),estimatedEndAt:estimatedEndAt.toISOString(),estimatedEndDate,estimatedEndTime:utcToLocalTime(estimatedEndAt,config.timezone),durationMinutes:service.estimatedDurationMinutes,bayId:data.bayId,assignedEmployeeId:user.uid,status:'ACTIVE',priceOnRequest:true,quoteStatus:'requested',priceBreakdown,totalAmount:priceBreakdown.total,membershipId:null,membershipDiscountApplied:false,membershipWashUsed:false,paymentStatus:'unpaid',payMode:'studio',holdExpiresAt:null,notes:data.notes??null,idempotencyKey:'walkin-'+jobRef.id,rescheduleCount:0,confirmedAt:nowIso,cancelledAt:null,cancellationReason:null,createdAt:nowIso,updatedAt:nowIso};tx.set(quoteBookingRef,b);}
     tx.set(jobRef, walkinJob);
     // Write the bay lock read above — forces Firestore to detect a conflict
     // and retry a genuinely concurrent second caller racing for this bay.

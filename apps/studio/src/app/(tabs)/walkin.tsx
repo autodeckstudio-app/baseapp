@@ -222,6 +222,8 @@ export default function WalkinScreen() {
   }
 
   async function handleCreateJob() {
+    if([selectedServiceId,...additionalServices].some(id=>services.find(s=>s.id===id)?.customerMenu?.bookingMode)){showActionError("Service needs separate handling","Initial checks do not create a scheduled job. Coordinated work needs its own agreed timing.");return;}
+
     if(multi){
       if(intakeLock.current||submitting||feedError||!studioId||!customer||!selectedVehicleId||!selectedServiceId||!selectedVehicle?.category)return;
       const scope=intakeScope;intakeLock.current=true;setActionError(null);setSubmitting(true);
@@ -282,7 +284,7 @@ export default function WalkinScreen() {
 
   const CATEGORY_LABELS:Record<string,string>=Object.fromEntries(SERVICE_HOMES.map(h=>[h.key,h.label]));
   const categoriesPresent=useMemo(()=>SERVICE_HOMES.filter(h=>services.some(s=>servicePlacement(s)?.home===h.key)).map(h=>h.key),[services]);
-  const visibleServices = services.filter((s) => catFilter === "all" || servicePlacement(s)?.home === catFilter);
+  const visibleServices = services.filter((s) => !s.customerMenu?.bookingMode).filter((s) => catFilter === "all" || servicePlacement(s)?.home === catFilter);
 
   function goBack() {
     setActionError(null);
@@ -423,6 +425,7 @@ export default function WalkinScreen() {
 
       {step === "service" && (
         <View style={{ gap: spacing.sm }}>
+          {services.some(s=>s.customerMenu?.bookingMode)?<Text style={{...typography.caption,color:colors.textSecondary}}>Initial checks and specialist coordination are not scheduled jobs. Agree any further work separately.</Text>:null}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.xs, paddingBottom: spacing.xs }}>
             {["all", ...categoriesPresent].map((c) => {
               const on = catFilter === c;
