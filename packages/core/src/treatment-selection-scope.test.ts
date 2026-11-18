@@ -15,3 +15,10 @@ describe('reviewed treatment choices',()=>{
  });
  it('does not infer new restrictions from a similar family or name',()=>expect(selectionScopeIssue([{...rows[0]!,id:'unreviewed'},{...rows[0]!,id:'another'}])).toBeNull());
 });
+
+describe('separate ceramic and PPF choices',()=>{
+ const option=(name:string,category:'ceramic'|'ppf')=>({name,category,description:'',customerMenu:rows[0]!.customerMenu});
+ it('blocks two ceramic alternatives',()=>expect(selectionScopeIssue([option('Ceramic A','ceramic'),option('Ceramic B','ceramic')])).toContain('alternative ceramic coatings'));
+ it('blocks two PPF alternatives',()=>expect(selectionScopeIssue([option('Film A','ppf'),option('Film B','ppf')])).toContain('alternative paint protection films'));
+ it('allows ceramic together with PPF',()=>expect(selectionScopeIssue([option('Ceramic A','ceramic'),option('Film A','ppf')])).toBeNull());
+});
