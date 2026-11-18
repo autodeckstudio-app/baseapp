@@ -1,0 +1,12 @@
+export const useAdminAuth=()=>({user:{uid:'local-preview'},claims:{tenantId:'automodz',role:'admin'}});
+import fixture from'./fixture.json';
+const services:any[]=fixture.services;
+const seed=()=>JSON.parse(JSON.stringify(fixture.drafts));
+let drafts:any[]=JSON.parse(sessionStorage.getItem('preview-drafts')??'null')??seed();
+export const getServicesIncludingHidden=async()=>JSON.parse(JSON.stringify(services));export const getCatalogueDrafts=async()=>({drafts:JSON.parse(JSON.stringify(drafts)),publishedCount:385});
+export const pushState=()=> 'unavailable';export const syncPushRegistration=async()=>{};export const enablePush=async()=>{};
+export const getCatalogueDraftHistory=async()=>({history:[],nextHistoryCursor:null});
+export const saveCatalogueDraft=async(input:any)=>{let d=drafts.find(x=>x.id===input.draftId);if(d){d.payload=input.payload;d.version++}else{d={...input,id:'sample-edit',version:1,state:'draft',reviewHash:null};drafts.push(d)}sessionStorage.setItem('preview-drafts',JSON.stringify(drafts));return {...d}};
+export const reviewManagedCatalogue=async()=>({});export const reviewManagedCatalogueBatch=async()=>{drafts.forEach(d=>{if(d.id==='sample-edit'){d.state='reviewed';d.reviewHash='a'.repeat(64)}})};
+export const publishManagedCatalogue=async()=>{throw Error('Sample unknown result')};export const getManagedCataloguePublishStatus=async()=>{throw Error('No live status available')};
+export const readCustomerPublication=async()=>{throw Error('Disabled in local preview')};export const discardCatalogueDraft=async()=>{throw Error('Disabled in local preview')};export const inspectManagedCatalogueRecovery=async()=>{throw Error('Disabled')};export const reviewManagedCatalogueRecovery=inspectManagedCatalogueRecovery;export const finishManagedCatalogueRecovery=inspectManagedCatalogueRecovery;export const uploadServiceImage=inspectManagedCatalogueRecovery;

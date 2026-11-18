@@ -1,0 +1,1 @@
+import React from'react';export default function Link({children,...props}:any){return <a {...props} onClick={e=>e.preventDefault()}>{children}</a>}
