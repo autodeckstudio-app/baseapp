@@ -1,3 +1,4 @@
+import{JobDelayControl}from'../../../components/JobDelayControl';
 import{VisitReceiptControl}from'../../../components/VisitReceiptControl';
 import{useVisitBill}from'../../../lib/use-visit-bill';
 import{visitFundingLabel}from'@autodeck/core';
@@ -857,6 +858,7 @@ export default function JobDetailScreen() {
       {job.visitId&&!["DELIVERED","CANCELLED"].includes(job.status)?<Section><VisitBayControl job={job}/><VisitScheduleControl job={job}/></Section>:null}
       {job.status === "PENDING_VEHICLE" && job.bookingId ? <Button label="Arrived - standby" variant="secondary" disabled={Date.parse(job.scheduledAt) > Date.now()} onPress={() => setStaffAction("enqueue")} style={{marginBottom: spacing.lg}} /> : null}
       {!job.visitBayPause&&job.status === "QUALITY_CHECK" ? <Button label="Send back for rework" variant="ghost" onPress={() => setStaffAction("rework")} style={{marginBottom: spacing.lg}} /> : null}
+      <JobDelayControl key={JSON.stringify([job.id,job.updatedAt])} job={job}/>
       {['IN_PROGRESS','QUALITY_CHECK','READY_FOR_DELIVERY','DELIVERED'].includes(job.status) ? <Section><JobWorkSession key={job.id} job={job}/></Section> : null}
       {ADMIN_APPROVAL_ENABLED && job ? <AdminRequestPanel targetType="job" targetId={job.id} tenantId={job.tenantId} studioId={job.studioId} /> : null}
       {advanceConfirm && job ? <Section>{job.status === "READY_FOR_DELIVERY" ? <DeliveryConfirmPane key={`${job.id}:${job.vehicleId}`} job={job} onDelivered={()=>setAdvanceConfirm(null)} onCancel={()=>setAdvanceConfirm(null)}/> : <><Text style={{color:colors.textPrimary}}>{advanceLabel}? This updates the studio floor and customer tracker.</Text><Button label={`Confirm ${advanceLabel.toLowerCase()}`} onPress={()=>void handleAdvance()} loading={advancing}/><Button label="Cancel" variant="secondary" disabled={advancing} onPress={()=>setAdvanceConfirm(null)}/></>}</Section> : null}

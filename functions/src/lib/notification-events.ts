@@ -1,3 +1,4 @@
+import{jobDelayNotification}from'./job-delay-notification.js';
 import{visitScheduleNotification}from'./visit-schedule-notification.js';
 import {visitIntakeNotification} from './visit-intake-notification.js';
 import {visitNotification} from './visit-notification.js';
@@ -197,6 +198,8 @@ export async function buildNotification(
         entityId: booking.id,
       };
     }
+
+    case "job.delay_reported": return jobDelayNotification(db,log);
 
     case "job.status_advanced": {
       const nextStatus = (log.after?.["status"] as string | undefined) ?? null;

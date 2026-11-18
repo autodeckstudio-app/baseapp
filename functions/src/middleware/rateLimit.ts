@@ -30,6 +30,7 @@ export type RateLimitAction =
   | "job.walkinCreate"
   | "job.walkinCancel"
   | "job.settleMembershipCovered"
+  | "job.reportDelay"
   | "job.advanceStatus"
   | "job.assignBay"
   | "approval.create"
@@ -172,6 +173,7 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "job.walkinCreate": { limit: 60, windowMs: 60_000 },
   "job.walkinCancel": { limit: 30, windowMs: 60_000 },
   "job.settleMembershipCovered": { limit: 60, windowMs: 60_000 },
+  "job.reportDelay": { limit: 10, windowMs: 60_000 },
   "job.advanceStatus": { limit: 60, windowMs: 60_000 },
   "job.assignBay": { limit: 60, windowMs: 60_000 },
   "approval.create": { limit: 60, windowMs: 60_000 },

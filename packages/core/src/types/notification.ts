@@ -3,6 +3,7 @@
 // AuditLog is the sole authoritative event source (Phase 2C architecture
 // audit). No client ever writes this collection.
 export type NotificationType =
+  | "job_delayed"
   | "booking_confirmed"
   | "booking_cancelled"
   | "booking_rescheduled"

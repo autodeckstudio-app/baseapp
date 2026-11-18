@@ -1,4 +1,5 @@
 export type AuditAction =
+  | "job.delay_reported"
   | "visit.bayReleased" | "visit.bayMoved"
   | "visit.intakeCancelled" | "visit.intakePrepared" | "visit.intakeOffered" | "visit.intakeAccepted" | "visit.intakeDeclined"
   | "visit.cancellationChargeReceiptRecorded" | "visit.receiptRecorded" | "visit.billPrepared" | "visit.serviceCancelled" | "visit.returnApproved"

@@ -277,3 +277,5 @@ export{reviewVisitService,executeVisitService,reconcileVisitService}from'./funct
 
 export{recordVisitCancellationCharge}from'./functions/visit/recordVisitCancellationCharge.js';
 export {getVisitSeparateInvoicePdf} from './functions/visit/getVisitSeparateInvoicePdf.js';
+
+export {reportJobDelay} from './functions/job/reportJobDelay.js';
