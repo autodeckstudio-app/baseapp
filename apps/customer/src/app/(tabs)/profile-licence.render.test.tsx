@@ -1,3 +1,4 @@
+vi.mock('../../lib/glass-pane',()=>({glassPane:()=>({})}));
 import React from 'react';import{act,create,type ReactTestRenderer}from'react-test-renderer';import{describe,it,expect,vi}from'vitest';
 const h=vi.hoisted(()=>({auth:{status:'ready',user:{uid:'auth-one',displayName:'Meet',email:'x@example.test'},customerDocId:'canonical-one',claims:{role:'customer',tenantId:'t'}} as any,upload:vi.fn(),licState:{url:'private://saved',state:'ready',retry:()=>undefined} as any}));
 vi.mock('../../ui/SavedLicensePhoto',()=>({SavedLicensePhoto:(p:any)=>React.createElement('SavedLicence',p),SavedLicensePhotoView:(p:any)=>React.createElement('SavedLicence',p),useSavedLicensePhoto:()=>h.licState}));

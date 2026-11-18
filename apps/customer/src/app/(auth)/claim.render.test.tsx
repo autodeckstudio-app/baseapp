@@ -47,6 +47,7 @@ vi.mock("@autodeck/ui", () => ({
 vi.mock("@autodeck/ui/theme", () => ({ space: { line: 8, gap: 12 } }));
 vi.mock("@autodeck/ui/native", () => ({ Ambient: ({ children }: { children: React.ReactNode }) => children }));
 vi.mock("../../ui/kit", () => ({
+  Ambient: ({children}:any)=>children,
   Button: ({ label, onPress, testID }: { label: string; onPress: () => void; testID?: string }) =>
     createElement("Pressable", { onPress, testID, accessibilityRole: "button" }, createElement("Text", null, label)),
   Kicker: ({ children }: { children: React.ReactNode }) => createElement("Text", null, children),

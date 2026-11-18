@@ -1,86 +1,44 @@
-import { useState } from 'react';
-import { Image, Platform, Pressable, Text, View, useWindowDimensions, type TextStyle, type ViewStyle } from 'react-native';
-import { useExperienceTheme } from '@autodeck/ui/native';
-import { pickTopServices } from '../lib/top-services';
-import { serviceImagery } from '../lib/imagery';
-import { pickIdleNudge, type HomeViewProps } from './HomeView';
-import { SideDrawer } from './SideDrawer';
-import { CampaignSlot } from './CampaignSlot';
-import { HomeShowroom } from './HomeShowroom';
-import { textStyle } from './kit';
-import{HomeOriginalTop}from './HomeOriginalTop';
-import { raised } from '../lib/raised';
-import { NavIcon } from './NavIcon';
-import { HomeClub } from './HomeClub';
-import { StudioFooterMockup } from './StudioFooterMockup';
-
-const gradient = (value: string): ViewStyle => Platform.OS === 'web' ? { backgroundImage: value } as ViewStyle : {};
-const display = (size: number, color: string): TextStyle => ({ ...textStyle(size >= 25 ? 'title' : 'heading'), fontSize: size, lineHeight: Math.round(size * 1.3), color });
-const label = (color: string): TextStyle => ({ ...textStyle('label'), color });
-function Link({ title, onPress, color, underline = true }: { title: string; onPress: () => void; color: string; underline?: boolean }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start', opacity: pressed ? .65 : 1 })}><Text style={{ ...textStyle('body'), color, fontSize: 12, lineHeight: 18, ...(underline ? { borderBottomWidth: 1, borderBottomColor: `${color}45`, paddingBottom: 4 } : {}) }}>{title}</Text></Pressable>;
-}
-
-/** One personal scene owns vehicle identity and its single priority action. No duplicate visit hero. */
-export function HomeScene({ p }: { p: HomeViewProps }) {
-  const { name, colors } = useExperienceTheme();
-  const surfaces = raised(name);
-  const dark = colors.surface;
-  const white = colors.textPrimary;
-  const mutedWhite = colors.textSecondary;
-  const { width } = useWindowDimensions();
-  const gutter = width < 360 ? 16 : 20;
-  const bleed = { marginHorizontal: -gutter };
-  const ink = colors.textPrimary;
-  const muted = colors.textSecondary;
-  const line = colors.borderSubtle;
-  const accent = colors.accentStrong;
-  const [menu, setMenu] = useState(false);
-  // The adapter's first vehicle is the canonical active vehicle. Do not switch
-  // the photo locally while leaving its reminders/jobs scoped to another car.
-  const car = p.cars.find(c=>c.id===p.activeCarId)??p.cars[0];
-  const event = p.live && !p.live.idle ? p.live : null;
-  const nudge = event ? null : pickIdleNudge({ reminder: p.reminders[0] ?? null, need: p.need, rebook: p.rebook, onReminder: p.onReminders });
-  const kicker = event?.kicker ?? nudge?.kicker ?? 'Ready when you are';
-  const title = event?.title ?? nudge?.title ?? (car ? `Care for ${car.title}` : 'Add your car to begin');
-  const detail = event?.detail ?? nudge?.detail ?? p.live?.detail ?? '';
-  const action = event ? (event.kicker === 'Needs your OK' ? 'Review' : event.kicker === 'Next visit' || event.kicker === 'Payment due' ? 'View' : 'Track') : nudge?.cta ?? (car ? 'Book a service' : 'Add your car');
-  const press = event?.onPress ?? nudge?.onPress ?? (car ? p.live?.onPress ?? p.onBook : p.onAddCar);
-  const top = pickTopServices(p.services);
-  const wash = top.find(s => s.key === 'wash');
-  const coat = top.find(s => s.key === 'coat');
-  const entrances = top.filter(s => s.key === 'garage' || s.key === 'inspect');
-  const servicePress = (s: typeof top[number]) => p.onService(s.service, s.key);
-  return <View testID="home-scene" style={{ ...bleed, marginTop: -16 }}>
-    {p.drawer?.length ? <SideDrawer open={menu} onClose={() => setMenu(false)} name={p.displayName ?? 'AutoDeck'} initial={p.initial} items={p.drawer} /> : null}
-    <View style={{paddingHorizontal:gutter,paddingTop:16}}><HomeOriginalTop p={p} onMenu={()=>p.drawer?.length?setMenu(true):p.onAvatar()}/></View>
-    {event || nudge ? <View testID="home-personal-stage" style={{paddingHorizontal:gutter}}>
-      <View testID="home-state-dock" style={{ borderTopWidth: 1, borderColor: colors.borderSubtle, paddingVertical: 18, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <View style={{ flex: 1, gap: 6 }}><Text style={label(accent)}>{kicker}</Text><Text style={display(20, white)}>{title}</Text>{detail ? <Text style={{ ...textStyle('body'),  color: mutedWhite, fontSize: 12, lineHeight: 18 }}>{detail}</Text> : null}{event?.ready ? <Text style={{ ...textStyle('body'),  color: mutedWhite, fontSize: 12 }}>Ready by {event.ready}</Text> : null}</View>
-        <Pressable accessibilityRole="button" accessibilityLabel={action} onPress={press} style={({ pressed }) => ({ minHeight: 44, maxWidth: 112, paddingHorizontal: 16, justifyContent: 'center', borderRadius: 24, borderWidth: 1, borderColor: colors.borderStrong, opacity: pressed ? .65 : 1 })}><Text style={{ ...textStyle('body'),  color: white, fontSize: 12 }}>{action}</Text></Pressable>
-      </View>
-
-    </View> : null}
-    <View style={{ paddingHorizontal: gutter }}>
-      {p.banner ? <View style={{ paddingTop: 16 }}>{p.banner}</View> : null}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 10, paddingTop: 22, paddingBottom: 18 }}><Text accessibilityRole="header" style={{ ...display(width < 360 ? 22 : 25, ink), flex: 1 }}>Services for you</Text><Link title="All services" onPress={p.onAllServices} color={muted} /></View>
-      {wash ? <Pressable accessibilityRole="button" accessibilityLabel="Wash & care" onPress={() => servicePress(wash)} style={{ ...bleed, height: 237, justifyContent: 'flex-end', backgroundColor: dark }}>
-        <Image source={serviceImagery.washing} resizeMode="cover" style={{ position: 'absolute', width: '100%', height: '100%' }} />
-        <View pointerEvents="none" style={{ position: 'absolute', inset: 0, backgroundColor: '#0b162038', ...gradient('linear-gradient(180deg,#0b162000,#0b162020 35%,#0b1620ed)') }} />
-        <View style={{ padding: 20, gap: 6 }}><Text style={label('#FFFFFF')}>Washing</Text><Text style={display(24, '#FFFFFF')}>Wash & care</Text><Text style={{ ...textStyle('body'),  fontSize: 12, color: '#FFFFFF', textDecorationLine: 'underline', lineHeight: 22 }}>Choose your wash</Text></View>
-      </Pressable> : null}
-      {coat || entrances.length ? <View testID="home-service-triad" style={{ flexDirection: 'row', gap: 11, paddingTop: 23, paddingBottom: 26 }}>
-        {coat ? <Pressable accessibilityRole="button" accessibilityLabel="Ceramic coating" onPress={() => servicePress(coat)} style={{ flex: 1, height: width < 360 ? 225 : 214, borderRadius: 24, borderWidth: 1, borderColor: line, overflow: 'hidden', backgroundColor: dark, justifyContent: 'flex-end' }}><Image source={serviceImagery.ceramic} resizeMode="cover" style={{ position: 'absolute', width: '100%', height: '100%' }} /><View pointerEvents="none" style={{ position: 'absolute', inset: 0, backgroundColor: '#111b2466', ...gradient('linear-gradient(180deg,#111b2430,#111b2440 33%,#111b24e0 68%,#111b24fa)') }} /><View style={{ paddingHorizontal: 14, paddingBottom: 17, gap: 8 }}><Text style={label('#FFFFFF')}>Protect</Text><Text style={display(width < 340 ? 18 : 20, '#FFFFFF')}>{'Ceramic\ncoating'}</Text><Text style={{ ...textStyle('body'),  fontSize: 12, color: '#FFFFFF' }}>Explore options</Text></View></Pressable> : null}
-        {entrances.length ? <View testID="home-service-shortcuts" style={{ flex: 1, gap: 8, minHeight: width < 360 ? 225 : 214 }}>{entrances.map(s => <Pressable key={s.key} accessibilityRole="button" accessibilityLabel={s.title} onPress={() => servicePress(s)} style={({ pressed }) => ({ flex: 1, minHeight: 64, ...surfaces.card, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 24, opacity: pressed ? .65 : 1 })}><Text style={label(accent)}>{s.key === 'garage' ? 'Maintain' : 'Understand'}</Text><Text style={{ ...textStyle('body'),  ...display(13, ink), lineHeight: 19, marginTop: 5 }}>{s.title}</Text></Pressable>)}<Pressable accessibilityRole="button" accessibilityLabel="Modifications" onPress={() => p.onCategory('modifications')} style={({ pressed }) => ({ flex: 1, minHeight: 64, ...surfaces.card, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 24, opacity: pressed ? .65 : 1 })}><Text style={label(accent)}>Customize</Text><Text style={{ ...textStyle('body'), ...display(13, ink), lineHeight: 19, marginTop: 5 }}>Modifications</Text></Pressable></View> : null}
-      </View> : null}
-      <HomeClub membership={p.membership} onPress={p.onMembership}/>
-      <CampaignSlot campaign={p.campaign} />
-      {p.carsList?.length && p.onOpenCar && p.onBuyCar && p.onSellCar ? <HomeShowroom cars={p.carsList} onOpen={p.onOpenCar} onBuy={p.onBuyCar} onSell={p.onSellCar} /> : null}
-      <View style={{ borderTopWidth: 1, borderColor: line, paddingTop: 18, marginTop: 26, paddingBottom: 0 }}>
-        <Pressable accessibilityRole="button" accessibilityLabel={`The studio, ${p.studio.hours}${p.studio.openText ? `, ${p.studio.openText}` : ''}. Open the studio page`} onPress={p.onStudio} style={{ minHeight: 64, gap: 8 }}><View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}><Text style={display(18, ink)}>The studio</Text>{p.studio.openText ? <Text style={{ ...textStyle('body'),  color: muted, fontSize: 12, flexShrink: 1 }}>{p.studio.openText}</Text> : null}</View><Text style={{ ...textStyle('body'),  color: muted, fontSize: 12 }}>{p.studio.hours}</Text></Pressable>
-        <View testID="home-studio-contacts" style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, paddingTop: 12 }}>{p.quick?.map(q => <Pressable key={q.key} accessibilityRole="button" accessibilityLabel={q.label} onPress={q.onPress} style={({ pressed }) => ({ width: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center', opacity: pressed ? .65 : 1 })}><NavIcon name={q.icon} color={ink} size={24} cut={colors.surface} /></Pressable>)}{p.social?.map(s => <Pressable key={s.key} accessibilityRole="button" accessibilityLabel={s.icon === 'channel' ? 'Channel' : s.title} onPress={s.onPress} style={({ pressed }) => ({ width: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center', opacity: pressed ? .65 : 1 })}><NavIcon name={s.icon} color={ink} size={24} cut={colors.surface} /></Pressable>)}</View>
-        <StudioFooterMockup />
-      </View>
-    </View>
-  </View>;
+import {useState} from 'react';
+import {Image,Platform,Pressable,Text,View} from 'react-native';
+import {useExperienceTheme} from '@autodeck/ui/native';
+import {SERVICE_HOMES} from '@autodeck/core';
+import {pickIdleNudge,type HomeViewProps} from './HomeView';
+import {HomeOriginalTop} from './HomeOriginalTop';
+import {SideDrawer} from './SideDrawer';
+import {HomeClub} from './HomeClub';
+import {HomeShowroom} from './HomeShowroom';
+import {CampaignSlot} from './CampaignSlot';
+import {StudioFooterMockup} from './StudioFooterMockup';
+import {NavIcon,type NavIconName} from './NavIcon';
+import {raised} from '../lib/raised';
+const icons:Record<string,NavIconName>={washing:'wash',paint:'ceramic',detailing:'surface',garage:'garage',modifications:'layers'};
+/** Every control keeps its connected adapter callback. No preview records or prices enter production. */
+export function HomeScene({p}:{p:HomeViewProps}){
+ const{name,colors}=useExperienceTheme(),r=raised(name),[menu,setMenu]=useState(false);
+ const event=p.live&&!p.live.idle?p.live:null;
+ const nudge=event?null:pickIdleNudge({reminder:p.reminders[0]??null,need:p.need,rebook:p.rebook,onReminder:p.onReminders});
+ const action=event?(event.kicker==='Needs your OK'?'Review':event.kicker==='Next visit'||event.kicker==='Payment due'?'View':'Track'):nudge?.cta??'Book a service';
+ const actionPress=event?.onPress??nudge?.onPress??p.onBook;
+ return <View testID="home-scene" style={{gap:18}}>
+  {p.drawer?.length?<SideDrawer open={menu} onClose={()=>setMenu(false)} name={p.displayName??'AutoDeck'} initial={p.initial} items={p.drawer}/>:null}
+  <HomeOriginalTop p={p} onMenu={()=>p.drawer?.length?setMenu(true):p.onAvatar()}/>
+  {event||nudge?<Pressable testID="home-state-dock" accessibilityRole="button" accessibilityLabel={action} onPress={actionPress} style={{...r.card,padding:17,gap:9,marginTop:-10}}>
+   <Text style={{fontSize:9,letterSpacing:1.4,textTransform:'uppercase',color:colors.textSecondary}}>{event?.kicker??nudge?.kicker}</Text>
+   <View style={{flexDirection:'row',alignItems:'center',gap:12}}><NavIcon cut={colors.surface} name={event?'history':'garage'} color={colors.textSecondary} size={24}/><View style={{flex:1,gap:4}}><Text style={{fontSize:17,lineHeight:23,fontWeight:'600',color:colors.textPrimary}}>{event?.title??nudge?.title}</Text>{event?.detail||nudge?.detail?<Text style={{fontSize:12,lineHeight:18,color:colors.textSecondary}}>{event?.detail??nudge?.detail}</Text>:null}{event?.ready?<Text style={{fontSize:11,color:colors.textSecondary}}>Ready by {event.ready}</Text>:null}</View><Text style={{fontSize:12,color:colors.textPrimary}}>{action}</Text></View>
+  </Pressable>:null}
+  {p.banner}
+  <View style={{gap:18,paddingTop:4}}><View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:10}}><Text accessibilityRole="header" style={{fontSize:22,fontWeight:'600',letterSpacing:-.7,color:colors.textPrimary}}>Care for your car</Text><Pressable accessibilityRole="button" accessibilityLabel="All services" onPress={p.onAllServices} style={{minHeight:44,justifyContent:'center'}}><Text style={{fontSize:12,color:colors.textPrimary}}>View all</Text></Pressable></View>
+   <View testID="home-service-shortcuts" style={{flexDirection:'row',gap:7,justifyContent:'space-between'}}>{[...SERVICE_HOMES].sort((a,b)=>['washing','paint','detailing','garage','modifications'].indexOf(a.key)-['washing','paint','detailing','garage','modifications'].indexOf(b.key)).map(h=><Pressable key={h.key} accessibilityRole="button" accessibilityLabel={h.key==='washing'?'Wash & care':h.key==='paint'?'Paint protection':h.key==='modifications'?'Mods & wraps':h.label} onPress={()=>p.onCategory(h.key)} style={{flex:1,minWidth:0,alignItems:'center',gap:9}}><View style={{...r.round,width:47,height:47,alignItems:'center',justifyContent:'center'}}><NavIcon cut={colors.surface} name={icons[h.key]??'services'} color={colors.textPrimary} size={23}/></View><Text style={{fontSize:10,lineHeight:15,textAlign:'center',color:colors.textPrimary}}>{h.key==='modifications'?'Mods & wraps':h.key==='paint'?'Paint protection':h.key==='washing'?'Wash & care':h.label}</Text></Pressable>)}</View>
+  </View>
+  <HomeClub membership={p.membership} onPress={p.onMembership}/>
+  <CampaignSlot campaign={p.campaign}/>
+  <View style={{gap:13}}><Text style={{fontSize:20,fontWeight:'600',letterSpacing:-.6,color:colors.textPrimary}}>More from AutoDeck</Text><Pressable accessibilityRole="button" accessibilityLabel="Your car records" onPress={p.onGarage} style={{...r.card,padding:20,flexDirection:'row',alignItems:'center',gap:16}}><NavIcon cut={colors.surface} name="garage" size={27} color={colors.textPrimary}/><View style={{flex:1,gap:6}}><Text style={{fontSize:16,fontWeight:'600',color:colors.textPrimary}}>Your car records</Text><Text style={{fontSize:12,lineHeight:18,color:colors.textSecondary}}>Visits, papers and protection, together.</Text></View></Pressable></View>
+  {p.carsList?.length&&p.onOpenCar&&p.onBuyCar&&p.onSellCar?<HomeShowroom cars={p.carsList} onOpen={p.onOpenCar} onBuy={p.onBuyCar} onSell={p.onSellCar}/>:null}
+  <View style={{borderTopWidth:1,borderColor:colors.borderSubtle,paddingTop:24,gap:12}}>
+   <Pressable accessibilityRole="button" accessibilityLabel={`The studio, ${p.studio.hours}${p.studio.openText?', '+p.studio.openText:''}. Open the studio page`} onPress={p.onStudio} style={{gap:9,minHeight:48}}><Text style={{fontSize:10,letterSpacing:1.5,color:colors.textSecondary}}>THE AUTODECK STUDIO</Text><Text style={{fontSize:24,lineHeight:30,fontWeight:'600',letterSpacing:-.7,color:colors.textPrimary}}>Visit or get in touch</Text>{p.studio.openText?<Text style={{fontSize:12,color:colors.textSecondary}}>{p.studio.openText}</Text>:null}{p.studio.hours?<Text style={{fontSize:12,lineHeight:18,color:colors.textSecondary}}>{p.studio.hours}</Text>:null}</Pressable>
+   <StudioFooterMockup/>
+   <View testID="home-studio-contacts" style={{flexDirection:'row',justifyContent:'space-between',gap:10,flexWrap:'wrap',paddingTop:6}}>{p.quick?.map(q=><Pressable key={q.key} accessibilityRole="button" accessibilityLabel={q.label} onPress={q.onPress} style={{minWidth:64,minHeight:65,alignItems:'center',gap:8}}><View style={{...r.round,width:44,height:44,alignItems:'center',justifyContent:'center'}}><NavIcon cut={colors.surface} name={q.icon} size={23} color={colors.textPrimary}/></View><Text style={{fontSize:11,color:colors.textPrimary}}>{q.label}</Text></Pressable>)}</View>
+   {p.social?.length?<View style={{flexDirection:'row',justifyContent:'center',gap:24}}>{p.social.map(s=><Pressable key={s.key} accessibilityRole="button" accessibilityLabel={s.icon==='channel'?'Channel':s.title} onPress={s.onPress} style={{minHeight:48,minWidth:48,alignItems:'center',justifyContent:'center'}}><NavIcon cut={colors.surface} name={s.icon} size={23} color={colors.textSecondary}/></Pressable>)}</View>:null}
+  </View>
+ </View>;
 }

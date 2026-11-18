@@ -2,10 +2,13 @@
 import { createElement } from "react";
 import { Image, Platform } from "react-native";
 
-export type NavIconName = "home" | "services" | "bookings" | "garage" | "profile" | "club" | "gift" | "bell" | "pin" | "chat" | "wash" | "ceramic" | "tools" | "search" | "check" | "call" | "whatsapp" | "instagram" | "channel" | "directions" | "proceed" | "refresh" | "download" | "share" | "edit" | "delete" | "close" | "history" | "back";
+export type NavIconName = "grid" | "layers" | "surface" | "home" | "services" | "bookings" | "garage" | "profile" | "club" | "gift" | "bell" | "pin" | "chat" | "wash" | "ceramic" | "tools" | "search" | "check" | "call" | "whatsapp" | "instagram" | "channel" | "directions" | "proceed" | "refresh" | "download" | "share" | "edit" | "delete" | "close" | "history" | "back";
 
 // body: the main silhouette (filled when active). detail: strokes drawn on top, in the cut-out colour when filled.
 const ART: Record<NavIconName, { body: string; detail: string }> = {
+  grid: {body:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',detail:''},
+  layers: {body:'<path d="m12 2 10 6-10 6L2 8zM2 13l10 6 10-6M2 18l10 5 10-5"/>',detail:''},
+  surface: {body:'<path d="m12 3 3 6 6 3-6 3-3 6-3-6-6-3 6-3z"/>',detail:''},
   back: {body:'<path d="M15 6l-6 6 6 6"/>',detail:""},
   refresh: {body:'<path d="M20 7v5h-5M4 17v-5h5M6.1 7a7 7 0 0 1 11.5-1L20 9M4 15l2.4 3A7 7 0 0 0 17.9 17"/>',detail:""},
   download: {body:'<path d="M12 3v12M7 10l5 5 5-5M4 16v4h16v-4"/>',detail:""},

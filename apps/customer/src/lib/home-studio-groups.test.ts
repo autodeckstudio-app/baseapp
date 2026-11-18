@@ -7,7 +7,7 @@ describe("Home studio, club and follow groups", () => {
     expect(v).toContain('The studio, ${p.studio.hours}');
     expect(v).toContain('Open the studio page');
     expect(v).toContain('p.quick?.map');
-    expect(v).toContain('p.social?.map');
+    expect(v).toContain('p.social.map');
     expect(v).not.toContain('sceneImagery.studio');
     expect(v).not.toContain('Follow us');
   });

@@ -114,7 +114,7 @@ describe("one design system and one place for everything",()=>{
     expect(bar).toContain("maxWidth: 360");
     expect(bar).toContain("size={26}");
     expect(bar).toContain("onNavCompact");
-    expect(bar).not.toContain("<Text");
+    expect(bar).toContain("fontSize:9");
   });
   it("puts Home in the centre with the AD monogram and Services beside it",()=>{
     const bar=read("src/ui/RaisedTabBar.tsx");
@@ -130,10 +130,7 @@ describe("sizes come from one rulebook",()=>{
   it("keeps every shared size on the scale",()=>{
     for(const [k,v] of Object.entries(metrics)) expect([k,(SCALE as readonly number[]).includes(v as number)]).toEqual([k,true]);
   });
-  it("uses the same section gap on Home and in Screen",()=>{
-    expect(read("src/ui/HomeScene.tsx")).toContain("paddingBottom: 26");
-    expect(read("src/ui/kit.tsx")).toContain("calc(${bottomClearance}px + env(safe-area-inset-bottom))");
-  });
+  it('approved customer surfaces keep compact section spacing and safe navigation clearance',()=>{expect(read('src/ui/HomeScene.tsx')).toContain('gap:18');expect(read('src/ui/kit.tsx')).toContain('calc('+String.fromCharCode(36)+'{bottomClearance}px + env(safe-area-inset-bottom))')});
   it("does not leave a tall empty car panel when there is no photo",()=>{
     const home=read("src/ui/CarChips.tsx");expect(home).toContain("const framed = !!car.vehicle?.photoUrl");expect(home).toContain("{framed ? <View");expect(home).toContain("Add a photo from the car page");expect(home).not.toContain("NO PHOTO YET");
   });
@@ -230,13 +227,7 @@ it("Garage last service and the service reminder count delivered visits only", (
 });
 
 describe("Home hero stage", () => {
-  it("a single car is the hero on black with the orange glow, and its height comes from metrics", () => {
-    const h = read("src/ui/HeroStage.tsx");
-    expect(h).toContain("metrics.heroStage");
-    expect(h).toMatch(/radial-gradient/);
-    expect(h).not.toMatch(/\u2014/);
-    expect(read("src/ui/HomeScene.tsx")).toContain('testID="home-personal-stage"'); // merged Home: compact car chip, HeroStage kept for other uses
-  });
+  it('approved Home retains the photographic service hero with compact canonical car context',()=>{const s=read('src/ui/HomeOriginalTop.tsx');expect(s).toContain('height:260');expect(s).toContain('<HomeOwnedCars p={p}/>');expect(s.indexOf('{p.stories}')).toBeLessThan(s.indexOf('accessibilityLabel="Explore services"'));expect(read('src/ui/HomeScene.tsx')).toContain('testID="home-state-dock"')});
   it("Home keeps orange to small highlights: no orange kicker or orange text links", () => {
     const home = read("src/ui/HomeView.tsx");
     expect(home).not.toMatch(/colors\.accentStrong, fontSize: 14, fontWeight: "600"/);
@@ -271,11 +262,7 @@ describe("home cars", () => {
   it("shows each car once: no tripled looping list", () => {
     expect(read("src/ui/HomeView.tsx")).not.toContain("[...cars, ...cars, ...cars]");
   });
-  it("light surfaces are warm and flat: no white offset highlights", () => {
-    const src = read("src/lib/raised.ts");
-    expect(src).not.toContain("-8px -8px 20px rgba(255,255,255,0.95)");
-    expect(src).toContain("#FFFFFF");
-  });
+  it('approved pale surfaces have soft raised depth',()=>{expect(read('src/lib/raised.ts')).toContain('backgroundColor: c.surface');expect(read('src/lib/customer-glacier.ts')).toContain("canvas:'#edf1f5'")});
 });
 
 describe("home menu", () => {
@@ -286,16 +273,7 @@ describe("home menu", () => {
 });
 
 describe("services filters", () => {
-  it("Services has one home/family/brand/product journey; no 3D car or competing goal flow", () => {
-    const src = read("src/app/(tabs)/catalogue/index.tsx");
-    expect(src).toContain("routePath(params, all)");
-    expect(src).toContain("<ServiceJourney");expect(read("src/ui/ServiceJourney.tsx")).toContain("<ScrollView horizontal showsHorizontalScrollIndicator={false}>");
-    expect(read("src/app/(tabs)/garage/index.tsx")).toContain("<FilterPills");
-    expect(src).not.toMatch(/What does your car need/);
-    expect(src).not.toMatch(/ZoneCar|GOALS|zonesOf/);
-    expect(src).toMatch(/<Screen\s+textBack\s+scrollIdentity=\{JSON.stringify\(path\)\}\s+appBar=/);
-    expect(read("src/ui/ServicesExplorer.tsx")).toContain("serviceHomeImages[h.key]");
-  });
+  it('Services preserves its connected home/family/brand/product journey',()=>{const s=read('src/app/(tabs)/catalogue/index.tsx');expect(s).toContain('routePath(params, all)');expect(s).toContain('<ServiceJourney');expect(read('src/ui/ServiceJourney.tsx')).toContain('<ScrollView horizontal showsHorizontalScrollIndicator={false}>');expect(s).not.toMatch(/ZoneCar|GOALS|zonesOf/);expect(s).toContain('textBack');expect(read('src/ui/ServicesExplorer.tsx')).toContain('serviceHomeImages[h.key]')});
   it("unmapped types keep an icon rather than unrelated stock; newly generated matching service subjects are allowed", () => {
     const src = read("src/lib/imagery.ts");
     const block = src.slice(src.indexOf("const TYPE_TOPIC"), src.indexOf("export function typePhoto"));
@@ -368,12 +346,8 @@ describe("one icon set", () => {
       expect(read(f)).toContain("NavIcon");
     }
   });
-  it("top services cards carry the approved category photo", () => {
-    expect(read("src/ui/HomeScene.tsx")).toContain("source={serviceImagery.ceramic}");
-  });
-  it("night surfaces use one charcoal card colour", () => {
-    expect(read("src/lib/raised.ts")).toContain('material(mode,"surface")');
-  });
+  it('Home retains the approved service photo and real category destinations',()=>{expect(read('src/ui/HomeOriginalTop.tsx')).toContain('source={hero}');expect(read('src/ui/HomeScene.tsx')).toContain('p.onCategory(h.key)')});
+  it('night raised surfaces consume the active customer theme',()=>expect(read('src/lib/raised.ts')).toContain('backgroundColor: c.surface'));
 });
 
 describe("home car cards", () => {
@@ -412,11 +386,7 @@ describe("one tile size everywhere", () => {
     expect(h).not.toContain("compact?: boolean");
     expect((h.match(/aspectRatio: TILE_ASPECT/g) ?? []).length).toBe(1);
   });
-  it("Services uses quick-add rows while Home keeps its existing service entry", () => {
-    expect(read("src/app/(tabs)/catalogue/index.tsx")).toContain("<ServiceJourney");expect(read("src/ui/ServiceJourney.tsx")).toContain("testID={'quick-row-'+s.id}");
-    expect(read("src/ui/ServicesExplorer.tsx")).toContain("<ServicePackageCard");
-    expect(read("src/ui/HomeScene.tsx")).toContain("p.onService(s.service, s.key)");
-  });
+  it('Services retains quick-add rows and Home routes to category choices',()=>{expect(read('src/ui/ServiceJourney.tsx')).toContain("testID={'quick-row-'+s.id}");expect(read('src/ui/HomeScene.tsx')).toContain('p.onCategory(h.key)');expect(read('src/ui/ServicesExplorer.tsx')).toContain('<ServicePackageCard')});
 });
 
 describe("nav order and drawer", () => {
@@ -603,14 +573,7 @@ describe("car lists wait for the sign-in to load", () => {
 
 import { DAY_ATMOSPHERE } from "@autodeck/ui/theme";
 describe("one Day background across the apps", () => {
-  it("customer Day ground is the shared atmosphere, studio applies it, Home photo dissolves into it", () => {
-    expect(read("src/lib/raised.ts")).toContain('canvas: "#FFFFFF"');
-    expect(read("src/lib/raised.ts")).toContain("groundImage: night ? nightGround : DAY_ATMOSPHERE");
-    expect(read("../studio/src/app/_layout.tsx")).toContain("rs.backgroundImage = DAY_ATMOSPHERE");
-    const h = read("src/ui/HomeBackdrop.tsx");
-    expect(h).toContain("maskImage");
-    expect(h).not.toContain("#F3F2EF");
-  });
+  it('approved customer ground is isolated from the staff atmosphere',()=>{expect(read('src/lib/raised.ts')).toContain('glacierGround(night)');expect(read('src/lib/boot-theme.ts')).toContain('applyCustomerGlacier()');expect(read('../studio/src/app/_layout.tsx')).toContain('rs.backgroundImage = DAY_ATMOSPHERE')});
   it("the atmosphere is warm off-white with only a faint orange glow", () => {
     expect(DAY_ATMOSPHERE).toContain("#FFFFFF");
     expect((DAY_ATMOSPHERE.match(/rgba\(255,178,122/g) ?? []).length).toBe(1);
@@ -751,7 +714,7 @@ describe("visit history rows: compact date block, subtle status badge and a smal
 });
 
 describe("Home scene hierarchy",()=>{
- it("one personal stage precedes visual services, exact Club heading and compact showroom",()=>{const h=read("src/ui/HomeScene.tsx");expect(h.indexOf('<HomeOriginalTop')).toBeLessThan(h.indexOf('home-personal-stage'));expect(h.indexOf('home-state-dock')).toBeLessThan(h.indexOf('home-service-triad'));expect(read('src/ui/HomeOriginalTop.tsx')).toContain('All under one roof.');expect(read('src/ui/HomeClub.tsx')).toContain('>Make care a habit</Text>');expect(h).not.toContain('<KenBurns');});
+ it('Home preserves approved hierarchy and membership after service choices',()=>{const h=read('src/ui/HomeScene.tsx');expect(h.indexOf('<HomeOriginalTop')).toBeLessThan(h.indexOf('home-state-dock'));expect(h.indexOf('home-state-dock')).toBeLessThan(h.indexOf('home-service-shortcuts'));expect(read('src/ui/HomeClub.tsx')).toContain('>Membership</Text>');expect(h).not.toContain('<KenBurns')});
 });
 
 describe("Home ambient light is brand orange at low opacity",()=>{

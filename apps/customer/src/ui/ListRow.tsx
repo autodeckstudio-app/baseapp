@@ -11,7 +11,7 @@ export function ListRow({ icon, title, detail, action, expanded, onPress, last }
         <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{title}</Text>
         <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 11 }}>{detail}</Text>
       </View>
-      <NavIcon name={action === "Close" ? "close" : "proceed"} size={22} color={colors.textSecondary} cut={name === "light" ? "#FFFFFF" : "#252C35"}/>
+      {action === "Close" ? <Text style={{fontSize:11,color:colors.textSecondary}}>Close</Text> : null}
     </Pressable>
   );
 }

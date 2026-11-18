@@ -1,6 +1,6 @@
 import { View } from "react-native";
 import { space } from "@autodeck/ui/theme";
-import { Ambient } from "@autodeck/ui/native";
+import { Ambient } from "../../ui/kit";
 import { signOut } from "../../lib/auth-service";
 import { Button, Kicker, T } from "../../ui/kit";
 

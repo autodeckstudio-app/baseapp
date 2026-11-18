@@ -1,8 +1,9 @@
-// Customer tab bar, Instagram style: translucent glass, plain outline icons with no labels,
-// the active icon on a soft orange tint. It shrinks while the page scrolls down and returns on scroll up.
+// Customer tab bar: short labels, official AD centre mark, and theme-aware raised material.
+// It shrinks while the page scrolls down and returns on scroll up.
 import { useEffect, useRef } from "react";
-import { Animated, Platform, Pressable, View } from "react-native";
+import { Animated, Platform, Pressable, Text, View } from "react-native";
 import { NavIcon, type NavIconName } from "./NavIcon";
+import {raised} from "../lib/raised";
 import { AdMonogram } from "./AdMonogram";
 import { emitTabPressed, useExperienceTheme } from "@autodeck/ui/native";
 import { onNavCompact } from "../lib/nav-scroll";
@@ -37,6 +38,7 @@ export function RaisedTabBar({ state, descriptors, navigation, icons }: Props) {
   }, [t, reduce]);
   const scale = t.interpolate({ inputRange: [0, 1], outputRange: [1, 0.8] });
   const lift = t.interpolate({ inputRange: [0, 1], outputRange: [0, 10] });
+  const surfaces=raised(name);
   const glass = light
     ? { backgroundColor: "rgba(255,255,255,0.66)", borderColor: "rgba(20,22,26,0.07)" }
     : { backgroundColor: "rgba(40,43,47,0.55)", borderColor: "rgba(255,255,255,0.10)" };
@@ -46,7 +48,7 @@ export function RaisedTabBar({ state, descriptors, navigation, icons }: Props) {
       style={{ position: "absolute", left: 0, right: 0, bottom: (Platform.OS === "web" ? "calc(8px + env(safe-area-inset-bottom))" : 8) as unknown as number, alignItems: "center", paddingHorizontal: 12 }}
     >
       <Animated.View style={{ width: "100%", maxWidth: 360, transform: [{ translateY: lift }, { scale }] }}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-around", width: "100%", paddingHorizontal: 6, paddingVertical: 6, borderRadius: 24, borderWidth: 1, ...glass, ...(Platform.OS === "web" ? ({ backdropFilter: "blur(16px) saturate(140%)", WebkitBackdropFilter: "blur(16px) saturate(140%)" } as object) : null) }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-around", width: "100%", paddingHorizontal: 6, paddingVertical: 6, borderRadius: 24, borderWidth: 1, ...glass,...surfaces.card, ...(Platform.OS === "web" ? ({ backdropFilter: "blur(16px) saturate(140%)", WebkitBackdropFilter: "blur(16px) saturate(140%)" } as object) : null) }}>
         {visible.map((route) => {
           const focused = activeKey === route.key;
           const label = descriptors[route.key]?.options.title ?? route.name;
@@ -65,14 +67,15 @@ export function RaisedTabBar({ state, descriptors, navigation, icons }: Props) {
               style={({ pressed }) => ({ flex: 1, minWidth: 0, alignItems: "center", justifyContent: "center", paddingVertical: 2, opacity: pressed ? 0.7 : 1 })}
             >
               {route.name === "index" ? (
-                <View style={{ width: 56, height: 56, marginTop: -22, marginBottom: -4, borderRadius: 9999, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: focused ? "rgba(236,134,56,0.85)" : "rgba(236,134,56,0.35)", backgroundColor: light ? "rgba(251,248,243,0.96)" : "rgba(56,59,64,0.96)", ...(Platform.OS === "web" ? ({ boxShadow: "0 6px 18px rgba(0,0,0,0.28), 0 0 14px rgba(236,134,56,0.22)" } as object) : {}) }}>
+                <View style={{ width: 56, height: 56, marginTop: -22, marginBottom: -4, borderRadius: 9999, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: focused ? "rgba(236,134,56,0.85)" : "rgba(236,134,56,0.35)", backgroundColor: colors.surface, ...(Platform.OS === "web" ? ({ boxShadow: "0 6px 18px rgba(0,0,0,0.28), 0 0 14px rgba(236,134,56,0.22)" } as object) : {}) }}>
                   <AdMonogram theme={light ? "light" : "dark"} width={32} />
                 </View>
               ) : (
-              <View style={{ width: 52, height: 36, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: focused ? "rgba(236,134,56,0.26)" : "transparent" }}>
-                <NavIcon name={icons[route.name] ?? "home"} color={focused ? colors.textPrimary : colors.textSecondary} size={26} filled={focused} cut={light ? "#FFFFFF" : "#18181C"} />
+              <View style={{ width: 52, height: 36, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: focused ? "rgba(178,199,225,0.28)" : "transparent" }}>
+                <NavIcon name={route.name==="catalogue"?"grid":icons[route.name] ?? "home"} color={focused ? colors.textPrimary : colors.textSecondary} size={26} filled={focused} cut={light ? "#FFFFFF" : "#18181C"} />
               </View>
               )}
+              <Text style={{fontSize:9,lineHeight:13,color:focused?colors.textPrimary:colors.textSecondary,marginTop:route.name==='index'?4:0}}>{route.name==='bookings'?'Visits':route.name==='catalogue'?'Services':route.name==='index'?'Home':route.name==='garage'?'Garage':'You'}</Text>
             </Pressable>
           );
         })}

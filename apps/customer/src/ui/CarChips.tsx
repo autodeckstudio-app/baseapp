@@ -1,3 +1,4 @@
+import {raised} from "../lib/raised";
 // The car on Home: one card with the active car (photo, name, plate, size). With several cars a row of small names switches the active one.
 // Tap the car to open it in Garage.
 import { Platform, Pressable, ScrollView, Text, View } from "react-native";
@@ -14,7 +15,7 @@ export function CarChips({ cars, active, onActive, onOpen, onAdd, contained = fa
   const light = name === "light";
   if (cars.length === 0) {
     return (
-      <Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={onAdd} style={{ minHeight: 60, flexDirection: "row", alignItems: "center", paddingHorizontal: metrics.cardPad, ...glassPane(light) }}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={onAdd} style={{ minHeight: 60, flexDirection: "row", alignItems: "center", paddingHorizontal: metrics.cardPad, ...raised(name).card }}>
         <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>Add your car</Text>
       </Pressable>
     );
@@ -25,9 +26,9 @@ export function CarChips({ cars, active, onActive, onOpen, onAdd, contained = fa
   // The 160px frame returns the moment a photo exists (loading states stay inside CarThumb).
   const framed = !!car.vehicle?.photoUrl;
   return (
-    <View style={{ padding: metrics.cardPad, gap: 12, ...glassPane(light), ...(contained ? {overflow:"hidden", ...(Platform.OS === "web" ? {boxShadow:"inset 0 1px 0 rgba(255,255,255,0.12)",backdropFilter:"none",WebkitBackdropFilter:"none"} : {shadowOpacity:0,elevation:0})} as object : {}) }}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`Open ${car.title}`} onPress={() => onOpen(car)} style={({ pressed }) => ({ gap: 12, opacity: pressed ? 0.88 : 1 })}>
-        {framed ? <View style={{ borderRadius: 16, overflow: "hidden" }}><CarThumb car={car.vehicle} height={160} radius={16} /></View> : null}
+    <View style={{ padding: metrics.cardPad, gap: 12, ...raised(name).card, ...(contained ? {overflow:"hidden", ...(Platform.OS === "web" ? {boxShadow:"inset 0 1px 0 rgba(255,255,255,0.12)",backdropFilter:"none",WebkitBackdropFilter:"none"} : {shadowOpacity:0,elevation:0})} as object : {}) }}>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Open ${car.title}`} onPress={() => onOpen(car)} style={({ pressed }) => ({ gap: 12, minHeight:framed?104:60, justifyContent:"center", paddingRight:framed?"36%":0, opacity: pressed ? 0.88 : 1 })}>
+        {framed ? <View style={{position:"absolute",right:0,top:0,bottom:0,width:"34%",borderRadius:18,overflow:"hidden"}}><CarThumb car={car.vehicle} height={104} radius={18} /></View> : null}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           {!framed ? (
             <View style={{ width: 44, height: 44, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: light ? "rgba(29,27,38,0.06)" : "rgba(255,255,255,0.07)" }}>
@@ -35,7 +36,7 @@ export function CarChips({ cars, active, onActive, onOpen, onAdd, contained = fa
             </View>
           ) : null}
           <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
-            <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "800" }}>{car.title}</Text>
+            <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "600" }}>{car.title}</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               {car.plate ? <Plate value={car.plate} /> : null}
               {seg ? <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{seg}</Text> : null}

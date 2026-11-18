@@ -16,7 +16,7 @@ it("restored contact icons retain every callback, accessible name and minimum 48
  const callbacks=Array.from({length:5},()=>vi.fn());let r:any;const props={greeting:"Good evening",initial:"F",unread:0,cars:[],services:[],reminders:[],progress:null,live:null,membership:null,studio:{address:"HIDDEN",hours:"Hours",openText:"Open"},quick:[{key:"call",label:"Call",icon:"call",onPress:callbacks[0]},{key:"wa",label:"WhatsApp",icon:"whatsapp",onPress:callbacks[1]},{key:"map",label:"Directions",icon:"directions",onPress:callbacks[2]}],social:[{key:"wac",title:"WhatsApp",sub:"Our channel",icon:"channel",onPress:callbacks[3]},{key:"ig",title:"Instagram",sub:"@autodeck.studio",icon:"instagram",onPress:callbacks[4]}],onAvatar:()=>{},onBell:()=>{},onSearch:()=>{},onAllServices:()=>{},onService:()=>{},onCar:()=>{},onAddCar:()=>{},onBook:()=>{},onMembership:()=>{},onReminders:()=>{}};
  await act(async()=>{r=create(<HomeView {...props as any}/>)});
  for(const [i,label]of ["Call","WhatsApp","Directions","Channel","Instagram"].entries()){
- const button=r.root.findAllByType(Pressable).find((n:any)=>n.props.accessibilityLabel===label);expect(button).toBeTruthy();const style=button.props.style({pressed:true});expect(style.minHeight).toBeGreaterThanOrEqual(48);expect(style.transform).toBeUndefined();await act(async()=>button.props.onPress());expect(callbacks[i]).toHaveBeenCalledTimes(1);
+ const button=r.root.findAllByType(Pressable).find((n:any)=>n.props.accessibilityLabel===label);expect(button).toBeTruthy();const style=typeof button.props.style==="function"?button.props.style({pressed:true}):button.props.style;expect(style.minHeight).toBeGreaterThanOrEqual(48);expect(style.transform).toBeUndefined();await act(async()=>button.props.onPress());expect(callbacks[i]).toHaveBeenCalledTimes(1);
  }await act(async()=>r.unmount());
 });
 
@@ -26,7 +26,7 @@ it("shared headings stay compact, full detail stays visible, profile pencil keep
 it('Home removes only the redundant search bar, preserving official tagline, menu and notifications',async()=>{
  const search=vi.fn();let r:any;await act(async()=>{r=create(<HomeView {...{greeting:'Good evening',initial:'S',unread:0,cars:[],services:[],reminders:[],progress:null,live:null,membership:null,studio:{address:'',hours:'Hours'},onAvatar:()=>{},onBell:()=>{},onSearch:search,onAllServices:()=>{},onService:()=>{},onCar:()=>{},onAddCar:()=>{},onBook:()=>{},onMembership:()=>{},onReminders:()=>{}}as any}/>)});
  expect(r.root.findAllByType(Pressable).some((p:any)=>p.props.accessibilityLabel==='Search services')).toBe(false);
- const json=JSON.stringify(r.toJSON());expect(json).toContain('Complete car care.');expect(json).toContain('All under one roof.');
+ const json=JSON.stringify(r.toJSON());expect(json).toContain('Welcome to AutoDeck');expect(json).toContain('Car care &');
  for(const label of ['Menu','Notifications'])expect(r.root.findAllByType(Pressable).some((p:any)=>p.props.accessibilityLabel===label)).toBe(true);expect(search).not.toHaveBeenCalled();await act(async()=>r.unmount());
 });
 

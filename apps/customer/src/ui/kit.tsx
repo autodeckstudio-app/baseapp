@@ -1,3 +1,4 @@
+import {raised} from "../lib/raised";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import {metrics} from "../lib/metrics";
 import { NavIcon, type NavIconName } from "./NavIcon";
@@ -100,8 +101,8 @@ function useBar(appBar?: string, onBackOverride?: () => void) {
   return { title, back: onBackOverride ?? goBack };
 }
 
-function Ambient({ children }: { children?: ReactNode }) {
-  return <BaseAmbient>{children}</BaseAmbient>;
+export function Ambient({ children }: { children?: ReactNode }) {
+  const {name}=useExperienceTheme();const r=raised(name);return <View style={{flex:1,backgroundColor:r.ground,...(Platform.OS==="web"?{backgroundImage:r.groundImage} as object:{})}}>{children}</View>;
 }
 
 /** Studio photo behind the top of a screen (web), as on the canvas layout. */
@@ -227,7 +228,7 @@ export function Screen({
 
 /** Shared one-layer glass pane, with native blur and accessible fallback. */
 export function Pane({ children, pad = "gap", tone, fill, style, testID }: GlassProps) {
- return <BaseGlass pad={pad} {...(tone?{tone}:{})} {...(fill?{fill}:{})} {...(style?{style}:{})} {...(testID?{testID}:{})}>{children}</BaseGlass>;
+ const {name}=useExperienceTheme();const r=raised(name);return <BaseGlass pad={pad} {...(tone?{tone}:{})} {...(fill?{fill}:{})} style={[r.card,style]} {...(testID?{testID}:{})}>{children}</BaseGlass>;
 }
 
 export function Kicker({ children, tone = "tertiary" }: { children: ReactNode; tone?: "tertiary" | "accent" | "premium" }) {
@@ -299,8 +300,8 @@ export function Button({
           justifyContent: "center",
           flexDirection: "row",
           gap: space.breath,
-          ...inkButton(name,reduce,pressed),
-          ...(primary ? {borderColor:"rgba(194,84,10,.45)"} : {}),
+          ...raised(name).quiet,
+          ...(primary?{backgroundColor:name==="light"?"#252c32":"#ecf1f7",borderColor:"transparent",...(Platform.OS==="web"?{backgroundImage:"none",boxShadow:name==="light"?"8px 8px 18px #b4c2d360":"8px 8px 18px #00000040"}:{} as ViewStyle)}:{}),
 
           ...(kind === "danger" ? { borderColor: colors.danger } : null),
           opacity: off ? 0.64 : 1,
@@ -311,8 +312,8 @@ export function Button({
         style,
       ]}
     >
-      {busy ? <ActivityIndicator color={colors.textPrimary} /> : null}
-      {icon ? (!busy ? <NavIcon name={icon} size={24} color={kind === "danger" ? colors.danger : colors.textPrimary} cut={name === "light" ? "#FFFFFF" : "#252C35"}/> : null) : <T numberOfLines={1} role="bodyStrong" tone={kind === "danger" ? "danger" : "primary"} style={[{textAlign:"center",flexShrink:1},primary?{fontWeight:"700"}:null]}>
+      {busy ? <ActivityIndicator color={primary?(name==="light"?"#ffffff":"#202831"):colors.textPrimary} /> : null}
+      {icon ? (!busy ? <NavIcon name={icon} size={24} color={kind === "danger" ? colors.danger : colors.textPrimary} cut={name === "light" ? "#FFFFFF" : "#252C35"}/> : null) : <T numberOfLines={1} role="bodyStrong" tone={kind === "danger" ? "danger" : "primary"} style={[{textAlign:"center",flexShrink:1},primary?{fontWeight:"600",color:name==="light"?"#ffffff":"#202831"}:null]}>
         {label}
       </T>}
     </Pressable>

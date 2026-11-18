@@ -4,7 +4,7 @@ import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { TextInput } from "@autodeck/ui";
 import { space } from "@autodeck/ui/theme";
-import { Ambient } from "@autodeck/ui/native";
+import { Ambient } from "../../ui/kit";
 import { claimCustomerRecord, setupCustomerProfile, refreshAuthToken, isClaimRequired, signOut, rememberMyCustomerDocId } from "../../lib/auth-service";
 import { Button, Kicker, T } from "../../ui/kit";
 

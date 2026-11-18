@@ -4,17 +4,10 @@ import { readFileSync } from "node:fs";
 const read = (f: string) => readFileSync(`${__dirname}/../${f}`, "utf8");
 
 describe("Day surfaces are never the night colour", () => {
-  it("the light card recipe is warm off-white", () => {
-    const r = read("lib/raised.ts");
-    expect(r).toContain('surface: "#FFFFFF"');
-    expect(r).toContain('canvas: "#FFFFFF"');
-    expect(r).toContain('material(mode,"surface")');
-  });
-  it("glassPane has a light variant that is the warm card, not dark glass", () => {
-    const g = read("lib/glass-pane.ts");
-    const light = g.slice(g.indexOf("if (light)"), g.indexOf("if (Platform.OS !== \"web\")"));
-    expect(light).toMatch(/"#FFFFFF"|rgba\(255,255,255,0\.[5-9]/);
-    expect(light).not.toMatch(/rgba\((24|28|34|40),/);
+  it('approved pale card and ground stay in the light colour family',()=>{expect(read('lib/customer-glacier.ts')).toContain("canvas:'#edf1f5'");expect(read('lib/customer-glacier.ts')).toContain("surface:'#f7f9fb'");expect(read('lib/raised.ts')).toContain('backgroundColor: c.surface')});
+  it("glassPane delegates to the customer mode-aware material",()=>{
+    expect(read("lib/glass-pane.ts")).toContain("raised(light?'light':'night').card");
+    expect(read("lib/raised.ts")).toContain("backgroundColor: c.surface");
   });
   it("Home never calls glassPane without the mode", () => {
     expect(read("ui/HomeView.tsx")).not.toMatch(/glassPane\(\)/);
