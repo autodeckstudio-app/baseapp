@@ -79,3 +79,9 @@ export async function getActiveServices(options?:{catalogueOnly?:boolean}): Prom
   const result = await fn({});
   return options?.catalogueOnly===false?result.data.services.filter(s=>s.active):alignedCustomerServices(result.data.services).filter(s=>s.catalogueEntryKind!=='enquiry');
 }
+
+/** Accepted, price-safe publication for new work, also when Admin signs in to Studio. */
+export async function getPublishedServices():Promise<{services:Service[];publishId:string|null}>{
+ const result=await httpsCallable<{staffPublication:true},{services:Service[];cataloguePublication?:{publishId:string}}>(functions,'getServiceCatalogue')({staffPublication:true});
+ return {services:alignedCustomerServices(result.data.services).filter(s=>s.catalogueEntryKind!=='enquiry'),publishId:result.data.cataloguePublication?.publishId??null};
+}

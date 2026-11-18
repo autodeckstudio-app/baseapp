@@ -1,3 +1,4 @@
+import{usePublishedServices}from'../../../hooks/usePublishedServices';
 import{JobDelayControl}from'../../../components/JobDelayControl';
 import{VisitReceiptControl}from'../../../components/VisitReceiptControl';
 import{useVisitBill}from'../../../lib/use-visit-bill';
@@ -37,7 +38,7 @@ import {
 } from "../../../lib/payment-service";
 import { getCustomerMembership } from "../../../lib/membership-service";
 import { approvalSendButton, pendingApprovalNote } from "../../../lib/approval-send";
-import { createApproval, cancelApproval, listenToApprovalsForJob, getActiveServices } from "../../../lib/approval-service";
+import { createApproval, cancelApproval, listenToApprovalsForJob } from "../../../lib/approval-service";
 import { listenToInspection, startInspection } from "../../../lib/inspection-service";
 import type { Vehicle, Customer, ServiceJob, StudioConfig, Payment, Invoice, Booking, Membership, ApprovalRequest, Service, Inspection } from "@autodeck/core";
 import { JOB_STATUS_TRANSITIONS, formatDuration } from "@autodeck/core";
@@ -153,10 +154,16 @@ export default function JobDetailScreen() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [cancellingApprovalId, setCancellingApprovalId] = useState<string | null>(null);
   const [showApprovalForm, setShowApprovalForm] = useState(false);
-  const [services, setServices] = useState<Service[]>([]);
+  const [advanceAuth, setAdvanceAuth] = useState<StaffAuth | null | undefined>(undefined);
+  useEffect(() => onStaffAuthChanged(setAdvanceAuth), []);
+  const catalogue=usePublishedServices(advanceAuth?staffAuthFingerprint(advanceAuth):null,advanceAuth?.tenantId??null,showApprovalForm);
+  const services=catalogue.services;
+  useEffect(()=>{setSelectedServiceId(null)},[catalogue.revision]);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [approvalReason, setApprovalReason] = useState("");
+  const approvalScope=JSON.stringify([id,job?.id,job?.tenantId,staffAuthFingerprint(advanceAuth),catalogue.revision]);const approvalLive=useRef(approvalScope);approvalLive.current=approvalScope;
   const [creatingApproval, setCreatingApproval] = useState(false);
+  useEffect(()=>{setCreatingApproval(false)},[approvalScope]);
   const [approvalSent, setApprovalSent] = useState(false);
   const [approvalsBefore, setApprovalsBefore] = useState(0);
 
@@ -291,18 +298,20 @@ export default function JobDetailScreen() {
   }
 
   async function handleCreateApproval() {
-    if (!job || quotePaymentHold || creatingApproval || !selectedServiceId || !approvalReason.trim()) return;
-    setActionError(null);setApprovalsBefore(approvals.length);setApprovalSent(false);setCreatingApproval(true);
+    if(approvalLive.current!==approvalScope)return;
+    if (!job || quotePaymentHold || creatingApproval || !catalogue.isCurrent() || catalogue.loading || catalogue.error || !selectedServiceId || !services.some(s=>s.id===selectedServiceId) || !approvalReason.trim()) return;
+    const scope=approvalScope;setActionError(null);setApprovalsBefore(approvals.length);setApprovalSent(false);setCreatingApproval(true);
     try {
       await createApproval({ jobId: job.id, serviceId: selectedServiceId, reason: approvalReason.trim() });
+      if(approvalLive.current!==scope)return;
       setApprovalSent(true);
       setShowApprovalForm(false);
       setSelectedServiceId(null);
       setApprovalReason("");
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to request approval.");
+      if(approvalLive.current===scope)setActionError(err instanceof Error ? err.message : "Failed to request approval.");
     } finally {
-      setCreatingApproval(false);
+      if(approvalLive.current===scope)setCreatingApproval(false);
     }
   }
 
@@ -320,11 +329,7 @@ export default function JobDetailScreen() {
 
   function openApprovalForm() {
     setShowApprovalForm(true);
-    if (services.length === 0) {
-      void getActiveServices()
-        .then(setServices)
-        .catch((err: unknown) => setActionError(err instanceof Error ? err.message : "Failed to load services."));
-    }
+
   }
 
   const payBusyRef = useRef(false);
@@ -334,8 +339,7 @@ export default function JobDetailScreen() {
   // method flip can never retarget an armed panel - the binding is compared
   // synchronously against the current render context AND re-checked against
   // the latest-state ref inside the handler before any mutation.
-  const [advanceAuth, setAdvanceAuth] = useState<StaffAuth | null | undefined>(undefined);
-  useEffect(() => onStaffAuthChanged(setAdvanceAuth), []);
+
   type CashBinding = { mode: "record" | "confirm"; armId: number; jobId: string; tenantId: string; paymentId: string | null; epoch: number; gen: number };
   // Monotonic arm identity: every click arms a NEW id, even for the same
   // record. A retained callback from an older arm can never match the
@@ -798,7 +802,7 @@ export default function JobDetailScreen() {
                 Additional service
               </Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.sm }}>
-                {services.map((s) => {
+                {catalogue.loading?<Text>Checking the accepted service list…</Text>:null}{catalogue.error?<Text>{catalogue.error}</Text>:null}{catalogue.error?<Button label="Refresh services" variant="secondary" onPress={catalogue.refresh}/>:null}{services.map((s) => {
                   const selected = selectedServiceId === s.id;
                   return (
                     <TouchableOpacity
@@ -828,10 +832,10 @@ export default function JobDetailScreen() {
                 multiline
               />
               <Button
-                label={approvalSendButton(creatingApproval ? "sending" : "idle", !!selectedServiceId && !!approvalReason.trim()).label}
+                label={approvalSendButton(creatingApproval ? "sending" : "idle", !catalogue.loading && !catalogue.error && !!selectedServiceId && services.some(s=>s.id===selectedServiceId) && !!approvalReason.trim()).label}
                 onPress={() => void handleCreateApproval()}
                 loading={creatingApproval}
-                disabled={approvalSendButton(creatingApproval ? "sending" : "idle", !!selectedServiceId && !!approvalReason.trim()).disabled}
+                disabled={approvalSendButton(creatingApproval ? "sending" : "idle", !catalogue.loading && !catalogue.error && !!selectedServiceId && services.some(s=>s.id===selectedServiceId) && !!approvalReason.trim()).disabled}
               />
               <View style={{ height: spacing.sm }} />
               <Button

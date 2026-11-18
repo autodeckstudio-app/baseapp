@@ -22,6 +22,7 @@ vi.mock("expo-router", () => ({
 }));
 
 type Snap = { exists: () => boolean; data: () => unknown };
+const catalogueEvents:any[]=[];const publishedReads:any[]=[];
 const bookingErrors=new Map<string,()=>void>();
 const bookingListeners = new Map<string, (s: Snap) => void>();
 const jobListeners = new Map<string, (s: Snap) => void>();
@@ -29,6 +30,7 @@ vi.mock("firebase/firestore", () => ({
   doc: (_db: unknown, ...parts: string[]) => ({ parts }),
   getDoc: async () => ({ exists: () => false, data: () => undefined }),
   onSnapshot: (ref: { parts?: string[] }, cb: (s: Snap) => void,err?:()=>void) => {
+    if(ref.parts?.[0]==='cataloguePublishedVersions')catalogueEvents.push(cb);
     if (ref.parts && ref.parts[0] === "jobs" && ref.parts[1]) jobListeners.set(ref.parts[1], cb);
     if(ref.parts?.[0] === "bookings") {bookingListeners.set(ref.parts[1]!,cb);if(err)bookingErrors.set(ref.parts[1]!,err);}
     return () => {};
@@ -82,6 +84,7 @@ vi.mock("../../../lib/approval-service", () => ({
   createApproval: vi.fn(),
   cancelApproval: vi.fn(),
   getActiveServices: async () => [],
+  getPublishedServices:()=>new Promise(resolve=>publishedReads.push(resolve)),
   listenToApprovalsForJob: () => () => {},
 }));
 vi.mock("../../../lib/inspection-service", () => ({ listenToInspection: () => () => {}, startInspection: vi.fn() }));
@@ -153,7 +156,7 @@ const capturePress = (el: any, label: string): (() => void) => {
 const emitJob = (id: string, j: ServiceJob) => act(() => { jobListeners.get(id)?.({ exists: () => true, data: () => j }); });
 
 beforeEach(() => {
-  paneRenders.length = 0;
+  paneRenders.length = 0;catalogueEvents.length=0;publishedReads.length=0;
   paymentListeners.length = 0;
   jobListeners.clear();
   jobAuthListeners.clear();
@@ -610,3 +613,5 @@ it('a new cash hold kills an armed counter confirmation and old callbacks cannot
 it('one Send to quality check click binds the displayed job version and never advances Ready implicitly',async()=>{advanceJobStatus.mockResolvedValue({newStatus:'QUALITY_CHECK'});let el:any;await act(async()=>{el=create(createElement(JobDetailScreen))});emitJob('jA',mkJob('jA',{status:'IN_PROGRESS',updatedAt:'stage-v2'}));await flush();press(el,'Send to quality check');await flush();expect(advanceJobStatus).toHaveBeenCalledTimes(1);expect(advanceJobStatus.mock.calls[0]![6]).toEqual({expectedStatus:'IN_PROGRESS',expectedUpdatedAt:'stage-v2',operationId:'IN_PROGRESS:stage-v2:forward'});await act(async()=>el.unmount())});
 
 it('bay source distinguishes loaded unassigned, exact reservation, missing bay and unavailable config',async()=>{getStudioConfig.mockResolvedValue({tenantId:'t',bays:[{id:'wash',name:'Wash Bay 1',active:true,bayType:'wash'}]});let el:any;await act(async()=>{el=create(createElement(JobDetailScreen))});emitJob('jA',mkJob('jA',{bayId:''}));await flush();expect(textOf(el)).toContain('No bay assigned');expect(textOf(el)).not.toContain('Loading bay');emitJob('jA',mkJob('jA',{bayId:'wash'}));await flush();expect(textOf(el)).toContain('Wash Bay 1');emitJob('jA',mkJob('jA',{bayId:'removed'}));await flush();expect(textOf(el)).toContain('Bay needs review');getStudioConfig.mockRejectedValue(Error('unavailable'));emitJob('jA',mkJob('jA',{studioId:'s2',bayId:'wash'}));await flush();expect(textOf(el)).toContain('Bay unavailable');expect(textOf(el)).not.toContain('Wash Bay 1');await act(async()=>el.unmount())});
+
+it('an already-open additional-service picker refreshes in place and clears its old selection after publication',async()=>{let el:any;await act(async()=>{el=create(createElement(JobDetailScreen))});emitJob('jA',mkJob('jA',{status:'IN_PROGRESS'}));await flush();press(el,'Request Approval');await flush();expect(publishedReads).toHaveLength(1);await act(async()=>publishedReads[0]({services:[{id:'wash',name:'Old listed wash',tenantId:'t'}],publishId:'p1'}));expect(textOf(el)).toContain('Old listed wash');press(el,'Old listed wash');await act(async()=>catalogueEvents[0]({exists:()=>true,data:()=>({publishId:'p2'}),metadata:{fromCache:false}}));expect(textOf(el)).not.toContain('Old listed wash');expect(textOf(el)).toContain('Checking the accepted service list');await act(async()=>publishedReads[1]({services:[{id:'wash',name:'Updated listed wash',tenantId:'t'}],publishId:'p2'}));expect(textOf(el)).toContain('Updated listed wash');const disabled=el.root.findAll((n:any)=>typeof n.props.onPress==='function'&&n.props.disabled===true&&textOfNode(n).includes('approval'));expect(disabled.length).toBeGreaterThan(0);await act(async()=>el.unmount())});
