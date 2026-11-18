@@ -1,3 +1,4 @@
+import {serviceActionSurface} from '../../../lib/service-action-surface';
 import {productDisplayName} from '../../../lib/product-display-name';
 import{useCataloguePublication}from'../../../hooks/useCataloguePublication';
 import {ServiceIdentityMedia} from '../../../ui/ServiceIdentityMedia';
@@ -145,7 +146,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
   const homeBack=detailHomeBack(origin);
   const [focused, setFocused] = useState(true);
   useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
-  const { colors } = useExperienceTheme();
+  const { colors,name } = useExperienceTheme();
   const [after, setAfter] = useState(true);
   const [benefitsOpen,setBenefitsOpen]=useState(false);
   useEffect(()=>setBenefitsOpen(false),[id]);
@@ -226,7 +227,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         {!service.brand||!['ceramic','ppf','coating'].includes(service.category)?(()=>{const facts=[service.brand&&service.brand!=="Add-ons"?`Product brand: ${service.brand}`:null,service.warrantyLabel?`Listed warranty: ${service.warrantyLabel}`:null].filter(Boolean).join(" · ");return facts?<T role="caption" tone="secondary">{facts}</T>:null})():null}
         {reviewedStartingPrice(service)?<Pane pad="gap"><View style={{gap:14}}><View style={{gap:5}}><Kicker>Starting price</Kicker><T role="title" tone="accent">{reviewedStartingPrice(service)!.label}</T></View>{service.category!=="tinting"?<View style={{borderTopWidth:1,borderColor:colors.borderSubtle,paddingTop:12}}><T role="caption" tone="secondary">{reviewedStartingPrice(service)!.condition}</T></View>:null}</View></Pane>:<ServicePrice inlineBreakdown compactQuote priceLabel={service.category==='garage'?'Price':'Price for your car'} {...{category:service.category,priceOnRequest:(service.priceOnRequest===true || reviewedQuoteRequired(service)),needsCarType,hasCar:!!pricingVehicle.vehicle,carSizeKnown:!!selectedCategory,loading:priceLoading,error:priceError,breakdown:priceBreakdown,onRetry,onHelp:()=>router.navigate("/(tabs)/help"),onGarage:()=>router.push(pricingVehicle.vehicle?`/(tabs)/garage/${pricingVehicle.vehicle.id}`:"/(tabs)/garage/add")}}/>}
 
-        {focused&&showBar?<Button style={(service.priceOnRequest || reviewedQuoteRequired(service))?undefined:{alignSelf:"stretch",width:"100%",marginTop:16,marginBottom:16}} kind={(service.priceOnRequest===true || reviewedQuoteRequired(service))?"quiet":"primary"} label={(service.priceOnRequest===true || reviewedQuoteRequired(service))?"Discuss your requirements":"Book now"} disabled={!(service.priceOnRequest || reviewedQuoteRequired(service))&&priceBreakdown===null} onPress={()=>(service.priceOnRequest===true || reviewedQuoteRequired(service))?router.push({pathname:"/(tabs)/help",params:{service:service.name}}):router.push(`/(tabs)/book/${id}`)}/>:null}
+        {focused&&showBar?<Button style={{...serviceActionSurface(name),...((service.priceOnRequest || reviewedQuoteRequired(service))?{}:{alignSelf:"stretch",width:"100%",marginTop:16,marginBottom:16})}} kind={(service.priceOnRequest===true || reviewedQuoteRequired(service))?"quiet":"primary"} label={(service.priceOnRequest===true || reviewedQuoteRequired(service))?"Discuss your requirements":"Book now"} disabled={!(service.priceOnRequest || reviewedQuoteRequired(service))&&priceBreakdown===null} onPress={()=>(service.priceOnRequest===true || reviewedQuoteRequired(service))?router.push({pathname:"/(tabs)/help",params:{service:service.name}}):router.push(`/(tabs)/book/${id}`)}/>:null}
 
         </>
 

@@ -1,3 +1,4 @@
+import{serviceActionSurface}from'../lib/service-action-surface';
 import {ProtectionFamilyIntro,type ProtectionFamily} from './ProtectionFamilyIntro';
 import {ServiceIdentityMedia} from './ServiceIdentityMedia';
 import {serviceExplanation} from '../lib/service-explanations';
@@ -57,7 +58,7 @@ export function ServiceProductSelection({title,description,services,priceLabel,o
   {conditions.filter(text=>!(application&&text==='Requires a brand-selected installer')).map((text,i)=><Text key={i} style={[font,{fontSize:10,lineHeight:16,color:muted,marginBottom:7}]}>Compatibility: {text}</Text>)}
 
 
-  <Pressable accessibilityRole="button" accessibilityLabel={onSelectForVisit?(selectedForVisit?.includes(s.id)?'Remove ':'Add ')+s.name:`${s.priceOnRequest?'Discuss requirements for':'Review booking for'} ${s.name}`} onPress={()=>onSelectForVisit?onSelectForVisit(s):s.priceOnRequest&&onInspect?onInspect(s):onOpen(s)} style={{minHeight:44,paddingHorizontal:14,borderRadius:8,backgroundColor:night?'#e8e2f7':'#202126',flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}><Text style={[font,{fontSize:12,fontWeight:'600',color:night?'#201a2c':'#fff'}]}>{onSelectForVisit?(selectedForVisit?.includes(s.id)?'Added':'Add to cart'):s.priceOnRequest?'Discuss your requirements':'Review & book'}</Text></Pressable>
+  <Pressable accessibilityRole="button" accessibilityLabel={onSelectForVisit?(selectedForVisit?.includes(s.id)?'Remove ':'Add ')+s.name:`${s.priceOnRequest?'Discuss requirements for':'Review booking for'} ${s.name}`} onPress={()=>onSelectForVisit?onSelectForVisit(s):s.priceOnRequest&&onInspect?onInspect(s):onOpen(s)} style={({pressed})=>({...serviceActionSurface(name,!!selectedForVisit?.includes(s.id),pressed),minHeight:46,paddingHorizontal:16,flexDirection:'row',alignItems:'center',justifyContent:'center'})}><Text style={[font,{fontSize:12,fontWeight:'600',color:ink}]}>{onSelectForVisit?(selectedForVisit?.includes(s.id)?'Added':'Add to cart'):s.priceOnRequest?'Discuss your requirements':'Review & book'}</Text></Pressable>
   {s.priceOnRequest?<Pressable accessibilityRole="button" accessibilityLabel={`Full details for ${s.name}`} onPress={()=>onOpen(s)} style={{minHeight:44,justifyContent:'center',alignItems:'center',marginTop:4}}><Text style={[font,{fontSize:11,color:muted,textDecorationLine:'underline'}]}>Full service details</Text></Pressable>:null}
   {productPage&&['Ceramic','PPF','PPS'].includes(s.customerMenu?.family??'')?<View style={{marginTop:24,borderTopWidth:1,borderColor:rule,paddingTop:18,gap:12}}><ProtectionFamilyIntro showMedia={false} family={s.customerMenu!.family as ProtectionFamily} careAction={careAction}/></View>:null}
   {services.length>1?<View>

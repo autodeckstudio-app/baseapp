@@ -1,4 +1,5 @@
 import{ServicesExplorer}from'./ServicesExplorer';
+import{serviceActionSurface}from'../lib/service-action-surface';
 import{ServiceProductSelection}from'./ServiceProductSelection';
 import{layout}from'@autodeck/ui/theme';
 import{raised}from'../lib/raised';
@@ -33,7 +34,7 @@ export function ServiceJourney({services,path,query,onPath,onOpen,onHelp,priceLa
  const crossBay=new Set(selected.map(s=>s.requiredBayType)).size>1;
  const money=(n:number)=>'₹'+(n/100).toLocaleString('en-IN');const price=(s:Service)=>s.priceOnRequest?'Inspect first':s.basePrice===0?'Free walk-in':priceLabel(s)??money(s.basePrice);
  const mini=(label:string,onPress:()=>void,active=false,aria?:string)=><Pressable accessibilityRole="button" accessibilityLabel={aria??label} onPress={onPress} style={{minHeight:44,minWidth:44,paddingHorizontal:4,alignItems:'flex-start',justifyContent:'center'}}><Text style={[font,{fontSize:12,lineHeight:17,fontWeight:active?'700':'500',color:active?accent:ink}]}>{label}</Text></Pressable>;
- const action=(label:string,onPress:()=>void,added=false,aria?:string)=><Pressable accessibilityRole="button" accessibilityLabel={aria??label} onPress={onPress} style={{minHeight:46,minWidth:82,paddingHorizontal:16,borderRadius:12,backgroundColor:added?chosen:accent,alignItems:'center',justifyContent:'center'}}><Text style={[font,{fontSize:13,lineHeight:19,fontWeight:'600',color:added?ink:'#201a2c'}]}>{label}</Text></Pressable>;
+ const action=(label:string,onPress:()=>void,added=false,aria?:string)=><Pressable accessibilityRole="button" accessibilityLabel={aria??label} accessibilityState={{selected:added}} onPress={onPress} style={({pressed})=>({...serviceActionSurface(name,added,pressed),minHeight:46,minWidth:82,paddingHorizontal:16,alignItems:'center',justifyContent:'center'})}><Text style={[font,{fontSize:13,lineHeight:19,fontWeight:'600',color:ink}]}>{label}</Text></Pressable>;
  const rootJourney=!path.home&&!query.trim();const journeyHome=need==='clean'?'washing':need==='protect'?'paint':need==='fix'?'garage':'modifications';const effectiveHome=path.home??journeyHome;
  let shown=services.filter(s=>s.active&&s.category!=='pickup');const q=query.trim().toLowerCase();if(q)shown=shown.filter(s=>(s.name+' '+s.description+' '+servicePlacement(s)?.family).toLowerCase().includes(q));else{if(rootJourney&&need!=='all')shown=shown.filter(s=>servicePlacement(s)?.home===journeyHome);if(path.home)shown=shown.filter(s=>servicePlacement(s)?.home===path.home);if(path.family)shown=shown.filter(s=>servicePlacement(s)?.family===path.family);if(path.brand)shown=shown.filter(s=>s.brand===path.brand)}
  const families=[...new Set(services.filter(s=>servicePlacement(s)?.home===path.home).map(s=>servicePlacement(s)?.family).filter(Boolean))] as string[];
