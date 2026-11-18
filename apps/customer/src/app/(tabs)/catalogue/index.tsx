@@ -31,7 +31,6 @@ import {
 } from "../../../lib/vehicle-size";
 import { careEntryPrice } from "../../../lib/service-journey";
 import { SERVICE_QUOTE_JOURNEY_READY } from "../../../lib/service-quote";
-import { useSegmentSwipe } from "../../../lib/segment-swipe";
 import { glassInner } from "../../../lib/glass";
 
 export default function CatalogueScreen() {
@@ -82,20 +81,7 @@ export default function CatalogueScreen() {
     if (replace) router.replace(href);
     else router.push(href);
   };
-  const filterKeys = ["all", ...SERVICE_HOMES.map((h) => h.key)];
-  const pathRef = useRef(path);
-  pathRef.current = path;
-  const searching = !!q.trim();
-  const fromRoute = !!path.home;
-  const swipe = useSegmentSwipe(
-    filterKeys,
-    () => pathRef.current.home ?? "all",
-    (key) =>
-      navigate(
-        key === "all" ? {} : { home: key as ServicesPath["home"] },
-        true,
-      ),
-  );
+  const fromRoute=!!path.home;
   const currentHome=SERVICE_HOMES.find(h=>h.key===path.home);
   const top = (
     <View
@@ -152,10 +138,8 @@ export default function CatalogueScreen() {
       <View
         key={JSON.stringify(path)}
         testID="services-swipe-area"
-        {...(!path.family && !searching ? swipe.handlers : {})}
         style={[
           { gap: 20, minHeight: Math.max(winH - 300, 480) },
-          !path.family && !searching ? swipe.style : null,
         ]}
       >
         {error ? (

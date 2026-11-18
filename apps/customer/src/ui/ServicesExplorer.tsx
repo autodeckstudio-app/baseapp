@@ -200,8 +200,12 @@ export function ServicesExplorer({
   onReference,
   onHelp,
   priceLabel,
+  onSelectForVisit,
+  selectedForVisit,
 }: {
   services: Service[];
+  onSelectForVisit?: ((s:Service)=>void)|undefined;
+  selectedForVisit?: readonly string[]|undefined;
   path: ServicesPath;
   query: string;
   onPath: (p: ServicesPath) => void;
@@ -370,7 +374,7 @@ export function ServicesExplorer({
         {title:home.label,onPress:()=>onPath({home:home.key})},
         ...(activeBrand ? [{title:family,onPress:()=>onPath(parentPath(path))}] : []),
       ]}/>
-      <ServiceProductSelection key={`${family}:${activeBrand??"all"}`} title={activeBrand ? `${activeBrand} products` : title} description={FAMILY_COPY[family]} services={shown} priceLabel={priceLabel} onOpen={onOpen} onBook={onBook} onInspect={s=>onHelp(s.name)} careAction={careAction}/>
+      <ServiceProductSelection key={`${family}:${activeBrand??"all"}`} title={activeBrand ? `${activeBrand} products` : title} description={FAMILY_COPY[family]} services={shown} priceLabel={priceLabel} onOpen={onOpen} onBook={onBook} onInspect={s=>onHelp(s.name)} careAction={careAction} {...(onSelectForVisit&&shown.every(s=>s.active&&!s.priceOnRequest&&!s.customerMenu?.bookingMode&&s.basePrice>0)?{onSelectForVisit,selectedForVisit:selectedForVisit??[]}:{})}/>
     </View>;
   }
   // Legacy work-first detailing renderer. Current nested selections return above.
