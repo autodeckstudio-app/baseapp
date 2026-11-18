@@ -1,3 +1,5 @@
+import{serviceSelection,selectionOwnerKey}from'../../../lib/booking-selection';
+import{listOwnerKey}from'../../../lib/owner-key';
 import{bookingExtras}from'../../../lib/booking-selection';
 import{serviceOnlineBookingIssue}from'@autodeck/core';
 import {PickupLocation} from '../../../ui/PickupLocation';
@@ -376,6 +378,7 @@ export default function BookingConfirmScreen() {
       });
       if(!current())return;
       created = true;
+      const cartOwner=listOwnerKey(auth);serviceSelection.consume(selectionOwnerKey(auth.status==='ready'&&cartOwner?{uid:auth.user.uid,tenantId:auth.claims.tenantId,customerId:cartOwner.key}:null),[params.serviceId,...extraIds]);
       // Create the booking exactly as before, then request pickup/drop with
       // the new booking id (round 8). The request's failure never fails the
       // booking - the booking page shows a call-the-studio note instead.

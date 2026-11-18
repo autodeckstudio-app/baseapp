@@ -13,6 +13,7 @@ export function createServiceSelection(){let owner:string|null=null,ids:readonly
  bind(next:string|null){if(next===owner)return;owner=next;ids=[];emit()},
  read(scope:string|null):readonly string[]{return scope&&scope===owner?ids:EMPTY},
  toggle(scope:string|null,id:string){if(!scope||scope!==owner||!/^[A-Za-z0-9_-]{1,120}$/.test(id))return false;if(ids.includes(id)){ids=ids.filter(v=>v!==id);emit();return true}if(ids.length>=5)return false;ids=[...ids,id];emit();return true},
+ consume(scope:string|null,booked:readonly string[]){if(!scope||scope!==owner)return;const used=new Set(booked),next=ids.filter(id=>!used.has(id));if(next.length!==ids.length){ids=next;emit()}},
  clear(scope:string|null){if(scope&&scope===owner){ids=[];emit()}},
  reconcile(scope:string|null,currentIds:ReadonlySet<string>){if(!scope||scope!==owner)return;const next=ids.filter(id=>currentIds.has(id));if(next.length!==ids.length){ids=next;emit()}}
 }}

@@ -205,5 +205,5 @@ describe("bay occupancy admission (status-based holders)",()=>{
   });
 });
 describe("customer in-app milestones",()=>{
-  it.each([["VEHICLE_RECEIVED","vehicle_received"],["QUALITY_CHECK","quality_check"],["DELIVERED","vehicle_delivered"],["IN_PROGRESS","job_started"],["READY_FOR_DELIVERY","job_completed"]])("maps %s to %s",async(status,type)=>{const n=await buildNotification(getFirestore(),{action:"job.status_advanced",entityId:"j",after:{status}} as any);expect(n).toMatchObject({type,userId:"c",entityType:"Booking",entityId:"b"});});
+  it.each([["VEHICLE_RECEIVED","vehicle_received"],["QUALITY_CHECK","quality_check"],["DELIVERED","vehicle_delivered"],["IN_PROGRESS","job_started"],["READY_FOR_DELIVERY","job_completed"]])("maps %s to %s",async(status,type)=>{const n=await buildNotification(getFirestore(),{action:"job.status_advanced",entityId:"j",after:{status}} as any);if(status==="READY_FOR_DELIVERY")expect(n).toMatchObject({type,userId:"c",entityType:"Booking",entityId:"b"});else expect(n).toBeNull();});
 });

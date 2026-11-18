@@ -5,7 +5,7 @@
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/startup-feedback-20261117 ]; then
   reviewed_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
   [ "$reviewed_parent" = ed3d40d14693ce130cd94820a549d44158384059 ] || exit 0
-  reviewed_paths="$(git diff --name-only HEAD^ HEAD | LC_ALL=C sort | sha256sum | cut -d' ' -f1)"
+  reviewed_paths="$(git diff --name-only "$reviewed_parent" HEAD | LC_ALL=C sort | sha256sum | cut -d' ' -f1)"
   [ "$reviewed_paths" = 4129ff806cd76d47fb89a6607ebe051f8b9aa0518c18633152c0cc9e223e8e95 ] || exit 0
   printf 'combined test release: SKIP automatic build (%s); named-project deployment only\n' "$1"
   exit 0

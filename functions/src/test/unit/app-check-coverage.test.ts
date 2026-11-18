@@ -55,6 +55,7 @@ function listTsFilesRecursive(dir: string): string[] {
 // the admin app gets a genuine free App Check provider (ReCaptchaV3Provider)
 // with no native/EAS blocker.
 const ENFORCED = [
+  "job/reportJobDelay.ts",
   "visit/coordinationRequests.ts",
   "visit/getRetainedTransportList.ts",
   "visit/retainedTransportOperations.ts",

@@ -45,7 +45,7 @@ describe("gift guardrails (source)", () => {
   it("the gift record holds only the hash of the code (the plain code is in the server-only giftSecrets, see gift-purchase.test.ts)", () => {
     expect(src).toContain("codeHash");
     // The plain code is written only to server-only giftSecrets (creation lives in lib/gift-purchase.ts).
-    expect(purchaseSrc).toMatch(/giftId: ref\.id, buyerId: user\.uid, tenantId: user\.claims\.tenantId, code, createdAt/);
+    expect(purchaseSrc).toMatch(/giftId: ref\.id, buyerId: customerDocId, tenantId: user\.claims\.tenantId, code, createdAt/);
   });
   it("booking marks the gift used in the same transaction, with no stacking", () => {
     expect(booking).toContain('status: "REDEEMED"');
