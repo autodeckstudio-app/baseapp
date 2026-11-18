@@ -500,7 +500,7 @@ export default function BookingDetailScreen() {
 
 
       {!isMock && ownerVerified && job && booking.status==='COMPLETED' ? <VisitRecords key={routeScope+job.id} jobId={job.id} vehicle={car?`${car.make} ${car.model}`:'This visit'} hasInspection={inspection?.status==='finalized'} onInspection={()=>router.push({pathname:'/(tabs)/bookings/inspection',params:{jobId:job.id}})}/> : <>
-      {!isMock && ownerVerified && job ? <View style={{gap:12}}>{job.status!=="READY_FOR_DELIVERY"?<Pane pad="gap"><Row title="Work record" expanded={workOpen} detail={workOpen?"Hide performed work":"View performed work and QC"} onPress={()=>setWorkOpen(v=>!v)} last/></Pane>:null}{workOpen||job.status==="READY_FOR_DELIVERY"?<JobWorkAndCoverage key={job.id} jobId={job.id} vehicle={car?`${car.make} ${car.model}`:"This visit"}/>:null}</View>:null}
+      {!isMock && ownerVerified && job ? <View style={{gap:12}}>{job.status!=="READY_FOR_DELIVERY"?<Pane pad="gap"><Row title="Work record" trailing={<View />} expanded={workOpen} detail={workOpen?"Hide performed work":"View performed work and QC"} onPress={()=>setWorkOpen(v=>!v)} last/></Pane>:null}{workOpen||job.status==="READY_FOR_DELIVERY"?<JobWorkAndCoverage key={job.id} jobId={job.id} vehicle={car?`${car.make} ${car.model}`:"This visit"}/>:null}</View>:null}
 
       {inspection?.status === "finalized" && job ? (
         <Pane pad="inset">
