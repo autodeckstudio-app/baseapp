@@ -344,8 +344,8 @@ export function ServicesExplorer({
   const addonRefs = selectedRefs.filter((r) => r.brand === ADDON_BRAND);
   const brands = [
     ...new Set([
-      ...selected.map((s) => s.brand).filter((b): b is string => !!b && b !== ADDON_BRAND && b !== "Standard"),
-      ...selectedRefs.map((r) => r.brand).filter((b): b is string => !!b && b !== ADDON_BRAND && b !== "Standard"),
+      ...selected.map((s) => s.brand).filter((b): b is string => !!b && b !== ADDON_BRAND && (home.key === "paint" || b !== "Standard")),
+      ...selectedRefs.map((r) => r.brand).filter((b): b is string => !!b && b !== ADDON_BRAND && (home.key === "paint" || b !== "Standard")),
     ]),
   ].sort();
   const chooseBrands = !!family && brands.length > 0 && !activeBrand;
