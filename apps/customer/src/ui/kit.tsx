@@ -1,3 +1,4 @@
+import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import {metrics} from "../lib/metrics";
 import { NavIcon, type NavIconName } from "./NavIcon";
 import { SceneMotion } from "./SceneMotion";
@@ -174,6 +175,10 @@ export function Screen({
   /** Pinned above the scroll area (sticky chips, search). */
   top?: ReactNode;
 }) {
+  // Expo Router supplies native insets. Web must use the viewport CSS inset,
+  // not add the provider inset again. Keep it outside both header/scroll paths.
+  const safeInsets = useContext(SafeAreaInsetsContext);
+  const safeTop = (Platform.OS === "web" ? "env(safe-area-inset-top, 0px)" : safeInsets?.top ?? 0) as unknown as number;
   const scrollRef = useRef<ScrollView>(null);
   const bar = useBar(appBar, onBack);
   // Screen deliberately removes unfocused content. Keep offsets outside that ScrollView lifecycle.
@@ -212,8 +217,10 @@ export function Screen({
   return (
     <Ambient>
       {canvas ? <CanvasBackdrop /> : null}
+      <View testID="screen-safe-area" style={{flex:1,paddingTop:safeTop}}>
       {top ? <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: space.inset, gap: space.line, zIndex: 2 }}>{bar ? <AppBar title={bar.title} onBack={bar.back} textBack={textBack} /> : null}{top}</View> : null}
       {scroll ? <ScrollView style={viewportBottomInset?{marginBottom:viewportBottomInset}:undefined} showsVerticalScrollIndicator={false} testID="screen-scroll" ref={scrollRef} scrollEventThrottle={16} onLayout={restoreOffset} onContentSizeChange={restoreOffset} onScrollBeginDrag={cancelRestore} onTouchStart={cancelRestore} {...(Platform.OS==='web'?{onWheel:cancelRestore}:{})} onScroll={(e) => {if(!scrollActive.current)return;const y=e.nativeEvent.contentOffset.y;const target=offsets.current.get(scrollIdentity)??0;if(restorePending.current){if(Math.abs(y-target)>1)return;restorePending.current=false;}offsets.current.set(scrollIdentity,y);reportScroll(y)}} contentContainerStyle={{ flexGrow: 1 }}><ScreenScrollContext.Provider value={()=>{restorePending.current=false;offsets.current.set(scrollIdentity,0);scrollRef.current?.scrollTo({y:0,animated:true})}}>{content}</ScreenScrollContext.Provider></ScrollView> : content}
+      </View>
     </Ambient>
   );
 }

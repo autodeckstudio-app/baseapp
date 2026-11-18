@@ -13,6 +13,7 @@ b.onLoad({filter:/^blur-web$/,namespace:'preview'},()=>({contents:`export {defau
 b.onResolve({filter:/^@autodeck\/ui\/tokens$/},()=>({path:path.join(root,'packages/ui/src/tokens/index.ts')}));
 b.onResolve({filter:/^@autodeck\/ui\/native$/},()=>({path:path.join(root,'packages/ui/src/native/index.ts')}));
 b.onResolve({filter:/^@autodeck\/ui\/theme$/},()=>({path:path.join(root,'packages/ui/src/theme/index.ts')}));
+b.onResolve({filter:/^react-native-safe-area-context$/},()=>({path:path.join(root,'apps/customer/test/stubs/safe-area.ts')}));
 b.onResolve({filter:/^react-native$/},()=>({path:customerRequire.resolve('react-native-web')}));
 b.onResolve({filter:/^expo-blur$/},()=>({path:'blur-web',namespace:'preview'}));
 b.onResolve({filter:/^expo-image-picker$/},()=>({path:'image-picker',namespace:'preview'}));
@@ -22,4 +23,4 @@ b.onResolve({filter:/^expo-router$/},()=>({path:dir+'/mocks.ts'}));
 b.onResolve({filter:/\/(useAuth|notification-service|vehicle-size|catalogue-service)$/},()=>({path:dir+'/mocks.ts'}));
 }}]});
 
-import fs from'node:fs';for(const mode of['current','proposed'])fs.writeFileSync('/downloads/ad-customer-theme-preview/'+mode+'.html','<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body,#root{height:100%;margin:0}body{overflow:hidden}</style><div id="root"></div><script>fetch=()=>Promise.reject(Error("LOCAL ONLY"));XMLHttpRequest=class{constructor(){throw Error("LOCAL ONLY")}};</script><script src="'+mode+'.js"></script>');
+import fs from'node:fs';for(const mode of['current','proposed'])fs.writeFileSync('/downloads/ad-customer-theme-preview/'+mode+'.html','<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>html,body,#root{height:100%;margin:0}body{overflow:hidden}</style><div id="root"></div><script>fetch=()=>Promise.reject(Error("LOCAL ONLY"));XMLHttpRequest=class{constructor(){throw Error("LOCAL ONLY")}};</script><script src="'+mode+'.js"></script>');
