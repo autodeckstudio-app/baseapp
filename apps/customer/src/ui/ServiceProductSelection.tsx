@@ -43,10 +43,10 @@ export function ServiceProductSelection({title,description,services,priceLabel,o
  const featured=highlights;
  const price=(item:Service)=>item.priceOnRequest?'Quote on request':priceLabel(item)??'Quote on request';
  return <View style={{padding:0,gap:0,minWidth:0}}>
-  <View testID="service-summary-card" style={{...raised(name).card,padding:16,gap:0}}>
-  <ServiceIdentityMedia service={s}/>
-  <View style={{paddingVertical:16,gap:9}}>
-   <View testID="service-title-price" style={{flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:16}}><Text accessibilityRole="header" style={[font,{flex:1,minWidth:0,fontSize:26,lineHeight:32,letterSpacing:-.7,fontWeight:'600'}]}>{productPage&&s.brand!=='Standard'?short(s):s.name}</Text><Text style={[font,{width:'36%',flexShrink:0,textAlign:'right',fontSize:s.priceOnRequest?13:20,lineHeight:28,fontWeight:'600',letterSpacing:-.4}]}>{price(s)}</Text></View>
+  <View testID="service-summary-card" style={{...raised(name).card,padding:12,gap:0}}>
+  <ServiceIdentityMedia service={s} compact/>
+  <View style={{paddingVertical:12,gap:7}}>
+   <View testID="service-title-price" style={{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between',gap:10}}><Text accessibilityRole="header" style={[font,{flex:1,minWidth:0,fontSize:24,lineHeight:30,letterSpacing:-.7,fontWeight:'600'}]}>{productPage&&s.brand!=='Standard'?short(s):s.name}</Text><Text style={[font,{maxWidth:'43%',flexShrink:0,textAlign:'right',fontSize:s.priceOnRequest?13:20,lineHeight:28,fontWeight:'600',letterSpacing:-.4}]}>{price(s)}</Text></View>
    {lines[0]?<Text style={[font,{fontSize:13,lineHeight:20,color:muted}]}>{lines[0]}</Text>:null}
   </View>
   {warranty||application?<View style={{borderTopWidth:1,borderBottomWidth:1,borderColor:rule,flexDirection:'row',alignItems:'flex-start',paddingVertical:12,gap:12}}>
@@ -56,7 +56,7 @@ export function ServiceProductSelection({title,description,services,priceLabel,o
   {application&&showWarranty?<View style={{paddingVertical:10}}><Text style={[font,{fontSize:11,lineHeight:17,color:muted}]}>{application.terms}</Text></View>:null}
   {warranty&&showWarranty?<View style={{gap:5,paddingVertical:10}}><Text style={[font,{fontSize:11,lineHeight:17,color:muted}]}>{warranty.terms}</Text><Text style={[font,{fontSize:11,lineHeight:17,color:muted}]}>Applies only to eligible installations under the manufacturer's terms.</Text></View>:null}
 
-  <View style={{gap:11,paddingVertical:featured.length?18:6}}>{featured.map((raw,i)=>{const f=productHighlight(raw);return <View key={i} style={{flexDirection:'row',alignItems:'center',gap:9}}><Icon mono name="check" size={15} color={accent}/><Text style={[font,{flex:1,fontSize:12,lineHeight:18}]}>{f.text}</Text></View>})}</View>
+  <View style={{gap:9,paddingVertical:featured.length?12:6}}>{featured.map((raw,i)=>{const f=productHighlight(raw);return <View key={i} style={{flexDirection:'row',alignItems:'center',gap:9}}><Icon mono name="check" size={15} color={accent}/><Text style={[font,{flex:1,fontSize:12,lineHeight:18}]}>{f.text}</Text></View>})}</View>
   {conditions.filter(text=>!(application&&text==='Requires a brand-selected installer')).map((text,i)=><Text key={i} style={[font,{fontSize:10,lineHeight:16,color:muted,marginBottom:7}]}>Compatibility: {text}</Text>)}
 
 
@@ -64,7 +64,7 @@ export function ServiceProductSelection({title,description,services,priceLabel,o
   {s.priceOnRequest?<Pressable accessibilityRole="button" accessibilityLabel={`Full details for ${s.name}`} onPress={()=>onOpen(s)} style={{minHeight:44,justifyContent:'center',alignItems:'center',marginTop:4}}><Text style={[font,{fontSize:11,color:muted,textDecorationLine:'underline'}]}>Full service details</Text></Pressable>:null}
   </View>
   {services.length>1?<View>
-  <View style={{flexDirection:'row',justifyContent:'space-between',marginTop:25,marginBottom:9}}><Text style={[font,{fontSize:11,fontWeight:'600'}]}>Choose an option</Text><Text style={[font,{fontSize:10,color:muted}]}>{services.length} {services.length===1?'option':'options'}</Text></View>
+  <View style={{flexDirection:'row',justifyContent:'space-between',marginTop:18,marginBottom:7}}><Text style={[font,{fontSize:11,fontWeight:'600'}]}>Choose an option</Text><Text style={[font,{fontSize:10,color:muted}]}>{services.length} {services.length===1?'option':'options'}</Text></View>
   <View accessibilityRole="radiogroup" accessibilityLabel={`${title} ${servicePage?'services':'products'}`}>{services.map(row=>{const active=row.id===s.id,im=photo(row);return <Pressable key={row.id} accessibilityRole="radio" accessibilityLabel={`Select ${row.name}`} accessibilityState={{checked:active}} onPress={()=>{setSelectedId(row.id);setShowWarranty(false);setShowFamilyGuide(false);scrollToTop()}} style={{minHeight:64,borderBottomWidth:1,borderBottomColor:active?'transparent':rule,borderRadius:active?8:0,paddingHorizontal:8,paddingVertical:10,backgroundColor:active?chosen:'transparent',flexDirection:'row',alignItems:'center',gap:8}}><View testID="product-comparison-thumbnail" style={{width:48,height:40,flexShrink:0,alignItems:'center',justifyContent:'center'}}>{im?<Image accessibilityLabel={`${row.name} thumbnail`} source={im} resizeMode="contain" style={{width:48,height:38}}/>:<BrandMark service={row} small/>}</View><Text style={[font,{flex:1,minWidth:0,fontSize:12,lineHeight:18,fontWeight:'500'}]}>{productPage&&row.brand!=='Standard'?short(row):row.name}</Text><Text style={[font,{fontSize:12,lineHeight:18,fontWeight:'600',width:78,flexShrink:0,textAlign:'right'}]}>{price(row)}</Text><View style={{width:13,flexShrink:0}}>{active?<Icon mono name="check" size={13} color={accent}/>:null}</View></Pressable>})}</View>
   <Text style={[font,{fontSize:10,lineHeight:16,color:muted,marginTop:12}]}>{servicePage?'Select a service to read about it. Selection does not book.':'Tap a product to compare. Selection does not book.'}</Text>
 

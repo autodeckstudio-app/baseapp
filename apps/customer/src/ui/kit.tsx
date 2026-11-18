@@ -151,6 +151,8 @@ export function Screen({
   onBack,
   scrollIdentity = "screen",
   bottomClearance = 96,
+  compactContent = false,
+  viewportBottomInset = 0,
   textBack=false,
 }: {
   /** Shared tab header: avatar, screen name, bell. Pass the screen name. */
@@ -162,6 +164,8 @@ export function Screen({
   scrollIdentity?: string;
   /** Clearance above the floating navigation, including its raised Home button. */
   bottomClearance?: number;
+  compactContent?: boolean;
+  viewportBottomInset?: number;
   /** Show the photo backdrop behind the header (use with CanvasTitle). */
   canvas?: boolean;
   children: ReactNode;
@@ -196,7 +200,7 @@ export function Screen({
   const myTab = segs[0] === "(tabs)" ? (segs[1] ?? "index") : "";
   useEffect(() => onTabPressed((t) => { if (t === myTab) {restorePending.current=false;offsets.current.set(activeScrollIdentity.current,0);scrollRef.current?.scrollTo({ y: 0, animated: true });} }), [myTab]);
   const body = (
-    <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: top ? space.gap : space.inset, paddingBottom: (Platform.OS === "web" ? `calc(${bottomClearance}px + env(safe-area-inset-bottom))` : bottomClearance) as unknown as number, gap: 20 }}>
+    <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: compactContent ? 4 : top ? space.gap : space.inset, paddingBottom: (Platform.OS === "web" ? `calc(${bottomClearance}px + env(safe-area-inset-bottom))` : bottomClearance) as unknown as number, gap: 20 }}>
       {bar && !top ? <AppBar title={bar.title} onBack={bar.back} textBack={textBack} /> : null}
       {header}
       {children}
@@ -209,7 +213,7 @@ export function Screen({
     <Ambient>
       {canvas ? <CanvasBackdrop /> : null}
       {top ? <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: space.inset, gap: space.line, zIndex: 2 }}>{bar ? <AppBar title={bar.title} onBack={bar.back} textBack={textBack} /> : null}{top}</View> : null}
-      {scroll ? <ScrollView showsVerticalScrollIndicator={false} testID="screen-scroll" ref={scrollRef} scrollEventThrottle={16} onLayout={restoreOffset} onContentSizeChange={restoreOffset} onScrollBeginDrag={cancelRestore} onTouchStart={cancelRestore} {...(Platform.OS==='web'?{onWheel:cancelRestore}:{})} onScroll={(e) => {if(!scrollActive.current)return;const y=e.nativeEvent.contentOffset.y;const target=offsets.current.get(scrollIdentity)??0;if(restorePending.current){if(Math.abs(y-target)>1)return;restorePending.current=false;}offsets.current.set(scrollIdentity,y);reportScroll(y)}} contentContainerStyle={{ flexGrow: 1 }}><ScreenScrollContext.Provider value={()=>{restorePending.current=false;offsets.current.set(scrollIdentity,0);scrollRef.current?.scrollTo({y:0,animated:true})}}>{content}</ScreenScrollContext.Provider></ScrollView> : content}
+      {scroll ? <ScrollView style={viewportBottomInset?{marginBottom:viewportBottomInset}:undefined} showsVerticalScrollIndicator={false} testID="screen-scroll" ref={scrollRef} scrollEventThrottle={16} onLayout={restoreOffset} onContentSizeChange={restoreOffset} onScrollBeginDrag={cancelRestore} onTouchStart={cancelRestore} {...(Platform.OS==='web'?{onWheel:cancelRestore}:{})} onScroll={(e) => {if(!scrollActive.current)return;const y=e.nativeEvent.contentOffset.y;const target=offsets.current.get(scrollIdentity)??0;if(restorePending.current){if(Math.abs(y-target)>1)return;restorePending.current=false;}offsets.current.set(scrollIdentity,y);reportScroll(y)}} contentContainerStyle={{ flexGrow: 1 }}><ScreenScrollContext.Provider value={()=>{restorePending.current=false;offsets.current.set(scrollIdentity,0);scrollRef.current?.scrollTo({y:0,animated:true})}}>{content}</ScreenScrollContext.Provider></ScrollView> : content}
     </Ambient>
   );
 }

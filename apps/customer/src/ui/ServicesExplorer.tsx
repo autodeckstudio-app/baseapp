@@ -366,7 +366,7 @@ export function ServicesExplorer({
     && (family !== "PPF" || !path.work || path.work === "full_body");
   if (family && (home.key === "detailing" || ["washing","garage","modifications"].includes(home.key) || nestedBrandProducts) && shown.length > 0) {
     const title = activeBrand ?? (family === "Glass" ? "Glass coating" : family === "Ceramic" ? "Ceramic coating" : family);
-    return <View style={{gap:20}}>
+    return <View style={{gap:12}}>
       <ServicePageHeader title={title} crumbs={[
         {title:"All services",onPress:()=>onPath({})},
         {title:home.label,onPress:()=>onPath({home:home.key})},
@@ -434,7 +434,7 @@ export function ServicesExplorer({
           ? "full-body protection"
           : (workLabel ?? family);
   return (
-    <View style={{ gap: 20 }}>
+    <View style={{ gap: 12 }}>
       <ServicePageHeader title={activeBrand ?? workLabel ?? family ?? home.label} detail={!family?HOME_COPY[home.key]:family==="PPF"&&!path.work?FAMILY_COPY.PPF:FAMILY_COPY[family]} context={!family?"AutoDeck care":activeBrand&&(family??home.label).toLowerCase()!==activeBrand.toLowerCase()?(family??home.label):undefined} crumbs={!family?[]:[
         {title:"All services",onPress:()=>onPath({})},
         {title:home.label,onPress:()=>onPath({home:home.key})},

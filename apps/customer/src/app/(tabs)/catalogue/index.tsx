@@ -1,3 +1,4 @@
+import {useServiceSelection} from '../../../hooks/useServiceSelection';
 import{ServiceJourney}from'../../../ui/ServiceJourney';
 import{ServiceSelectionBar}from'../../../ui/ServiceSelectionBar';
 import {ServicePageHeader,ServiceHeaderHidden} from '../../../ui/ServicePageHeader';
@@ -34,7 +35,7 @@ import { SERVICE_QUOTE_JOURNEY_READY } from "../../../lib/service-quote";
 import { glassInner } from "../../../lib/glass";
 
 export default function CatalogueScreen() {
-  const[reviewing,setReviewing]=useState(false);
+  const[reviewing,setReviewing]=useState(false);const selection=useServiceSelection();
   const router = useRouter(),
     params = useLocalSearchParams<{home?:string;family?:string;brand?:string;work?:string;cat?:string;need?:string;p?:string;mock?:string;theme?:string;returnTo?:string;homeEntry?:string}>();
   const { colors } = useExperienceTheme();
@@ -85,7 +86,7 @@ export default function CatalogueScreen() {
   const currentHome=SERVICE_HOMES.find(h=>h.key===path.home);
   const top = (
     <View
-      style={{ gap: 14, paddingBottom: 16 }}
+      style={{ gap: 12, paddingBottom: 4 }}
       testID="services-filter-header"
     >
       <><View
@@ -129,7 +130,7 @@ export default function CatalogueScreen() {
     </View>
   );
   return (
-    <View style={{flex:1}}><Screen textBack
+    <View style={{flex:1}}><Screen textBack compactContent viewportBottomInset={selection.ids.length&&!reviewing?152:88} bottomClearance={24}
       scrollIdentity={JSON.stringify(path)}
       appBar="Services"
       top={top}
