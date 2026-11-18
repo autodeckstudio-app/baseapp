@@ -43,7 +43,7 @@ export function ServiceChoiceCard({
   photo,
 }: {
   title: string;
-  detail: string;
+  detail?: string;
   onPress: () => void;
   brand?: boolean;
   photo?: ImageSourcePropType;
@@ -99,9 +99,7 @@ export function ServiceChoiceCard({
           <T role="heading" style={{ fontSize: 20, lineHeight: 25 }}>
             {title}
           </T>
-          <T role="caption" tone="secondary">
-            {detail}
-          </T>
+          {detail?<T role="caption" tone="secondary">{detail}</T>:null}
         </View>
         <T tone="accent">›</T>
       </View>
@@ -475,7 +473,6 @@ export function ServicesExplorer({
                   key={b}
                   title={b}
                   brand
-                  detail={family==="PPF"?"Full-body paint protection":familySummary(family!)}
                   onPress={() => onPath({ ...path, brand: b })}
                 />
               ))}
