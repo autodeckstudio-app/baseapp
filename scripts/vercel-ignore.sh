@@ -1,4 +1,19 @@
 #!/usr/bin/env bash
+# Scoped customer Glacier release: fail closed for every sibling application.
+# This branch may build Customer only, and only with the reviewed base/path scope.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = build/customer-glacier-implementation-20261119 ]; then
+  glacier_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$glacier_root" ] || exit 0
+  cd "$glacier_root" || exit 0
+  glacier_base=e334387a5c74fafbeb9decd8d3cd9ee4a3b4825a
+  git merge-base --is-ancestor "$glacier_base" HEAD 2>/dev/null || exit 0
+  glacier_paths="$(git diff --name-only "$glacier_base" HEAD 2>/dev/null)" || exit 0
+  [ -n "$glacier_paths" ] || exit 0
+  glacier_unexpected="$(printf '%s\n' "$glacier_paths" | grep -vE '^(apps/customer/src/|docs/customer-glacier-[^/]+\.md$|scripts/vercel-ignore\.sh$)' || true)"
+  [ -z "$glacier_unexpected" ] || exit 0
+  case "$1" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
+
 # Combined reviewed Customer/Admin test release. Never auto-deploy any app for this
 # exact branch/parent; the two named projects are built without domain promotion
 # and individually qualified before the one combined release is made visible.
