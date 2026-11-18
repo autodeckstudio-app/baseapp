@@ -10,13 +10,13 @@ describe("login stage", () => {
     expect(texts).toHaveLength(3);
     // One line at 320px wide: card inner is about 230px, 15px bold fits about 24 characters.
     for (const t of texts) expect(t.length).toBeLessThanOrEqual(24);
-    expect(read("ui/LoginStage.tsx")).toMatch(/numberOfLines=\{1\}[^>]*>\{perk\.text\}/);
+    expect(read("ui/LoginStage.tsx")).toContain("{perk.text}"); expect(read("ui/LoginStage.tsx")).toContain("lineHeight: 21");
     for (const t of texts) { expect(t).not.toMatch(/\u2014|\u2013/); expect(t).not.toMatch(/[\u{1F300}-\u{1FAFF}]/u); }
   });
   it("respects Reduce Motion and keeps the photo unblurred", () => {
     const s = read("ui/LoginStage.tsx");
     expect(s).toContain("useReduceMotion"); expect(s).toMatch(/if \(reduce\) return;/);
-    expect(s).toContain("KenBurns"); expect(s).not.toMatch(/blur\(\d+px\)[^\n]*sceneImagery/);
+    expect(s).toContain("<Image source={sceneImagery.login}"); expect(s).not.toContain("KenBurns"); expect(s).not.toMatch(/blur\(\d+px\)[^\n]*sceneImagery/);
   });
   it("keeps Google-only sign-in and the legal links", () => {
     const s = read("ui/LoginStage.tsx"); expect(s).toContain("Google sign-in only"); expect(s).toContain("LegalLinks");

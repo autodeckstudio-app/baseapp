@@ -1,3 +1,4 @@
+import { StatePanel } from "../../../ui/StatePanel";
 import { useState, useEffect } from "react";
 import { View } from "react-native";
 import type { Membership } from "@autodeck/core";
@@ -47,7 +48,7 @@ export default function MembershipHistoryScreen() {
       }
     >
       {memberships.length === 0 ? (
-        <Notice title="No memberships yet" body="Plans you join will appear here." />
+        <StatePanel icon="club" title="No memberships yet" body="Plans you join will appear here." />
       ) : (
         <Pane pad="gap">
           {memberships.map((m, i) => (

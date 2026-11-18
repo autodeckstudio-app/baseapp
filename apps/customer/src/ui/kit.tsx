@@ -451,28 +451,20 @@ export function Chip({ label, tone = "neutral", onDark, small }: { label: string
 }
 
 export function Loading({ label = "Loading" }: { label?: string }) {
-  const { colors } = useExperienceTheme();
-  return (
-    <Ambient>
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: space.line }}>
-        <ActivityIndicator color={colors.accent} />
-        <T role="label" tone="tertiary">{label}</T>
-      </View>
-    </Ambient>
-  );
+  const { colors, name } = useExperienceTheme();
+  return <Ambient><View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}><View style={{ width: "100%", maxWidth: 340, padding: 28, borderRadius: 28, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: name === "light" ? "#F7F9FC" : "#233143", gap: 24 }}>
+    <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}><ActivityIndicator color={colors.textPrimary} /><T role="bodyStrong">{label}</T></View>
+    <View style={{ gap: 10 }}><View style={{ height: 8, borderRadius: 4, width: "82%", backgroundColor: colors.borderSubtle }} /><View style={{ height: 8, borderRadius: 4, width: "56%", backgroundColor: colors.borderSubtle }} /></View>
+  </View></View></Ambient>;
 }
 
-/** Empty / failed / offline states share one quiet pane. */
+/** Compact status or retry panel. The route owns every action and its meaning. */
 export function Notice({ title, body, action }: { title: string; body?: string; action?: ReactNode }) {
-  return (
-    <Pane pad="inset">
-      <View style={{ gap: space.breath }}>
-        <T role="heading">{title}</T>
-        {body ? <T tone="secondary">{body}</T> : null}
-        {action ? <View style={{ marginTop: space.breath }}>{action}</View> : null}
-      </View>
-    </Pane>
-  );
+  const { colors, name } = useExperienceTheme();
+  return <Pane pad="inset"><View style={{ gap: 18 }}><View style={{ flexDirection: "row", alignItems: "flex-start", gap: 14 }}>
+    <View style={{ width: 4, minHeight: 42, alignSelf: "stretch", borderRadius: 4, backgroundColor: name === "light" ? "#A9B9CD" : "#758CA9" }} />
+    <View style={{ flex: 1, minWidth: 0, gap: 8 }}><T role="heading">{title}</T>{body ? <T tone="secondary" style={{ lineHeight: 22 }}>{body}</T> : null}</View>
+  </View>{action ? <View style={{ paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.borderSubtle }}>{action}</View> : null}</View></Pane>;
 }
 
 /** Themed text input on the glass kit: label above, data-safe styling. */
@@ -528,10 +520,10 @@ export function Field({
             ...(Platform.OS === "web" ? material(name,"field",{reduce}).web as object : {}),
             borderWidth: 1,
             borderColor: error ? colors.danger : colors.borderSubtle,
-            borderRadius: radius.chip,
-            paddingHorizontal: space.line,
+            borderRadius: 16,
+            paddingHorizontal: 16,
             paddingVertical: 12,
-            minHeight: multiline ? 96 : 44,
+            minHeight: multiline ? 112 : 52,
             textAlignVertical: multiline ? "top" : "auto",
           },
         ]}

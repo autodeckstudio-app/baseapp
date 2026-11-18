@@ -1,3 +1,4 @@
+import { JourneySteps } from "../../../ui/JourneySteps";
 import { readPendingListing, writePendingListing, clearPendingListing } from "../../../lib/cars-pending";
 import { randomUUID } from "expo-crypto";
 import { FileUploader, SelectField } from "../../../ui/inputs";
@@ -12,7 +13,7 @@ import { listOwnerKey } from "../../../lib/owner-key";
 import { sellCarLabel, sellPrefillFromVehicle } from "../../../lib/sell-prefill";
 import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
-import { Button, Field, Kicker, Notice, Pane, Screen, T } from "../../../ui/kit";
+import { Button, Field, Kicker, Notice, PageHeader, Pane, Screen, T } from "../../../ui/kit";
 import { getCarListings, getMyListingSubmission, submitMyListing, uploadListingPhoto, type SellInput } from "../../../lib/carsale-service";
 
 import { validateSellStep, sellNumber, type SellForm as F, type SellErrors } from "../../../lib/sell-validation";
@@ -148,9 +149,8 @@ export default function SellScreen() {
     );
   }
   return (
-    <Screen appBar="Sell your car">
-      <T tone="secondary">Add your car for studio review.</T>
-      <View style={{flexDirection:"row",gap:8}}>{steps.map((label,i)=><View key={label} style={{flex:1,gap:8}}><View style={{height:3,backgroundColor:i<=step?"#EC8638":"rgba(128,128,136,0.35)",borderRadius:9999}}/><T role="caption" tone={i===step?"accent":"tertiary"}>{i+1}. {label}</T></View>)}</View>
+    <Screen appBar="Sell your car" header={<PageHeader title="List your car" sub="Add your car for studio review." />}>
+      <JourneySteps labels={steps} current={step} />
       {step===0 && garage.length > 0 && <View style={{ gap: space.hair }}>
         <Kicker tone="accent">Pick your car</Kicker>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
@@ -164,7 +164,7 @@ export default function SellScreen() {
           })}
         </ScrollView>
       </View>}
-      {step===0 && <View style={{ gap: space.line }}>
+      {step===0 && <Pane pad="inset"><View style={{ gap: 18 }}>
         <Kicker>Your vehicle</Kicker>
         <Field editable={!busy && !uncertain && !restoring} label="Make" value={f.make} error={fieldErrors.make} onBlur={() => setFieldErrors((p) => ({ ...p, make: validateSellStep(f, step, photos.length).make }))} onChangeText={(v) => up("make", v)} placeholder="Tata" autoCapitalize="words" maxLength={50} />
         <Field editable={!busy && !uncertain && !restoring} label="Model" value={f.model} error={fieldErrors.model} onBlur={() => setFieldErrors((p) => ({ ...p, model: validateSellStep(f, step, photos.length).model }))} onChangeText={(v) => up("model", v)} placeholder="Nexon" autoCapitalize="words" maxLength={80} />
@@ -186,11 +186,11 @@ export default function SellScreen() {
         <Field editable={!busy && !uncertain && !restoring} label="Owners so far" value={f.owners} error={fieldErrors.owners} onBlur={() => setFieldErrors((p) => ({ ...p, owners: validateSellStep(f, step, photos.length).owners }))} onChangeText={(v) => up("owners", v)} keyboardType="numeric" maxLength={2} />
         <Field editable={!busy && !uncertain && !restoring} label="Colour" value={f.colour} error={fieldErrors.colour} onBlur={() => setFieldErrors((p) => ({ ...p, colour: validateSellStep(f, step, photos.length).colour }))} onChangeText={(v) => up("colour", v)} autoCapitalize="words" maxLength={40} />
         <Field editable={!busy && !uncertain && !restoring} label="Area or city" value={f.area} error={fieldErrors.area} onBlur={() => setFieldErrors((p) => ({ ...p, area: validateSellStep(f, step, photos.length).area }))} onChangeText={(v) => up("area", v)} placeholder="Satellite, Ahmedabad" autoCapitalize="words" maxLength={60} />
-      </View>}
-      {step===1 && <View style={{gap:space.line}}><Kicker>Price and story</Kicker>
+      </View></Pane>}
+      {step===1 && <Pane pad="inset"><View style={{gap:18}}><Kicker>Price and story</Kicker>
         <Field editable={!busy && !uncertain && !restoring} label="Asking price (rupees)" value={f.price} error={fieldErrors.price} onBlur={() => setFieldErrors((p) => ({ ...p, price: validateSellStep(f, step, photos.length).price }))} onChangeText={(v) => up("price", v)} keyboardType="numeric" maxLength={9} />
         <Field editable={!busy && !uncertain && !restoring} label="About the car (optional)" placeholder="Service history, owners, accidents, reason for selling - no phone numbers or links" value={f.description} error={fieldErrors.description} onBlur={() => setFieldErrors((p) => ({ ...p, description: validateSellStep(f, step, photos.length).description }))} onChangeText={(v) => up("description", v)} multiline maxLength={1000} />
-      </View>}
+      </View></Pane>}
 
       {step===1 ? (
         <View style={{ gap: space.hair }}>

@@ -244,8 +244,8 @@ export default function CoordinateVisit() {
       />
       {error ? <Notice title="Request needs a check" body={error} /> : null}
       {validIds && sent !== key ? (
-        <Pane>
-          <T role="heading">Your selection</T>
+        <Pane pad="inset">
+          <View style={{gap:18}}><T role="label" tone="tertiary">YOUR SELECTION</T>
           {loaded === key ? (
             chosen.map((s) => <T key={s.id}>{s.name}</T>)
           ) : (
@@ -288,9 +288,9 @@ export default function CoordinateVisit() {
               backgroundColor: colors.surface,
               borderWidth: 1,
               borderColor: colors.borderSubtle,
-              borderRadius: 12,
-              padding: 12,
-              minHeight: 96,
+              borderRadius: 16,
+              padding: 16,
+              minHeight: 112,
             }}
             placeholderTextColor={colors.textSecondary}
             maxLength={1000}
@@ -300,7 +300,7 @@ export default function CoordinateVisit() {
             label="Send visit request"
             disabled={!ready || !valid || !car.vehicle}
             onPress={() => void submit()}
-          />
+          /></View>
         </Pane>
       ) : sent === key ? (
         <Notice

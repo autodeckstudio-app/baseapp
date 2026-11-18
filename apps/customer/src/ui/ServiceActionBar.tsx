@@ -38,6 +38,7 @@ export function ServiceActionBar({
         </T>}
       </View>
       <Button
+        kind="quiet"
         label={label}
         disabled={disabled}
         onPress={onPress}

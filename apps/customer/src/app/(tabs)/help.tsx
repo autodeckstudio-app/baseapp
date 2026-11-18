@@ -11,7 +11,7 @@ import { useLang } from "../../lib/i18n";
 import { FAQ, STUDIO_INFO, formatHours, isOpenNow, type LiveStudioInfo } from "../../lib/studio-info";
 import { getStudioInfo } from "../../lib/booking-service";
 import { FIRST_STUDIO_ID } from "@autodeck/core";
-import { Field, Kicker, Notice, Pane, Row, Screen, T } from "../../ui/kit";
+import { Field, Kicker, Notice, PageHeader, Pane, Row, Screen, T } from "../../ui/kit";
 import { StudioContactDetails } from "../../ui/StudioContactDetails";
 import { searchFaq } from "../../lib/faq-search";
 
@@ -41,7 +41,7 @@ export default function HelpScreen() {
   const openNow=isOpenNow(liveInfo?.operatingHours,new Date(now),liveInfo?.timezone,liveInfo?.holidays??[]);
   const hasContact = Boolean(s.phone || s.whatsapp);
   return (
-    <Screen appBar="Help & contact">
+    <Screen appBar="Help & contact" header={<PageHeader title="Help & contact" sub="Contact the studio or find an answer." />}>
       {typeof serviceName === "string" && serviceName.trim() ? <Notice title={`Ask about ${serviceName.slice(0, 160)}`} body="Call or message to check this service." /> : null}
       {hasContact ? (
         <Pane pad="gap">
@@ -54,13 +54,13 @@ export default function HelpScreen() {
       {s.address ? (
         <StudioContactDetails address={s.address} hours={s.hours} openNow={openNow} onDirections={s.mapsUrl?()=>void Linking.openURL(s.mapsUrl):undefined}/>
       ) : null}
-      <Kicker>{t("Questions")}</Kicker>
+      <View style={{gap:8}}><Kicker>{t("Questions")}</Kicker><T role="heading">How can we help?</T></View>
       <Field label="Search questions" value={query} onChangeText={(v: string) => { setQuery(v); setOpen(null); }} placeholder="Type a few words" />
       {query.trim() ? <T role="caption" tone="secondary">Please do not type phone numbers or car plates here.</T> : null}
       {shown.length ? (
         <Pane pad="gap">
           {shown.map((f, i) => (
-            <View key={f.q}>
+            <View key={f.q} style={{paddingHorizontal:4}}>
               <Row title={f.q} onPress={() => setOpen(open === i ? null : i)} last={i === shown.length - 1 && open !== i} />
               {open === i ? <View style={{ paddingHorizontal: space.line, paddingBottom: space.line }}><View style={{gap:space.line}}>{f.facts.map((fact,index)=><View key={fact.label} style={{gap:6,paddingVertical:12,borderBottomWidth:index<f.facts.length-1?1:0,borderBottomColor:colors.borderSubtle}}><T role="caption" tone="tertiary">{fact.label}</T><T tone="secondary">{fact.detail}</T></View>)}</View></View> : null}
             </View>

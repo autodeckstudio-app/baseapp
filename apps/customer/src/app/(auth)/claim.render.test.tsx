@@ -13,7 +13,7 @@ vi.mock("react-native", () => {
   const mk = (name: string) => (props: Record<string, unknown> & { children?: React.ReactNode }) =>
     createElement(name, props, props.children);
   return {
-    View: mk("View"),
+    View: mk("View"),ScrollView:mk("ScrollView"),
     Text: mk("Text"),
     Pressable: mk("Pressable"),
     TextInput: mk("TextInput"),
@@ -45,8 +45,9 @@ vi.mock("@autodeck/ui", () => ({
   TextInput: (props: Record<string, unknown>) => createElement("TextInput", props),
 }));
 vi.mock("@autodeck/ui/theme", () => ({ space: { line: 8, gap: 12 } }));
-vi.mock("@autodeck/ui/native", () => ({ Ambient: ({ children }: { children: React.ReactNode }) => children }));
+vi.mock("@autodeck/ui/native", () => ({ useExperienceTheme:()=>({name:"light",colors:{textPrimary:"#222",textTertiary:"#555",borderSubtle:"#ccc"}}),Ambient: ({ children }: { children: React.ReactNode }) => children }));
 vi.mock("../../ui/kit", () => ({
+  Pane: (p:any)=>createElement("Pane",p,p.children),
   Ambient: ({children}:any)=>children,
   Button: ({ label, onPress, testID }: { label: string; onPress: () => void; testID?: string }) =>
     createElement("Pressable", { onPress, testID, accessibilityRole: "button" }, createElement("Text", null, label)),

@@ -1,3 +1,4 @@
+import { StatePanel } from "../../ui/StatePanel";
 // Gifts: buy a foam wash for someone (pay, then get the code to share), enter a code you were given, and see the gifts you bought.
 // Empty until GIFT_LIVE. A gift is valid 60 days from payment and cannot be refunded; both are said before the pay button.
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -5,7 +6,7 @@ import { Share, View } from "react-native";
 import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
 import { GIFT_TERMS, giftDaysLeft, giftValidityLine, normaliseGiftCode } from "@autodeck/core";
-import { Button, Field, Kicker, Notice, Pane, Row, Screen, T, rupees } from "../../ui/kit";
+import { Button, Field, Kicker, Notice, PageHeader, Pane, Row, Screen, T, rupees } from "../../ui/kit";
 import { giftCodeProblem } from '../../lib/gift-code-feedback';
 import { GiftCard } from "../../ui/GiftCard";
 import { GiftBuy } from "../../ui/GiftBuy";
@@ -47,8 +48,8 @@ export default function GiftsScreen() {
   }, [owner]);
   useEffect(() => {setStateOwner(owner);setGifts([]);setOffer(null);setClaimed(null);setCard(null);setCode("");setInfo(null);setError(null);setBusy(false);if (GIFT_LIVE&&owner) load(); return()=>{loadGeneration.current+=1}; }, [load,owner]);
   const referralCode = auth.status === "ready" ? referralCodeFor(auth.user.uid) : null;
-  const friendPanel = <Pane pad="gap"><T role="heading">Bring a friend</T><T tone="secondary">{referralSubtitle(referralCode)}</T><Button icon="share" label="Share AutoDeck" onPress={() => void Share.share({ message: referralShareMessage(referralCode) }).catch(() => undefined)} /></Pane>;
-  if (!GIFT_LIVE) return <Screen appBar="Friends & gifts">{friendPanel}<Notice title="Gift a wash" body="Wash gifting is not available yet." /></Screen>;
+  const friendPanel = <Pane pad="gap"><T role="heading">Share AutoDeck</T>{referralSubtitle(referralCode)!=="Share AutoDeck"?<T tone="secondary">{referralSubtitle(referralCode)}</T>:null}<Button icon="share" label="Share AutoDeck" onPress={() => void Share.share({ message: referralShareMessage(referralCode) }).catch(() => undefined)} /></Pane>;
+  if (!GIFT_LIVE) return <Screen appBar="Friends & gifts" header={<PageHeader title="Friends & gifts" />}>{friendPanel}<StatePanel icon="gift" title="Gift a wash" body="Wash gifting is not available yet." /></Screen>;
 
   async function buy() {
     if (!checkoutSupported && !NATIVE_GIFT_PAYMENT_ENABLED) { setInfo("Buying a gift is not available in this app build yet. Use app.autodeck.in."); return; }
@@ -91,20 +92,20 @@ export default function GiftsScreen() {
     finally {if((ownerRef.current===claimOwner&&ownerEpoch.current===claimEpoch&&mounted.current))setBusy(false); }
   }
   const now = Date.now();
-  if(!visible)return <Screen appBar="Friends & gifts"><T role="caption" tone="secondary">Loading gifts</T></Screen>;
+  if(!visible)return <Screen appBar="Friends & gifts" header={<PageHeader title="Friends & gifts" />}><T role="caption" tone="secondary">Loading gifts</T></Screen>;
   return (
-    <Screen appBar="Friends & gifts">
+    <Screen appBar="Friends & gifts" header={<PageHeader title="Friends & gifts" />}>
       {friendPanel}
       {card ? <GiftCard code={card.code} expiresAt={card.expiresAt} buyerName={buyerName} /> : null}
       {loadFailed ? <Notice title="Could not load gifts" body="Check your connection and try again." action={<Button icon="refresh" label="Retry" onPress={load} />} /> : null}
       {loading?<T role="caption" tone="secondary">Loading gifts</T>:null}
-      {!loading&&!loadFailed&&gifts.length===0?<Notice title="No gifts bought yet" body="You can add a code below, or buy a gift when available."/>:null}
+      {!loading&&!loadFailed&&gifts.length===0?<StatePanel icon="gift" title="No gifts bought yet" body="You can add a code below, or buy a gift when available."/>:null}
       {offer ? <GiftBuy amountPaise={offer.amountPaise} canPay={checkoutSupported || NATIVE_GIFT_PAYMENT_ENABLED} busy={busy} onPay={() => void buy()} /> : null}
-      <Pane pad="gap">
+      <Pane pad="inset"><View style={{gap:18}}>
         <T role="heading">Got a gift code?</T>
         <Field label="Gift code" value={code} onChangeText={setCode} autoCapitalize="characters" placeholder="GW-XXXX-XXXX" maxLength={14} {...(error ? { error } : {})} />
         <Button label="Use this code" onPress={() => void redeem()} disabled={busy || code.trim() === ""} />
-      </Pane>
+      </View></Pane>
       {info ? <T role="caption" tone="secondary">{info}</T> : null}
       {claimed?.expiresAt ? (
         <Notice title="Your gift is ready" body={`${GIFT_TERMS.oneWash} ${giftValidityLine(claimed.expiresAt, now)}`} action={<Button label="Book your wash" onPress={() => router.push(GIFT_SERVICE_ROUTE as never)} />} />

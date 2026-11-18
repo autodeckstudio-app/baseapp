@@ -78,8 +78,8 @@ export default function InspectionScreen() {
         if (items.length === 0) return null;
         return (
           <View key={area} style={{ gap: space.line }}>
-            <Kicker>{AREA_LABELS[area]}</Kicker>
-            <Pane pad="gap">
+            <View style={{flexDirection:"row",alignItems:"center",gap:12}}><T role="heading">{AREA_LABELS[area]}</T><Chip label={String(items.length)} /></View>
+            <Pane pad="inset"><View style={{gap:6}}>
               {items.map((item, idx) => (
                 <Row
                   key={item.key}
@@ -89,7 +89,7 @@ export default function InspectionScreen() {
                   last={idx === items.length - 1}
                 />
               ))}
-            </Pane>
+            </View></Pane>
           </View>
         );
       })}

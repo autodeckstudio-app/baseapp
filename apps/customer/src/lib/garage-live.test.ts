@@ -53,7 +53,7 @@ describe("car detail cover guards", () => {
     expect(d).toContain("onBook={undefined}");
     expect(o).not.toMatch(/Book a service|onBook|>Book</);
   });
-  it("cover photo height comes from metrics and the name sits on the photo", () => { expect(h).toContain("metrics.heroCover"); expect(h).toContain("fontSize: 30"); });
+  it("car identity precedes recorded photo and labeled facts", () => { expect(h).toContain("compact ? 200 : 250"); expect(h.indexOf("{title}")).toBeLessThan(h.indexOf("{photo}")); expect(h).toContain("fontSize: 30"); });
   it("empty states are one quiet line, not a block with a button", () => { expect(d).not.toContain('<Notice title="No care plan yet"'); expect(o).not.toContain("No service history yet"); });
 });
 describe("garage services have one price for every car", () => {

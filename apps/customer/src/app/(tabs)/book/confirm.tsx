@@ -1,3 +1,4 @@
+import { JourneySteps } from "../../../ui/JourneySteps";
 import{serviceSelection,selectionOwnerKey}from'../../../lib/booking-selection';
 import{bookingExtras}from'../../../lib/booking-selection';
 import{serviceOnlineBookingIssue}from'@autodeck/core';
@@ -440,6 +441,7 @@ export default function BookingConfirmScreen() {
 
   return (
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Confirm</Kicker><T role="title">Review booking</T>{service?.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : null}</View>}>
+      <JourneySteps labels={["Car & time", "Review"]} current={1} />
       <Sheet>
         <SheetLine small label={extraIds?.length?"Primary service":"Service"} value={service?.name ?? "-"} />
         <SheetLine small label="Car" value={vehicle ? `${vehicle.make} ${vehicle.model} · ${vehicle.registrationNumber}` : "-"} />

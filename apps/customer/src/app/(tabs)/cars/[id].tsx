@@ -124,11 +124,11 @@ export default function CarDetail() {
         <T role="display" tone="accent">{hasCarPrice(car) ? inr(car.askingPrice) : "Price on request"}</T>{!hasCarPrice(car) ? <T role="caption" tone="secondary">Ask the studio and the price is shown here once you have requested it.</T> : null}
       </View>
       <Pane pad="inset">
-        <View style={{ flexDirection: "row", flexWrap: "wrap", rowGap: space.line }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", rowGap: 22 }}>
           {facts.map(([k, v]) => (
-            <View key={k} style={{ width: "50%", gap: 2 }}>
+            <View key={k} style={{ width: "50%", paddingRight:12,gap: 7 }}>
               <T role="caption" tone="tertiary">{k}</T>
-              <T role="bodyStrong" numberOfLines={1} style={{ textTransform: "capitalize" }}>{v}</T>
+              <T role="bodyStrong" style={{ textTransform: "capitalize" }}>{v}</T>
             </View>
           ))}
         </View>
@@ -148,7 +148,7 @@ export default function CarDetail() {
       ) : sent === "report" ? (
         <Notice title="Thanks, we will look at it" />
       ) : (
-        <View style={{ gap: space.gap }}>
+        <Pane pad="inset"><View style={{ gap: 20 }}>
           <View style={{gap:8}}><Kicker>Interested?</Kicker><T role="heading">See if this is your next car</T><T tone="secondary">Ask the studio about this car. Your number is not shown to the seller.</T></View>
           {authState.status === "unauthenticated" ? <Button label="Sign in to enquire" onPress={() => router.push("/(auth)/login")}/> : !showEnquiry ? <Button label={!hasCarPrice(car) ? "Request the price" : "I am interested"} onPress={() => setShowEnquiry(true)}/> : <View style={{gap:12}}><Field label="Your phone number (required for enquiries)" value={phone} error={phoneError} onChangeText={(v) => { setPhone(v); setPhoneError(undefined); }} keyboardType="phone-pad" placeholder="So the studio can reach you" maxLength={15} />
           <Field label="Message (optional)" value={note} onChangeText={setNote} maxLength={300} />
@@ -160,7 +160,7 @@ export default function CarDetail() {
           ) : (
             <Pressable accessibilityRole="button" onPress={() => {setShowReport(true);setShowEnquiry(true);}} style={{minHeight:44,justifyContent:"center"}}><T role="caption" tone="tertiary">Report this listing</T></Pressable>
           )}
-        </View>
+        </View></Pane>
       )}
       <T role="caption" tone="tertiary">AutoDeck lists cars to help buyers and sellers meet. Check papers, loans and ownership before you pay anyone. We are not a party to the sale.</T>
     </Screen>

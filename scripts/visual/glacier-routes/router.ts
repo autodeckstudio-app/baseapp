@@ -1,0 +1,1 @@
+import {useEffect} from 'react';export const useRouter=()=>({back(){},replace(){},push(){},navigate(){}});export const useSegments=()=>[];export const useFocusEffect=(fn:any)=>useEffect(fn,[fn]);export const useLocalSearchParams=()=>({id: new URLSearchParams(location.search).get('route')==='visit-detail'?'sample-job':'A'});export const Link=({children}:any)=>children;

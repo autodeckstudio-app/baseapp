@@ -1,3 +1,4 @@
+import { JourneySteps } from "../../../ui/JourneySteps";
 import {MembershipActivationTerms,MembershipUpgradeTerms} from "../../../ui/MembershipTerms";
 import { useReduceMotion } from "../../../lib/reduce-motion";
 import { useState, useEffect, useRef } from "react";
@@ -147,7 +148,7 @@ export default function PurchaseMembershipScreen() {
         <Button label="Upgrade" busy={purchasing} onPress={() => setAskUpgrade(true)} />
         <Modal visible={askUpgrade} transparent animationType={reduce ? "none" : "fade"} onRequestClose={() => setAskUpgrade(false)}>
           <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 24 }}>
-            <View style={{ width: "100%", maxWidth: 420, borderRadius: 24, padding: 20, gap: 14, backgroundColor: colors.surface }}>
+            <View style={{ width: "100%", maxWidth: 420, borderRadius: 28, padding: 24, gap: 20, borderWidth:1,borderColor:colors.borderSubtle,backgroundColor: colors.surface }}>
               <T role="heading">{copy.title}</T>
               <T tone="secondary">{copy.body}</T>
               <Button label={copy.confirm} onPress={() => void confirmUpgrade("razorpay_payment_link")} />
@@ -205,13 +206,13 @@ export default function PurchaseMembershipScreen() {
         </View>
       }
     >
-      <Pane pad="gap">
+      <JourneySteps labels={["Plan details", "Payment"]} current={0}/>
+      <Pane pad="inset"><View style={{gap:10}}><T role="label" tone="tertiary">YOUR PLAN</T><T role="display">{rupees(plan.priceInPaise)}<T role="caption" tone="secondary"> / month</T></T>
         <Row title="Included washes" detail={`${plan.includedWashes} / month`} />
         {pickupsLine(plan.freePickups) ? <Row title="Free pickups" detail={`${plan.freePickups} / month`} /> : null}
         {plan.prioritySlot ? <Row title="Priority slot" detail="Included" /> : null}
         {plan.discountPercent > 0 ? <Row title="Discount" detail={`${plan.discountPercent}%`} /> : null}
-        <Row title="Price" detail={`${rupees(plan.priceInPaise)} / month`} last />
-      </Pane>
+      </View></Pane>
 
       <T role="caption" tone="tertiary">
         {[carryOverLine(), plan.discountPercent > 0 ? "Non-wash services receive the discount automatically at booking." : ""].filter(Boolean).join(" ")}

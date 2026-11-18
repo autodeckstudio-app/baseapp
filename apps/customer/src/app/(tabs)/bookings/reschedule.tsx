@@ -1,3 +1,4 @@
+import { JourneySteps } from "../../../ui/JourneySteps";
 import { DateField } from "../../../ui/inputs";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Pressable, ScrollView, View } from "react-native";
@@ -148,6 +149,7 @@ export default function RescheduleBookingScreen() {
         </View>
       }
     >
+      <JourneySteps labels={["New time", "Confirm change"]} current={pendingSlot ? 1 : 0} />
       {slotsLoading ? (
         <T role="caption" tone="tertiary">Checking the studio's calendar...</T>
       ) : slotsError ? (
@@ -155,7 +157,7 @@ export default function RescheduleBookingScreen() {
       ) : Object.keys(slotsByDate).length === 0 ? (
         <Notice title="No free times" body="Nothing available in the next 14 days. Try again tomorrow or call the studio." />
       ) : (
-        <View style={{gap:space.line}}><DateField label="New booking date" value={selectedDate??""} min={Object.keys(slotsByDate).sort()[0]} max={Object.keys(slotsByDate).sort().at(-1)} onChange={v=>{if(slotsByDate[v]){setSelectedDate(v);setPendingSlot(null);}}}/><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>{Object.keys(slotsByDate).sort().map(date=><Pressable key={date} accessibilityRole="button" accessibilityState={{selected:date===selectedDate}} accessibilityLabel={`Choose ${date}`} disabled={submitting} onPress={()=>{setSelectedDate(date);setPendingSlot(null);}} style={{minHeight:48,justifyContent:"center",paddingHorizontal:16,paddingVertical:10,borderRadius:14,borderWidth:1,borderColor:date===selectedDate?colors.accent:colors.borderSubtle,backgroundColor:date===selectedDate?colors.accentHaze:"transparent"}}><T role="caption" tone={date===selectedDate?"accent":"secondary"}>{new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}</T></Pressable>)}</ScrollView>{Object.entries(slotsByDate).filter(([date])=>date===selectedDate).map(([date, daySlots]) => (
+        <View style={{gap:18}}><Pane pad="inset"><DateField label="New booking date" value={selectedDate??""} min={Object.keys(slotsByDate).sort()[0]} max={Object.keys(slotsByDate).sort().at(-1)} onChange={v=>{if(slotsByDate[v]){setSelectedDate(v);setPendingSlot(null);}}}/></Pane><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>{Object.keys(slotsByDate).sort().map(date=><Pressable key={date} accessibilityRole="button" accessibilityState={{selected:date===selectedDate}} accessibilityLabel={`Choose ${date}`} disabled={submitting} onPress={()=>{setSelectedDate(date);setPendingSlot(null);}} style={{minHeight:48,justifyContent:"center",paddingHorizontal:16,paddingVertical:10,borderRadius:14,borderWidth:1,borderColor:date===selectedDate?colors.accent:colors.borderSubtle,backgroundColor:date===selectedDate?colors.accentHaze:"transparent"}}><T role="caption" tone={date===selectedDate?"accent":"secondary"}>{new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}</T></Pressable>)}</ScrollView>{Object.entries(slotsByDate).filter(([date])=>date===selectedDate).map(([date, daySlots]) => (
           <Pane key={date} pad="gap">
             <View style={{ gap: space.line }}>
               <T role="heading">{new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}</T>
@@ -172,8 +174,8 @@ export default function RescheduleBookingScreen() {
                       style={({ pressed }) => ({
                         borderRadius: 12,
                         borderWidth: 1,
-                        borderColor: colors.accent,
-                        backgroundColor: selected ? colors.accentHaze : "transparent",
+                        borderColor: selected ? colors.textPrimary : colors.borderSubtle,
+                        backgroundColor: selected ? colors.accentHaze : colors.surface,
                         paddingHorizontal: 14,
                         paddingVertical: 10,
                         opacity: submitting ? 0.4 : pressed ? 0.7 : 1,
@@ -181,7 +183,7 @@ export default function RescheduleBookingScreen() {
                         alignItems: "center",
                       })}
                     >
-                      <T role="data" tone="accent">{slot.startTime}</T>
+                      <T role="data">{slot.startTime}</T>
                     </Pressable>
                   );
                 })}

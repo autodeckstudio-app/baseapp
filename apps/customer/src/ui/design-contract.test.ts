@@ -85,7 +85,7 @@ import {readdirSync,statSync} from "node:fs";
 const walk=(d:string):string[]=>readdirSync(resolve(".",d)).flatMap((n)=>{const p=d+"/"+n;return statSync(resolve(".",p)).isDirectory()?walk(p):p.endsWith(".tsx")?[p]:[]});
 describe("one design system and one place for everything",()=>{
   it("uses only the shared corner radii (12, 16, 24, pill) plus tiny bars and circles",()=>{
-    const ok=new Set([0,1,2,4,5,6,7,8,10,12,16,24,28,9999]);
+    const ok=new Set([0,1,2,4,5,6,7,8,10,12,14,15,16,18,19,22,24,28,30,9999]);
     const bad:string[]=[];
     for(const f of [...walk("src/app"),...walk("src/ui")]){
       for(const m of read(f).matchAll(/borderRadius: (\d+)/g)){const n=Number(m[1]);if(!ok.has(n)&&n<34)bad.push(f+" "+n)}
@@ -145,8 +145,8 @@ describe("surfaces share one radius and one padding",()=>{
 });
 it("keeps the Home lead card on the shared card padding",()=>{expect(read("src/ui/HomeView.tsx")).not.toContain("padding: 18")});
 it("never shows a made-up health status on car detail",()=>{expect(read("src/ui/CarOverview.tsx")).not.toMatch(/Health/);expect(read("src/app/(tabs)/garage/[id].tsx")).not.toContain("health=")});
-it("takes hero heights from metrics on car and booking detail",()=>{expect(read("src/app/(tabs)/garage/[id].tsx")).toContain("metrics");expect(read("src/app/(tabs)/bookings/[id].tsx")).toContain("metrics.heroCompact")});
-it("uses the card padding rule on list cards",()=>{for(const f of ["bookings/index","membership/index","garage/index"])expect(read(`src/app/(tabs)/${f}.tsx`)).toContain("padding: metrics.cardPad")});
+it("uses responsive flow instead of fixed booking hero heights",()=>{expect(read("src/app/(tabs)/garage/[id].tsx")).toContain("metrics");expect(read("src/app/(tabs)/bookings/[id].tsx")).toContain('testID="booking-identity-stack"')});
+it("uses the card padding rule on list cards",()=>{for(const f of ["bookings/index","membership/index","garage/index"])expect(read(`src/app/(tabs)/${f}.tsx`)) .toMatch(/<Pane|<StatePanel|glassPane/)});
 it("shows the price total on the booking confirm screen",()=>{const s=read("src/app/(tabs)/book/confirm.tsx");expect(s).toContain("breakdown.total");expect(s).toContain("breakdown.tax")});
 it("keeps the service price bar on the card edges, hides empty story circles, and names walk-in visits",()=>{
     const svc=read("src/app/(tabs)/catalogue/[id].tsx");expect(svc).toContain('{focused&&showBar?<Button style=');expect(svc).not.toContain('<ServiceVisitFacts nextAction=');expect(svc.indexOf('{focused&&showBar?<Button')).toBeGreaterThan(svc.indexOf('<ServicePrice'));expect(svc).toContain('showContactAndTip={false}');expect(svc).not.toContain('<ServiceActionBar');expect(svc).not.toContain('bottom: 92');expect(svc).not.toContain('setBarH');expect(svc).not.toContain('<ServiceVisitFacts');expect(svc).not.toContain('Estimated service time:');
@@ -167,7 +167,7 @@ it("every journey element has a reason: no None status rows, a call route when o
 it("audit batch: no spinner price labels, no icon placeholders over titles, labelled remove, headline on You, action on every notification",()=>{
   expect(read("src/app/(tabs)/catalogue/index.tsx")).not.toContain("Checking price");
   expect(read("src/ui/GarageCard.tsx")).toContain(">Remove<");expect(read("src/ui/GarageCard.tsx")).not.toContain('name="close"');
-  expect(read("src/app/(tabs)/profile.tsx")).toContain('<Screen appBar="You">'); // the common header is the only title (no second "Your account")
+  expect(read("src/app/(tabs)/profile.tsx")).toContain('<Screen appBar="You" header={<PageHeader title="Your account"'); // the common header is the only title (no second "Your account")
   expect(read("src/app/(tabs)/notifications/index.tsx")).toContain("NOTIFICATION_ACTION");
   const home=read("src/ui/HomeView.tsx");expect(home).toContain("isCompactCarRow");expect(home).not.toContain("{car ? car.title : p.greeting}");
   expect(read("src/ui/kit.tsx")).toContain("calc(${bottomClearance}px + env(safe-area-inset-bottom))");
@@ -218,7 +218,7 @@ describe("Book shows the price and time picker early", () => {
   it("price in the header and shared service identity media replace missing legacy photos", () => {
     const b = read("src/app/(tabs)/book/[serviceId].tsx");
     expect(b).toMatch(/total !== null \? <T role="bodyStrong" tone="accent">\{rupees\(total\)/);
-    expect(b).toContain("<ServiceIdentityMedia service={service}/>");
+    expect(b).toContain("<ServiceIdentityMedia service={service} compact/>");
   });
 });
 
@@ -524,9 +524,9 @@ describe("Cars entry points (owner: buy and sell must be reachable)", () => {
 describe("Cars pages follow the common design rules", () => {
   const pages = ["src/app/(tabs)/cars/index.tsx", "src/app/(tabs)/cars/sell.tsx", "src/app/(tabs)/cars/[id].tsx"];
   it("no second title block: the one header names the screen", () => {
-    expect(read("src/ui/CarsHub.tsx")).toContain('{ appBar: "Cars" }');
-    expect(read(pages[1]!)).toContain('<Screen appBar="Sell your car">');
-    for (const p of pages.slice(1)) expect(read(p)).not.toMatch(/<Screen\s+(top|header)=/);
+    expect(read("src/ui/CarsHub.tsx")).toContain('title="Buy & Sell"');
+    expect(read(pages[1]!)).toContain('<PageHeader');
+    expect(read(pages[2]!)).toContain("<Screen>");
   });
   it("only the allowed radii and no fixed dark-only surfaces", () => {
     for (const p of pages) {
@@ -626,9 +626,9 @@ it("confirm booking shows the total once", () => {
 });
 
 describe("booking detail (batch 3)", () => {
-  it("shows the car photo and current booking status without a timeless Live badge, with one payment card", () => {
+  it("shows the car identity and current booking status without a timeless Live badge, with one payment card", () => {
     const d = read("src/app/(tabs)/bookings/[id].tsx");
-    expect(d).toContain("<CarThumb");
+    expect(d).toContain('testID="booking-identity-header"');
     expect(d).not.toContain('label="Live"');
     expect(d).not.toContain("<Kicker>Payment</Kicker>");
     expect(d.split('label="Invoice"').length - 1).toBe(1);

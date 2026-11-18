@@ -59,10 +59,10 @@ export function GarageCarSheet({ car, onClose, onOpenRoom, jobs, svcNames, paper
   return (
     <Modal transparent visible animationType={reduce ? "none" : "fade"} onRequestClose={onClose} statusBarTranslucent>
       <Pressable accessibilityRole="button" accessibilityLabel="Close car preview" onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(10,10,14,0.55)", alignItems: "center", justifyContent: "center", padding: 16 }}>
-        <View onStartShouldSetResponder={() => true} style={{ width: Math.min(winW - 32, 480), maxHeight: Math.round(winH * 0.86), borderRadius: 24, overflow: "hidden", backgroundColor: light ? "#F6F4F1" : "#17171C", borderWidth: 1, borderColor: "rgba(180,180,190,0.25)" }}>
+        <View onStartShouldSetResponder={() => true} style={{ width: Math.min(winW - 32, 480), maxHeight: Math.round(winH * 0.86), borderRadius: 28, overflow: "hidden", backgroundColor: light ? "#F5F8FC" : "#202F42", borderWidth: 1, borderColor: "rgba(180,180,190,0.25)" }}>
           <ScrollView bounces={false}>
-            <CarThumb car={car} height={200} radius={0} />
-            <View style={{ padding: 18, gap: 16 }}>
+            <View style={{padding:16,paddingBottom:0}}><View style={{borderRadius:24,overflow:"hidden"}}><CarThumb car={car} height={180} radius={0} /></View></View>
+            <View style={{ padding: 22, gap: 22 }}>
               <View style={{ gap: 6 }}>
                 <Text style={{ color: ink.textPrimary, fontSize: 22, fontWeight: "800", letterSpacing: -0.4 }}>{name}</Text>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -118,7 +118,7 @@ export function GarageCarSheet({ car, onClose, onOpenRoom, jobs, svcNames, paper
               <Button label="Open full details" kind="quiet" onPress={() => onOpenRoom(car)} />
             </View>
           </ScrollView>
-          <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} hitSlop={8} style={{ position: "absolute", top: 10, right: 10, width: 34, height: 34, borderRadius: 9999, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} hitSlop={8} style={{ position: "absolute", top: 20, right: 20, width: 44, height: 44, borderRadius: 9999, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" }}>
             <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "800" }}>×</Text>
           </Pressable>
         </View>

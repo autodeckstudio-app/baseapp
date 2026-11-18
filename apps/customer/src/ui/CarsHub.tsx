@@ -1,3 +1,4 @@
+import { StatePanel } from "./StatePanel";
 import { SelectField } from "./inputs";
 // Cars for sale: studio stock and approved customer cars as a grid of photo cards, plus "Sell your car" and your own listings.
 import { useEffect, useMemo, useState } from "react";
@@ -6,7 +7,7 @@ import { NavIcon } from "./NavIcon";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import type { CarListingView } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
-import { Button, Chip, Field, Kicker, Notice, Screen, Skeleton, T } from "./kit";
+import { Button, Chip, Field, Kicker, Notice, PageHeader, Screen, Skeleton, T } from "./kit";
 import { hasCarPrice } from "../lib/cars-home";
 import { glassPane } from "../lib/glass-pane";
 import { filterCars } from "../lib/car-filters";
@@ -59,12 +60,12 @@ function FeatureCard({ l, onPress }: { l: CarListingView; onPress: () => void })
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`View ${l.year} ${l.make} ${l.model}, ${hasCarPrice(l) ? inr(l.askingPrice) : "price on request"}`} onPress={onPress} style={({ pressed }) => ({ width: "100%", overflow: "hidden", opacity: pressed ? 0.85 : 1, ...glassPane(day) })}>
       <View>
-        <Photo l={l} style={{ width: "100%", height: 132 }} />
+        <Photo l={l} style={{ width: "100%", height: 210 }} />
         <View style={{ position: "absolute", top: 12, left: 12, backgroundColor: "rgba(10,10,12,.82)", borderRadius: 9999, paddingHorizontal: 12, paddingVertical: 6 }}><T role="caption" style={{ color: "#FFFFFF" }}>{l.status === "reserved" ? "Reserved" : l.source === "studio" ? "Studio listing" : "Customer listing"}</T></View>
       </View>
-      <View style={{ paddingHorizontal: 14, paddingVertical: 12, gap: 2 }}>
+      <View style={{ paddingHorizontal: 20, paddingVertical: 20, gap: 10 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
-          <T role="bodyStrong" numberOfLines={1} style={{ flex: 1 }}>{l.make} {l.model}</T>
+          <T role="heading" numberOfLines={2} style={{ flex: 1 }}>{l.make} {l.model}</T>
           <T role="bodyStrong">{hasCarPrice(l) ? inr(l.askingPrice) : "Ask price"}</T>
         </View>
         <T role="caption" tone="tertiary" numberOfLines={1}>{carFacts(l)}{l.variant ? ` · ${l.variant}` : ""}</T>
@@ -77,8 +78,8 @@ function FeatureCard({ l, onPress }: { l: CarListingView; onPress: () => void })
 function RowCard({ l, onPress }: { l: CarListingView; onPress: () => void }) {
   const day = useExperienceTheme().name === "light";
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`View ${l.year} ${l.make} ${l.model}, ${hasCarPrice(l) ? inr(l.askingPrice) : "price on request"}`} onPress={onPress} style={({ pressed }) => ({ width: "100%", flexDirection: "row", alignItems: "center", gap: 14, padding: 10, opacity: pressed ? 0.85 : 1, ...glassPane(day) })}>
-      <Photo l={l} style={{ width: 96, height: 66, borderRadius: 12 }} />
+    <Pressable accessibilityRole="button" accessibilityLabel={`View ${l.year} ${l.make} ${l.model}, ${hasCarPrice(l) ? inr(l.askingPrice) : "price on request"}`} onPress={onPress} style={({ pressed }) => ({ width: "100%", flexDirection: "row", alignItems: "center", gap: 14, padding: 16, opacity: pressed ? 0.85 : 1, ...glassPane(day) })}>
+      <Photo l={l} style={{ width: 104, height: 90, borderRadius: 12 }} />
       <View style={{ flex: 1, gap: 4 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
           <T role="bodyStrong" numberOfLines={1} style={{ flex: 1 }}>{l.make} {l.model}</T>
@@ -96,12 +97,12 @@ type Tab = "buy" | "sell";
 function TabSwitch({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
   const night = useExperienceTheme().name === "night";
   return (
-    <View accessibilityRole="tablist" style={{ flexDirection: "row", padding: 3, gap: 3, ...glassPane(!night), borderRadius: 9999 }}>
+    <View accessibilityRole="tablist" style={{ flexDirection: "row", padding: 5, gap: 5, ...glassPane(!night), borderRadius: 22 }}>
       {(["buy", "sell"] as Tab[]).map((t) => {
         const on = tab === t;
         return (
           <Pressable key={t} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={t === "buy" ? "Buy a car" : "Sell your car"} onPress={() => onChange(t)}
-            style={{ flex: 1, minHeight: 36, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: on ? (night ? "#FAF8F5" : "#1D1B26") : "transparent" }}>
+            style={{ flex: 1, minHeight: 46, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: on ? (night ? "#FAF8F5" : "#1D1B26") : "transparent" }}>
             <T role="label" style={{ color: on ? (night ? "#1D1B26" : "#FFFFFF") : night ? "#FAF8F5" : "#1D1B26", letterSpacing: 1, fontWeight: "800" }}>{t === "buy" ? "BUY" : "SELL"}</T>
           </Pressable>
         );
@@ -182,7 +183,7 @@ export function CarsHub({ all, mine, error, mineError = false, initialTab = "buy
   const clear = () => { setQuery(""); setFuel(null); setBody(null); setBudget("any"); };
   const chipBorder = themeNight ? "rgba(255,255,255,0.28)" : "rgba(29,27,38,0.16)";
   return (
-    <Screen {...(header ? { header } : { appBar: "Cars" })}>
+    <Screen {...(header ? { header } : { appBar: "Cars", header: <PageHeader title="Buy & Sell" sub="Cars and listings with AutoDeck." /> })}>
     <View style={{ gap: 14 }}>
       <TabSwitch tab={tab} onChange={setTab} />
       {tab === "sell" && mineError ? <Notice title="Can't load your listings" body="Check your connection and retry before submitting again." action={<Button label="Retry" onPress={onRetry}/>} /> : null}
@@ -213,8 +214,8 @@ export function CarsHub({ all, mine, error, mineError = false, initialTab = "buy
       ) : null}
       {tab === "buy" && error ? <Notice title="Can't load cars" body="Check your connection and try again." action={<Button kind="quiet" label="Retry" onPress={onRetry} />} /> : null}
       {tab === "buy" && !all && !error ? <View style={{ gap: space.line }}><Skeleton height={200} /><Skeleton height={90} /></View> : null}
-      {tab === "buy" && all && all.length === 0 ? <Notice title="No cars listed yet" body="New cars appear here as soon as the studio lists them." /> : null}
-      {tab === "buy" && all && all.length > 0 && shown.length === 0 && filtering ? <Notice title="No cars match" body="Try a wider budget or clear the search." action={<Button kind="quiet" label="Clear filters" onPress={clear} />} /> : null}
+      {tab === "buy" && all && all.length === 0 ? <StatePanel icon="garage" title="No cars listed yet" body="New cars appear here as soon as the studio lists them." /> : null}
+      {tab === "buy" && all && all.length > 0 && shown.length === 0 && filtering ? <StatePanel icon="search" title="No cars match" body="Try a wider budget or clear the search." action={<Button kind="quiet" label="Clear filters" onPress={clear} />} /> : null}
       {tab === "buy" && shown.length > 0 ? (
         <View style={{ gap: 12 }}>
           {shown.map((l, i) => i === 0 ? <FeatureCard key={l.id} l={l} onPress={() => onOpen(l.id)} /> : <RowCard key={l.id} l={l} onPress={() => onOpen(l.id)} />)}

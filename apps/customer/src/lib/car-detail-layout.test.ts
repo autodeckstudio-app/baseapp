@@ -15,9 +15,9 @@ describe("car detail layout", () => {
     expect(g).toContain('key: "history"');
     expect(g).toContain('key: "documents"');
   });
-  it("hero facts are one slim line, and the details card does not repeat make, model or plate", () => {
+  it("hero facts use a labeled wrapping grid, and the details card does not repeat make, model or plate", () => {
     const h = read("ui/CarHero.tsx");
-    expect(h).toContain('numberOfLines={1}');
+    expect(h).toContain('flexWrap: "wrap"'); expect(h).toContain('{f.label}'); expect(h).toContain('{f.value}');
     expect(h).not.toContain("flexBasis");
     const g = read("app/(tabs)/garage/[id].tsx");
     expect(g).not.toContain('{ label: "Make"');

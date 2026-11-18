@@ -1,3 +1,4 @@
+import { buildDrawerItems } from "../../lib/drawer-items";
 import { ProfileVisitLinks } from "../../ui/ProfileVisitLinks";
 import { LicenceSection } from "../../ui/LicenceSection";
 import { ListRow } from "../../ui/ListRow";
@@ -22,7 +23,7 @@ import { ProfileHero } from "../../ui/ProfileHero";
 import { NavIcon } from "../../ui/NavIcon";
 import { glassPane } from "../../lib/glass-pane";
 import { metrics } from "../../lib/metrics";
-import { Button, Field, Kicker, Loading, Notice, Screen, T } from "../../ui/kit";
+import { Button, Field, Kicker, Loading, Notice, PageHeader, Pane, Screen, T } from "../../ui/kit";
 
 export default function YouScreen() {
   const { colors, name: themeName } = useExperienceTheme();
@@ -72,7 +73,7 @@ export default function YouScreen() {
 
   const light = themeName === "light";
   return (
-    <Screen appBar="You">
+    <Screen appBar="You" header={<PageHeader title="Your account" sub="Your AutoDeck profile and preferences." />}>
       <ProfileHero
         name={name}
         photoUrl={auth.user.photoURL ?? auth.user.providerData?.find(p=>p.providerId==='google.com')?.photoURL ?? null}
@@ -90,6 +91,13 @@ export default function YouScreen() {
         </View>
       ) : null}
       {actionMessage ? <Notice title="Account update" body={actionMessage} /> : null}
+      <Pane pad="inset"><View style={{ gap: 6 }}><Kicker>Your AutoDeck</Kicker>
+        {buildDrawerItems((path) => router.push(path as never), null).filter(it => it.key !== "help").map((it) => <Pressable key={it.key} accessibilityRole="button" accessibilityLabel={it.label} onPress={it.onPress} style={({ pressed }) => ({ flexDirection: "row", gap: 14, alignItems: "center", minHeight: 76, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle, opacity: pressed ? 0.7 : 1 })}>
+          <View style={{ width: 44, height: 44, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: light ? "#E7EDF5" : "#29384C" }}><NavIcon name={it.key === "cars" ? "garage" : it.key === "membership" ? "club" : it.key === "friends-gifts" ? "gift" : "bell"} size={23} color={colors.textPrimary} cut={light ? "#E7EDF5" : "#29384C"} /></View>
+          <View style={{ flex: 1, minWidth: 0, gap: 4 }}><T role="bodyStrong">{it.label}</T>{it.sub ? <T role="caption" tone="secondary">{it.sub}</T> : null}</View><T role="caption" tone="secondary">Open</T>
+        </Pressable>)}
+        <ListRow last icon="chat" title="Your quotes" detail="Review work and prices" onPress={() => router.push("/(tabs)/quotes")} />
+      </View></Pane>
       <View style={{ ...glassPane(light), paddingHorizontal: 16 }}>
         <LicenceSection customerId={auth.status==="ready"?auth.customerDocId:null} scope={scopeKey} upload={uploadLicensePhoto} lock={saveLock} epoch={generation} />
         <ListRow last icon="chat" title="Help & contact" detail="Call or WhatsApp the studio" onPress={() => router.navigate("/(tabs)/help")} />

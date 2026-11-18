@@ -7,9 +7,9 @@ const status:Record<string,string>={requested:'Awaiting quote',offered:'Quote re
 export function QuoteRequestCard({quote,title,vehicleLabel,busy,onInspect,onDetails}:{quote:CustomerQuote;title:string;vehicleLabel?:string|undefined;busy:boolean;onInspect:()=>void;onDetails:()=>void}){
  const {colors}=useExperienceTheme();
  const waiting=['requested','inspection_requested','inspection_confirmed','inspection_arrived','inspection_completed'].includes(quote.phase);
- return <Pane pad="inset"><View style={{gap:18}}>
-  <View style={{gap:8}}><T role="caption" tone="secondary">{status[quote.phase]??'Request'}</T><T role="heading">{title}</T>{vehicleLabel?<T role="caption" tone="secondary">{vehicleLabel}</T>:null}</View>
-  <View style={{borderTopWidth:1,borderTopColor:colors.borderSubtle,paddingTop:14,gap:6}}>
+ return <Pane pad="inset"><View style={{gap:24}}>
+  <View style={{gap:10}}><T role="label" tone="tertiary">{status[quote.phase]??'Request'}</T><T role="heading">{title}</T>{vehicleLabel?<T role="caption" tone="secondary">{vehicleLabel}</T>:null}</View>
+  <View style={{borderTopWidth:1,borderTopColor:colors.borderSubtle,paddingTop:20,gap:10}}>
    <T role="caption" tone="tertiary">{quote.offer?'QUOTED TOTAL':waiting?'PRICE':'STATUS'}</T>
    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12,minHeight:44}}>
     <View style={{flex:1,minWidth:0}}>{quote.offer?<T role="heading">{rupees(quote.offer.totalPaise)}</T>:<View style={{alignSelf:'flex-start',paddingHorizontal:12,paddingVertical:8,borderWidth:1,borderStyle:'dashed',borderColor:colors.borderSubtle,borderRadius:12}}><T role="caption" tone="secondary">{waiting?'Price pending':quote.phase==='declined'?'Request closed':'View booking'}</T></View>}</View>

@@ -16,18 +16,18 @@ export function MembershipCard({ membership, today }: { membership: Membership; 
   const rule = carryOverLine();
   return (
     <Pane pad="none" round="hero" fill="cool" tone="premium">
-      <View style={{ padding: metrics.cardPad, gap: space.breath }}>
+      <View style={{ padding: 24, gap: 20 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <T role="label" tone="secondary">{tier} membership</T>
           {pending ? <Chip label="Payment pending" /> : label ? <Chip label={label} tone={s.endingSoon || s.ended ? "accent" : "neutral"} /> : null}
         </View>
-        <View style={{ flexDirection: "row", alignItems: "baseline", gap: space.line }}>
-          <T role="display">{pending ? s.total : s.left}</T>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 22 }}>
+          <T role="display" style={{fontSize:64,lineHeight:70}}>{pending ? s.total : s.left}</T>
           <T tone="secondary">{pending ? "washes after activation" : `of ${s.total} washes left`}</T>
         </View>
-        {!pending?<View accessibilityRole="progressbar" accessibilityLabel={`${s.left} of ${s.total} washes left`} style={{ flexDirection: "row", gap: 6 }}>
+        {!pending?<View accessibilityRole="progressbar" accessibilityLabel={`${s.left} of ${s.total} washes left`} style={{ flexDirection: "row", gap: 5 }}>
           {Array.from({ length: Math.min(s.total, 24) }, (_, i) => (
-            <View key={i} style={{ flex: 1, height: 8, borderRadius: 9999, backgroundColor: !pending && i < s.left ? "#EC8638" : glassInner.backgroundColor }} />
+            <View key={i} style={{ flex: 1, height: 5, borderRadius: 9999, backgroundColor: !pending && i < s.left ? "#8DACC8" : glassInner.backgroundColor }} />
           ))}
         </View>:null}
         <T tone="secondary">

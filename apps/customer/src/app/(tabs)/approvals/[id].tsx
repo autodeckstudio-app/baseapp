@@ -116,18 +116,19 @@ export default function ApprovalDetailScreen() {
         </View>
       }
     >
-      <Pane pad="gap">
+      <Pane pad="inset"><View style={{gap:16}}>
+        <T role="label" tone="tertiary">WORK TO REVIEW</T>
+        <T role="heading" style={{fontSize:24,lineHeight:30}}>{approval.serviceName}</T>
+        <T tone="secondary">{approval.reason}</T>
         <Row title="Car" detail={vehicle ? `${vehicle.make} ${vehicle.model}` : "-"} />
-        <Row title="Additional service" detail={approval.serviceName} />
-        <Row title="Reason" detail={approval.reason} />
         <Row title="Requested" detail={formatWhen(approval.createdAt)} last />
-      </Pane>
+      </View></Pane>
 
-      <Pane pad="gap">
+      <Pane pad="inset"><View style={{gap:12}}><T role="label" tone="tertiary">PRICE CHANGE</T>
         <Row title="Current total" trailing={<T role="data">{rupees(approval.originalAmount)}</T>} />
         <Row title="Additional cost" trailing={<T role="data" tone="accent">+{rupees(approval.priceImpact)}</T>} />
         <Row title={<T role="heading">New total</T>} trailing={<T role="heading">{rupees(approval.newTotal)}</T>} last />
-      </Pane>
+      </View></Pane>
 
       {actionError ? <Notice title="Could not complete that" body={actionError} /> : null}
 

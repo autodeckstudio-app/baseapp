@@ -12,7 +12,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { space } from "@autodeck/ui/theme";
 import { COLLECTIONS } from "@autodeck/database";
 import type { Vehicle, VehicleCategory } from "@autodeck/core";
-import { Button, Field, Kicker, Notice, Screen, T } from "../../../ui/kit";
+import { Button, Field, Kicker, Notice, Pane, Screen, T } from "../../../ui/kit";
 import { ModalCard } from "../../../ui/ModalCard";
 import { useAuth } from "../../../hooks/useAuth";
 import { db } from "../../../lib/firebase";
@@ -489,7 +489,7 @@ export default function AddVehicleScreen() {
             pointer events blocked for EVERY input path (fields, selects,
             date, photo) and the handlers no-op too, so no path can bypass
             the freeze and strand pending work. */}
-        <View style={{ gap: space.line, opacity: editsFrozen() ? 0.6 : 1 }} pointerEvents={editsFrozen() ? "none" : "auto"}>
+        <Pane pad="inset"><View style={{gap:18}}><Kicker>Car details</Kicker><View style={{ gap: 18, opacity: editsFrozen() ? 0.6 : 1 }} pointerEvents={editsFrozen() ? "none" : "auto"}>
           {FIELDS.map(({ key, label, placeholder, autoCapitalize = "sentences", keyboardType = "default" }) => (
             <Field
               key={key}
@@ -504,16 +504,16 @@ export default function AddVehicleScreen() {
               maxLength={key === "registrationNumber" ? REG_RAW_MAX : key === "year" ? 4 : 50}
             />
           ))}
-        </View>
+        </View></View></Pane>
 
-        <View style={{ gap: space.breath }}>
+        <Pane pad="inset"><View style={{ gap: 16 }}>
           <Kicker>Size</Kicker>
           <T role="caption" tone="secondary">Saved with your car. Only PPF prices change with car size.</T>
           <SelectField label="Car size" value={size ?? ""} placeholder="Choose size" options={VEHICLE_SIZES} onChange={v=>{setSize(v as VehicleCategory);setSizeError(false);}}/>
           {sizeError?<T role="caption" tone="danger">Choose your car's size.</T>:null}
-        </View>
+        </View></Pane>
 
-        <View style={{ gap: space.breath }}>
+        <Pane pad="inset"><View style={{ gap: 18 }}>
           <Kicker>Existing protection (optional)</Kicker>
           <GarageDisclosure kind="protection"/>
           {PROTECTION_BLOCKS.map(({ kind, label, question }) => (
@@ -557,14 +557,14 @@ export default function AddVehicleScreen() {
             </View>
           ))}
           {protectionError ? <T role="caption" tone="danger">{protectionError}</T> : null}
-        </View>
+        </View></Pane>
 
         <>
-          <View style={{ gap: space.hair }}>
+          <Pane pad="inset"><View style={{ gap: 16 }}>
             <Kicker>Photo (optional)</Kicker>
             <FileUploader files={photo && !(photo.blob instanceof Uint8Array)?[{blob:photo.blob,type:photo.contentType}]:[]} nativeEnabled nativeFileCount={photo?1:0} onNativeChange={fs=>{if(editsFrozen())return;const f=fs[0];setPhoto(f?{blob:f.bytes,contentType:f.type,previewUrl:f.previewUri}:null);setError(null);}} onChange={fs=>pickPhoto(fs[0]?{blob:fs[0].blob,type:fs[0].type}:null)}/>
             {photo ? <T role="caption" tone="tertiary">Photo ready - it uploads when the car is added.</T> : null}
-          </View>
+          </View></Pane>
         </>
 
 

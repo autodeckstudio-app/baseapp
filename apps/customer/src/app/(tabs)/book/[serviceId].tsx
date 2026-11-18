@@ -1,3 +1,4 @@
+import { JourneySteps } from "../../../ui/JourneySteps";
 import{ServiceIdentityMedia}from'../../../ui/ServiceIdentityMedia';
 import{bookingExtras}from'../../../lib/booking-selection';
 import{serviceOnlineBookingIssue}from'@autodeck/core';
@@ -166,10 +167,12 @@ export default function BookServiceScreen() {
   if(service.priceOnRequest===true||service.customerMenu?.priceMode==="inspection")return <Screen appBar="Studio inspection"><T role="title">Bring your car for inspection</T><T>Agree the work and final price at the studio before service.</T><Button label="Studio details" onPress={()=>router.navigate("/(tabs)/help")}/></Screen>;
   return (
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{extraIds.length?"Your service selection":service.name}</T>{extraIds.length?<T role="caption" tone="secondary">{[serviceId,...extraIds].map(id=>catalogue.find(s=>s.id===id)?.name??"Service unavailable").join(" + ")}</T>:null}{total !== null ? <T role="bodyStrong" tone="accent">{rupees(total)} · {durationText(selectionMinutes??service.estimatedDurationMinutes)}</T> : null}</View>}>
-      <ServiceIdentityMedia service={service}/>
-      <View style={{ gap: space.line }}>
-        <Kicker>Booking for</Kicker>
-        {selectedVehicle ? <Pane pad="inset"><View style={{flexDirection:"row",alignItems:"center",gap:14}}>{selectedVehicle.photoUrl?<CarThumb car={selectedVehicle} height={60} width={84} radius={12}/>:null}<View style={{flex:1,minWidth:0,gap:6}}><T role="heading">{selectedVehicle.make} {selectedVehicle.model}</T><Plate value={selectedVehicle.registrationNumber}/></View></View>{vehicles.length>1&&!choosingVehicle?<Pressable accessibilityRole="button" accessibilityLabel="Change car" onPress={()=>setChoosingVehicle(true)} style={{alignSelf:"flex-start",minHeight:44,justifyContent:"center",paddingHorizontal:2,marginTop:4}}><T role="caption" tone="secondary" style={{textDecorationLine:"underline"}}>Change car</T></Pressable>:null}</Pane> : null}
+      <JourneySteps labels={["Car & time", "Review"]} current={0} />
+      <ServiceIdentityMedia service={service} compact/>
+      <Pane pad="inset">
+        <View style={{ gap: 16 }}>
+        <Kicker>01 / Your car</Kicker>
+        {selectedVehicle ? <View style={{gap:12}}><View style={{flexDirection:"row",alignItems:"center",gap:14}}>{selectedVehicle.photoUrl?<CarThumb car={selectedVehicle} height={60} width={84} radius={12}/>:null}<View style={{flex:1,minWidth:0,gap:6}}><T role="heading">{selectedVehicle.make} {selectedVehicle.model}</T><Plate value={selectedVehicle.registrationNumber}/></View></View>{vehicles.length>1&&!choosingVehicle?<Pressable accessibilityRole="button" accessibilityLabel="Change car" onPress={()=>setChoosingVehicle(true)} style={{alignSelf:"flex-start",minHeight:44,justifyContent:"center",paddingHorizontal:2,marginTop:4}}><T role="caption" tone="secondary" style={{textDecorationLine:"underline"}}>Change car</T></Pressable>:null}</View> : null}
         {vehiclesError ? <Notice title="Can't load your cars" body="Try again before choosing a time." action={<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>}/> : vehicles.length === 0 ? (
           <Notice title="Add your car first" body="We price and plan the work around it." action={<Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} />} />
         ) : selectedVehicle && !choosingVehicle ? null : (
@@ -194,7 +197,7 @@ export default function BookServiceScreen() {
             })}
           </Pane>
         )}
-      </View>
+      </View></Pane>
 
       {vehiclesLoaded&&!vehiclesError&&!selectedVehicle&&vehicles.length>0?<Notice title="Choose a car before choosing a time" body={requestedVehicleId?"The car from this suggestion is no longer available. Choose one of your current saved cars to continue.":"Select the car for this booking."}/>:null}
       {selectedVehicle && !selectedVehicle.category ? <View style={{gap:space.line}}>
@@ -211,8 +214,8 @@ export default function BookServiceScreen() {
       ) : null}
 
 
-      <View style={{ gap: space.line }}>
-        <Kicker>Choose a date</Kicker>
+      <Pane pad="inset"><View style={{ gap: 18 }}>
+        <Kicker>02 / Your visit</Kicker>
         {dayMissed ? <T role="caption" tone="secondary">No free time {day === "weekend" ? "this weekend" : day} for this service. Showing the earliest day instead.</T> : null}
         {slotsError ? <Notice title="Can't load times" body="Check your connection and try again." action={<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /> : null}
         {slotsLoading ? (
@@ -224,7 +227,7 @@ export default function BookServiceScreen() {
         )}
         {sizeError ? <T role="caption" tone="danger">{sizeError}</T> : null}
         <Button style={{alignSelf:"stretch",width:"100%",marginTop:16,marginBottom:16}} label={pickedSlot ? `Continue with ${pickedSlot.startTime}` : "Pick a time to continue"} disabled={!pickedSlot || !selectedVehicle || vehiclesError || sizeSaving || total===null} busy={sizeSaving} onPress={() => { if (pickedSlot) void handleSelectSlot(pickedSlot); }} />
-      </View>
+      </View></Pane>
     </Screen>
   );
 }

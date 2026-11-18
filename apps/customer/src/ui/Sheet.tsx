@@ -12,7 +12,7 @@ const web = Platform.OS === "web";
 export function Sheet({ children }: { children: ReactNode }) {
   const {name,colors}=useExperienceTheme();
   return (
-    <View style={{ borderRadius: metrics.cardRadius, padding: metrics.cardPad, gap: metrics.innerGap, backgroundColor: name==="light"?"rgba(240,234,226,0.95)":colors.surfaceElevated, borderWidth: 1, borderColor: name==="light"?"rgba(255,255,255,0.5)":colors.borderSubtle, ...(web ? ({ backdropFilter: "blur(18px) saturate(130%)", WebkitBackdropFilter: "blur(18px) saturate(130%)", boxShadow: "0 12px 34px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.7)" } as object) : {}) }}>
+    <View style={{ borderRadius: metrics.cardRadius, padding: metrics.cardPad, gap: 8, backgroundColor: name==="light"?"#F7F9FC":colors.surfaceElevated, borderWidth: 1, borderColor: name==="light"?"rgba(255,255,255,0.5)":colors.borderSubtle, ...(web ? ({ backdropFilter: "blur(18px) saturate(130%)", WebkitBackdropFilter: "blur(18px) saturate(130%)", boxShadow: "0 16px 38px rgba(31,51,77,0.08), inset 0 1px 0 rgba(255,255,255,0.7)" } as object) : {}) }}>
       {children}
     </View>
   );
@@ -32,7 +32,7 @@ export function SheetTotal({ label, value }: { label: string; value: string }) {
 export function SheetLine({ label, value, small = false, last = false }: { label: string; value: string; small?: boolean; last?: boolean }) {
   const {name,colors}=useExperienceTheme();
   return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 16, paddingVertical: small ? 4 : 10, borderBottomWidth: last ? 0 : 1, borderBottomColor: small ? "transparent" : name==="light"?LINE:colors.borderSubtle }}>
+    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 16, paddingVertical: small ? 9 : 14, borderBottomWidth: last ? 0 : 1, borderBottomColor: name==="light"?LINE:colors.borderSubtle }}>
       <Text style={{ color: name==="light"?SOFT:colors.textSecondary, fontSize: small ? 13 : 14 }}>{label}</Text>
       <Text style={{ color: name==="light"?INK:colors.textPrimary, fontSize: small ? 13 : 15, fontWeight: small ? "500" : "700", flexShrink: 1, textAlign: "right" }}>{value}</Text>
     </View>

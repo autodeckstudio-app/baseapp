@@ -1,3 +1,4 @@
+import { StatePanel } from "../../../ui/StatePanel";
 import {WalkinVisitEstimates} from '../../../ui/WalkinVisitEstimates';
 import {useSharedVisit} from '../../../hooks/useSharedVisit';
 import {visitProgress} from '@autodeck/core';
@@ -180,14 +181,14 @@ export default function BookingsScreen() {
   };
 
   return (
-    <Screen appBar="Bookings" header={<PageHeader title={error || bookings === null ? "Bookings" : liveJob ? "In the studio" : next ? "Upcoming visit" : "No upcoming visits"} sub={error || bookings === null ? "" : [upcoming.length > 0 ? `${upcoming.length} coming up` : "", past.length > 0 ? `${past.length} past` : ""].filter(Boolean).join(" · ") || "Book a service when you are ready."} />}>
+    <Screen appBar="Visits" header={<PageHeader title="Your visits" sub={error || bookings === null ? "" : [upcoming.length > 0 ? `${upcoming.length} coming up` : "", past.length > 0 ? `${past.length} past` : ""].filter(Boolean).join(" · ") || "Bookings, progress and visit records."} />}>
       <View {...swipe.handlers} style={[{ gap: 20, minHeight: Math.max(winH - 220, 480) }, swipe.style]}>
       {error ? <Notice title="Can't load bookings" body="Check your connection and try again." action={<Button kind="quiet" icon="refresh" label="Try again" onPress={() => void load()} />} /> : null}
 
       <WalkinVisitEstimates selectedId={typeof estimateId==="string"?estimateId:null} owner={owner} customerId={auth.customerDocId} vehicleLabel={id=>{const c=cars[id];return c?[c.make,c.model,c.registrationNumber].filter(Boolean).join(' '):'Car'}} onAccepted={()=>void load()}/>
       <TabPills tabs={[{ key: "active", label: "Active" }, { key: "upcoming", label: "Upcoming" }, { key: "past", label: "Past" }]} value={seg} onChange={setSegPick} />
 
-      {seg === "active" && !liveJob && approvals.filter((a) => a.status === "pending").length === 0 ? <Notice title="Nothing active" body="When your car is in the studio, you can follow it here." /> : null}
+      {seg === "active" && !liveJob && approvals.filter((a) => a.status === "pending").length === 0 ? <StatePanel icon="history" title="Nothing active" body="When your car is in the studio, you can follow it here." /> : null}
 
       {seg === "active" && liveJob?.visitId&&!stage?<Pane pad="inset"><T role="heading">{sharedVisit?.error?"Visit unavailable":"Checking visit…"}</T></Pane>:null}
       {seg === "active" && liveJob && stage ? (
@@ -241,14 +242,7 @@ export default function BookingsScreen() {
       ) : null}
 
       {seg === "upcoming" && !error && !next ? (
-        <Pane pad="none" round="hero">
-          <HeroImage source={sceneImagery.heroHome} />
-          <View style={{ padding: metrics.cardPad, gap: space.breath }}>
-            <T role="heading">Nothing booked</T>
-            <T tone="secondary">Pick a service and a time. The studio confirms it.</T>
-            <Button label="Book a service" onPress={() => router.navigate("/(tabs)/catalogue")} />
-          </View>
-        </Pane>
+        <StatePanel icon="bookings" title="Nothing booked" body="Pick a service and a time. The studio confirms it." action={<Button label="Book a service" onPress={() => router.navigate("/(tabs)/catalogue")} />} />
       ) : null}
 
       {seg === "upcoming" && !error && !next && selCar ? <BookingSuggestions vehicle={selCar} suggestions={suggestions} onChooseTime={(serviceId,vehicleId)=>router.push({pathname:"/(tabs)/book/[serviceId]",params:{serviceId,vehicleId}})} /> : null}
@@ -272,7 +266,7 @@ export default function BookingsScreen() {
           <View style={{ gap: space.line }}>
             {groupByMonth(past).map((g) => <View key={g.key} style={{ gap: space.line }}><T role="label" tone="secondary">{g.label.toUpperCase()}</T>{list(g.items)}</View>)}
           </View>
-        ) : <Notice title="No past visits" body="Finished and cancelled visits show here." />
+        ) : <StatePanel icon="bookings" title="No past visits" body="Finished and cancelled visits show here." />
       ) : null}
       </View>
     </Screen>

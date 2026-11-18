@@ -1,0 +1,21 @@
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createRequire} from 'node:module';
+const dir=path.dirname(fileURLToPath(import.meta.url));
+const root=path.resolve(dir,'../../..');
+const require=createRequire(path.join(root,'functions/package.json'));
+const {build}=require('esbuild');
+const customerRequire=createRequire(path.join(root,'apps/customer/package.json'));
+const blurPath=path.join(path.dirname(customerRequire.resolve('expo-blur/package.json')),'build/BlurView.web.js');
+await build({entryPoints:[dir+'/entry.tsx'],bundle:true,resolveExtensions:['.web.tsx','.tsx','.web.ts','.ts','.web.js','.js','.json'],jsx:'automatic',outfile:dir+'/preview.js',nodePaths:[root+'/apps/customer/node_modules'],platform:'browser',format:'iife',define:{global:'globalThis','process.env':'{}',__DEV__:'false','process.env.NODE_ENV':'"production"'},loader:{'.js':'jsx','.ttf':'dataurl','.png':'dataurl','.jpg':'dataurl','.webp':'dataurl'},plugins:[{name:'aliases',setup(b){
+b.onLoad({filter:/^blur-web$/,namespace:'preview'},()=>({contents:`export {default as BlurView} from ${JSON.stringify(blurPath)}`,resolveDir:root,loader:'js'}));
+b.onResolve({filter:/^@autodeck\/ui(?:\/native|\/theme)?$/},args=>({path:root+'/packages/ui/src/'+(args.path.endsWith('/native')?'native/index.ts':args.path.endsWith('/theme')?'theme/index.ts':'index.ts')}));
+b.onResolve({filter:/^react-native$/},()=>({path:customerRequire.resolve('react-native-web')}));
+b.onResolve({filter:/^expo-blur$/},()=>({path:'blur-web',namespace:'preview'}));
+b.onResolve({filter:/^expo-image-picker$/},()=>({path:'image-picker',namespace:'preview'}));
+b.onLoad({filter:/^image-picker$/,namespace:'preview'},()=>({contents:'export const launchImageLibraryAsync=()=>{throw new Error("LOCAL PREVIEW ONLY")};export const requestMediaLibraryPermissionsAsync=async()=>({granted:false});',loader:'js'}));
+b.onResolve({filter:/^firebase\/firestore$/},()=>({path:dir+'/mocks.ts'}));
+b.onResolve({filter:/^expo-router$/},()=>({path:dir+'/mocks.ts'}));
+
+b.onResolve({filter:/\/(push|carsale-service|native-image-pick|upload-service|vehicle-onboarding|vehicle-upload|vehicle-create|upload-vehicle|car-service|car-listing-service|listing-service|onboarding-storage|membership-service|gift|gift-service|native-gift-availability|useCataloguePublication|active-vehicle|useForegroundRefresh|visit-intake-service|firebase|useAuth|useCustomerHome|vehicle-service|job-service|home-service|catalogue-service|paper-service|dev-garage-loader|booking-service|invoice-service|approval-service|service-names|pickup-service|auth-service|useSharedVisit|notification-service|protection-service|warranty-service|payment-service|razorpay-checkout|review-service|inspection-service)$/},()=>({path:dir+'/mocks.ts'}));
+}}]});

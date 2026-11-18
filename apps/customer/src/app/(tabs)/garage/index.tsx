@@ -1,3 +1,4 @@
+import { StatePanel } from "../../../ui/StatePanel";
 import {GarageDisclosure} from '../../../ui/GarageDisclosure';
 import {GarageActions} from '../../../ui/GarageActions';
 import { JourneySheet } from "../../../ui/JourneySheet";
@@ -186,11 +187,7 @@ export default function GarageScreen() {
         <FilterPills fixedFirst items={[{ key: null as string | null, label: "All" }, ...brands.map((b) => ({ key: b.key as string | null, label: b.label }))]} value={sel} onChange={setPick} flat trailing={<Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={() => router.push("/(tabs)/garage/add")} style={{ paddingHorizontal: 2, paddingVertical: 9, flexDirection: "row", alignItems: "center", gap: 4 }}><Text style={{ color: ink.premium, fontSize: 16, fontWeight: "800" }}>+</Text><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "700" }}>Add car</Text></Pressable>} />
       ) : null}
       {list.length === 0 && !error && !ownerUnknown && !ownerLinking && !ownerNoProfile ? (
-        <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.breath }}>
-          <T role="heading">No cars yet</T>
-          <T tone="secondary">Add your car once. Bookings, bills and papers attach to it from then on.</T>
-          <Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} testID="garage-add" />
-        </View>
+        <StatePanel icon="garage" title="No cars yet" body="Add your car once. Bookings, bills and papers attach to it from then on." action={<Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} testID="garage-add" />} />
       ) : filtered.length > 0 ? (
         <View style={{ gap: metrics.sectionGap }}>
           <View testID="garage-car-stack" style={{gap:20}}>

@@ -1,3 +1,4 @@
+import { StatePanel } from "../../../ui/StatePanel";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { listOwnerKey } from "../../../lib/owner-key";
 import { View } from "react-native";
@@ -69,7 +70,7 @@ export default function MembershipUsageScreen() {
       }
     >
       {usage.length === 0 ? (
-        <Notice title="No usage yet" body="Recorded use of an active plan appears here. A pending plan does not provide benefits yet." />
+        <StatePanel icon="history" title="No usage yet" body="Recorded use of an active plan appears here. A pending plan does not provide benefits yet." />
       ) : (
         <Pane pad="gap">
           {usage.map((u, i) => {

@@ -15,11 +15,11 @@ export function JobTimeline({ status, history,finalLabel }: { status: string; hi
   return (
     <View style={{ borderRadius: metrics.cardRadius, padding: metrics.cardPad, gap: 12, ...r.card }}>
       <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>Progress</Text>
-      {steps.map((s) => (
-        <View key={s.label} accessibilityLabel={`${s.label}${s.at ? `, ${clock(s.at)}` : s.state === "next" ? ", next" : ""}`} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: s.state === "next" ? "transparent" : colors.textPrimary, borderWidth: 1.5, borderColor: s.state === "next" ? colors.textTertiary : colors.textPrimary }} />
-          <Text style={{ flex: 1, color: s.state === "next" ? colors.textTertiary : colors.textPrimary, fontSize: 15, fontWeight: s.state === "now" ? "800" : "600" }}>{s.label}</Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{s.at ? clock(s.at) : ""}</Text>
+      {steps.map((s,i) => (
+        <View key={s.label} accessibilityLabel={`${s.label}${s.at ? `, ${clock(s.at)}` : s.state === "next" ? ", next" : ""}`} style={{ flexDirection: "row", alignItems: "flex-start", gap: 16, minHeight:60 }}>
+          <View style={{width:24,alignItems:"center",alignSelf:"stretch"}}><View style={{ width: 18, height: 18, borderRadius: 10, backgroundColor: s.state === "next" ? "transparent" : colors.textPrimary, borderWidth: 1.5, borderColor: s.state === "next" ? colors.textTertiary : colors.textPrimary }} />{i<steps.length-1?<View style={{width:1,flex:1,marginTop:6,backgroundColor:colors.borderSubtle}}/>:null}</View>
+          <View style={{flex:1,gap:6,paddingBottom:18}}><Text style={{ color: s.state === "next" ? colors.textTertiary : colors.textPrimary, fontSize: 15, fontWeight: s.state === "now" ? "800" : "600" }}>{s.label}</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{s.at ? clock(s.at) : ""}</Text></View>
         </View>
       ))}
     </View>

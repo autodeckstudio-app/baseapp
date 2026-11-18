@@ -1,3 +1,4 @@
+import { StatePanel } from "../../../ui/StatePanel";
 import {formatGarageDate as formatDate} from "../../../lib/garage-date";
 import{GarageBookingRow}from"../../../ui/GarageBookingRow";
 import { warrantyDisplay } from "@autodeck/core";
@@ -564,7 +565,7 @@ export default function VehicleDetailScreen() {
         <View style={{ gap: space.breath }}>
           {!editing && (newPhoto || vehicle.photoUrl) ? (
           <CarHero
-            photo={newPhoto ? (Platform.OS === "web" ? createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: metrics.heroTall, objectFit: "cover", display: "block" } }) : <Image source={{uri:newPhoto.previewUrl}} accessibilityLabel="New car photo" style={{width:"100%",height:metrics.heroTall}} resizeMode="cover" />) : <CarThumb car={vehicle} height={metrics.heroTall} radius={0} />}
+            photo={newPhoto ? (Platform.OS === "web" ? createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: 250, objectFit: "cover", display: "block" } }) : <Image source={{uri:newPhoto.previewUrl}} accessibilityLabel="New car photo" style={{width:"100%",height:250}} resizeMode="cover" />) : <CarThumb car={vehicle} height={250} radius={0} />}
             title={`${vehicle.make} ${vehicle.model}`}
             plate={mockDetail ? null : vehicle.registrationNumber}
             facts={heroFacts}
@@ -616,7 +617,7 @@ export default function VehicleDetailScreen() {
             ))}
           </Pane>
         </View>
-      ) : !editing ? bookingsReady===contextKey ? <Notice title="No upcoming bookings" body="Choose your next visit from Services." /> : <T role="caption" tone="secondary">Loading upcoming bookings...</T> : null}
+      ) : !editing ? bookingsReady===contextKey ? <StatePanel icon="bookings" title="No upcoming bookings" body="Choose your next visit from Services." /> : <T role="caption" tone="secondary">Loading upcoming bookings...</T> : null}
       {!editing && !vehicle.category ? (
         <Pane pad="inset">
           <View style={{ gap: space.line }}>
@@ -642,7 +643,7 @@ export default function VehicleDetailScreen() {
           ) : null}
 
           {editing ? (
-            <View style={{ gap: space.line }}>
+            <Pane pad="inset"><View style={{ gap: 22 }}><View style={{gap:7}}><Kicker>EDIT CAR</Kicker><T role="heading">Car details & photos</T></View>
               <>
                 <View style={{ gap: space.hair }}>
                   <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:8}}>
@@ -671,7 +672,7 @@ export default function VehicleDetailScreen() {
                 <Button label="Save changes" style={{ minHeight: 44, marginTop: 0, paddingHorizontal: 18 }} busy={saving} onPress={() => void handleSave()} />
                 <Button label="Cancel" style={{ minHeight: 44, paddingHorizontal: 18 }} kind="quiet" onPress={() => { setNewPhoto(null); setNewRc(null); setEditing(false); }} />
               </View>
-            </View>
+            </View></Pane>
           ) : null}
 
           {removeImage ? (
@@ -854,10 +855,10 @@ export default function VehicleDetailScreen() {
               visible at a time, so it never appears twice. */}
           {actionError ? <Notice title="Could not complete that" body={actionError} /> : null}
           {protEdit ? (
-            <Pane pad="gap">
+            <Pane pad="inset">
               <T role="label" tone="tertiary">{`Edit ${PROTECTION_KIND_LABELS[protEdit.protection.kind] ?? protEdit.protection.kind}`}</T>
               <T role="caption" tone="secondary">Marked as added by you - AutoDeck has not verified it. Warranty years alone do not create an expiry date.</T>
-              <View pointerEvents={protBusy ? "none" : "auto"} accessibilityState={{ busy: protBusy }} style={protBusy ? { opacity: 0.6 } : undefined}>
+              <View pointerEvents={protBusy ? "none" : "auto"} accessibilityState={{ busy: protBusy }} style={{gap:20,...(protBusy?{opacity:.6}:{})}}>
                 {/* Handlers are guarded too: pointer-events alone does not
                     stop keyboard input on an already-focused field or a
                     programmatic change while the save is in flight. (Writer lineage 0110/0113 restored.) */}
@@ -876,10 +877,10 @@ export default function VehicleDetailScreen() {
             <Notice title="Delete this document?" body={`${(() => { const t = papers.find((x) => x.id === deleteId); return t ? `${paperName(t)}${t.reference ? ` · ${t.reference}` : ""}. ` : ""; })()}The document and its photo will no longer be available in the garage. Your car and bookings are not affected.`} action={<View style={{ gap: space.breath }}><Button label="Delete" busy={docBusy} onPress={() => void handleDeleteDoc(deleteId)} /><Button label="Cancel" kind="quiet" onPress={() => setDeleteId(null)} /></View>} />
           ) : null}
           {docOpen ? (
-            <View style={{ gap: space.breath }}>
+            <Pane pad="inset"><View style={{ gap: 22 }}><View style={{gap:8}}><Kicker>YOUR DOCUMENT</Kicker><T role="heading">{docEditing?"Edit document":"Add a document"}</T></View>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.hair }}>
                 {(["RC", "INSURANCE", "PUC", "OTHER"] as const).map((k) => (
-                  <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: docForm.kind === k }} onPress={() => pickDocKind(k)}>
+                  <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: docForm.kind === k }} onPress={() => pickDocKind(k)} style={{minHeight:44,justifyContent:"center"}}>
                     <Chip label={k === "OTHER" ? "Other" : k === "RC" ? "RC" : k === "PUC" ? "PUC" : "Insurance"} tone={docForm.kind === k ? "premium" : "neutral"} />
                   </Pressable>
                 ))}
@@ -908,7 +909,7 @@ export default function VehicleDetailScreen() {
               {docError ? <Notice title={/^Saved, but automatic checks/.test(docError) ? "Document saved, checks unfinished" : /^Saved, but the photo did not upload/.test(docError) ? "Photo did not upload" : docEditing ? "Can't save this document" : "Can't add this document"} body={docError} /> : null}
               <Button label={docEditing ? "Save changes" : "Submit for verification"} busy={docBusy} onPress={() => void handleSaveDoc()} />
               <Button label="Cancel" kind="quiet" onPress={resetDocForm} />
-            </View>
+            </View></Pane>
           ) : (
             <Button label="Add a document" onPress={() => { setDocNotice(null); setDocOpen(true); }} />
           )}
