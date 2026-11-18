@@ -13,7 +13,7 @@ export function QuoteRequestCard({quote,title,vehicleLabel,busy,onInspect,onDeta
    <T role="caption" tone="tertiary">{quote.offer?'QUOTED TOTAL':waiting?'PRICE':'STATUS'}</T>
    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12,minHeight:44}}>
     <View style={{flex:1,minWidth:0}}>{quote.offer?<T role="heading">{rupees(quote.offer.totalPaise)}</T>:<View style={{alignSelf:'flex-start',paddingHorizontal:12,paddingVertical:8,borderWidth:1,borderStyle:'dashed',borderColor:colors.borderSubtle,borderRadius:12}}><T role="caption" tone="secondary">{waiting?'Price pending':quote.phase==='declined'?'Request closed':'View booking'}</T></View>}</View>
-    <Pressable accessibilityRole="button" accessibilityLabel={`View request details: ${title}`} onPress={onDetails} style={{minHeight:44,justifyContent:'center',paddingHorizontal:4}}><T role="caption">View details ›</T></Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel={`View request details: ${title}`} onPress={onDetails} style={{minHeight:44,justifyContent:'center',paddingHorizontal:4}}><T role="caption">View details</T></Pressable>
    </View>
   </View>
   {quote.phase==='inspection_confirmed'?<T role="caption" tone="secondary">Studio is expecting your car. No service booking yet.</T>:null}

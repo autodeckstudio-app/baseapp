@@ -363,7 +363,7 @@ export function Row({
           {typeof title === "string" ? <T role="bodyStrong">{title}</T> : title}
           {detail ? typeof detail === "string" ? <T role="caption" tone={detailTone}>{detail}</T> : detail : null}
         </View>
-        {onPress && !trailing ? <NavIcon name={expanded?"close":"proceed"} size={22} color={colors.textSecondary} cut={name === "light" ? "#FFFFFF" : "#252C35"}/> : null}
+        {onPress && !trailing && expanded ? <NavIcon name="close" size={22} color={colors.textSecondary} cut={name === "light" ? "#FFFFFF" : "#252C35"}/> : null}
       </Pressable>
       {trailing}
     </View>

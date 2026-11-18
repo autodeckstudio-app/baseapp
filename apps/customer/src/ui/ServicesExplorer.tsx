@@ -101,7 +101,7 @@ export function ServiceChoiceCard({
           </T>
           {detail?<T role="caption" tone="secondary">{detail}</T>:null}
         </View>
-        <T tone="accent">›</T>
+        
       </View>
     </SceneCard>
   );
@@ -298,7 +298,7 @@ export function ServicesExplorer({
             <View style={{ padding: 18, gap: 8 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <T role="heading" style={{ flex: 1, fontSize: 20, lineHeight: 25 }}>{h.label}</T>
-                <T role="caption" style={{ fontSize: 22, lineHeight: 24 }}>›</T>
+                
               </View>
               <T role="caption" tone="secondary">
                 {HOME_COPY[h.key]}
