@@ -96,6 +96,7 @@ export const setServiceActiveSchema = z.object({
 }).strict();
 
 export const getServiceCatalogueSchema = z.object({
+  staffPublication: z.boolean().optional(),
   customerPublication: z.boolean().optional(),
   includeInactive: z.boolean().optional(),
   category: serviceCategoryEnum.optional(),

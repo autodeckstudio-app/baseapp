@@ -1,0 +1,121 @@
+{
+  "state": "PRIVATE_INACTIVE_APPROVAL_SCOPE_CANDIDATE",
+  "notAuthority": true,
+  "sourceWorkbook": {
+    "id": "15K6LY_sbDF_6UNEqg1rycqxnuyd5lvPCH7pk17deol0",
+    "url": "https://docs.google.com/spreadsheets/d/15K6LY_sbDF_6UNEqg1rycqxnuyd5lvPCH7pk17deol0/edit?authuser=autodeckstudio%40gmail.com",
+    "lastSourceReadAt": "2026-11-19T16:19:32+05:30",
+    "currentSharingChange": false
+  },
+  "proposedAccess": {
+    "newPrincipal": "catalogue-price-source-writer@autodeck-studio.iam.gserviceaccount.com",
+    "fileRole": "writer",
+    "rangeEnforcement": "Code only. The Google file-level grant can technically edit all cells.",
+    "sourceWorkerInvoker": "catalogue-publish-controller@autodeck-studio.iam.gserviceaccount.com",
+    "firestoreRoleForSourceWorker": null,
+    "keysOrImpersonation": false
+  },
+  "proposedSourceEffects": [
+    {
+      "serviceId": "svc_12599d616b1d7ca131ab7249cf46141f",
+      "cell": "Ceramic!I19",
+      "before": 35000,
+      "after": 40000,
+      "constraint": "Fresh exact identity/formula/preimage check, preserve existing held draft."
+    },
+    {
+      "serviceId": "enquiry_pps-spray",
+      "newTabTitle": "PPS",
+      "range": "A1:C2",
+      "values": [
+        [
+          "Product",
+          "Description",
+          "Selling Price"
+        ],
+        [
+          "Standard PPS",
+          "Spray-on protective film.",
+          40000.0
+        ]
+      ],
+      "tabId": "UNRESOLVED. Use only the ID returned by approved creation; no guessed binding.",
+      "descriptionProvenance": "Captured current customer snapshot,2026-11-19T14:42+05:30. Recheck before execution."
+    }
+  ],
+  "sourceWorkerConfig": {
+    "region": "asia-south1",
+    "cpu": 1,
+    "memory": "256MiB",
+    "minInstances": 0,
+    "maxInstances": 1,
+    "concurrency": 1,
+    "timeoutSeconds": 60,
+    "origin": "UNRESOLVED. Exact deployed origin required, no guessed URL."
+  },
+  "deploymentTargets": [
+    "getManagedCataloguePublishStatus",
+    "reviewManagedCatalogue",
+    "publishManagedCatalogue",
+    "inspectManagedCatalogueRecovery",
+    "reviewManagedCatalogueRecovery",
+    "finishManagedCatalogueRecovery",
+    "catalogueSheetPanelBridge",
+    "saveCatalogueDraft",
+    "getCatalogueDrafts",
+    "cataloguePriceSourceWorker"
+  ],
+  "otherEffects": [
+    "Replace only the existing bound Apps Script Code/Panel after renewed exact approval; prior temporary clasp grant remains revoked.",
+    "Create64 accepted fixed-price baselines only after fresh full74 reconciliation and matching frozen baseline hash. Preserve drafts.",
+    "Deploy Admin with source review enabled only with matching backend activation and exact approved server mapping.",
+    "No raw onEdit publishing. Each intended change remains behind Review and Publish.",
+    "No-sheet-edit window during Publish. Unknown/partial effects require original-operation recovery."
+  ],
+  "preserved": [
+    "getServiceCatalogue",
+    "getPublicCatalogue",
+    "cataloguePublicSheetWorker",
+    "Customer app",
+    "Studio app",
+    "Actual source cells",
+    "Actual workbook permissions"
+  ],
+  "inactiveBundle": {
+    "bundle": {
+      "file": "lib/index.js",
+      "sha256": "87447fd366923b4ad9a375fc6f0615618f3f0a3510014f99bd5df983a3900445"
+    },
+    "package": {
+      "file": "package.json",
+      "sha256": "c540922ccb684f1785979622d5790a21022943cf1e637290fcbea4324d120d26"
+    }
+  },
+  "costs": {
+    "newStandingPolling": false,
+    "meteredResources": [
+      "Cloud Run/Functions execution",
+      "Firestore reads and writes",
+      "Cloud Build and artifact storage"
+    ],
+    "sheetsQuota": {
+      "perIdentityPerMinuteReads": 60,
+      "perIdentityPerMinuteWrites": 60,
+      "perProjectPerMinuteReads": 300,
+      "perProjectPerMinuteWrites": 300
+    },
+    "costPromise": null,
+    "scopeNeeded": "Owner approval for the exact deployment and its metered usage. Actual bill depends on usage, region, existing quota/free-tier consumption.",
+    "sources": [
+      "https://developers.google.com/workspace/sheets/api/limits",
+      "https://cloud.google.com/run/pricing"
+    ]
+  },
+  "remainingBeforeActiveHash": [
+    "Owner decisions for source effects/access/deployment and metered usage.",
+    "Fresh source+app+publication preimages, not only the recorded14:42 app capture.",
+    "Returned PPS tab ID and computed row identity.",
+    "Provisioned exact source-worker origin/IAM readback.",
+    "Rebuild with exact resolved mapping and paired backend/Admin/script activation, freeze active hashes."
+  ]
+}

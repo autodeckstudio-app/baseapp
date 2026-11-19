@@ -23,6 +23,9 @@ export const getServiceCatalogue = onCall({ region: "asia-south1" , enforceAppCh
 
   const db = getFirestore();
   const isAdmin = user.claims.role === "admin" || user.claims.role === "superadmin";
+  // Preserve the explicit staff-publication route in deployed00010-yov.
+  if(data.staffPublication&&!['studio','admin','superadmin'].includes(user.claims.role))throw new HttpsError('permission-denied','Staff publication reader required');
+  if(data.staffPublication&&user.claims.tenantId==='automodz'){const published=await readPublicCatalogue(user.claims.tenantId);return{services:published.services,references:published.references,cataloguePublication:{publishId:published.publishId,hash:published.hash}};}
   if(data.customerPublication){
     if(!isAdmin||user.claims.tenantId!=='automodz')throw new HttpsError('permission-denied','Admin publication readback required');
     const published=await readPublicCatalogue(user.claims.tenantId);

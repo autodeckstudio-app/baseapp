@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
  * Google Sheets does not offer cell CAS. A checked plan is not a safe write lease.
  */
 export const PRICE_LIST_ID='15K6LY_sbDF_6UNEqg1rycqxnuyd5lvPCH7pk17deol0';
-const columns:Record<string,string>={Ceramic:'I',PPF:'L',Detailing:'J',Washing:'F',Garage:'D'};
+const columns:Record<string,string>={Ceramic:'I',PPF:'L',Detailing:'J',Washing:'F',Garage:'D',PPS:'C'};
 export interface PriceBinding{serviceId:string;tab:string;row:number;column:string;identityHash:string;policy:'fixed'|'inspection';}
 export interface AcceptedPrice{bindingHash:string;minor:number;publicationId:string;}
 export interface ObservedPrice{serviceId:string;identityHash:string;sheetValue:unknown;sheetFormula:string|null;adminMinor:number;sourceVersion:string;hasOtherDraft:boolean;}
@@ -13,7 +13,7 @@ export type PriceDecision={kind:'same'|'inspection';serviceId:string}|{kind:'cha
 const digest=(x:unknown)=>createHash('sha256').update(JSON.stringify(x,(_k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).sort(([a],[b])=>a.localeCompare(b))):v)).digest('hex');
 const minor=(n:unknown):number=>{if(typeof n!=='number'||!Number.isFinite(n)||n<0||n>1_000_000)throw Error('Finite nonnegative numeric selling price required');const cents=Math.round(n*100);if(Math.abs(n*100-cents)>0.00001||!Number.isSafeInteger(cents))throw Error('Whole paise required');return cents;};
 export function bindingHash(b:PriceBinding){return digest([PRICE_LIST_ID,b.serviceId,b.tab,b.row,b.column,b.identityHash,b.policy]);}
-export function validatePriceBinding(b:PriceBinding){if(!/^[A-Za-z0-9_-]{1,128}$/.test(b.serviceId)||!Number.isInteger(b.row)||b.row<3||b.row>1000||!b.identityHash)throw Error('Exact identity binding required');if(b.policy==='fixed'&&columns[b.tab]!==b.column)throw Error('Selling-price cell required');if(b.policy!=='fixed'&&b.policy!=='inspection')throw Error('Known price policy required');}
+export function validatePriceBinding(b:PriceBinding){if(!/^[A-Za-z0-9_-]{1,128}$/.test(b.serviceId)||!Number.isInteger(b.row)||b.row<(b.tab==='PPS'?2:3)||b.row>1000||!b.identityHash)throw Error('Exact identity binding required');if(b.policy==='fixed'&&columns[b.tab]!==b.column)throw Error('Selling-price cell required');if(b.policy!=='fixed'&&b.policy!=='inspection')throw Error('Known price policy required');}
 /** Call only after a trusted initial reconciliation. A mismatch is NOT an import.
  * Inspection-only amounts are not price inputs; duplicate/roll variants need an
  * explicit one-customer-price binding before acceptance.

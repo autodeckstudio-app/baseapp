@@ -249,6 +249,7 @@ const EXCLUDED_NON_CALLABLE = [
   "employee/cleanExpiredStaffDocumentUploads.ts",
   "invoice/onInvoiceCreatedPdf.ts",
   "service/catalogueRuntime.ts",
+  "service/cataloguePriceWorker.candidate.ts",
   "service/getPublicCatalogue.ts",
   "approval/expireStaleApprovalsScheduled.ts",
   "booking/flagMissedBookingsScheduled.ts",

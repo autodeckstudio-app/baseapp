@@ -14,7 +14,7 @@ import type{SourcePricePreparedReview}from'../../../experience/SourcePriceReview
 // Inactive until exact source-writer, mapping and rollout approval.
 const PRICE_SOURCE_REVIEW_READY=false;
 import {CatalogueReview}from '../../../experience/CatalogueReview';
-import{publishReviewedSelection,publishSelectionProblem}from '../../../experience/catalogue-publish-review';
+import{canonicalDraftSelection,publishReviewedSelection,publishSelectionProblem}from '../../../experience/catalogue-publish-review';
 import{useAdminAuth}from '../../../lib/auth-context';
 import{CatalogueRecovery}from '../../../experience/CatalogueRecovery';
 import{CataloguePublishInspector}from '../../../experience/CataloguePublishInspector';
@@ -108,11 +108,11 @@ export function ServiceCatalogueScope({principal,tenantId}:{principal:string;ten
   }
 
   async function discard(draft:CatalogueDraftView){if(busy||loading||error)return;setBusy(true);setError(null);try{await discardCatalogueDraft({draftId:draft.id,expectedVersion:draft.version});setStatus('Draft discarded. The live service and past bookings were not affected.');await refresh();}catch{setError('Draft was not discarded. Reload and try again.');await refresh();}finally{setBusy(false)}}
-  const prepareSourceReview=useCallback(async(chosen:CatalogueDraftView[]):Promise<SourcePricePreparedReview>=>{const r=await reviewManagedCatalogueBatch(chosen);if(!r.sourceReview)throw Error('Actual source review unavailable');return{...r.sourceReview,reviews:r.drafts.map(d=>({draftId:d.id,reviewHash:d.reviewHash}))};},[]);
+  const prepareSourceReview=useCallback(async(chosen:CatalogueDraftView[]):Promise<SourcePricePreparedReview>=>{const r=await reviewManagedCatalogueBatch(canonicalDraftSelection(chosen));if(!r.sourceReview)throw Error('Actual source review unavailable');return{...r.sourceReview,reviews:r.drafts.map(d=>({draftId:d.id,reviewHash:d.reviewHash}))};},[]);
   async function reviewAndPublish(chosen:CatalogueDraftView[],sourceReview?:SourcePricePreparedReview):Promise<boolean>{
     if(PRICE_SOURCE_REVIEW_READY&&!sourceReview){setError('Check the actual sheet prices before publishing.');return false;}
     if(!trackingReady||busy||loading||error||publishFlight.current||unconfirmedOperation||drafts.some(d=>['publishing','blocked'].includes(d.state)))return false;
-    chosen=[...chosen].sort((a,b)=>a.id.localeCompare(b.id));
+    chosen=canonicalDraftSelection(chosen);
     const problem=publishSelectionProblem(chosen,services);if(problem){setError(problem);return false;}
     publishFlight.current=true;setBusy(true);setError(null);setStatus(null);let started=false;let publishId='';
     try{
