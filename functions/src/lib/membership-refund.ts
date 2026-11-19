@@ -20,7 +20,16 @@ function refundSystemUser(tenantId: string): AuthorizedUser {
  * ORIGINAL term still has days left and its own payment was never refunded.
  * The term is never extended. Washes already consumed under the refunded
  * upgrade COUNT against the restored plan (same ruling); pickup counters are
- * not carried (no owner ruling asked or given for pickups).
+ * not carried (no owner ruling asked or given for pickups). Interior-refresh
+ * counters are likewise not carried: the ruling names washes only, and under
+ * the approved 18 Nov 2026 ladder only Platinum (the strictly highest-priced
+ * plan, so never a restored predecessor in any reachable upgrade refund)
+ * carries refreshes - every reachable restore targets a refreshesTotal 0
+ * plan, making carry and no-carry outcome-identical, while the uncapped
+ * washes-style carry would strand used>total on the restored plan, which
+ * recordMembershipRefresh's fail-closed counter validation reads as
+ * corruption. If a future lower-tier plan ever includes refreshes, settle
+ * the carry rule with the owner BEFORE creating that plan.
  *
  * Guardrails:
  *  - Only the membership the payment itself activated (payment.membershipId)
@@ -244,6 +253,9 @@ function alertMembershipRestoreUncertainInTx(
  * bookings move to the restored plan with their usage records, so a later
  * cancellation restores the credit on the live plan and a completed job
  * keeps it counted. Pickup counters are NOT carried (no ruling).
+ * Refresh counters are NOT carried either (washes-only ruling; outcome-
+ * identical under the approved ladder, and uncapped carry would trip the
+ * refresh counter's fail-closed validation - see the header note).
  * Idempotent: after a restore the
  * predecessor is active with no `upgraded_to:` reason, so a redelivery or a
  * converged rerun fails the first guard and writes nothing.
@@ -295,7 +307,9 @@ export function restoreUpgradedPredecessorInTx(
   // washesUsed < washesTotal, so an over-total counter simply means "no
   // credits", and a later cancellation of a transferred booking decrements
   // real use - it can never mint a credit out of capped-away overflow.
-  // Pickups deliberately untouched (no ruling).
+  // Pickups deliberately untouched (no ruling). Refresh counters also
+  // untouched: washes-only ruling, outcome-identical under the approved
+  // ladder, and uncapped carry would trip fail-closed counter validation.
   const carriedWashes = (data.washesUsed ?? 0) + (refundedMembership.washesUsed ?? 0);
   for (const ob of ev.openWashBookings ?? []) {
     tx.update(ob.ref, { membershipId: ref.id, updatedAt: now });
