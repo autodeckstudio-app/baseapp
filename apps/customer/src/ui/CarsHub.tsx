@@ -192,11 +192,11 @@ export function CarsHub({ all, mine, error, mineError = false, initialTab = "buy
       {tab === "buy" && all && all.length > 0 ? (
         <View style={{ gap: 8 }}>
           <SearchBox value={query} onChange={setQuery} />
-          <View style={{ flexDirection: "row", gap: 8 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {BUDGETS.filter((b) => b.id !== "any").map((b) => {
               const on = budget === b.id;
               return (
-                <Pressable key={b.id} accessibilityRole="button" accessibilityState={{ selected: on }} hitSlop={{ top: 5, bottom: 5 }} onPress={() => setBudget(on ? "any" : b.id)} style={{ flex: 1, minHeight: 34, paddingHorizontal: 6, borderRadius: 9999, borderWidth: 1, alignItems: "center", justifyContent: "center", borderColor: on ? "#EC8638" : chipBorder, backgroundColor: on ? "rgba(236,134,56,0.16)" : themeNight ? "rgba(255,255,255,0.08)" : "#FFFFFF" }}>
+                <Pressable key={b.id} accessibilityRole="button" accessibilityState={{ selected: on }} hitSlop={{ top: 5, bottom: 5 }} onPress={() => setBudget(on ? "any" : b.id)} style={{ flexGrow: 1, flexBasis: 110, minHeight: 44, paddingHorizontal: 10, borderRadius: 9999, borderWidth: 1, alignItems: "center", justifyContent: "center", borderColor: on ? "#EC8638" : chipBorder, backgroundColor: on ? "rgba(236,134,56,0.16)" : themeNight ? "rgba(255,255,255,0.08)" : "#FFFFFF" }}>
                   <T role="label" numberOfLines={1} style={{ fontSize: 12, textTransform: "none", letterSpacing: 0, color: on ? (themeNight ? "#F59A4E" : "#B8500A") : themeNight ? "#FAF8F5" : "#1D1B26" }}>{b.label}</T>
                 </Pressable>
               );

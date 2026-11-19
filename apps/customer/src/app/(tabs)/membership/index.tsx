@@ -120,7 +120,7 @@ export default function MembershipScreen() {
               <Button label="Book a wash with my plan" onPress={() => router.push(washIds.length === 1 ? `/(tabs)/catalogue/${washIds[0]}` : "/(tabs)/catalogue")} />
             ) : null}
             {current.status === "pending" && current.planId ? <Button label="Pay online" onPress={() => router.push({ pathname: "/(tabs)/membership/purchase", params: { planId: current.planId } })} /> : null}
-            <Button icon="history" label="Usage and history" kind="quiet" onPress={() => router.push("/(tabs)/membership/usage")} />
+            <Button label="Usage and history" kind="quiet" onPress={() => router.push("/(tabs)/membership/usage")} />
           </View>
         </>
       ) : (

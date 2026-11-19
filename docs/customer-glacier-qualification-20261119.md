@@ -11,12 +11,12 @@ Actual offerings, prices, policy text, booking eligibility, quote approval, paym
 ## Evidence
 
 - Customer render suite: 136 files, 664 tests passed after the row-price regression test.
-- Customer unit suite: 210 files, 1,236 tests passed.
+- Customer unit suite: 211 files, 1,239 tests passed.
 - Customer TypeScript passes.
 - Production-configured web export and production bundle guard pass with the existing autodeck-studio public configuration.
 - Actual-component offline captures cover the rebuilt routes at 320 and 390 CSS pixels, Day and Night. Populated invoice, inspection, sale, approval, reschedule, history, usage and notification states are included. Approval and reschedule confirmation panes were inspected without submitting them.
 - Pickup map actual-component pixels show real tile images and the custom CSS pin. The staged deployment serves the Leaflet stylesheet. Build diagnostics about Leaflet default PNGs concern unused default marker/layer-control assets, not the custom pin used by this surface.
-- One Night issue found during populated usage review was fixed: primitive row trailing prices now use themed data text. Plan history uses a visible text control rather than a lone icon.
+- One Night issue found during populated usage review was fixed: primitive row trailing prices now use themed data text. Plan history and Usage and history use visible text controls rather than lone icons. Narrow concept-Shop cards use one column, and full car-budget filter labels wrap without changing their behavior.
 
 ## Live and deployment boundaries
 

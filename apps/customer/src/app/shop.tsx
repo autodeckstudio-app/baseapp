@@ -39,7 +39,7 @@ export default function Shop() {
   );
 
   const tile = (c: ShopConcept) => (
-    <Pressable key={c.id} accessibilityRole="button" onPress={() => setOpen(c)} style={{ flexBasis: "47%", flexGrow: 1 }}>
+    <Pressable key={c.id} accessibilityRole="button" onPress={() => setOpen(c)} style={{ flexBasis: "47%", flexGrow: 1, minWidth: 220 }}>
       <Pane>
         <View style={{ gap: space.line }}>
           <Chip label={c.limited ? "CONCEPT · LIMITED DROP" : "CONCEPT"} tone={c.limited ? "premium" : "neutral"} />
