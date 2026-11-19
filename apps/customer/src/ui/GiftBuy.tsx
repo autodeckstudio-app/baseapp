@@ -8,8 +8,7 @@ export function GiftBuy({ amountPaise, canPay, busy, onPay,serviceName="Foam was
     <Pane pad="inset"><View style={{gap:18}}>
 <T role="label" tone="tertiary">GIFT A SERVICE</T>
       <T role="heading">Buy a gift</T>
-      <Row title={serviceName} detail="Any car, one use" />
-      <View style={{paddingVertical:8,gap:5}}><T role="caption" tone="tertiary">Gift value</T><T role="title">{rupees(amountPaise)}</T></View>
+      <Row title={serviceName} detail="Any car, one use" trailing={<View style={{alignItems:"flex-end",gap:2}}><T role="caption" tone="tertiary">Gift value</T><T role="title">{rupees(amountPaise)}</T></View>} />
       <Row title="Valid for" detail={`${GIFT_VALID_DAYS} days from purchase`} last />
       <T role="caption" tone="secondary">{GIFT_TERMS.validity}</T>
       <T role="caption" tone="secondary">{GIFT_TERMS.nonRefundable}</T>
