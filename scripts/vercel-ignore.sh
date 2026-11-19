@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# Approved gathered release, exact path scope; site remains untouched.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/gathered-approved-20261119 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  git merge-base --is-ancestor eb70b23a8c9b647fbb71c9ac3c125240c2eef085 HEAD || exit 0
+  reviewed_paths="$(git diff --name-only eb70b23a8c9b647fbb71c9ac3c125240c2eef085 HEAD | LC_ALL=C sort | sha256sum | cut -d' ' -f1)"
+  [ "$reviewed_paths" = 2731fe5d9c58102de0da5424cbf351b612b8b64186b06e193f828a9119c37756 ] || exit 0
+  case "$1" in customer|studio|admin) exit 1 ;; *) exit 0 ;; esac
+fi
 # Scoped customer Glacier release: fail closed for every sibling application.
 # This branch may build Customer only, and only with the reviewed base/path scope.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = build/customer-glacier-implementation-20261119 ]; then
