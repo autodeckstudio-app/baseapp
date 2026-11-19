@@ -13,7 +13,7 @@ import { Text, Pressable, TextInput, View, useWindowDimensions } from "react-nat
 import { useLocalSearchParams, usePathname, useRouter } from "expo-router";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { SERVICE_HOMES, GST_ENABLED, type Service } from "@autodeck/core";
-import { Button, Notice, Screen, Skeleton, T } from "../../../ui/kit";
+import { Button, Notice, PageHeader, Screen, Skeleton, T } from "../../../ui/kit";
 import {
   getServiceCatalogue,
   peekCatalogue,
@@ -83,6 +83,7 @@ export default function CatalogueScreen() {
     else router.push(href);
   };
   const fromRoute=!!path.home;
+  const sharedRootHeader=!path.home&&!reviewing;
   const currentHome=SERVICE_HOMES.find(h=>h.key===path.home);
   const top = (
     <View
@@ -130,12 +131,14 @@ export default function CatalogueScreen() {
     </View>
   );
   return (
-    <View style={{flex:1}}><Screen textBack compactContent viewportBottomInset={selection.ids.length&&!reviewing?152:88} bottomClearance={24}
+    <View style={{flex:1}}><Screen textBack compactContent={!sharedRootHeader} viewportBottomInset={selection.ids.length&&!reviewing?152:88} bottomClearance={24}
       scrollIdentity={JSON.stringify(path)}
       appBar="Services"
-      top={top}
+      top={sharedRootHeader?undefined:top}
+      header={sharedRootHeader?<PageHeader title="Care for your car" sub="Choose a service area or search all services."/>:undefined}
       onBack={params.returnTo==="home" ? () => {const parent=homeCatalogueBack(path,params.homeEntry);if(parent)navigate(parent,true);else router.navigate("/(tabs)");} : fromRoute ? () => router.canGoBack() ? router.back() : navigate(parentPath(path), true) : undefined}
     >
+      {sharedRootHeader?top:null}
       <View
         key={JSON.stringify(path)}
         testID="services-swipe-area"
@@ -163,7 +166,7 @@ export default function CatalogueScreen() {
           </>
         ) : null}
         {services ? (
-          <ServiceJourney services={services} path={path} query={q} onPath={next=>{setReviewing(false);navigate(next)}} onOpen={s=>setDetailId(s.id)} onHelp={text=>router.push({pathname:"/(tabs)/help",params:{service:text}})} priceLabel={s=>servicePriceText(s,pricingVehicle.category,prices)} reviewing={reviewing} onReview={setReviewing} onCoordinate={ids=>router.push({pathname:'/(tabs)/coordinate',params:{services:ids.join(',')}})} onBookSelection={ids=>{if(ids.length)router.push({pathname:"/(tabs)/book/[serviceId]",params:{serviceId:ids[0],...(ids.length>1?{extras:ids.slice(1).join(",")}:{} )}})}}/>
+          <ServiceJourney showRootHeader={!sharedRootHeader} services={services} path={path} query={q} onPath={next=>{setReviewing(false);navigate(next)}} onOpen={s=>setDetailId(s.id)} onHelp={text=>router.push({pathname:"/(tabs)/help",params:{service:text}})} priceLabel={s=>servicePriceText(s,pricingVehicle.category,prices)} reviewing={reviewing} onReview={setReviewing} onCoordinate={ids=>router.push({pathname:'/(tabs)/coordinate',params:{services:ids.join(',')}})} onBookSelection={ids=>{if(ids.length)router.push({pathname:"/(tabs)/book/[serviceId]",params:{serviceId:ids[0],...(ids.length>1?{extras:ids.slice(1).join(",")}:{} )}})}}/>
         ) : null}
         <Pressable accessibilityRole="button" accessibilityLabel="View visit requests" onPress={()=>router.navigate('/(tabs)/coordinate')} style={{minHeight:44,justifyContent:'center',alignSelf:'flex-start'}}><Text style={{color:colors.textSecondary,fontSize:13}}>Visit requests</Text></Pressable>
       </View>

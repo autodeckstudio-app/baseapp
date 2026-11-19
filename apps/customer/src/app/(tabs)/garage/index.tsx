@@ -2,7 +2,6 @@ import { StatePanel } from "../../../ui/StatePanel";
 import {GarageDisclosure} from '../../../ui/GarageDisclosure';
 import {GarageActions} from '../../../ui/GarageActions';
 import { JourneySheet } from "../../../ui/JourneySheet";
-import { SceneIntro } from "../../../ui/SceneIntro";
 // Garage: one lead car with its state, the rest compact (spec §6.4).
 // Choosing a car makes it the active one on Home and opens its room.
 import { useEffect, useRef, useState } from "react";
@@ -24,7 +23,7 @@ import { listenToMyJobs } from "../../../lib/job-service";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import type { ServiceJob } from "@autodeck/core";
 import { metrics } from "../../../lib/metrics";
-import { Button, Loading, Notice, Plate, Screen, T } from "../../../ui/kit";
+import { Button, Loading, Notice, Plate, PageHeader, Screen, T } from "../../../ui/kit";
 import { FloorCar } from "../../../ui/GarageShowroom";
 import { useSegmentSwipe } from "../../../lib/segment-swipe";
 import { garageBrands, garageCarsForBrand } from "../../../lib/garage-brands";
@@ -176,8 +175,7 @@ export default function GarageScreen() {
   };
 
   return (
-    <Screen appBar="Garage">
-      <SceneIntro eyebrow="Your garage" compact title="Your cars"/>
+    <Screen appBar="Garage" header={<PageHeader title="Your cars" sub="Your cars, service history and papers."/>}>
       <View testID="garage-swipe-area" {...brandSwipe.handlers} style={[{ gap: 20, minHeight: Math.max(winH - 240, 400) }, brandSwipe.style]}>
       {ownerUnknown ? <Notice title="Couldn't confirm your profile" body="Try again in a moment." action={<Button icon="refresh" label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {ownerLinking ? <Notice title="Your profile is waiting to be claimed" body="Claim it to see your cars, bookings and bills here." action={<Button label="Claim your profile" onPress={() => router.push("/(auth)/claim")} />} /> : null}

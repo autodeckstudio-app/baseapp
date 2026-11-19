@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# Services/Garage header correction: isolate build to Customer on this branch.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = fix/services-shared-header-20261119 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  [ "$(git rev-parse HEAD^)" = 6e7e683437a18fbcc4948d0909ab48764cb997e6 ] || exit 0
+  unexpected="$(git diff --name-only HEAD^ HEAD | grep -vE '^(apps/customer/src/app/\(tabs\)/(catalogue/index\.tsx|garage/(index\.tsx|archive-states\.render\.test\.tsx))|apps/customer/src/ui/(ServiceJourney\.tsx|services-shared-header\.test\.ts)|scripts/vercel-ignore\.sh)$' || true)"
+  [ -z "$unexpected" ] || exit 0
+  case "$1" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
 # Approved gathered release, exact path scope; site remains untouched.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/gathered-approved-20261119 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0
