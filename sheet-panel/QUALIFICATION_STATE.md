@@ -60,3 +60,36 @@ The visible current Admin chrome said Pricing, so the feature patch must merge
 into the then-current Admin ancestry rather than deploy this whole older tree.
 The browser session was released. This is a remaining execution-time validation,
 not a reinstated Google approval or permission blocker for private preparation.
+
+
+## Whole-page preview and corrected ancestry,16:35
+
+A fresh Vercel read at16:33 confirms Admin production remains
+F395wL5eXcxuDuBXVzuacXy86TCB / e3a258b0c8aa3cf8a8b5dabe6bd71a5e413a1dd4.
+https://vercel.com/autodeckstudio-9370/baseapp-admin/F395wL5eXcxuDuBXVzuacXy86TCB
+The earlier inference from the Pricing label to a newer deployment is withdrawn.
+The feature branch descends from the exact verified production source.
+
+The full ServiceCataloguePage, StaffShell, ServicesView, editor and review are
+now mounted locally with captured173 service rows and fixture auth/callables.
+The root shows74 menu/99 stored, normal category navigation works, Edit opens
+the shared sample draft, source review requires the no-edit checkbox, and final
+Publish reaches only the fixture callback. The sidebar is the actual inactive
+HTML with a fixture bridge. A labelled local worksheet context is not Google
+Sheets. Desktop/mobile root, Washing, editor and Publish pixels were inspected.
+No external requests or live effects are enabled. The source-review flag is
+transformed only within the preview builder, not the deployable source.
+
+The existing signed-in bound editor opens the correct business project and lists
+Code.gs/Panel.html/Pilot.gs. The code pane stayed Loading in a bounded read-only
+inspection. No edit was tested. Thus manual browser installation is a possible
+route without new API/clasp grant, not yet proven through a save. The temporary
+clasp grant remains revoked; only if that route is chosen later would its exact
+new permission be needed. Do not ask for it as an inherent prerequisite.
+Runtime scopes remain openid/email/container UI/external request, no source-cell
+scope is added to Apps Script. Owner approval for actual code changes is separate.
+
+Ordinary existing-project backend use is covered by standing scope per main;
+no new plan, upgrade or trial is proposed. Remove redundant spending questions.
+Whole-file source-writer access, PPC source correction and PPS addition remain
+explicit effects for the grouped release decision.

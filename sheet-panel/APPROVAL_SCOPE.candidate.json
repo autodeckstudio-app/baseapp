@@ -66,7 +66,7 @@
     "cataloguePriceSourceWorker"
   ],
   "otherEffects": [
-    "Replace only the existing bound Apps Script Code/Panel after renewed exact approval; prior temporary clasp grant remains revoked.",
+    "Replace only the existing bound Apps Script Code/Panel after exact code-change approval. Prefer the existing signed-in bound editor if usable; no temporary API/clasp grant is inherently required. The prior clasp grant remains revoked and cannot be reused.",
     "Create64 accepted fixed-price baselines only after fresh full74 reconciliation and matching frozen baseline hash. Preserve drafts.",
     "Deploy Admin with source review enabled only with matching backend activation and exact approved server mapping.",
     "No raw onEdit publishing. Each intended change remains behind Review and Publish.",
@@ -96,14 +96,14 @@
       "perProjectPerMinuteWrites": 300
     },
     "costPromise": null,
-    "scopeNeeded": "Owner approval for the exact deployment and its metered usage. Actual bill depends on usage, region, existing quota/free-tier consumption.",
+    "scopeNeeded": "Ordinary existing-project backend use is already within standing scope per main. No new plans, upgrades, trials or spending ask. Existing quota/rate facts are operational disclosure only.",
     "sources": [
       "https://developers.google.com/workspace/sheets/api/limits",
       "https://cloud.google.com/run/pricing"
     ]
   },
   "remainingBeforeActiveHash": [
-    "Owner decisions for source effects/access/deployment and metered usage.",
+    "Owner decisions for source-writer whole-file access, PPC source reconciliation, PPS source addition and exact release effects. Existing-project usage is not an unresolved spending ask.",
     "Fresh source+app+publication preimages, not only the recorded14:42 app capture.",
     "Returned PPS tab ID and computed row identity.",
     "Provisioned exact source-worker origin/IAM readback.",
@@ -120,5 +120,12 @@
     "Actual source cells",
     "Actual workbook permissions",
     "All deployed apps and functions"
-  ]
+  ],
+  "verifiedAdminAncestry": {
+    "verifiedAt": "2026-11-19T16:33:00+05:30",
+    "deployment": "F395wL5eXcxuDuBXVzuacXy86TCB",
+    "commit": "e3a258b0c8aa3cf8a8b5dabe6bd71a5e413a1dd4",
+    "url": "https://vercel.com/autodeckstudio-9370/baseapp-admin/F395wL5eXcxuDuBXVzuacXy86TCB",
+    "wholePagePreview": "Actual page and shell mounted locally from feature descendant; fixture auth/data/callables, no live requests."
+  }
 }
