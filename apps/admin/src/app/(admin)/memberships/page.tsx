@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import type { Customer, Membership, MembershipPlan, PaymentMethod } from "@autodeck/core";
+import { useCallback, useEffect, useState, Fragment } from "react";
+import type { Customer, Membership, MembershipPlan, MembershipRefreshUsage, PaymentMethod } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { useLabels } from "../../../lib/use-labels";
 import { formatDate, formatPaise } from "../../../lib/format";
@@ -19,6 +19,8 @@ import {
   findCustomerByPhone,
   createWalkinCustomer,
   normalizePhone,
+  getMembershipUsage,
+  restoreMembershipRefresh,
   type PendingMembershipRow,
 } from "../../../lib/membership-service";
 import {GiftVerification} from '../../../experience/GiftVerification';
@@ -266,6 +268,54 @@ function WalkinSale({ tenantId, plans, onChanged }: { tenantId: string; plans: M
   );
 }
 
+function RefreshUsagePanel({ membershipId }: { membershipId: string }) {
+  const [rows, setRows] = useState<MembershipRefreshUsage[] | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    getMembershipUsage(membershipId)
+      .then((r) => { if (live) setRows(r.refreshUsage ?? []); })
+      .catch(() => { if (live) setMessage("Could not load refresh records."); });
+    return () => { live = false; };
+  }, [membershipId]);
+
+  async function restore(row: MembershipRefreshUsage) {
+    const reason = window.prompt("Reason for restoring this interior refresh?");
+    if (!reason || !reason.trim()) return;
+    setBusyId(row.id);
+    setMessage(null);
+    try {
+      await restoreMembershipRefresh({ membershipId, refreshUsageId: row.id, reason: reason.trim() });
+      setRows((prev) => (prev ?? []).map((r) => (r.id === row.id ? { ...r, restoredAt: new Date().toISOString(), restoredBy: "admin" } : r)));
+      setMessage("Refresh credit restored.");
+    } catch {
+      setMessage("Could not restore the refresh.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  if (message && !rows) return <p style={msgStyle}>{message}</p>;
+  if (!rows) return <p style={msgStyle}>Loading refresh records...</p>;
+  if (rows.length === 0) return <p style={msgStyle}>No interior refreshes recorded yet.</p>;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {rows.map((r) => (
+        <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 13, color: "var(--ad-text-primary)" }}>{fmtDate(r.usedAt)} - job {r.jobId.slice(0, 8)}</span>
+          {r.restoredAt ? (
+            <span style={{ fontSize: 12, color: "var(--ad-text-secondary)" }}>restored {fmtDate(r.restoredAt)}</span>
+          ) : (
+            <button style={btn} disabled={busyId === r.id} onClick={() => void restore(r)}>{busyId === r.id ? "Restoring..." : "Restore credit"}</button>
+          )}
+        </div>
+      ))}
+      {message && <p style={msgStyle}>{message}</p>}
+    </div>
+  );
+}
+
 function MembersPanel({ members, plans }: { members: Membership[]; plans: MembershipPlan[] }) {
   const names = useLabels(COLLECTIONS.customers(), members.map((m) => m.customerId), (d) => (d as Customer).name || (d as Customer).phone || "Customer");
   const planName = Object.fromEntries(plans.map((p) => [p.id, p.name]));
@@ -278,6 +328,7 @@ function MembersPanel({ members, plans }: { members: Membership[]; plans: Member
   const washesLeft = active.reduce((n, m) => n + Math.max(0, m.washesTotal - m.washesUsed), 0);
   const revenue = active.reduce((n, m) => n + (priceOf[m.planId] ?? 0), 0);
   const [filter, setFilter] = useState<string>("all");
+  const [refreshOpenId, setRefreshOpenId] = useState<string | null>(null);
   const statuses = Array.from(new Set(members.map((m) => m.status)));
   const shown = filter === "all" ? members : members.filter((m) => m.status === filter);
   const sorted = [...shown].sort((a, b) => (a.status === "active" ? 0 : 1) - (b.status === "active" ? 0 : 1) || (a.endDate ?? "").localeCompare(b.endDate ?? ""));
@@ -297,16 +348,28 @@ function MembersPanel({ members, plans }: { members: Membership[]; plans: Member
       {sorted.length === 0 ? <p style={msgStyle}>{members.length === 0 ? "No memberships sold yet." : "No memberships with this status."}</p> : (
         <div style={{ overflowX: "auto" }}>
           <table>
-            <thead><tr><th>Customer</th><th>Plan</th><th>Status</th><th>Washes</th><th>Ends</th></tr></thead>
+            <thead><tr><th>Customer</th><th>Plan</th><th>Status</th><th>Washes</th><th>Interior refresh</th><th>Ends</th></tr></thead>
             <tbody>
               {sorted.map((m) => (
-                <tr key={m.id}>
+                <Fragment key={m.id}>
+                <tr>
                   <td><a href={`/customers/${m.customerId}`} style={{ color: "var(--ad-accent-strong)" }}>{names[m.customerId] ?? "..."}</a></td>
                   <td>{planName[m.planId] ?? m.tier}</td>
                   <td><StatusBadge label={m.status} /></td>
                   <td>{m.washesUsed} of {m.washesTotal}</td>
+                  <td>
+                    {(m.refreshesTotal ?? 0) > 0 ? (
+                      <button type="button" style={{ ...btn, padding: "4px 10px" }} onClick={() => setRefreshOpenId(refreshOpenId === m.id ? null : m.id)}>
+                        {(m.refreshesUsed ?? 0)} of {m.refreshesTotal}{refreshOpenId === m.id ? " - hide" : " - review"}
+                      </button>
+                    ) : "-"}
+                  </td>
                   <td>{m.endDate ? formatDate(m.endDate) : "Not started"}</td>
                 </tr>
+                {refreshOpenId === m.id && (
+                  <tr><td colSpan={6}><RefreshUsagePanel membershipId={m.id} /></td></tr>
+                )}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -355,15 +418,16 @@ export default function MembershipPlansPage() {
     const discountPercent = Number(d.discountPercent);
     try {
       if (d.planId) {
-        // Send the pickup fields only when they changed, so a price edit never depends on them.
+        // Send the pickup/refresh fields only when they changed, so a price edit never depends on them.
         const was = plans.find((x) => x.id === d.planId);
-        const extra: { freePickups?: number; prioritySlot?: boolean } = {};
+        const extra: { freePickups?: number; prioritySlot?: boolean; includedInteriorRefreshes?: number } = {};
         if (Number(d.freePickups) !== (was?.freePickups ?? 0)) extra.freePickups = Number(d.freePickups);
         if (d.prioritySlot !== !!was?.prioritySlot) extra.prioritySlot = d.prioritySlot;
+        if (Number(d.includedInteriorRefreshes) !== (was?.includedInteriorRefreshes ?? 0)) extra.includedInteriorRefreshes = Number(d.includedInteriorRefreshes);
         await updateMembershipPlan({ planId: d.planId, name: d.name.trim(), priceInPaise, includedWashes, discountPercent, ...extra });
         setStatus("Plan saved. Existing members keep the terms they bought.");
       } else {
-        await createMembershipPlan({ tier: d.tier, name: d.name.trim(), priceInPaise, includedWashes, discountPercent, freePickups: Number(d.freePickups), prioritySlot: d.prioritySlot });
+        await createMembershipPlan({ tier: d.tier, name: d.name.trim(), priceInPaise, includedWashes, discountPercent, freePickups: Number(d.freePickups), prioritySlot: d.prioritySlot, includedInteriorRefreshes: Number(d.includedInteriorRefreshes) });
         setStatus(`${d.name.trim()} is on sale.`);
       }
       await refresh();

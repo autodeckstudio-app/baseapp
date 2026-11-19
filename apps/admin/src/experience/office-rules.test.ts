@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { planProblem } from "./MembershipsView";
 import { daysLeft } from "./VehiclesView";
 
-const ok = { planId: null, tier: "gold" as const, name: "Gold", priceInRupees: "1499", includedWashes: "4", discountPercent: "10", freePickups: "0", prioritySlot: false };
+const ok = { planId: null, tier: "gold" as const, name: "Gold", priceInRupees: "1499", includedWashes: "4", discountPercent: "10", freePickups: "0", prioritySlot: false, includedInteriorRefreshes: "0" };
 
 describe("planProblem", () => {
   it("accepts a sane plan", () => expect(planProblem(ok)).toBeNull());
@@ -11,6 +11,7 @@ describe("planProblem", () => {
   it("rejects fractional washes", () => expect(planProblem({ ...ok, includedWashes: "2.5" })).toMatch(/whole/));
   it("rejects discount over 100", () => expect(planProblem({ ...ok, discountPercent: "120" })).toMatch(/Discount/));
   it("rejects blank name", () => expect(planProblem({ ...ok, name: "  " })).toMatch(/name/));
+  it("rejects a bad interior refresh count", () => { expect(planProblem({ ...ok, includedInteriorRefreshes: "-1" })).toBeTruthy(); expect(planProblem({ ...ok, includedInteriorRefreshes: "1.5" })).toBeTruthy(); expect(planProblem({ ...ok, includedInteriorRefreshes: "1" })).toBeNull(); });
 });
 
 describe("daysLeft", () => {

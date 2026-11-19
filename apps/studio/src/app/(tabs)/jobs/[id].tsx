@@ -19,6 +19,7 @@ import { canRecordPayment, payErrorNote, recordInput, type RecordMethod } from "
 import { claimUpiPayment } from "../../../lib/payment-service";
 import { RecordPaymentFields } from "../../../components/RecordPaymentFields";
 import { membershipCoveredLabel } from "../../../lib/membership-covered-label";
+import { refreshVisitState } from "../../../lib/membership-refresh";
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
 import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
@@ -149,7 +150,10 @@ export default function JobDetailScreen() {
     membership: Membership;
     washUsed: boolean;
     discountApplied: boolean;
+    // Platinum interior refresh benefit: balance plus this visit's live record.
+    refresh: { used: number; total: number; recordedRowId: string | null } | null;
   } | null>(null);
+  const [recordingRefresh, setRecordingRefresh] = useState(false);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [cancellingApprovalId, setCancellingApprovalId] = useState<string | null>(null);
   const [showApprovalForm, setShowApprovalForm] = useState(false);
@@ -249,10 +253,23 @@ export default function JobDetailScreen() {
       if (!membershipBooking.membershipId) return;
       const membership = await getCustomerMembership(job.customerId, membershipBooking.membershipId);
       if (membership) {
+        // Interior refresh readout: the balance rides on the membership doc;
+        // this visit's record comes from the separate refresh usage list.
+        let refresh: { used: number; total: number; recordedRowId: string | null } | null = null;
+        const refreshTotal = membership.refreshesTotal ?? 0;
+        if (refreshTotal > 0) {
+          refresh = { used: membership.refreshesUsed ?? 0, total: refreshTotal, recordedRowId: null };
+          try {
+            const usageResult = await httpsCallable<{ membershipId: string }, { refreshUsage?: { id: string; jobId: string; restoredAt: string | null }[] }>(functions, "getMembershipUsage")({ membershipId: membership.id });
+            const live = (usageResult.data.refreshUsage ?? []).find((r) => r.jobId === job.id && !r.restoredAt);
+            if (live) refresh.recordedRowId = live.id;
+          } catch { /* the doc balance still renders without the visit record */ }
+        }
         setBookingMembership({
           membership,
           washUsed: membershipBooking.membershipWashUsed,
           discountApplied: membershipBooking.membershipDiscountApplied,
+          refresh,
         });
       }
     })();
@@ -276,6 +293,28 @@ export default function JobDetailScreen() {
     }
     return listenToInspection(job.id, setInspection, () => undefined);
   }, [job?.id]);
+
+  // Staff action for the Platinum interior refresh benefit: one record per
+  // visit job, idempotent on the backend (replay returns the same row).
+  async function handleRecordRefresh() {
+    if (!job || !bookingMembership?.refresh || recordingRefresh) return;
+    setActionError(null);
+    setRecordingRefresh(true);
+    try {
+      const res = await httpsCallable<
+        { membershipId: string; jobId: string },
+        { refreshUsageId: string; refreshesUsed: number }
+      >(functions, "recordMembershipRefresh")({ membershipId: bookingMembership.membership.id, jobId: job.id });
+      setBookingMembership({
+        ...bookingMembership,
+        refresh: { ...bookingMembership.refresh, used: res.data.refreshesUsed, recordedRowId: res.data.refreshUsageId },
+      });
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Could not record the interior refresh.");
+    } finally {
+      setRecordingRefresh(false);
+    }
+  }
 
   async function handleStartInspection() {
     if (!job || startingInspection) return;
@@ -637,6 +676,39 @@ export default function JobDetailScreen() {
           )}
         </View>
       )}
+
+      {bookingMembership?.refresh ? (() => {
+        const state = refreshVisitState(bookingMembership.membership, job, bookingMembership.refresh.recordedRowId);
+        if (state === "unavailable") return null;
+        return (
+        <View
+          style={{
+            backgroundColor: colors.accentMuted,
+            borderRadius: radius.lg,
+            padding: spacing.md,
+            marginBottom: spacing.lg,
+            gap: spacing.xs,
+          }}
+        >
+          <Text style={{ ...typography.caption, color: colors.accentPressed }}>
+            Interior refresh: {bookingMembership.refresh.used} of {bookingMembership.refresh.total} used
+          </Text>
+          {state === "recorded" ? (
+            <Text style={{ ...typography.caption, color: colors.textMuted }}>Recorded for this visit.</Text>
+          ) : state === "recordable" ? (
+            <Button
+              label="Record interior refresh"
+              accessibilityLabel="Record the included interior refresh for this visit"
+              variant="secondary"
+              loading={recordingRefresh}
+              onPress={() => void handleRecordRefresh()}
+            />
+          ) : (
+            <Text style={{ ...typography.caption, color: colors.textMuted }}>All refreshes used this term.</Text>
+          )}
+        </View>
+        );
+      })() : null}
 
       {job.statusHistory.length?<><Text style={sectionTitle}>Job stage history</Text>
       <Section>

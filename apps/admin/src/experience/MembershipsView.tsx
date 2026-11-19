@@ -20,8 +20,9 @@ export interface PlanDraft {
   discountPercent: string;
   freePickups: string;
   prioritySlot: boolean;
+  includedInteriorRefreshes: string;
 }
-const EMPTY: PlanDraft = { planId: null, tier: "silver", name: "", priceInRupees: "", includedWashes: "", discountPercent: "0", freePickups: "0", prioritySlot: false };
+const EMPTY: PlanDraft = { planId: null, tier: "silver", name: "", priceInRupees: "", includedWashes: "", discountPercent: "0", freePickups: "0", prioritySlot: false, includedInteriorRefreshes: "0" };
 
 // Returns a problem to show, or null when the draft can be saved.
 export function planProblem(d: PlanDraft): string | null {
@@ -34,6 +35,8 @@ export function planProblem(d: PlanDraft): string | null {
   if (!Number.isFinite(disc) || disc < 0 || disc > 100) return "Discount must be between 0 and 100%.";
   const pickups = Number(d.freePickups);
   if (!Number.isInteger(pickups) || pickups < 0 || pickups > 31) return "Free pickups must be a whole number from 0 to 31.";
+  const refreshes = Number(d.includedInteriorRefreshes);
+  if (!Number.isInteger(refreshes) || refreshes < 0 || refreshes > 31) return "Interior refreshes must be a whole number from 0 to 31.";
   return null;
 }
 
@@ -84,10 +87,11 @@ export function MembershipsView(p: {
                     <li>{plan.includedWashes} wash{plan.includedWashes === 1 ? "" : "es"} included each month</li>
                     {plan.discountPercent > 0 && <li>{plan.discountPercent}% off other services</li>}
                     {(plan.freePickups ?? 0) > 0 && <li>{plan.freePickups} free pickup{plan.freePickups === 1 ? "" : "s"} per month</li>}
+                    {(plan.includedInteriorRefreshes ?? 0) > 0 && <li>{plan.includedInteriorRefreshes} interior refresh{(plan.includedInteriorRefreshes ?? 0) === 1 ? "" : "es"} per month</li>}
                     {plan.prioritySlot && <li>Priority slot</li>}
                   </ul>
                   <div className="ax-panel-actions">
-                    <button type="button" className="ax-button" onClick={() => setDraft({ planId: plan.id, tier: plan.tier, name: plan.name, priceInRupees: String(plan.priceInPaise / 100), includedWashes: String(plan.includedWashes), discountPercent: String(plan.discountPercent), freePickups: String(plan.freePickups ?? 0), prioritySlot: !!plan.prioritySlot })}>Edit</button>
+                    <button type="button" className="ax-button" onClick={() => setDraft({ planId: plan.id, tier: plan.tier, name: plan.name, priceInRupees: String(plan.priceInPaise / 100), includedWashes: String(plan.includedWashes), discountPercent: String(plan.discountPercent), freePickups: String(plan.freePickups ?? 0), prioritySlot: !!plan.prioritySlot, includedInteriorRefreshes: String(plan.includedInteriorRefreshes ?? 0) })}>Edit</button>
                     {confirmId === plan.id ? (
                       <>
                         <button type="button" className={`ax-button${plan.active ? " ax-button--danger" : ""}`} disabled={p.busy} onClick={() => { p.onToggle(plan); setConfirmId(null); }}>{plan.active ? "Stop selling" : "Start selling"}</button>
@@ -123,8 +127,9 @@ export function MembershipsView(p: {
               </div>
               <div className="ax-form-pair">
                 <label className="ax-form-row"><span>Free pickups / month</span><input inputMode="numeric" value={draft.freePickups} onChange={(e) => setDraft({ ...draft, freePickups: e.target.value })} placeholder="0" /></label>
-                <label className="ax-form-row"><span>Priority slot</span><input type="checkbox" checked={draft.prioritySlot} onChange={(e) => setDraft({ ...draft, prioritySlot: e.target.checked })} /></label>
+                <label className="ax-form-row"><span>Interior refreshes / month</span><input inputMode="numeric" value={draft.includedInteriorRefreshes} onChange={(e) => setDraft({ ...draft, includedInteriorRefreshes: e.target.value })} placeholder="0" /></label>
               </div>
+              <label className="ax-form-row"><span>Priority slot</span><input type="checkbox" checked={draft.prioritySlot} onChange={(e) => setDraft({ ...draft, prioritySlot: e.target.checked })} /></label>
               {problem && draft.name && <p className="ax-note" style={{ color: "var(--ad-warning)" }}>{problem}</p>}
               <div className="ax-panel-actions">
                 <button type="submit" className="ax-button ax-button--primary" disabled={p.busy || !!problem}>{draft.planId ? "Save changes" : "Create plan"}</button>

@@ -3,7 +3,7 @@
 import { httpsCallable } from "firebase/functions";
 import { collection, doc, getDoc, getDocs, onSnapshot, query, where, type Unsubscribe } from "firebase/firestore";
 import { getEffectiveMembershipStatus } from "@autodeck/core";
-import type { Customer, Membership, MembershipPlan, MembershipTier, Payment } from "@autodeck/core";
+import type { Customer, Membership, MembershipPlan, MembershipRefreshUsage, MembershipTier, Payment } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { db, functions } from "./firebase";
 
@@ -24,6 +24,7 @@ export interface CreateMembershipPlanInput {
   discountPercent: number;
   freePickups?: number;
   prioritySlot?: boolean;
+  includedInteriorRefreshes?: number;
 }
 
 export async function createMembershipPlan(input: CreateMembershipPlanInput): Promise<MembershipPlan> {
@@ -57,6 +58,31 @@ export async function activateMembership(membershipId: string): Promise<void> {
 export async function cancelMembership(membershipId: string, reason: string): Promise<void> {
   const fn = httpsCallable(functions, "cancelMembership");
   await fn({ membershipId, reason });
+}
+
+// Staff readout for the Platinum interior refresh benefit: wash/discount usage
+// plus the separate refresh records (kept out of the money-path usage rows).
+export async function getMembershipUsage(membershipId: string): Promise<{ usage: unknown[]; refreshUsage: MembershipRefreshUsage[] }> {
+  const fn = httpsCallable<{ membershipId: string }, { usage: unknown[]; refreshUsage: MembershipRefreshUsage[] }>(
+    functions,
+    "getMembershipUsage",
+  );
+  const result = await fn({ membershipId });
+  return result.data;
+}
+
+// Admin-only correction: return one recorded interior refresh credit.
+export async function restoreMembershipRefresh(input: {
+  membershipId: string;
+  refreshUsageId: string;
+  reason: string;
+}): Promise<{ alreadyRestored: boolean; refreshesUsed: number }> {
+  const fn = httpsCallable<typeof input, { alreadyRestored: boolean; refreshesUsed: number }>(
+    functions,
+    "restoreMembershipRefresh",
+  );
+  const result = await fn(input);
+  return result.data;
 }
 
 // Admin-wide membership list is not yet exposed by a dedicated Cloud Function
