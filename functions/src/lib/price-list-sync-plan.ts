@@ -10,7 +10,7 @@ export interface AcceptedPrice{bindingHash:string;minor:number;publicationId:str
 export interface ObservedPrice{serviceId:string;identityHash:string;sheetValue:unknown;sheetFormula:string|null;adminMinor:number;sourceVersion:string;hasOtherDraft:boolean;}
 export interface PriceChange{serviceId:string;kind:'sheet-draft'|'sheet-return';beforeMinor:number;afterMinor:number;bindingHash:string;identityHash:string;sourceVersion:string;publicationId:string;range:string;}
 export type PriceDecision={kind:'same'|'inspection';serviceId:string}|{kind:'change';change:PriceChange}|{kind:'blocked';serviceId:string;reason:string};
-const digest=(x:unknown)=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
+const digest=(x:unknown)=>createHash('sha256').update(JSON.stringify(x,(_k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).sort(([a],[b])=>a.localeCompare(b))):v)).digest('hex');
 const minor=(n:unknown):number=>{if(typeof n!=='number'||!Number.isFinite(n)||n<0||n>1_000_000)throw Error('Finite nonnegative numeric selling price required');const cents=Math.round(n*100);if(Math.abs(n*100-cents)>0.00001||!Number.isSafeInteger(cents))throw Error('Whole paise required');return cents;};
 export function bindingHash(b:PriceBinding){return digest([PRICE_LIST_ID,b.serviceId,b.tab,b.row,b.column,b.identityHash,b.policy]);}
 export function validatePriceBinding(b:PriceBinding){if(!/^[A-Za-z0-9_-]{1,128}$/.test(b.serviceId)||!Number.isInteger(b.row)||b.row<3||b.row>1000||!b.identityHash)throw Error('Exact identity binding required');if(b.policy==='fixed'&&columns[b.tab]!==b.column)throw Error('Selling-price cell required');if(b.policy!=='fixed'&&b.policy!=='inspection')throw Error('Known price policy required');}

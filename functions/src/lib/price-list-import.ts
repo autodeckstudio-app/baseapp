@@ -23,11 +23,13 @@ export async function stageSheetPriceImport(request:PriceImportRequest,port:Pric
  for(const item of prepared){try{const view=item.prior??await port.save(item.input);if(view.serviceId!==item.c.serviceId||view.basePrice!==item.c.afterMinor||view.sourceVersion!==item.c.sourceVersion||!view.draftId||view.version<1)throw Error('Exact shared draft receipt required');completed.push({serviceId:item.c.serviceId,operationId:item.input.operationId,view});}catch{return{state:'needs-recovery',operationId:request.operationId,completed,unconfirmed:{serviceId:item.c.serviceId,operationId:item.input.operationId}};}}
  return{state:'staged',operationId:request.operationId,completed};
 }
+/** Read-only recovery of an exact import, even after preview expiry. */
+export async function inspectSheetPriceImport(request:PriceImportRequest,port:PriceImportPort):Promise<PriceImportResult>{if(request.planHash!==pricePlanHash(request.changes))throw Error('Exact frozen import required');const completed:PriceImportResult['completed']=[];let unconfirmed:PriceImportResult['unconfirmed'];for(const c of request.changes){const operationId=itemId(request,c),view=await port.prior({serviceId:c.serviceId,draftId:null,version:0,sourceVersion:c.sourceVersion,basePrice:c.afterMinor,operationId});if(view)completed.push({serviceId:c.serviceId,operationId,view});else unconfirmed??={serviceId:c.serviceId,operationId};}return{state:unconfirmed?'needs-recovery':'staged',operationId:request.operationId,completed,...(unconfirmed?{unconfirmed}:{})};}
 /** Caller must pass a reviewed server-owned mapping's IDs, never a client list.
  * This adapter intentionally refuses to overwrite ANY existing draft during an
  * import. Normal sidebar/Admin edits can still edit their exact shared version.
  */
 export function priceListImportStore(db:Firestore,actor:{uid:string;tenantId:string;role:string},reviewedAllowedIds:readonly string[]):PriceImportPort{
- const panel=cataloguePanelStore(db,actor,reviewedAllowedIds);
+ const panel=cataloguePanelStore(db,actor,reviewedAllowedIds,{allowZeroPrice:true});
  return{read:panel.read,save:panel.save,async prior(input){if(!reviewedAllowedIds.includes(input.serviceId))throw Error('Mapped service required');const row=(await db.collection('cataloguePanelOperations').doc(input.operationId).get()).data();if(!row)return null;if(row['cancelled']||row['actor']!==actor.uid||row['tenantId']!==actor.tenantId||row['digest']!==catalogueReviewHash({input}))throw Error('Import operation identity mismatch');const saved=row['view']as PanelView,current=await panel.read(input.serviceId);if(!current.editable||current.draftId!==saved.draftId||current.version!==saved.version||current.basePrice!==saved.basePrice||current.sourceVersion!==saved.sourceVersion)throw Error('Prior import is no longer the current shared draft');return current;}};
 }

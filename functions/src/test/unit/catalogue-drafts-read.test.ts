@@ -15,6 +15,7 @@ vi.mock("firebase-admin/firestore", () => ({
   getFirestore: () => ({
     collection: () => {
       const q: any = {
+        doc: () => ({get: async () => ({data: () => undefined})}),
         _states: null as string[] | null,
         _limit: 1000,
         _after: null as string | null,

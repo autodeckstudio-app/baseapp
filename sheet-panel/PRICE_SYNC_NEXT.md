@@ -60,4 +60,27 @@ There is no trigger, live allowlist expansion, deployment, source-cell mutation,
 
 The next proposal must cover the exact source workbook, writer identity and file-level access; allowed cells and formula/cost exclusions; PPC 35,000 -> 40,000 source reconciliation; PPS source row; shared-draft/import workflow and one Review & Publish; no-edit window and recovery behavior; source/script/backend deployment manifest and metered usage. It must not treat approval of PPC's app price or the earlier one-service unpublished test as approval of that new capability.
 
-No further permission question is needed for local coding and testing. Actual access grants, source changes, rollout and publication stay held until their matching authority is established.
+This file records implementation findings only, not user authority. All live effects remain held.
+
+
+## November 19 private integration checkpoint
+
+Private source review/store, canonical review binding, source apply/inspect/recovery,
+accepted baseline commit, strict source import coordinator, authenticated fixed
+source worker and runtime factories are implemented. Production composition is
+unchanged. Code.next.gs and Panel.next.html are inactive replacement candidates.
+Source review UI is the actual CatalogueReview and SourcePriceReview components,
+mounted with sample props in a standalone disconnected harness, not a full live
+Admin screen. Sidebar preview uses the actual inactive HTML and a mocked bridge.
+
+Validated: 72 focused unit tests, 57 emulator tests, 354 Admin unit tests and
+224 Admin mounted tests. Both typechecks pass. A full functions sweep initially
+found two preexisting read-test mock failures after the pilot added panel state
+reads; the fixture lacked doc(). The fixture is updated and rechecked separately.
+
+Remaining before an exact executable release: rebase the production packaging
+onto the deployed newer reader/archive ancestry; build an activated server mapping
+only after PPS structure approval; compose runtime exports and all-service Admin
+shared-draft selection/save through that mapping; baseline initialization dry-run
+and exact preimage manifest; deployment build and cross-app verification. These
+are explicit remaining work, not claims of release readiness.

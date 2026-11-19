@@ -2,7 +2,7 @@ import {beforeAll,afterAll,it,expect} from 'vitest';
 import {initializeTestEnvironment,assertFails,type RulesTestEnvironment} from '@firebase/rules-unit-testing';
 import {readFileSync} from 'node:fs';import {resolve} from 'node:path';import {TEST_PROJECT_ID} from '../emulator-setup';
 let env:RulesTestEnvironment;
-const collections=['cataloguePanelStates','cataloguePanelOperations'];
+const collections=['cataloguePanelStates','cataloguePanelOperations','catalogueSourcePriceReviews','catalogueSourcePriceBaselines','catalogueSourcePriceImports'];
 beforeAll(async()=>{env=await initializeTestEnvironment({projectId:TEST_PROJECT_ID+'-rules',firestore:{host:'127.0.0.1',port:Number(process.env['FIRESTORE_EMULATOR_HOST']!.split(':')[1]),rules:readFileSync(resolve(__dirname,'../../../../firestore.rules'),'utf8')}});await env.withSecurityRulesDisabled(async c=>{const db=c.firestore();for(const name of collections)await db.collection(name).doc('test').set({tenantId:'automodz',actor:'admin',version:1})})});
 afterAll(async()=>{await env.cleanup()});
 for(const role of ['admin','superadmin','studio','customer','other-tenant','anonymous'])for(const name of collections)it(`${role} cannot read, list or mutate ${name} directly`,async()=>{const ctx=role==='anonymous'?env.unauthenticatedContext():env.authenticatedContext(role,{role:role==='other-tenant'?'admin':role,tenantId:role==='other-tenant'?'other':'automodz'});const db=ctx.firestore(),doc=db.collection(name).doc('test');await assertFails(doc.get());await assertFails(db.collection(name).get());await assertFails(doc.set({tenantId:'automodz',version:999}));await assertFails(doc.update({version:999}));await assertFails(doc.delete());await assertFails(db.collection(name).doc('forged').set({tenantId:'automodz'}));});

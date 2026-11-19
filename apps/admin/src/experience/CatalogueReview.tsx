@@ -1,4 +1,5 @@
 "use client";
+import{SourcePriceReview,type SourcePricePreparedReview}from"./SourcePriceReview";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { Service } from "@autodeck/core";
@@ -22,6 +23,7 @@ export function CatalogueReview({
   publishedCount = 0,
   primaryIds = [],
   onReviewAndPublish,
+  onPrepareSourceReview,
   onEdit,
   onDiscard,
   busy,
@@ -38,13 +40,15 @@ export function CatalogueReview({
     d: CatalogueDraftView,
     v: PublicCatalogueDestination,
   ) => Promise<void>;
-  onReviewAndPublish?: (drafts: CatalogueDraftView[]) => Promise<boolean>;
+  onReviewAndPublish?: (drafts: CatalogueDraftView[],source?:SourcePricePreparedReview) => Promise<boolean>;
+  onPrepareSourceReview?:(drafts:CatalogueDraftView[])=>Promise<SourcePricePreparedReview>;
   onEdit?: (d: CatalogueDraftView) => void;
   onDiscard?: (d: CatalogueDraftView) => Promise<void>;
   busy: boolean;
   blocked?: boolean;
   error?: string | null;
 }) {
+  const[sourceReview,setSourceReview]=useState<SourcePricePreparedReview|null>(null),[sourceBusy,setSourceBusy]=useState(false),[sourceError,setSourceError]=useState(''),[noSheetEdits,setNoSheetEdits]=useState(false);
   const [frozen, setFrozen] = useState<CatalogueDraftView[] | null>(null),
     [selected, setSelected] = useState<string[]>([]),
     [expanded, setExpanded] = useState<string | null>(null),
@@ -61,6 +65,8 @@ export function CatalogueReview({
     earlier = pending.filter((d) => !primaryIds.includes(d.id)),
     chosen = (frozen ?? []).filter((d) => selected.includes(d.id));
   const problem = publishSelectionProblem(chosen, services);
+  const sourceSelection=chosen.map(d=>d.id+':'+d.version).sort().join('|');
+  useEffect(()=>{let current=true;setSourceReview(null);setNoSheetEdits(false);setSourceError('');if(!onPrepareSourceReview||!frozen||!chosen.length){setSourceBusy(false);return;}setSourceBusy(true);void onPrepareSourceReview(chosen).then(r=>{if(current)setSourceReview(r)}).catch(()=>{if(current)setSourceError('Sheet prices could not be verified. Close this review and try again. Nothing was published.')}).finally(()=>{if(current)setSourceBusy(false)});return()=>{current=false};},[Boolean(frozen),sourceSelection,onPrepareSourceReview]);
   const open = (rows: CatalogueDraftView[]) => {
     setFrozen(JSON.parse(JSON.stringify(rows)));
     setSelected(rows.map((d) => d.id));
@@ -94,10 +100,10 @@ export function CatalogueReview({
     }
   }
   async function publish() {
-    if (busy || flight.current || problem || !onReviewAndPublish) return;
+    if (busy || flight.current || problem || !onReviewAndPublish || (onPrepareSourceReview&&(!sourceReview||sourceBusy||!noSheetEdits))) return;
     flight.current = true;
     try {
-      if (await onReviewAndPublish(chosen)) {
+      if (await (sourceReview?onReviewAndPublish(chosen,sourceReview):onReviewAndPublish(chosen))) {
         setFrozen(null);
         trigger.current?.focus();
       }
@@ -270,6 +276,7 @@ export function CatalogueReview({
               }}
             >
               <h2>Publish changes?</h2>
+              {onPrepareSourceReview?(sourceBusy?<p role="status">Checking actual sheet prices...</p>:sourceError?<p role="alert">{sourceError}</p>:sourceReview?<SourcePriceReview review={sourceReview} confirmed={noSheetEdits} onConfirm={setNoSheetEdits}/>:null):null}
               <p className="ax-sub">Only these changes will go live.</p>
               <div className="ax-publish-diff">
                 {frozen.map((d) => {
@@ -299,7 +306,7 @@ export function CatalogueReview({
                       </label>
                       <ul>
                         {visible.map((line, i) => (
-                          <li key={i}>{line}</li>
+                          <li key={i}>{line.replaceAll(" → "," to ")}</li>
                         ))}
                       </ul>
                       {other.length > 0 ? (
@@ -309,7 +316,7 @@ export function CatalogueReview({
                           </summary>
                           <ul>
                             {other.map((line, i) => (
-                              <li key={i}>{line}</li>
+                              <li key={i}>{line.replaceAll(" → "," to ")}</li>
                             ))}
                           </ul>
                         </details>
@@ -342,7 +349,7 @@ export function CatalogueReview({
                 </button>
                 <button
                   className="ax-button ax-button--primary"
-                  disabled={busy || Boolean(problem) || !onReviewAndPublish}
+                  disabled={busy || Boolean(problem) || !onReviewAndPublish || Boolean(onPrepareSourceReview&&(!sourceReview||sourceBusy||!noSheetEdits))}
                   onClick={() => void publish()}
                 >
                   {busy ? "Publishing…" : "Publish"}

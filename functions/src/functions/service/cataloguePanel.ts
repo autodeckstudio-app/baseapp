@@ -1,3 +1,4 @@
+import{mappedPriceListPanelRequest,type PriceListSheetController}from'../../lib/price-list-sheet-controller.js';
 import {PANEL_PILOT_EMAIL,authenticateCataloguePanel} from '../../lib/catalogue-panel-identity.js';
 import {onCall,onRequest,HttpsError} from 'firebase-functions/v2/https';
 import {getFirestore} from 'firebase-admin/firestore';
@@ -10,7 +11,7 @@ import {enforceRateLimit,subjectFrom} from '../../middleware/rateLimit.js';
 import {CATALOGUE_PANEL_QUALIFIED as ENABLED,panelServiceIds} from '../../lib/catalogue-panel-gate.js';
 const id=z.string().regex(/^[A-Za-z0-9_-]{1,128}$/);
 const input=z.discriminatedUnion('operation',[z.object({operation:z.literal('read'),serviceId:id}).strict(),panelSaveSchema.extend({operation:z.literal('save')}).strict(),z.object({operation:z.literal('status'),operationId:id}).strict()]);
-export async function panelRequest(actor:{uid:string;tenantId:string;role:string},data:unknown){if(!ENABLED)throw new HttpsError('failed-precondition','Sheet panel is not activated. Nothing changed.');const p=input.parse(data);const ids=panelServiceIds();const store=cataloguePanelStore(getFirestore(),actor,ids);if(p.operation==='read')return store.read(p.serviceId);if(p.operation==='status')return store.status(p.operationId);const{operation:_,...save}=p;return store.save(save);}
+export async function panelRequest(actor:{uid:string;tenantId:string;role:string},data:unknown,source?:PriceListSheetController){if(!ENABLED)throw new HttpsError('failed-precondition','Sheet panel is not activated. Nothing changed.');if(source)return mappedPriceListPanelRequest(source,data);const p=input.parse(data);const ids=panelServiceIds();const store=cataloguePanelStore(getFirestore(),actor,ids);if(p.operation==='read')return store.read(p.serviceId);if(p.operation==='status')return store.status(p.operationId);const{operation:_,...save}=p;return store.save(save);}
 /** Not exported from index.ts. Admin and sidebar share panelRequest/store. */
 export const manageCataloguePanelDraft=onCall({region:'asia-south1',enforceAppCheck:true},async request=>{const user=extractUser(request);assertRole(user,'admin','superadmin');if(user.email!==PANEL_PILOT_EMAIL)throw new HttpsError('permission-denied','Pilot owner required');await enforceRateLimit(subjectFrom(user),'service.update');return panelRequest({uid:user.uid,tenantId:user.claims.tenantId,role:user.claims.role},request.data)});
 /** Server-to-server bridge for a container-bound Apps Script. The ID token is
