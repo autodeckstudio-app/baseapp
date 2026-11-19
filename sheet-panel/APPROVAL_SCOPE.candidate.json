@@ -72,15 +72,6 @@
     "No raw onEdit publishing. Each intended change remains behind Review and Publish.",
     "No-sheet-edit window during Publish. Unknown/partial effects require original-operation recovery."
   ],
-  "preserved": [
-    "getServiceCatalogue",
-    "getPublicCatalogue",
-    "cataloguePublicSheetWorker",
-    "Customer app",
-    "Studio app",
-    "Actual source cells",
-    "Actual workbook permissions"
-  ],
   "inactiveBundle": {
     "bundle": {
       "file": "lib/index.js",
@@ -117,5 +108,17 @@
     "Returned PPS tab ID and computed row identity.",
     "Provisioned exact source-worker origin/IAM readback.",
     "Rebuild with exact resolved mapping and paired backend/Admin/script activation, freeze active hashes."
+  ],
+  "preservedDeploymentTargets": [
+    "getServiceCatalogue",
+    "getPublicCatalogue",
+    "cataloguePublicSheetWorker",
+    "Customer app",
+    "Studio app"
+  ],
+  "currentlyUnchanged": [
+    "Actual source cells",
+    "Actual workbook permissions",
+    "All deployed apps and functions"
   ]
 }
