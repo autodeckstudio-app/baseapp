@@ -7,6 +7,7 @@ import{AutoExperienceThemeProvider as ExperienceThemeProvider}from'../../../pack
 import{ServiceProductSelection}from'../../../apps/customer/src/ui/ServiceProductSelection';
 import{ServiceDetailRich}from'../../../apps/customer/src/ui/ServiceDetailRich';
 import{ServiceJourney}from'../../../apps/customer/src/ui/ServiceJourney';
+import{ServicePageHeader}from'../../../apps/customer/src/ui/ServicePageHeader';
 import{HomeView}from'../../../apps/customer/src/ui/HomeView';
 import{PlanCompare}from'../../../apps/customer/src/ui/PlanCompare';
 import{StatePanel}from'../../../apps/customer/src/ui/StatePanel';
@@ -102,7 +103,8 @@ const sections=<div style={{display:'flex',flexDirection:'column',gap:56}}>
 </div>;
 createRoot(document.getElementById('root')!).render(<ExperienceThemeProvider>
  <div style={{font:'12px sans-serif',color:'#EC8638',background:'#18181c',padding:10,textAlign:'center'}}>LOCAL DESIGN PREVIEW · CORRECTION CANDIDATE · SYNTHETIC CONTENT · NO ACCOUNT OR WRITES</div>
- {q.has('paint')?shell('PAINT DETAIL · EXISTING COMPOSITION, FOR REVIEW',<ServiceProductSelection title="Ceramic" services={[ceramic,ceramicB]} priceLabel={s=>s.id==='cer-c1'?'₹25,000':'₹30,000'} onOpen={noop}/>)
+ {q.has('back')?shell('SERVICE PAGE HEADER · COMPACT HAIRLINE BACK CONTROL · REAL SHARED COMPONENT',<ServicePageHeader context="Wash & care · Exterior" title="Regular Wash" crumbs={[{title:'All services',onPress:noop}]}/>)
+ :q.has('paint')?shell('PAINT DETAIL · EXISTING COMPOSITION, FOR REVIEW',<ServiceProductSelection title="Ceramic" services={[ceramic,ceramicB]} priceLabel={s=>s.id==='cer-c1'?'₹25,000':'₹30,000'} onOpen={noop}/>)
  :q.has('services')?shell('SERVICES ROOT · HEADING AND LAYOUT UNIFIED WITH GARAGE AND VISITS · SAMPLE CATALOGUE CONTENT',<ServiceJourney services={[wash,ceramic,ceramicB] as never} path={{}} query="" onPath={noop} onOpen={noop} onHelp={noop} priceLabel={()=>null} reviewing={false} onReview={noop} onBookSelection={noop}/>)
  :q.has('detail')?shell('SERVICE DETAIL · NON-PAINT RICH LAYOUT · SAMPLE CATALOGUE CONTENT, LIVE COPY AND OPTIONS RENDER AT RUNTIME',<ServiceDetailRich service={wash} siblings={[wash]} priceLabel={s=>'₹600'} eligible={true} added={false} onToggle={noop} onOpen={noop} onInspect={noop} onSelect={noop}/>)
  :q.has('home')?shell('HOME · SMALLER HERO, LARGER CAR CARD, STUDIO STATUS RIGHT, THEMED SOCIAL TILES',<HomeView {...homeProps}/>)
