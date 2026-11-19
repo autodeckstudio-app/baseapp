@@ -141,6 +141,8 @@ export function SectionTitle({ children }: { children: ReactNode }) {
 }
 
 const ScreenScrollContext=createContext<()=>void>(()=>{});
+const ScreenScrollCheckpointContext=createContext<()=>void>(()=>{});
+export const useScreenScrollCheckpoint=()=>useContext(ScreenScrollCheckpointContext);
 export const useScreenScrollToTop=()=>useContext(ScreenScrollContext);
 
 export function Screen({
@@ -152,6 +154,7 @@ export function Screen({
   appBar,
   onBack,
   scrollIdentity = "screen",
+  scrollCheckpointRef,
   bottomClearance = 96,
   compactContent = false,
   viewportBottomInset = 0,
@@ -164,6 +167,7 @@ export function Screen({
   onBack?: (() => void) | undefined;
   /** In-screen route identity, e.g. a catalogue category, each retains its own offset. */
   scrollIdentity?: string;
+  scrollCheckpointRef?:{current:(()=>void)|null};
   /** Clearance above the floating navigation, including its raised Home button. */
   bottomClearance?: number;
   compactContent?: boolean;
@@ -187,6 +191,8 @@ export function Screen({
   const activeScrollIdentity=useRef(scrollIdentity);activeScrollIdentity.current=scrollIdentity;
   const restoreOffset=useCallback(()=>{if(restorePending.current)scrollRef.current?.scrollTo({y:offsets.current.get(scrollIdentity)??0,animated:false})},[scrollIdentity]);
   const cancelRestore=()=>{restorePending.current=false};
+  const checkpoint=()=>{const node=scrollRef.current?.getScrollableNode?.() as {scrollTop?:number}|undefined;if(Platform.OS==='web'&&typeof node?.scrollTop==='number')offsets.current.set(scrollIdentity,node.scrollTop);scrollActive.current=false;restorePending.current=true};
+  if(scrollCheckpointRef)scrollCheckpointRef.current=checkpoint;
   const {width}=useWindowDimensions();
   const gutter=width<360?layout.screenInsetCompact:layout.screenInset;
   const [focused, setFocused] = useState(true);
@@ -220,7 +226,7 @@ export function Screen({
       {canvas ? <CanvasBackdrop /> : null}
       <View testID="screen-safe-area" style={{flex:1,paddingTop:safeTop}}>
       {top ? <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: space.inset, gap: space.line, zIndex: 2 }}>{bar ? <AppBar title={bar.title} onBack={bar.back} textBack={textBack} /> : null}{top}</View> : null}
-      {scroll ? <ScrollView style={viewportBottomInset?{marginBottom:viewportBottomInset}:undefined} showsVerticalScrollIndicator={false} testID="screen-scroll" ref={scrollRef} scrollEventThrottle={16} onLayout={restoreOffset} onContentSizeChange={restoreOffset} onScrollBeginDrag={cancelRestore} onTouchStart={cancelRestore} {...(Platform.OS==='web'?{onWheel:cancelRestore}:{})} onScroll={(e) => {if(!scrollActive.current)return;const y=e.nativeEvent.contentOffset.y;const target=offsets.current.get(scrollIdentity)??0;if(restorePending.current){if(Math.abs(y-target)>1)return;restorePending.current=false;}offsets.current.set(scrollIdentity,y);reportScroll(y)}} contentContainerStyle={{ flexGrow: 1 }}><ScreenScrollContext.Provider value={()=>{restorePending.current=false;offsets.current.set(scrollIdentity,0);scrollRef.current?.scrollTo({y:0,animated:true})}}>{content}</ScreenScrollContext.Provider></ScrollView> : content}
+      {scroll ? <ScrollView style={viewportBottomInset?{marginBottom:viewportBottomInset}:undefined} showsVerticalScrollIndicator={false} testID="screen-scroll" ref={scrollRef} scrollEventThrottle={16} onLayout={restoreOffset} onContentSizeChange={restoreOffset} onScrollBeginDrag={cancelRestore} onTouchStart={cancelRestore} {...(Platform.OS==='web'?{onWheel:cancelRestore}:{})} onScroll={(e) => {if(!scrollActive.current)return;const y=e.nativeEvent.contentOffset.y;const target=offsets.current.get(scrollIdentity)??0;if(restorePending.current){if(Math.abs(y-target)>1)return;restorePending.current=false;}offsets.current.set(scrollIdentity,y);reportScroll(y)}} contentContainerStyle={{ flexGrow: 1 }}><ScreenScrollCheckpointContext.Provider value={checkpoint}><ScreenScrollContext.Provider value={()=>{restorePending.current=false;offsets.current.set(scrollIdentity,0);scrollRef.current?.scrollTo({y:0,animated:true})}}>{content}</ScreenScrollContext.Provider></ScreenScrollCheckpointContext.Provider></ScrollView> : content}
       </View>
     </Ambient>
   );

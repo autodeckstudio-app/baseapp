@@ -275,7 +275,7 @@ describe("home menu", () => {
 });
 
 describe("services filters", () => {
-  it('Services preserves its connected home/family/brand/product journey',()=>{const s=read('src/app/(tabs)/catalogue/index.tsx');expect(s).toContain('routePath(params, all)');expect(s).toContain('<ServiceJourney');expect(read('src/ui/ServiceJourney.tsx')).toContain('<ScrollView horizontal showsHorizontalScrollIndicator={false}>');expect(s).not.toMatch(/ZoneCar|GOALS|zonesOf/);expect(s).toContain('textBack');expect(read('src/ui/ServicesExplorer.tsx')).toContain('serviceHomeImages[h.key]')});
+  it('Services preserves its connected home/family/brand/product journey',()=>{const s=read('src/app/(tabs)/catalogue/index.tsx');expect(s).toContain('routePath(params, all)');expect(s).toContain('<ServiceJourney');expect(read('src/ui/ServiceJourney.tsx')).toContain('<ScrollView ref={strip} horizontal showsHorizontalScrollIndicator={false}>');expect(s).not.toMatch(/ZoneCar|GOALS|zonesOf/);expect(s).toContain('textBack');expect(read('src/ui/ServicesExplorer.tsx')).toContain('serviceHomeImages[h.key]')});
   it("unmapped types keep an icon rather than unrelated stock; newly generated matching service subjects are allowed", () => {
     const src = read("src/lib/imagery.ts");
     const block = src.slice(src.indexOf("const TYPE_TOPIC"), src.indexOf("export function typePhoto"));

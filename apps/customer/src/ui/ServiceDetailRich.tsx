@@ -17,7 +17,7 @@ import{useScreenScrollToTop}from'./kit';
  *  writing, iconified points, care and a quiet action. Copy stays canonical —
  *  every shown line comes from the catalogue record or reviewed product copy;
  *  no invented prices, timing, warranty or benefits. Selecting never books. */
-export function ServiceDetailRich({service,siblings,priceLabel,eligible,added,onToggle,onOpen,onInspect,onSelect}:{service:Service;siblings:Service[];priceLabel:(service:Service)=>string|null|undefined;eligible:boolean;added:boolean;onToggle?:((s:Service)=>void)|undefined;onOpen:(s:Service)=>void;onInspect:(s:Service)=>void;onSelect:(s:Service)=>void}){
+export function ServiceDetailRich({service,siblings,priceLabel,eligible,added,onToggle,onOpen,onInspect,onSelect,serviceTitle,optionLabel}:{service:Service;siblings:Service[];serviceTitle?:string|undefined;optionLabel?:((service:Service)=>string)|undefined;priceLabel:(service:Service)=>string|null|undefined;eligible:boolean;added:boolean;onToggle?:((s:Service)=>void)|undefined;onOpen:(s:Service)=>void;onInspect:(s:Service)=>void;onSelect:(s:Service)=>void}){
  const{name,colors}=useExperienceTheme();const scrollToTop=useScreenScrollToTop();
  const ink=colors.textPrimary,muted=colors.textSecondary,rule=colors.borderSubtle,accent=colors.accentStrong,chosen=colors.accentHaze;
  const font={fontFamily:'Inter, system-ui, sans-serif',color:ink};
@@ -32,14 +32,25 @@ export function ServiceDetailRich({service,siblings,priceLabel,eligible,added,on
  const actionLabel=eligible?(added?'Added':'Add to cart'):quote?'Discuss your requirements':'Review & book';
  const actionPress=()=>{if(eligible&&onToggle)onToggle(s);else if(quote)onInspect(s);else onOpen(s)};
  return <View testID="service-detail-rich" style={{gap:16,minWidth:0}}>
-  <ServiceIdentityMedia service={s}/>
+  <ServiceIdentityMedia service={s} compact={!!serviceTitle}/>
   <View style={{gap:7}}>
    <View style={{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between',gap:10}}>
-    <Text accessibilityRole="header" style={[font,{flex:1,minWidth:0,fontSize:22,lineHeight:28,letterSpacing:-.7,fontWeight:'600'}]}>{s.brand&&s.brand!=='Standard'&&s.brand!=='Add-ons'?productDisplayName(s):s.name}</Text>
+    <Text accessibilityRole="header" style={[font,{flex:1,minWidth:0,fontSize:22,lineHeight:28,letterSpacing:-.7,fontWeight:'600'}]}>{serviceTitle??(s.brand&&s.brand!=='Standard'&&s.brand!=='Add-ons'?productDisplayName(s):s.name)}</Text>
     <Text style={[font,{maxWidth:'43%',flexShrink:0,textAlign:'right',fontSize:quote?13:20,lineHeight:28,fontWeight:'600',letterSpacing:-.4}]}>{price(s)}</Text>
    </View>
+   {serviceTitle?<Text style={[font,{fontSize:12,lineHeight:18,color:accent}]}>{optionLabel?.(s)??s.name}</Text>:null}
    {lines[0]?<Text style={[font,{fontSize:13,lineHeight:20,color:muted}]}>{lines[0]}</Text>:null}
   </View>
+  {siblings.length>1?<View>
+   <View style={{flexDirection:'row',justifyContent:'space-between',marginTop:8,marginBottom:7}}><Text style={[font,{fontSize:11,fontWeight:'600'}]}>Choose an option</Text><Text style={[font,{fontSize:10,color:muted}]}>{siblings.length} options</Text></View>
+   <View accessibilityRole="radiogroup" accessibilityLabel="Service options">{siblings.map(row=>{const active=row.id===s.id,im=photo(row),logo=row.brand?BRAND_LOGOS[row.brand]:undefined;return <Pressable key={row.id} accessibilityRole="radio" accessibilityLabel={`Select ${row.name}`} accessibilityState={{checked:active}} onPress={()=>{onSelect(row);scrollToTop()}} style={{minHeight:serviceTitle?48:64,borderBottomWidth:1,borderBottomColor:active?'transparent':rule,borderRadius:active?8:0,paddingHorizontal:8,paddingVertical:10,backgroundColor:active?chosen:'transparent',flexDirection:'row',alignItems:'center',gap:8}}>
+    {!serviceTitle?<View style={{width:48,height:40,flexShrink:0,alignItems:'center',justifyContent:'center'}}>{im?<Image accessibilityLabel={`${row.name} thumbnail`} source={im} resizeMode="contain" style={{width:48,height:38}}/>:logo?<Image accessibilityLabel={`${row.brand} brand logo`} source={logo.src} resizeMode="contain" style={{width:44,height:28}}/>:<Icon mono name="shield" size={20} color={muted}/>}</View>:null}
+    <Text style={[font,{flex:1,minWidth:0,fontSize:12,lineHeight:18,fontWeight:'500'}]}>{optionLabel?optionLabel(row):row.brand&&row.brand!=='Standard'&&row.brand!=='Add-ons'?productDisplayName(row):row.name}</Text>
+    <Text style={[font,{fontSize:12,lineHeight:18,fontWeight:'600',width:78,flexShrink:0,textAlign:'right'}]}>{price(row)}</Text>
+    <View style={{width:13,flexShrink:0}}>{active?<Icon mono name="check" size={13} color={accent}/>:null}</View>
+   </Pressable>})}</View>
+   <Text style={[font,{fontSize:10,lineHeight:16,color:muted,marginTop:12}]}>{serviceTitle?'Choose an option to see its details and price. Selection does not book.':'Select a service to read about it. Selection does not book.'}</Text>
+  </View>:null}
   {points.length?<View testID="service-detail-points" style={{borderRadius:22,borderWidth:1,borderColor:rule,backgroundColor:colors.surface,padding:16,gap:12}}>
    {points.map((raw,i)=>{const f=productHighlight(raw);return <View key={i} style={{flexDirection:'row',alignItems:'center',gap:12}}>
     <View style={{width:34,height:34,borderRadius:17,borderWidth:1,borderColor:rule,backgroundColor:colors.surface,alignItems:'center',justifyContent:'center'}}><Icon mono name={f.icon} size={16} color={ink}/></View>
@@ -60,15 +71,6 @@ export function ServiceDetailRich({service,siblings,priceLabel,eligible,added,on
   </View>
   {s.customerMenu?.bookingMode?<Text style={[font,{fontSize:11,lineHeight:16,color:muted}]}>{s.customerMenu.bookingMode==='walk_in'?'Free initial walk-in check. No online slot.':'Specialist timing must be confirmed. No online slot.'}</Text>:null}
   {quote?<Pressable accessibilityRole="button" accessibilityLabel={`Full details for ${s.name}`} onPress={()=>onOpen(s)} style={{minHeight:44,justifyContent:'center',alignItems:'flex-start'}}><Text style={[font,{fontSize:11,color:muted,textDecorationLine:'underline'}]}>Full service details</Text></Pressable>:null}
-  {siblings.length>1?<View>
-   <View style={{flexDirection:'row',justifyContent:'space-between',marginTop:8,marginBottom:7}}><Text style={[font,{fontSize:11,fontWeight:'600'}]}>Choose an option</Text><Text style={[font,{fontSize:10,color:muted}]}>{siblings.length} options</Text></View>
-   <View accessibilityRole="radiogroup" accessibilityLabel="Service options">{siblings.map(row=>{const active=row.id===s.id,im=photo(row),logo=row.brand?BRAND_LOGOS[row.brand]:undefined;return <Pressable key={row.id} accessibilityRole="radio" accessibilityLabel={`Select ${row.name}`} accessibilityState={{checked:active}} onPress={()=>{onSelect(row);scrollToTop()}} style={{minHeight:64,borderBottomWidth:1,borderBottomColor:active?'transparent':rule,borderRadius:active?8:0,paddingHorizontal:8,paddingVertical:10,backgroundColor:active?chosen:'transparent',flexDirection:'row',alignItems:'center',gap:8}}>
-    <View style={{width:48,height:40,flexShrink:0,alignItems:'center',justifyContent:'center'}}>{im?<Image accessibilityLabel={`${row.name} thumbnail`} source={im} resizeMode="contain" style={{width:48,height:38}}/>:logo?<Image accessibilityLabel={`${row.brand} brand logo`} source={logo.src} resizeMode="contain" style={{width:44,height:28}}/>:<Icon mono name="shield" size={20} color={muted}/>}</View>
-    <Text style={[font,{flex:1,minWidth:0,fontSize:12,lineHeight:18,fontWeight:'500'}]}>{row.brand&&row.brand!=='Standard'&&row.brand!=='Add-ons'?productDisplayName(row):row.name}</Text>
-    <Text style={[font,{fontSize:12,lineHeight:18,fontWeight:'600',width:78,flexShrink:0,textAlign:'right'}]}>{price(row)}</Text>
-    <View style={{width:13,flexShrink:0}}>{active?<Icon mono name="check" size={13} color={accent}/>:null}</View>
-   </Pressable>})}</View>
-   <Text style={[font,{fontSize:10,lineHeight:16,color:muted,marginTop:12}]}>Select a service to read about it. Selection does not book.</Text>
-  </View>:null}
+
  </View>;
 }
