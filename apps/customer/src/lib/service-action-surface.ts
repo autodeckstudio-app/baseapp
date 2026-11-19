@@ -7,7 +7,7 @@ import { raised, type Mode } from './raised';
 export function serviceActionSurface(mode:Mode,selected=false,pressed=false):ViewStyle{
  const night=mode!=='light',colors=night?nightColors:lightColors;
  return {
-  borderRadius:9999,
+  borderRadius:10,
   borderWidth:1,
   borderColor:selected?colors.accentStrong:colors.borderSubtle,
   backgroundColor:selected?colors.accentHaze:'transparent',

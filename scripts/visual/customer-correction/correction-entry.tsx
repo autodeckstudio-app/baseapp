@@ -39,7 +39,7 @@ const homeProps:any={greeting:'Good morning, Meet',initial:'M',unread:0,
  quick:[{key:'call',label:'Call',icon:'call',onPress:noop},{key:'wa',label:'WhatsApp',icon:'whatsapp',onPress:noop},{key:'map',label:'Directions',icon:'directions',onPress:noop}],
  social:[{key:'wac',title:'WhatsApp',sub:'Our channel',icon:'channel',onPress:noop},{key:'ig',title:'Instagram',sub:'@autodeck',icon:'instagram',onPress:noop}],
  onAvatar:noop,onSearch:noop,onBell:noop,onAllServices:noop,onCategory:noop,onService:noop,onCar:noop,onAddCar:noop,onReminders:noop,onBook:noop,onStudio:noop,onMembership:noop,onVisits:noop,onShare:noop};
-const shell=(label:string,child:React.ReactNode)=><div style={{maxWidth:430,margin:'0 auto',padding:'18px 14px 40px',background:glacierGround(isNightPalette),minHeight:'100vh'}}><div style={{font:'11px sans-serif',color:'#EC8638',letterSpacing:1.5,marginBottom:12}}>{label}</div>{child}</div>;
+const shell=(label:string,child:React.ReactNode)=><div style={{maxWidth:430,boxSizing:'border-box',margin:0,padding:'18px 14px 40px',background:glacierGround(isNightPalette),minHeight:'100vh'}}><div style={{font:'11px sans-serif',color:'#EC8638',letterSpacing:1.5,marginBottom:12}}>{label}</div>{child}</div>;
 const tabBar=<RaisedTabBar state={{index:2,routes:['bookings','catalogue','index','garage','profile'].map(name=>({key:name,name}))}} descriptors={Object.fromEntries(['bookings','catalogue','index','garage','profile'].map(name=>[name,{options:{title:name}}]))} navigation={{navigate:noop,emit:()=>({defaultPrevented:false})}} icons={{index:'home',catalogue:'services',bookings:'bookings',garage:'garage',profile:'profile'}}/>;
 const giftService={serviceId:'wash-regular',serviceName:'Regular Wash',amountPaise:60000};
 const giftsPreview=<div style={{display:'flex',flexDirection:'column',gap:28}}>
@@ -105,12 +105,13 @@ createRoot(document.getElementById('root')!).render(<ExperienceThemeProvider>
  <div style={{font:'12px sans-serif',color:'#EC8638',background:'#18181c',padding:10,textAlign:'center'}}>LOCAL DESIGN PREVIEW · CORRECTION CANDIDATE · SYNTHETIC CONTENT · NO ACCOUNT OR WRITES</div>
  {q.has('back')?shell('SERVICE PAGE HEADER · COMPACT HAIRLINE BACK CONTROL · REAL SHARED COMPONENT',<ServicePageHeader context="Wash & care · Exterior" title="Regular Wash" crumbs={[{title:'All services',onPress:noop}]}/>)
  :q.has('paint')?shell('PAINT DETAIL · EXISTING COMPOSITION, FOR REVIEW',<ServiceProductSelection title="Ceramic" services={[ceramic,ceramicB]} priceLabel={s=>s.id==='cer-c1'?'₹25,000':'₹30,000'} onOpen={noop}/>)
- :q.has('services')?shell('SERVICES ROOT · HEADING AND LAYOUT UNIFIED WITH GARAGE AND VISITS · SAMPLE CATALOGUE CONTENT',<ServiceJourney services={[wash,ceramic,ceramicB] as never} path={{}} query="" onPath={noop} onOpen={noop} onHelp={noop} priceLabel={()=>null} reviewing={false} onReview={noop} onBookSelection={noop}/>)
+ :q.has('services')?shell('SERVICES ROOT · ORIGINAL TILE LAYOUT KEPT, HEADING AND TITLES UNIFIED · SAMPLE CATALOGUE CONTENT',<ServiceJourney services={[wash,ceramic,ceramicB] as never} path={{}} query="" onPath={noop} onOpen={noop} onHelp={noop} priceLabel={()=>null} reviewing={false} onReview={noop} onBookSelection={noop}/>)
+ :q.has('category')?shell('CATEGORY PAGE · INNER SERVICE LIST · SAMPLE CATALOGUE CONTENT',<ServiceJourney services={[wash,ceramic,ceramicB] as never} path={{home:'washing'} as never} query="" onPath={noop} onOpen={noop} onHelp={noop} priceLabel={()=>null} reviewing={false} onReview={noop} onBookSelection={noop}/>)
  :q.has('detail')?shell('SERVICE DETAIL · NON-PAINT RICH LAYOUT · SAMPLE CATALOGUE CONTENT, LIVE COPY AND OPTIONS RENDER AT RUNTIME',<ServiceDetailRich service={wash} siblings={[wash]} priceLabel={s=>'₹600'} eligible={true} added={false} onToggle={noop} onOpen={noop} onInspect={noop} onSelect={noop}/>)
  :q.has('home')?shell('HOME · SMALLER HERO, LARGER CAR CARD, STUDIO STATUS RIGHT, THEMED SOCIAL TILES',<HomeView {...homeProps}/>)
  :q.has('visits')?shell('VISITS · COMPACT EMPTY CARD, CENTRED ACTION',<StatePanel compact icon="bookings" title="Nothing booked" body="Pick a service and a time. The studio confirms it." action={<Button label="Book a service" onPress={noop}/>}/>)
  :q.has('plans')?shell('MEMBERSHIP · V17 CARDS · NEWLY APPROVED LADDER AS CANDIDATE DATA',<PlanCompare cols={plans} onOpen={noop}/>)
- :q.has('tabs')?shell('TAB BAR · NO HOME LABEL UNDER MONOGRAM',<div style={{position:'relative',height:120}}>{tabBar}</div>)
+ :q.has('tabs')?shell('TAB BAR · DARK ISLAND, AD MONOGRAM, GLOW ONLY WHEN HOME SELECTED',<div style={{position:'relative',height:120}}>{tabBar}</div>)
  :q.has('gifts')?shell('GIFTS · SERVICE SELECTOR, BUY CARD, CODE CARD, COMPACT EMPTY STATE',giftsPreview)
  :q.has('account')?shell('ACCOUNT · REAL FULL PAGE · AUTH AND ROUTER MOCKED, NO WRITES',<YouScreen/>)
  :q.has('navideas')?shell('NAV IDEAS · CONCEPTS FOR REVIEW · NONE APPLIED',navIdeas)

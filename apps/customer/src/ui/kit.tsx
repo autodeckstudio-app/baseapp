@@ -294,7 +294,7 @@ export function Button({
           alignSelf: "flex-start",
           marginTop: primary ? 8 : 0,
           marginBottom: icon ? 0 : 8,
-          borderRadius: radius.pill,
+          borderRadius: 12,
           paddingHorizontal: 14,
           alignItems: "center",
           justifyContent: "center",
