@@ -147,7 +147,16 @@ export default function JobDetailScreen() {
   const paymentEpoch = useRef(0);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [paymentActionLoading, setPaymentActionLoading] = useState(false);
-  const [bookingMembership, setBookingMembership] = useState<{
+  const [advanceAuth, setAdvanceAuth] = useState<StaffAuth | null | undefined>(undefined);
+  useEffect(() => onStaffAuthChanged(setAdvanceAuth), []);
+  const refreshScope = [id, job?.id, job?.tenantId, job?.customerId, job?.bookingId, job?.status, staffAuthFingerprint(advanceAuth)].join("|");
+  const refreshGeneration = useRef({ scope: refreshScope, epoch: 0 });
+  if (refreshGeneration.current.scope !== refreshScope) refreshGeneration.current = { scope: refreshScope, epoch: refreshGeneration.current.epoch + 1 };
+  const refreshEpoch = refreshGeneration.current.epoch;
+  useEffect(() => () => { refreshGeneration.current = { scope: "unmounted", epoch: refreshGeneration.current.epoch + 1 }; }, []);
+  const refreshBusy = useRef<number | null>(null);
+  const [bookingMembershipRaw, setBookingMembership] = useState<{
+    epoch: number;
     membership: Membership;
     washUsed: boolean;
     discountApplied: boolean;
@@ -155,7 +164,9 @@ export default function JobDetailScreen() {
     // usageUnverified: the visit-record read failed - no Record until verified.
     refresh: { used: number; total: number; recordedRowId: string | null; usageUnverified?: boolean } | null;
   } | null>(null);
-  const [recordingRefresh, setRecordingRefresh] = useState(false);
+  const bookingMembership = bookingMembershipRaw?.epoch === refreshEpoch ? bookingMembershipRaw : null;
+  const [recordingRefreshEpoch, setRecordingRefreshEpoch] = useState<number | null>(null);
+  const recordingRefresh = recordingRefreshEpoch === refreshEpoch;
   // Fail-closed counters review: the backend rejected recording for this job
   // with "counters need staff review" - retrying cannot succeed until staff
   // fix the counters, so the visit surface stops offering the action. Keyed
@@ -259,13 +270,14 @@ export default function JobDetailScreen() {
     setRefreshBlockedJobId(null);
     if (!job?.bookingId || !job.customerId) return;
     let alive = true;
+    const valid = () => alive && refreshGeneration.current.epoch === refreshEpoch;
     void (async () => {
       const freshBookingSnap = await getDoc(doc(db, COLLECTIONS.bookings(), job.bookingId as string));
-      if (!alive || !freshBookingSnap.exists()) return;
+      if (!valid() || !freshBookingSnap.exists()) return;
       const membershipBooking = freshBookingSnap.data() as Booking;
       if (!membershipBooking.membershipId) return;
       const membership = await getCustomerMembership(job.customerId, membershipBooking.membershipId);
-      if (!alive || !membership) return;
+      if (!valid() || !membership) return;
       // Interior refresh readout: the balance rides on the membership doc;
       // this visit's record comes from the separate refresh usage list.
       let refresh: { used: number; total: number; recordedRowId: string | null; usageUnverified?: boolean } | null = null;
@@ -282,18 +294,19 @@ export default function JobDetailScreen() {
           refresh.usageUnverified = true;
         }
       }
-      if (!alive) return;
+      if (!valid()) return;
       setBookingMembership({
+        epoch: refreshEpoch,
         membership,
         washUsed: membershipBooking.membershipWashUsed,
         discountApplied: membershipBooking.membershipDiscountApplied,
         refresh,
       });
     })().catch(() => {
-      if (alive) setBookingMembership(null);
+      if (valid()) setBookingMembership(null);
     });
     return () => { alive = false; };
-  }, [job?.id, job?.tenantId, job?.customerId, job?.bookingId, membershipRetryTick]);
+  }, [refreshScope, membershipRetryTick]);
 
   // Live update: studio sees the customer's approve/reject decision the
   // moment it happens, via the same real-time listener pattern as
@@ -314,23 +327,17 @@ export default function JobDetailScreen() {
     return listenToInspection(job.id, setInspection, () => undefined);
   }, [job?.id]);
 
-  // Current job identity for in-flight action responses: an answer that
-  // lands after ANY part of the identity moved (same job id but another
-  // tenant/customer/booking counts) belongs to the old context.
-  const jobIdentity = (j: ServiceJob | null) =>
-    j ? [j.tenantId, j.customerId, j.bookingId, j.id].join("|") : "";
-  const jobIdentityRef = useRef<string>("");
-  jobIdentityRef.current = jobIdentity(job);
-
   // Staff action for the Platinum interior refresh benefit: one record per
   // visit job, idempotent on the backend (replay returns the same row).
   async function handleRecordRefresh() {
-    if (!job || !bookingMembership?.refresh || recordingRefresh) return;
+    if (refreshGeneration.current.epoch !== refreshEpoch || refreshBusy.current === refreshEpoch || !job || !bookingMembership?.refresh) return;
+    if (!advanceAuth || !["studio", "admin", "superadmin"].includes(advanceAuth.role ?? "") || advanceAuth.tenantId !== job.tenantId) return;
+    if (refreshVisitState(bookingMembership.membership, job, bookingMembership.refresh.recordedRowId) !== "recordable" || refreshBlockedJobId === job.id) return;
     if (bookingMembership.refresh.usageUnverified) return; // verify the visit record first
-    const identity = jobIdentity(job);
+    refreshBusy.current = refreshEpoch;
     const membershipId = bookingMembership.membership.id;
     setActionError(null);
-    setRecordingRefresh(true);
+    setRecordingRefreshEpoch(refreshEpoch);
     try {
       const res = await httpsCallable<
         { membershipId: string; jobId: string },
@@ -338,14 +345,14 @@ export default function JobDetailScreen() {
       >(functions, "recordMembershipRefresh")({ membershipId, jobId: job.id });
       // The job context may have changed under the in-flight action; never
       // write the response into another context's view.
-      if (jobIdentityRef.current !== identity) return;
+      if (refreshGeneration.current.epoch !== refreshEpoch) return;
       setBookingMembership((prev) =>
-        prev && prev.membership.id === membershipId && prev.refresh
+        prev && prev.epoch === refreshEpoch && prev.membership.id === membershipId && prev.refresh
           ? { ...prev, refresh: { ...prev.refresh, used: res.data.refreshesUsed, recordedRowId: res.data.refreshUsageId } }
           : prev,
       );
     } catch (e) {
-      if (jobIdentityRef.current !== identity) return;
+      if (refreshGeneration.current.epoch !== refreshEpoch) return;
       const message = e instanceof Error ? e.message : "Could not record the interior refresh.";
       // The fail-closed counters rejection is permanent until staff review:
       // pause the action instead of offering a retry that can only fail again.
@@ -353,7 +360,8 @@ export default function JobDetailScreen() {
       if (/staff review/i.test(message)) setRefreshBlockedJobId(job.id);
       setActionError(message);
     } finally {
-      setRecordingRefresh(false);
+      if (refreshBusy.current === refreshEpoch) refreshBusy.current = null;
+      setRecordingRefreshEpoch((prev) => prev === refreshEpoch ? null : prev);
     }
   }
 
@@ -414,8 +422,7 @@ export default function JobDetailScreen() {
   // method flip can never retarget an armed panel - the binding is compared
   // synchronously against the current render context AND re-checked against
   // the latest-state ref inside the handler before any mutation.
-  const [advanceAuth, setAdvanceAuth] = useState<StaffAuth | null | undefined>(undefined);
-  useEffect(() => onStaffAuthChanged(setAdvanceAuth), []);
+
   type CashBinding = { mode: "record" | "confirm"; armId: number; jobId: string; tenantId: string; paymentId: string | null; epoch: number; gen: number };
   // Monotonic arm identity: every click arms a NEW id, even for the same
   // record. A retained callback from an older arm can never match the

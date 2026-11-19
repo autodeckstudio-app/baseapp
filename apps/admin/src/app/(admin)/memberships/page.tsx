@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, Fragment } from "react";
+import { useCallback, useEffect, useState, useRef, Fragment } from "react";
 import type { Customer, Membership, MembershipPlan, MembershipRefreshUsage, PaymentMethod } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { useLabels } from "../../../lib/use-labels";
@@ -269,34 +269,49 @@ function WalkinSale({ tenantId, plans, onChanged }: { tenantId: string; plans: M
 }
 
 export function RefreshUsagePanel({ membershipId }: { membershipId: string }) {
-  const [rows, setRows] = useState<MembershipRefreshUsage[] | null>(null);
+  const { claims } = useAdminAuth();
+  const scope = [membershipId, claims?.tenantId, claims?.role].join("|");
+  const generation = useRef({ scope, epoch: 0 });
+  if (generation.current.scope !== scope) generation.current = { scope, epoch: generation.current.epoch + 1 };
+  const epoch = generation.current.epoch;
+  const busy = useRef<number | null>(null);
+  const [retry, setRetry] = useState(0);
+  useEffect(() => () => { generation.current = { scope: "unmounted", epoch: generation.current.epoch + 1 }; }, []);
+  const [rowsState, setRows] = useState<{ epoch: number; rows: MembershipRefreshUsage[] } | null>(null);
+  const rows = rowsState?.epoch === epoch ? rowsState.rows : null;
   const [message, setMessage] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   useEffect(() => {
     let live = true;
+    setRows(null); setMessage(null); setBusyId(null);
     getMembershipUsage(membershipId)
-      .then((r) => { if (live) setRows(r.refreshUsage ?? []); })
-      .catch(() => { if (live) setMessage("Could not load refresh records."); });
+      .then((r) => { if (live && generation.current.epoch === epoch) setRows({ epoch, rows: r.refreshUsage ?? [] }); })
+      .catch(() => { if (live && generation.current.epoch === epoch) setMessage("Could not load refresh records."); });
     return () => { live = false; };
-  }, [membershipId]);
+  }, [scope, retry]);
 
   async function restore(row: MembershipRefreshUsage) {
+    if (generation.current.epoch !== epoch || busy.current === epoch || row.restoredAt) return;
     const reason = window.prompt("Reason for restoring this interior refresh?");
     if (!reason || !reason.trim()) return;
+    if (generation.current.epoch !== epoch) return;
+    busy.current = epoch;
     setBusyId(row.id);
     setMessage(null);
     try {
       await restoreMembershipRefresh({ membershipId, refreshUsageId: row.id, reason: reason.trim() });
-      setRows((prev) => (prev ?? []).map((r) => (r.id === row.id ? { ...r, restoredAt: new Date().toISOString(), restoredBy: "admin" } : r)));
+      if (generation.current.epoch !== epoch) return;
+      setRows((prev) => prev?.epoch === epoch ? { epoch, rows: prev.rows.map((r) => r.id === row.id ? { ...r, restoredAt: new Date().toISOString(), restoredBy: "admin" } : r) } : prev);
       setMessage("Refresh credit restored.");
     } catch {
-      setMessage("Could not restore the refresh.");
+      if (generation.current.epoch === epoch) setMessage("Could not restore the refresh.");
     } finally {
-      setBusyId(null);
+      if (busy.current === epoch) busy.current = null;
+      if (generation.current.epoch === epoch) setBusyId(null);
     }
   }
 
-  if (message && !rows) return <p style={msgStyle}>{message}</p>;
+  if (message && !rows) return <div><p style={msgStyle}>{message}</p><button style={btn} onClick={() => { if (generation.current.epoch === epoch) setRetry((n) => n + 1); }}>Retry refresh records</button></div>;
   if (!rows) return <p style={msgStyle}>Loading refresh records...</p>;
   if (rows.length === 0) return <p style={msgStyle}>No interior refreshes recorded yet.</p>;
   return (
@@ -387,10 +402,13 @@ export default function MembershipPlansPage() {
   const [busy, setBusy] = useState(false);
   const { claims } = useAdminAuth();
   const tenantId = claims?.tenantId ?? null;
-  const [members, setMembers] = useState<Membership[]>([]);
+  const [memberState, setMemberState] = useState<{ tenantId: string; rows: Membership[] } | null>(null);
+  const members = memberState?.tenantId === tenantId ? memberState.rows : [];
   useEffect(() => {
     if (!tenantId) return undefined;
-    return listenToTenantMemberships(tenantId, setMembers, () => undefined);
+    let alive = true;
+    const stop = listenToTenantMemberships(tenantId, (rows) => { if (alive) setMemberState({ tenantId, rows }); }, () => { if (alive) setMemberState(null); });
+    return () => { alive = false; stop(); };
   }, [tenantId]);
 
   async function refresh() {

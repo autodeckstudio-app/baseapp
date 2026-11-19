@@ -742,3 +742,44 @@ it('a record response for a superseded tenant/customer/booking identity is disca
   bookingDocs.map.clear();
   await act(async () => el.unmount());
 });
+
+it('retained refresh callback after identity roundtrip or unmount cannot send, and stale completion cannot mark new epoch recorded', async () => {
+  membershipRead.getCustomerMembership.mockResolvedValue({ id: 'm1', tier: 'platinum', status: 'active', endDate: '2099-01-01', refreshesTotal: 1, refreshesUsed: 0 });
+  bookingDocs.map.set('bA', { exists: () => true, data: () => ({ membershipId: 'm1' }) });
+  bookingDocs.map.set('bB', { exists: () => true, data: () => ({}) });
+  let resolveRecord: (v: unknown) => void = () => {};
+  const send = vi.fn(() => new Promise(r => { resolveRecord = r; }));
+  callableHandlers.map.set('recordMembershipRefresh', send);
+  let el: any;
+  await act(async () => { el = create(createElement(JobDetailScreen)); });
+  const a = () => emitJob('jA', mkJob('jA', { bookingId: 'bA', customerId: 'cA' }));
+  const b = () => emitJob('jA', mkJob('jA', { bookingId: 'bB', customerId: 'cB' }));
+  a(); await flush();
+  const old = el.root.findAll((n: any) => n.props.label === 'Record interior refresh' && typeof n.props.onPress === 'function')[0].props.onPress;
+  await act(async () => { old(); old(); });
+  expect(send).toHaveBeenCalledTimes(1);
+  b(); await flush(); a(); await flush();
+  await act(async () => old());
+  expect(send).toHaveBeenCalledTimes(1);
+  await act(async () => resolveRecord({ data: { refreshUsageId: 'old-row', refreshesUsed: 1 } }));
+  expect(textOf(el)).not.toContain('Recorded for this visit.');
+  expect(textOf(el)).toContain('Record interior refresh');
+  const fresh = el.root.findAll((n: any) => n.props.label === 'Record interior refresh' && typeof n.props.onPress === 'function')[0].props.onPress;
+  await act(async () => el.unmount());
+  await act(async () => fresh());
+  expect(send).toHaveBeenCalledTimes(1);
+  callableHandlers.map.clear(); bookingDocs.map.clear(); membershipRead.getCustomerMembership.mockReset();
+});
+
+it('operator auth roundtrip invalidates an old refresh record callback', async () => {
+  membershipRead.getCustomerMembership.mockResolvedValue({ id: 'm1', tier: 'platinum', status: 'active', endDate: '2099-01-01', refreshesTotal: 1, refreshesUsed: 0 });
+  bookingDocs.map.set('bA', { exists: () => true, data: () => ({ membershipId: 'm1' }) });
+  const send = vi.fn(async () => ({ data: { refreshUsageId: 'r', refreshesUsed: 1 } }));
+  callableHandlers.map.set('recordMembershipRefresh', send);
+  let el: any; await act(async () => { el = create(createElement(JobDetailScreen)); });
+  emitJob('jA', mkJob('jA', { bookingId: 'bA', customerId: 'cA' })); await flush();
+  const old = el.root.findAll((n: any) => n.props.label === 'Record interior refresh' && typeof n.props.onPress === 'function')[0].props.onPress;
+  fireAuth({ ...STAFF, uid: 'u2' }); await flush(); fireAuth(STAFF); await flush();
+  await act(async () => old()); expect(send).not.toHaveBeenCalled();
+  await act(async () => el.unmount()); callableHandlers.map.clear(); bookingDocs.map.clear(); membershipRead.getCustomerMembership.mockReset();
+});
