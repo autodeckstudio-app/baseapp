@@ -10,6 +10,7 @@ import{ServiceJourney}from'../../../apps/customer/src/ui/ServiceJourney';
 import{ServicePageHeader}from'../../../apps/customer/src/ui/ServicePageHeader';
 import{HomeView}from'../../../apps/customer/src/ui/HomeView';
 import{PlanCompare}from'../../../apps/customer/src/ui/PlanCompare';
+import{MembershipCard}from'../../../apps/customer/src/ui/MembershipCard';
 import{StatePanel}from'../../../apps/customer/src/ui/StatePanel';
 import{Button}from'../../../apps/customer/src/ui/kit';
 import{RaisedTabBar}from'../../../apps/customer/src/ui/RaisedTabBar';
@@ -111,6 +112,7 @@ createRoot(document.getElementById('root')!).render(<ExperienceThemeProvider>
  :q.has('home')?shell('HOME · SMALLER HERO, LARGER CAR CARD, STUDIO STATUS RIGHT, THEMED SOCIAL TILES',<HomeView {...homeProps}/>)
  :q.has('visits')?shell('VISITS · COMPACT EMPTY CARD, CENTRED ACTION',<StatePanel compact icon="bookings" title="Nothing booked" body="Pick a service and a time. The studio confirms it." action={<Button label="Book a service" onPress={noop}/>}/>)
  :q.has('plans')?shell('MEMBERSHIP · V17 CARDS · NEWLY APPROVED LADDER AS CANDIDATE DATA',<PlanCompare cols={plans} onOpen={noop}/>)
+ :q.has('member')?shell('MEMBERSHIP HUB CARD · REFRESH BALANCE READOUT · SAMPLE RECORD',<MembershipCard membership={{id:'m1',tenantId:'t',customerId:'c',planId:'platinum',tier:'platinum',status:'active',washesTotal:8,washesUsed:3,discountPercent:0,pickupsTotal:3,pickupsUsed:1,refreshesTotal:1,refreshesUsed:0,prioritySlot:true,startDate:'2026-11-10',endDate:'2026-12-09',activatedAt:'2026-11-10',activatedBy:'a',cancelledAt:null,cancelledBy:null,cancellationReason:null,createdAt:'2026-11-10',updatedAt:'2026-11-19'}} today={'2026-11-19'}/>)
  :q.has('tabs')?shell('TAB BAR · DARK ISLAND, AD MONOGRAM, GLOW ONLY WHEN HOME SELECTED',<div style={{position:'relative',height:120}}>{tabBar}</div>)
  :q.has('gifts')?shell('GIFTS · SERVICE SELECTOR, BUY CARD, CODE CARD, COMPACT EMPTY STATE',giftsPreview)
  :q.has('account')?shell('ACCOUNT · REAL FULL PAGE · AUTH AND ROUTER MOCKED, NO WRITES',<YouScreen/>)

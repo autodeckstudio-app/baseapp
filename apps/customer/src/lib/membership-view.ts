@@ -84,3 +84,11 @@ export function pickupsLeftLine(m: { pickupsTotal?: number; pickupsUsed?: number
   if (total <= 0) return null;
   return `${Math.max(0, total - (m.pickupsUsed ?? 0))} of ${total} free pickups left`;
 }
+
+/** "1 of 1 interior refresh left". Null when the membership has none, so older plans never show a fabricated balance. */
+export function refreshesLeftLine(m: { refreshesTotal?: number; refreshesUsed?: number }): string | null {
+  const total = m.refreshesTotal ?? 0;
+  if (total <= 0) return null;
+  const left = Math.max(0, total - (m.refreshesUsed ?? 0));
+  return `${left} of ${total} interior refresh${total === 1 ? "" : "es"} left`;
+}

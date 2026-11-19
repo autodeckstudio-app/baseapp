@@ -4,7 +4,8 @@ import { View } from "react-native";
 import { GIFT_TERMS, formatGiftCode, giftDaysLeft, giftValidityLine } from "@autodeck/core";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { NavIcon } from "./NavIcon";
-import { Button, Kicker, Pane, T } from "./kit";
+import { IconAction } from "./IconAction";
+import { Kicker, Pane, T } from "./kit";
 import { giftMessage, shareGift } from "../lib/gift-share";
 
 export function GiftCard({ code, expiresAt, buyerName, serviceName, now = Date.now() }: { code: string; expiresAt: string; buyerName: string | null; serviceName?:string|undefined; now?: number }) {
@@ -27,15 +28,17 @@ export function GiftCard({ code, expiresAt, buyerName, serviceName, now = Date.n
           <T role="heading">{serviceName??"Foam wash"}, any car</T>
         </View>
       </View>
-      <View style={{ gap: 10, padding:18,borderRadius:18,borderWidth:1,borderStyle:"dashed",borderColor:"rgba(128,128,128,.4)",backgroundColor:codeBg }}>
-        <T role="caption" tone="tertiary">Gift code</T>
-        <T role="title">{formatGiftCode(code)}</T>
+      <View style={{ flexDirection:"row",alignItems:"center",gap:12,padding:18,borderRadius:18,borderWidth:1,borderStyle:"dashed",borderColor:"rgba(128,128,128,.4)",backgroundColor:codeBg }}>
+        <View style={{flex:1,gap:10}}>
+          <T role="caption" tone="tertiary">Gift code</T>
+          <T role="title">{formatGiftCode(code)}</T>
+        </View>
+        <IconAction kind="share" label="Share gift" onPress={() => void share()} />
       </View>
       <View style={{gap:6}}>
         <T tone="secondary">{giftValidityLine(expiresAt, now)}</T>
         {days <= 7 ? <T role="caption" tone="tertiary">Only {days} {days === 1 ? "day" : "days"} left.</T> : null}
       </View>
-      <Button icon="share" label="Share gift" onPress={() => void share()} />
       {note ? <T role="caption" tone="tertiary">{note}</T> : null}
       <T role="caption" tone="tertiary">{GIFT_TERMS.nonRefundable}</T>
     </View></Pane>
