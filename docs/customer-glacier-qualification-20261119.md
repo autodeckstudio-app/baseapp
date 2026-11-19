@@ -1,49 +1,27 @@
-# AutoDeck customer Glacier implementation qualification
+# Customer design qualification
 
-19 November 2026, Asia/Kolkata. Local source candidate, not deployed.
+19 November 2026, Asia/Kolkata. Customer-only source qualification. This document does not establish deployment or transaction acceptance.
 
-## Implemented
+## Design scope
 
-- Customer-only day and night material across shared panes, controls and screens.
-- Home retains the official identity, Stories immediately below Welcome, photographic services hero, canonical persisted car selection, one prioritized live action, existing membership, listing and contact callbacks, and whole-frontage studio promotional image.
-- Five category shortcuts open existing catalogue areas. Existing Home-return behavior is retained.
-- Services root adopts pale image-right cards. Narrow cards reserve space for headings rather than letting headings run into images.
-- Garage retains its existing car list, archive, history and detail flows. Empty-photo cards now follow day/night material instead of staying dark in day mode.
-- Account material follows the same theme; narrow identity stacks so an email is not split mid-address.
-- Official AD bottom navigation remains, with short labels and distinct service-area icons.
-- Shared primary buttons use dark day and pale night fills. Existing selection, payment, confirmation and safety callbacks remain.
-- Auth setup, claim and staff explanation screens use the same local ground.
+The Customer design now extends beyond Home and Services into Account, Garage and the car room, Visits and populated visit tracking, booking and review, reschedule and coordination, additional-work approvals, invoices and inspection, membership purchase/history/usage, gifts, quotes, notifications, help, buy/sell, onboarding and sign-in/profile forms. Existing route wrappers and redirect routes keep their behavior. Shared loading, notice, modal, field, sheet, button and row surfaces follow Day and Night appearances.
 
-## Passed
+Actual offerings, prices, policy text, booking eligibility, quote approval, payment sequencing, account/tenant scope checks and existing action handlers are retained. No backend, security rule, environment, flag, sibling app or business-policy change is included in this design continuation.
 
-- Customer: 210 unit files, 1,236 tests.
-- Customer render: 136 files, 662 tests.
-- Customer TypeScript: no errors.
-- Core: 62 files, 595 tests.
-- Functions unit: 168 files, 2,106 tests passed, one skipped.
-- 32 added AA contrast checks cover primary, secondary, tertiary and accent text on actual day/night canvas and card surfaces.
-- Compile-only iOS and Android Hermes exports pass, with inert demo config. These are not installed-app acceptance.
-- Compile-only production-mode web export and preview/fixture/hashed-asset guard pass, with inert demo config.
-- Catalogue source guard passes. It checks local source, not live publication.
-- Actual-component captures cover Home at 320/390/430 day/night; Garage, account and empty bookings at 320/390/430 day/night; service roots and Ceramic/brand/PPF/PPS/wash states at 320/390; payment review at 320/390 day/night. No horizontal overflow or missing images in these captures. Decisive pixels were inspected, not only layout metadata.
+## Evidence
 
-## Backend coverage follow-through
+- Customer render suite: 136 files, 664 tests passed after the row-price regression test.
+- Customer unit suite: 210 files, 1,236 tests passed.
+- Customer TypeScript passes.
+- Production-configured web export and production bundle guard pass with the existing autodeck-studio public configuration.
+- Actual-component offline captures cover the rebuilt routes at 320 and 390 CSS pixels, Day and Night. Populated invoice, inspection, sale, approval, reschedule, history, usage and notification states are included. Approval and reschedule confirmation panes were inspected without submitting them.
+- Pickup map actual-component pixels show real tile images and the custom CSS pin. The staged deployment serves the Leaflet stylesheet. Build diagnostics about Leaflet default PNGs concern unused default marker/layer-control assets, not the custom pin used by this surface.
+- One Night issue found during populated usage review was fixed: primitive row trailing prices now use themed data text. Plan history uses a visible text control rather than a lone icon.
 
-A separate source audit reported 86 customer callable references resolving among 242 backend exports. Remaining exports were staff/admin-only, redundant or intentionally gated. Referral redemption and shop ordering remain gated. This is source coverage, not proof that every endpoint is deployed or every live workflow accepted.
+## Live and deployment boundaries
 
-Web sign-in source routes profile setup through setupCustomerProfile, retains its returned customer document ID and refreshes claims. No extra resolveClaims call was introduced.
+The source branch is separate from main. Earlier partial Customer builds and this candidate must not be confused. Verify the exact current commit, Customer project, release configuration, deployed entry hash, excluded sibling builds and rollback deployment before promoting existing Customer aliases. Do not add domains or change sign-in settings to qualify an immutable deployment URL.
 
-Read-only live studio config checked at 04:04 IST: studio-ahmedabad, Asia/Kolkata, Mon-Sat 10:00-21:00, Sunday 10:00-19:00, no configured holidays. Phone/address constants match the current public https://www.autodeck.in page. getStudioInfo intentionally returns hours/timezone, not phone/address; no change was made to contact facts.
+Read-only live checks on the existing app domain have opened Home, saved car, catalogue, booking times, booking review and pickup map. One initial review transition returned Home without an error; the same cold load and a repeated normal time-to-review transition succeeded and remained on review. No root-cause fix is claimed for that transient observation. Recheck the normal path on the final live candidate.
 
-## Not qualified by this work
-
-- Nothing deployed or pushed. The compile artifact is deliberately demo-configured, not suitable to publish.
-- No real sign-in/profile mutation, booking, payment, refund, invoice, document upload/download or native installed-app acceptance performed.
-- Not every populated detail route/state has been visually accepted. Existing render suites cover many functional states, but they are not live transaction evidence.
-- Existing backend feature gates, pricing, payment/refund policies and release flags were not activated or changed.
-- No paid resource, purchase or account change.
-- Historical release records were used only to locate code and prior setup, never as authority for a new deployment.
-
-## Release continuation
-
-Use the connected source candidate, not the standalone preview. Reconcile the candidate against any newer owner work before assembling a production-configured artifact. Validate destination, active feature flags, public configuration and artifact hash, and obtain any still-needed authority before a deployment. Preserve the unresolved transaction/native acceptance gaps rather than reporting them as complete.
+No real booking, hold, pickup request, approval decision, reschedule, payment, refund, account deletion, document upload or other record mutation was performed as acceptance testing. Offline fixture callbacks block writes. Installed iOS/Android acceptance and financial transaction acceptance remain separate. Passing behavior tests and representative pixel checks do not establish every possible production state or every deployed backend operation.

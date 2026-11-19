@@ -13,3 +13,11 @@ for(const mode of ['light','night'])it(`${mode} busy primary action keeps a cont
  const style=StyleSheet.flatten(button.props.style({pressed:false}));expect(style.backgroundColor).toBe(mode==='light'?'#252c32':'#ecf1f7');
  await act(async()=>tree.unmount());
 });
+it('plain row prices use themed data text instead of an unstyled native string',async()=>{
+ h.name='night';let tree:any;
+ const {Row,T}=await import('./kit');
+ await act(async()=>{tree=create(<Row title="Wash credit used" trailing="₹600" last/>)});
+ const price=tree.root.findAllByType(T).find((x:any)=>x.props.children==='₹600');
+ expect(price?.props.role).toBe('data');
+ await act(async()=>tree.unmount());
+});

@@ -88,7 +88,7 @@ export default function MembershipUsageScreen() {
           })}
         </Pane>
       )}
-      <Button icon="history" label="Plan history" kind="quiet" onPress={() => router.push("/(tabs)/membership/history")} />
+      <Button label="Plan history" kind="quiet" onPress={() => router.push("/(tabs)/membership/history")} />
     </Screen>
   );
 }

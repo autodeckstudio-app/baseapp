@@ -365,7 +365,7 @@ export function Row({
         </View>
         {onPress && !trailing && expanded ? <NavIcon name="close" size={22} color={colors.textSecondary} cut={name === "light" ? "#FFFFFF" : "#252C35"}/> : null}
       </Pressable>
-      {trailing}
+      {typeof trailing === "string" || typeof trailing === "number" ? <T role="data">{trailing}</T> : trailing}
     </View>
   );
 }
