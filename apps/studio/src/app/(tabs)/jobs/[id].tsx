@@ -179,8 +179,7 @@ export default function JobDetailScreen() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [cancellingApprovalId, setCancellingApprovalId] = useState<string | null>(null);
   const [showApprovalForm, setShowApprovalForm] = useState(false);
-  const [advanceAuth, setAdvanceAuth] = useState<StaffAuth | null | undefined>(undefined);
-  useEffect(() => onStaffAuthChanged(setAdvanceAuth), []);
+
   const catalogue=usePublishedServices(advanceAuth?staffAuthFingerprint(advanceAuth):null,advanceAuth?.tenantId??null,showApprovalForm);
   const services=catalogue.services;
   useEffect(()=>{setSelectedServiceId(null)},[catalogue.revision]);
