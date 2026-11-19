@@ -35,7 +35,7 @@ export function AppBar({ title, onBack, textBack=false }: { title: string;textBa
     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
       <SideDrawer open={open} onClose={() => setOpen(false)} name={display} initial={initial} items={items} />
       {onBack ? (
-        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...(textBack?{borderRadius:10,borderWidth:1,borderColor:colors.borderSubtle,backgroundColor:colors.surface}:r.round) }}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", backgroundColor:"transparent" }}>
           <Text style={{color:colors.textPrimary,fontSize:11}}>Back</Text>
         </Pressable>
       ) : (
