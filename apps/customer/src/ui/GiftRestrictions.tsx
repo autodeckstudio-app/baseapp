@@ -9,8 +9,8 @@ import { T } from "./kit";
 export function GiftRestrictions() {
   const { colors, name } = useExperienceTheme();
   return (
-    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
-      <View style={{ paddingTop: 2 }}><NavIcon name="close" size={16} color={colors.danger} cut={name === "light" ? "#FFFFFF" : "#252C35"} /></View>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+      <NavIcon name="close" size={16} color={colors.danger} cut={name === "light" ? "#FFFFFF" : "#252C35"} />
       <View style={{ flex: 1 }}>
         <T role="caption" tone="danger">Non-refundable · No cash exchange · Non-transferable</T>
       </View>

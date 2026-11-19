@@ -37,6 +37,7 @@ describe("gift client", () => {
   it("the card and redeem screen show the validity line", () => {
     expect(read("ui/GiftCard.tsx")).toContain("Use by ${");
     expect(read("ui/GiftCard.tsx")).toContain('"days"} left');
+    expect(read("ui/GiftCard.tsx")).toContain("Expired");
     expect(read("ui/GiftCard.tsx")).toContain("<GiftRestrictions");
     expect(read("app/(tabs)/gifts.tsx")).toContain("giftValidityLine(claimed.expiresAt, now)");
   });

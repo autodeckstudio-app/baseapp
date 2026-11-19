@@ -440,8 +440,8 @@ export function LinkAction({ label, onPress, testID }: { label: string; onPress:
 /** One compact fact with a small leading icon: validity, terms, restrictions. Text stays full; the icon only aids scanning. */
 export function InfoLine({ icon, children }: { icon: NavIconName; children: ReactNode }) {
   const { colors, name } = useExperienceTheme();
-  return <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
-    <View style={{ paddingTop: 2 }}><NavIcon name={icon} size={16} color={colors.textTertiary} cut={name === "light" ? "#FFFFFF" : "#252C35"} /></View>
+  return <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+    <NavIcon name={icon} size={16} color={colors.textTertiary} cut={name === "light" ? "#FFFFFF" : "#252C35"} />
     <View style={{ flex: 1 }}><T tone="secondary">{children}</T></View>
   </View>;
 }

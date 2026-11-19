@@ -26,7 +26,7 @@ export function GiftBuy({ amountPaise, canPay, busy, onPay,serviceName="Foam was
         <GiftRestrictions />
       </View>
       {canPay
-        ? <Button label={`Pay ${rupees(amountPaise)}`} busy={busy} onPress={onPay} />
+        ? <Button label={`Pay ${rupees(amountPaise)}`} busy={busy} onPress={onPay} style={{alignSelf:"flex-end"}} />
         : <T role="caption" tone="tertiary">Buying a gift works in the browser at app.autodeck.in.</T>}
     </View></Pane>
   );
