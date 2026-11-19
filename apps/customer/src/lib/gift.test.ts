@@ -20,17 +20,23 @@ describe("gift client", () => {
     const g = read("ui/GiftBuy.tsx");
     const pay = g.indexOf("Pay ${rupees(amountPaise)}");
     expect(pay).toBeGreaterThan(-1);
-    expect(g.indexOf("GIFT_TERMS.validity")).toBeGreaterThan(-1);
-    expect(g.indexOf("GIFT_TERMS.nonRefundable")).toBeGreaterThan(-1);
-    expect(g.indexOf("GIFT_TERMS.validity")).toBeLessThan(pay);
-    expect(g.indexOf("GIFT_TERMS.nonRefundable")).toBeLessThan(pay);
+    expect(g.indexOf("days from purchase · No extensions")).toBeGreaterThan(-1);
+    expect(g.indexOf("<GiftRestrictions")).toBeGreaterThan(-1);
+    expect(g.indexOf("days from purchase")).toBeLessThan(pay);
+    expect(g.indexOf("<GiftRestrictions")).toBeLessThan(pay);
+    const r = read("ui/GiftRestrictions.tsx");
+    expect(r).toContain("After payment:");
+    expect(r).toContain("Non-refundable");
+    expect(r).toContain("No cash exchange");
+    expect(r).toContain("Non-transferable");
     const screen = read("app/(tabs)/gifts.tsx");
     expect(screen).toContain("amountPaise={offer.amountPaise}");
     expect(screen).not.toMatch(/cancelMyGift|Tap an unused gift to cancel/);
   });
   it("the card and redeem screen show the validity line", () => {
-    expect(read("ui/GiftCard.tsx")).toContain("giftValidityLine(expiresAt, now)");
-    expect(read("ui/GiftCard.tsx")).toContain("GIFT_TERMS.nonRefundable");
+    expect(read("ui/GiftCard.tsx")).toContain("Use by ${");
+    expect(read("ui/GiftCard.tsx")).toContain('"days"} left');
+    expect(read("ui/GiftCard.tsx")).toContain("<GiftRestrictions");
     expect(read("app/(tabs)/gifts.tsx")).toContain("giftValidityLine(claimed.expiresAt, now)");
   });
   it("the share message carries the 60-day validity", () => {

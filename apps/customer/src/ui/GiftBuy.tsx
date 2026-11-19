@@ -1,9 +1,10 @@
 // The buy panel: what the gift is, the price (from the server), and the terms, all above the pay button.
 import {View} from "react-native";
-import { GIFT_TERMS, GIFT_VALID_DAYS } from "@autodeck/core";
+import { GIFT_VALID_DAYS } from "@autodeck/core";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { NavIcon } from "./NavIcon";
-import { Button, Pane, Row, T, rupees } from "./kit";
+import { GiftRestrictions } from "./GiftRestrictions";
+import { Button, InfoLine, Pane, Row, T, rupees } from "./kit";
 
 export function GiftBuy({ amountPaise, canPay, busy, onPay,serviceName="Foam wash" }: { amountPaise: number; canPay: boolean; busy: boolean; onPay: () => void;serviceName?:string|undefined }) {
   const { colors, name } = useExperienceTheme();
@@ -18,12 +19,11 @@ export function GiftBuy({ amountPaise, canPay, busy, onPay,serviceName="Foam was
         </View>
       </View>
       <View>
-        <Row title={serviceName} detail="Any car, one use" trailing={<View style={{alignItems:"flex-end",gap:2}}><T role="caption" tone="tertiary">Gift value</T><T role="title">{rupees(amountPaise)}</T></View>} />
-        <Row title="Valid for" detail={`${GIFT_VALID_DAYS} days from purchase`} last />
+        <Row title={serviceName} detail="Any car, one use" trailing={<View style={{alignItems:"flex-end",gap:2}}><T role="caption" tone="tertiary">Gift value</T><T role="title">{rupees(amountPaise)}</T></View>} last />
       </View>
-      <View style={{gap:6}}>
-        <T role="caption" tone="secondary">{GIFT_TERMS.validity}</T>
-        <T role="caption" tone="secondary">{GIFT_TERMS.nonRefundable}</T>
+      <View style={{gap:10}}>
+        <InfoLine icon="history">{`Valid ${GIFT_VALID_DAYS} days from purchase · No extensions`}</InfoLine>
+        <GiftRestrictions />
       </View>
       {canPay
         ? <Button label={`Pay ${rupees(amountPaise)}`} busy={busy} onPress={onPay} />

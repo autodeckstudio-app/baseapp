@@ -1,11 +1,12 @@
 // A gift you bought, as a card: the wash, the code, how long it is valid, and the terms. Shown after payment and when a bought gift is opened.
 import { useState } from "react";
 import { View } from "react-native";
-import { GIFT_TERMS, formatGiftCode, giftDaysLeft, giftValidityLine } from "@autodeck/core";
+import { formatGiftCode, giftDaysLeft } from "@autodeck/core";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { NavIcon } from "./NavIcon";
 import { IconAction } from "./IconAction";
-import { Kicker, Pane, T } from "./kit";
+import { GiftRestrictions } from "./GiftRestrictions";
+import { InfoLine, Kicker, Pane, T } from "./kit";
 import { giftMessage, shareGift } from "../lib/gift-share";
 
 export function GiftCard({ code, expiresAt, buyerName, serviceName, now = Date.now() }: { code: string; expiresAt: string; buyerName: string | null; serviceName?:string|undefined; now?: number }) {
@@ -35,12 +36,9 @@ export function GiftCard({ code, expiresAt, buyerName, serviceName, now = Date.n
         </View>
         <IconAction kind="share" label="Share gift" onPress={() => void share()} />
       </View>
-      <View style={{gap:6}}>
-        <T tone="secondary">{giftValidityLine(expiresAt, now)}</T>
-        {days <= 7 ? <T role="caption" tone="tertiary">Only {days} {days === 1 ? "day" : "days"} left.</T> : null}
-      </View>
+      <InfoLine icon="history">{`Use by ${new Date(expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" })} · ${Date.parse(expiresAt) <= now ? "Expired" : `${days} ${days === 1 ? "day" : "days"} left`}`}</InfoLine>
       {note ? <T role="caption" tone="tertiary">{note}</T> : null}
-      <T role="caption" tone="tertiary">{GIFT_TERMS.nonRefundable}</T>
+      <GiftRestrictions />
     </View></Pane>
   );
 }

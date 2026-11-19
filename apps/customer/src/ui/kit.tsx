@@ -437,6 +437,15 @@ export function LinkAction({ label, onPress, testID }: { label: string; onPress:
   );
 }
 
+/** One compact fact with a small leading icon: validity, terms, restrictions. Text stays full; the icon only aids scanning. */
+export function InfoLine({ icon, children }: { icon: NavIconName; children: ReactNode }) {
+  const { colors, name } = useExperienceTheme();
+  return <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+    <View style={{ paddingTop: 2 }}><NavIcon name={icon} size={16} color={colors.textTertiary} cut={name === "light" ? "#FFFFFF" : "#252C35"} /></View>
+    <View style={{ flex: 1 }}><T tone="secondary">{children}</T></View>
+  </View>;
+}
+
 export function Chip({ label, tone = "neutral", onDark, small }: { label: string; tone?: "neutral" | "accent" | "premium" | "danger"; onDark?: boolean; small?: boolean }) {
   const { colors, name } = useExperienceTheme();
   const c = onDark && tone !== "danger" ? "#FFFFFF" : tone === "accent" ? colors.textPrimary : tone === "premium" ? colors.premium : tone === "danger" ? colors.danger : colors.textSecondary;
