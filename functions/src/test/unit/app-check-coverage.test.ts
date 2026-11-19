@@ -78,6 +78,7 @@ const ENFORCED = [
   "work/recordJobPerformedWork.ts", // combined candidate, staged enforcement wiring
   "work/getJobWorkCoverage.ts", // combined read candidate; uses staged enforcement wiring
   "service/catalogueDrafts.ts",
+  "service/cataloguePanel.ts",
   "service/catalogueManaged.ts",
   "service/catalogueRescue.ts",
   "booking/serviceQuoteJourney.ts",

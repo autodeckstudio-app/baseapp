@@ -31,6 +31,7 @@ export function ServiceCatalogueScope({principal,tenantId}:{principal:string;ten
   const[editing,setEditing]=useState<CatalogueDraftView|null>(null);
   const[preparedIds,setPreparedIds]=useState<string[]>([]);
   const[recentIds,setRecentIds]=useState<string[]>([]);
+  const[sharedDraftIds,setSharedDraftIds]=useState<string[]>([]);
   const[drafts,setDrafts]=useState<CatalogueDraftView[]>([]);
   const[publishedCount,setPublishedCount]=useState(0);
   const [services, setServices] = useState<Service[]>([]);
@@ -46,7 +47,7 @@ export function ServiceCatalogueScope({principal,tenantId}:{principal:string;ten
     setError(null);
     try {
       const [list,reviewData] = await Promise.all([getServicesIncludingHidden(),getCatalogueDrafts()]);
-      setDrafts(reviewData.drafts);
+      setDrafts(reviewData.drafts);setSharedDraftIds(reviewData.sharedDraftIds??[]);
       setPublishedCount(reviewData.publishedCount);
       list.sort((a, b) => a.displayOrder - b.displayOrder);
       setServices(list);
@@ -67,7 +68,7 @@ export function ServiceCatalogueScope({principal,tenantId}:{principal:string;ten
     setError(null);
     setStatus(null);
     try {
-      const selectedDraft=editing&&editing.serviceId===serviceId?editing:serviceId?drafts.find(d=>recentIds.includes(d.id)&&d.serviceId===serviceId&&['draft','reviewed'].includes(d.state))??null:null;
+      const selectedDraft=editing&&editing.serviceId===serviceId?editing:serviceId?drafts.find(d=>(recentIds.includes(d.id)||sharedDraftIds.includes(d.id))&&d.serviceId===serviceId&&['draft','reviewed'].includes(d.state))??null:null;
       const source=serviceId?services.find(s=>s.id===serviceId):null;
       if(serviceId&&!source)throw Error('Source service missing');
       if(source)payload=preserveUneditedServiceFields(payload,selectedDraft?{...source,...selectedDraft.payload}:source);
@@ -90,7 +91,7 @@ export function ServiceCatalogueScope({principal,tenantId}:{principal:string;ten
     setError(null);
     setStatus(null);
     try {
-      const selected=drafts.find(d=>recentIds.includes(d.id)&&d.serviceId===svc.id&&['draft','reviewed'].includes(d.state));
+      const selected=drafts.find(d=>(recentIds.includes(d.id)||sharedDraftIds.includes(d.id))&&d.serviceId===svc.id&&['draft','reviewed'].includes(d.state));
       const base=selected?{...svc,...selected.payload}:svc;const converted=toServicePayload(draftFromService(base));if(!converted.ok)throw Error(converted.problem);
       const saved=await saveCatalogueDraft({...(selected?{draftId:selected.id}:{}),serviceId:svc.id,expectedServiceUpdatedAt:selected?.expectedServiceUpdatedAt??svc.updatedAt,expectedDraftVersion:selected?.version??0,payload:{...preserveUneditedServiceFields(converted.payload,base),active:!svc.active}});
       rememberRecent([...new Set([...recentIds,saved.id])]);
@@ -124,7 +125,7 @@ export function ServiceCatalogueScope({principal,tenantId}:{principal:string;ten
   const recoveryId=unconfirmedOperation;const recoveryNeeded=Boolean(recoveryId||heldDraft);
   return <>
 
- <ServicesView draftMode onOpenLive={svc=>{const existing=svc?drafts.find(d=>recentIds.includes(d.id)&&d.serviceId===svc.id&&['draft','reviewed'].includes(d.state)):null;setEditing(existing??null);return Boolean(existing)}} onCloseDraft={()=>setEditing(null)} incomingDraft={editing?{key:editing.id+editing.version,value:draftFromService({...services.find(s=>s.id===editing.serviceId),id:editing.serviceId as string,...editing.payload,vehicleCategoryPricing:editing.payload.vehicleCategoryPricing??[],requiredBayType:editing.payload.requiredBayType??'general',membershipWashEligible:editing.payload.membershipWashEligible??false,displayOrder:editing.payload.displayOrder??0}as Service)}:null} services={services} loading={loading} error={recoveryNeeded?null:error} message={status} busy={busy||recoveryNeeded} onSave={handleSave} onToggle={(svc)=>void handleToggleActive(svc)}/>
+ <ServicesView draftMode onOpenLive={svc=>{const existing=svc?drafts.find(d=>(recentIds.includes(d.id)||sharedDraftIds.includes(d.id))&&d.serviceId===svc.id&&['draft','reviewed'].includes(d.state)):null;setEditing(existing??null);return Boolean(existing)}} onCloseDraft={()=>setEditing(null)} incomingDraft={editing?{key:editing.id+editing.version,value:draftFromService({...services.find(s=>s.id===editing.serviceId),id:editing.serviceId as string,...editing.payload,vehicleCategoryPricing:editing.payload.vehicleCategoryPricing??[],requiredBayType:editing.payload.requiredBayType??'general',membershipWashEligible:editing.payload.membershipWashEligible??false,displayOrder:editing.payload.displayOrder??0}as Service)}:null} services={services} loading={loading} error={recoveryNeeded?null:error} message={status} busy={busy||recoveryNeeded} onSave={handleSave} onToggle={(svc)=>void handleToggleActive(svc)}/>
  {recoveryNeeded?<section className="ax-publish-strip" role="status"><div><strong>Publish not confirmed</strong><p>Your changes are protected. Don't publish again yet.</p></div>{recoveryId?<button className="ax-button" disabled={busy} onClick={()=>void checkPending(recoveryId).catch(()=>{})}>Check status</button>:null}</section>:null}
  <CatalogueReview drafts={drafts} blocked={recoveryNeeded} primaryIds={[...recentIds,...preparedIds]} publishedCount={publishedCount} services={services} busy={!trackingReady||busy||loading||Boolean(error)||recoveryNeeded} error={error} onReviewAndPublish={reviewAndPublish} onEdit={setEditing} onDiscard={discard}/>
  <details className="ax-catalogue-tools"><summary>Catalogue tools</summary><PreparedCatalogueImport services={services} drafts={drafts} disabled={busy||loading||Boolean(error)||recoveryNeeded} onStaged={async ids=>{setPreparedIds(ids);rememberRecent([...new Set([...recentIds,...ids])]);await refresh()}}/>{recoveryNeeded?<details className="ax-panel ax-publishing-help"><summary>Publishing help</summary><CataloguePublishInspector key={'inspect-'+recoveryId} initialOperationId={recoveryId??''} principal={principal} tenantId={tenantId} onCheck={checkPending}/><details><summary>Recovery review</summary><CatalogueRecovery key={'recover-'+recoveryId} initialOperationId={recoveryId??''}/></details></details>:null}</details>
