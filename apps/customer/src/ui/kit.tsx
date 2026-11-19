@@ -290,20 +290,19 @@ export function Button({
       onPress={onPress}
       style={({ pressed }) => [
         {
-          minHeight: 48,
+          minHeight: 44,
           alignSelf: "flex-start",
           marginTop: primary ? 8 : 0,
           marginBottom: icon ? 0 : 8,
           borderRadius: radius.pill,
-          paddingHorizontal: 18,
+          paddingHorizontal: 14,
           alignItems: "center",
           justifyContent: "center",
           flexDirection: "row",
           gap: space.breath,
-          ...raised(name).quiet,
-          ...(primary?{backgroundColor:name==="light"?"#252c32":"#ecf1f7",borderColor:"transparent",...(Platform.OS==="web"?{backgroundImage:"none",boxShadow:name==="light"?"8px 8px 18px #b4c2d360":"8px 8px 18px #00000040"}:{} as ViewStyle)}:{}),
-
-          ...(kind === "danger" ? { borderColor: colors.danger } : null),
+          // Compact hairline controls (19 Nov user pick of concept A): small ink primary, hairline outline quiet, no heavy shadows.
+          ...(primary?{backgroundColor:name==="light"?"#16181C":"#ecf1f7",borderWidth:1,borderColor:"transparent"}:{backgroundColor:"transparent",borderWidth:1,borderColor:colors.borderSubtle}),
+          ...(kind === "danger" ? { backgroundColor:"transparent", borderWidth:1, borderColor: colors.danger } : null),
           opacity: off ? 0.64 : 1,
           transform: pressed && !off ? [{ scale: 0.97 }] : [],
           ...(Platform.OS === "web" ? ({ transition: "transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease", cursor: "pointer" } as object) : {}),
@@ -313,7 +312,7 @@ export function Button({
       ]}
     >
       {busy ? <ActivityIndicator color={primary?(name==="light"?"#ffffff":"#202831"):colors.textPrimary} /> : null}
-      {icon ? (!busy ? <NavIcon name={icon} size={24} color={kind === "danger" ? colors.danger : colors.textPrimary} cut={name === "light" ? "#FFFFFF" : "#252C35"}/> : null) : <T numberOfLines={1} role="bodyStrong" tone={kind === "danger" ? "danger" : "primary"} style={[{textAlign:"center",flexShrink:1},primary?{fontWeight:"600",color:name==="light"?"#ffffff":"#202831"}:null]}>
+      {icon ? (!busy ? <NavIcon name={icon} size={24} color={kind === "danger" ? colors.danger : colors.textPrimary} cut={name === "light" ? "#FFFFFF" : "#252C35"}/> : null) : <T numberOfLines={1} role="bodyStrong" tone={kind === "danger" ? "danger" : "primary"} style={[{textAlign:"center",flexShrink:1},{fontWeight:"600",fontSize:13,color:kind === "danger" ? undefined : primary ? (name==="light"?"#ffffff":"#202831") : colors.textPrimary}]}>
         {label}
       </T>}
     </Pressable>

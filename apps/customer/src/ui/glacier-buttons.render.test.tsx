@@ -10,7 +10,8 @@ for(const mode of ['light','night'])it(`${mode} busy primary action keeps a cont
  await act(async()=>{tree=create(<Button label="Pay sample total" busy onPress={onPress}/>)});
  expect(tree.root.findByType(ActivityIndicator).props.color).toBe(mode==='light'?'#ffffff':'#202831');
  const button=tree.root.findByType(Pressable);expect(button.props.disabled).toBe(true);
- const style=StyleSheet.flatten(button.props.style({pressed:false}));expect(style.backgroundColor).toBe(mode==='light'?'#252c32':'#ecf1f7');
+ const style=StyleSheet.flatten(button.props.style({pressed:false}));// Compact hairline direction (19 Nov user pick): small ink primary.
+ expect(style.backgroundColor).toBe(mode==='light'?'#16181C':'#ecf1f7');
  await act(async()=>tree.unmount());
 });
 it('plain row prices use themed data text instead of an unstyled native string',async()=>{
