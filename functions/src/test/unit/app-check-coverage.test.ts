@@ -163,6 +163,8 @@ const ENFORCED = [
   "membership/cancelMembership.ts",
   "membership/confirmMembershipPayment.ts",
   "membership/createMembershipPlan.ts",
+  "membership/recordMembershipRefresh.ts",
+  "membership/restoreMembershipRefresh.ts",
   "membership/createWalkinMembership.ts",
   "membership/expireStaleMemberships.ts",
   "membership/getMembershipPlans.ts",
