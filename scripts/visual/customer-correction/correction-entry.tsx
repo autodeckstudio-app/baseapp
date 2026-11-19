@@ -6,6 +6,7 @@ import{glacierGround}from'../../../apps/customer/src/lib/customer-glacier';
 import{AutoExperienceThemeProvider as ExperienceThemeProvider}from'../../../packages/ui/src/native/ThemeContext';
 import{ServiceProductSelection}from'../../../apps/customer/src/ui/ServiceProductSelection';
 import{ServiceDetailRich}from'../../../apps/customer/src/ui/ServiceDetailRich';
+import{ServiceJourney}from'../../../apps/customer/src/ui/ServiceJourney';
 import{HomeView}from'../../../apps/customer/src/ui/HomeView';
 import{PlanCompare}from'../../../apps/customer/src/ui/PlanCompare';
 import{StatePanel}from'../../../apps/customer/src/ui/StatePanel';
@@ -66,10 +67,28 @@ const navIdeas=<div style={{display:'flex',flexDirection:'column',gap:34}}>
  <div><div style={{font:'600 12px sans-serif',color:C.muted,marginBottom:8}}>D · DARK ISLAND, WHITE ACTIVE DISC, ICONS ONLY</div>{barWrap(<>{navItem('bookings','','rgba(255,255,255,.65)')}{navItem('services','','rgba(255,255,255,.65)')}<div style={{width:44,height:44,borderRadius:22,background:'#fff',display:'flex',alignItems:'center',justifyContent:'center'}}><NavIcon name={'home' as never} size={22} color={C.ink} cut={'#fff'}/></div>{navItem('garage','','rgba(255,255,255,.65)')}{navItem('profile','','rgba(255,255,255,.65)')}</>,{background:C.ink,border:'none'})}</div>
 </div>;
 const btn=(label:string,s:React.CSSProperties,t:React.CSSProperties)=><div style={{display:'inline-flex',alignItems:'center',justifyContent:'center',padding:'13px 26px',borderRadius:24,fontFamily:THEME_FONT,fontSize:13,fontWeight:600,...s}}><span style={t}>{label}</span></div>;
+const ctxHead=(title:string)=><div style={{font:'600 12px sans-serif',color:C.muted,marginBottom:8}}>{title}</div>;
+const ctxCard=(back:React.ReactNode,actions:React.ReactNode)=><div style={{background:C.canvas,border:`1px solid ${C.border}`,borderRadius:20,overflow:'hidden'}}>
+ <div style={{display:'flex',alignItems:'center',gap:10,padding:'12px 14px',borderBottom:`1px solid ${C.border}`}}>{back}<span style={{fontFamily:THEME_FONT,fontSize:13,fontWeight:600,color:C.text}}>Regular Wash</span><span style={{marginLeft:'auto',fontFamily:THEME_FONT,fontSize:13,fontWeight:600,color:C.text}}>₹600</span></div>
+ <div style={{display:'flex',alignItems:'center',gap:16,padding:'12px 14px',justifyContent:'flex-end'}}>{actions}</div>
+</div>;
+const chev=(color:string)=><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
 const buttonIdeas=<div style={{display:'flex',flexDirection:'column',gap:30}}>
- <div><div style={{font:'600 12px sans-serif',color:C.muted}}>A · CURRENT (reference): dark ink primary, quiet hairline secondary</div><div style={{display:'flex',gap:14,alignItems:'center',padding:'10px 0'}}>{btn('Add to cart',{background:C.ink},{color:'#fff'})}{btn('View plan',{border:`1px solid ${C.border}`,background:C.surface},{color:C.text})}</div></div>
- <div><div style={{font:'600 12px sans-serif',color:C.muted}}>B · ORANGE PRIMARY: one warm action per screen, neutral secondary</div><div style={{display:'flex',gap:14,alignItems:'center',padding:'10px 0'}}>{btn('Add to cart',{background:C.accent},{color:'#fff'})}{btn('View plan',{border:`1px solid ${C.border}`,background:C.surface},{color:C.text})}</div></div>
- <div><div style={{font:'600 12px sans-serif',color:C.muted}}>C · TONAL PRIMARY: soft orange tint, quiet text secondary</div><div style={{display:'flex',gap:14,alignItems:'center',padding:'10px 0'}}>{btn('Add to cart',{background:'rgba(236,134,56,.14)'},{color:C.accentInk})}{btn('View plan',{background:'transparent',padding:'13px 8px'},{color:C.muted})}</div></div>
+ <div>{ctxHead('A · HAIRLINE CHIPS: 32px controls, outline only, back as a small square')}
+ {ctxCard(<div style={{display:'flex',alignItems:'center',justifyContent:'center',width:32,height:32,borderRadius:10,border:`1px solid ${C.border}`,background:C.canvas}}>{chev(C.text)}</div>,
+ <><div style={{display:'inline-flex',alignItems:'center',padding:'7px 14px',borderRadius:10,border:`1px solid ${C.border}`,fontFamily:THEME_FONT,fontSize:12,fontWeight:600,color:C.text}}>Details</div>
+ <div style={{display:'inline-flex',alignItems:'center',padding:'7px 14px',borderRadius:10,border:`1px solid ${C.ink}`,background:C.ink,fontFamily:THEME_FONT,fontSize:12,fontWeight:600,color:'#fff'}}>Add to cart</div></>)}
+ <div style={{font:'11px sans-serif',color:C.muted,marginTop:6}}>Same control grammar as the service list rows; touch targets stay 44px via padding around the 32px visual.</div></div>
+ <div>{ctxHead('B · QUIET TEXT: no pills at all, small text actions in the negative space')}
+ {ctxCard(<span style={{fontFamily:THEME_FONT,fontSize:12,fontWeight:500,color:C.muted}}>All services</span>,
+ <><span style={{fontFamily:THEME_FONT,fontSize:12,fontWeight:500,color:C.muted}}>Details</span>
+ <span style={{fontFamily:THEME_FONT,fontSize:12,fontWeight:700,color:C.text,borderBottom:`1.5px solid ${C.accent}`,paddingBottom:2}}>Add to cart</span></>)}
+ <div style={{font:'11px sans-serif',color:C.muted,marginTop:6}}>Back stays the existing text crumb pattern. Primary is marked by weight plus a short orange underline, not a filled button.</div></div>
+ <div>{ctxHead('C · TONAL MINI: 30px soft tonal controls, low visual weight')}
+ {ctxCard(<div style={{display:'flex',alignItems:'center',justifyContent:'center',width:30,height:30,borderRadius:15,background:C.surface}}>{chev(C.muted)}</div>,
+ <><span style={{fontFamily:THEME_FONT,fontSize:12,fontWeight:500,color:C.muted}}>Details</span>
+ <div style={{display:'inline-flex',alignItems:'center',padding:'6px 14px',borderRadius:15,background:C.surface,border:`1px solid ${C.border}`,fontFamily:THEME_FONT,fontSize:12,fontWeight:600,color:C.text}}>Add to cart</div></>)}
+ <div style={{font:'11px sans-serif',color:C.muted,marginTop:6}}>Tonal surfaces instead of outlines; nothing taller than 30px, no solid fills except the existing ink where a screen already uses it.</div></div>
 </div>;
 const sections=<div style={{display:'flex',flexDirection:'column',gap:56}}>
  <section>{shell('SERVICE DETAIL · LAYOUT PREVIEW WITH SAMPLE CATALOGUE CONTENT · LIVE COPY, PRICES AND SAME-FAMILY OPTIONS RENDER AT RUNTIME',<ServiceDetailRich service={wash} siblings={[wash]} priceLabel={s=>'₹600'} eligible={true} added={false} onToggle={noop} onOpen={noop} onInspect={noop} onSelect={noop}/>)}</section>
@@ -84,6 +103,7 @@ const sections=<div style={{display:'flex',flexDirection:'column',gap:56}}>
 createRoot(document.getElementById('root')!).render(<ExperienceThemeProvider>
  <div style={{font:'12px sans-serif',color:'#EC8638',background:'#18181c',padding:10,textAlign:'center'}}>LOCAL DESIGN PREVIEW · CORRECTION CANDIDATE · SYNTHETIC CONTENT · NO ACCOUNT OR WRITES</div>
  {q.has('paint')?shell('PAINT DETAIL · EXISTING COMPOSITION, FOR REVIEW',<ServiceProductSelection title="Ceramic" services={[ceramic,ceramicB]} priceLabel={s=>s.id==='cer-c1'?'₹25,000':'₹30,000'} onOpen={noop}/>)
+ :q.has('services')?shell('SERVICES ROOT · HEADING AND LAYOUT UNIFIED WITH GARAGE AND VISITS · SAMPLE CATALOGUE CONTENT',<ServiceJourney services={[wash,ceramic,ceramicB] as never} path={{}} query="" onPath={noop} onOpen={noop} onHelp={noop} priceLabel={()=>null} reviewing={false} onReview={noop} onBookSelection={noop}/>)
  :q.has('detail')?shell('SERVICE DETAIL · NON-PAINT RICH LAYOUT · SAMPLE CATALOGUE CONTENT, LIVE COPY AND OPTIONS RENDER AT RUNTIME',<ServiceDetailRich service={wash} siblings={[wash]} priceLabel={s=>'₹600'} eligible={true} added={false} onToggle={noop} onOpen={noop} onInspect={noop} onSelect={noop}/>)
  :q.has('home')?shell('HOME · SMALLER HERO, LARGER CAR CARD, STUDIO STATUS RIGHT, THEMED SOCIAL TILES',<HomeView {...homeProps}/>)
  :q.has('visits')?shell('VISITS · COMPACT EMPTY CARD, CENTRED ACTION',<StatePanel compact icon="bookings" title="Nothing booked" body="Pick a service and a time. The studio confirms it." action={<Button label="Book a service" onPress={noop}/>}/>)
@@ -92,6 +112,6 @@ createRoot(document.getElementById('root')!).render(<ExperienceThemeProvider>
  :q.has('gifts')?shell('GIFTS · SERVICE SELECTOR, BUY CARD, CODE CARD, COMPACT EMPTY STATE',giftsPreview)
  :q.has('account')?shell('ACCOUNT · REAL FULL PAGE · AUTH AND ROUTER MOCKED, NO WRITES',<YouScreen/>)
  :q.has('navideas')?shell('NAV IDEAS · CONCEPTS FOR REVIEW · NONE APPLIED',navIdeas)
- :q.has('buttonideas')?shell('BUTTON IDEAS · CONCEPTS FOR REVIEW · NONE APPLIED',buttonIdeas)
+ :q.has('buttonideas')?shell('COMPACT CONTROL IDEAS · SHOWN IN SCREEN CONTEXT · CONCEPTS FOR REVIEW · NONE APPLIED',buttonIdeas)
  :sections}
 </ExperienceThemeProvider>);

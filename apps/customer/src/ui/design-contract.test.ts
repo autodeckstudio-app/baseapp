@@ -114,7 +114,9 @@ describe("one design system and one place for everything",()=>{
     expect(bar).toContain("maxWidth: 360");
     expect(bar).toContain("size={26}");
     expect(bar).toContain("onNavCompact");
-    expect(bar).toContain("fontSize:9");
+    // Dark island bar with no per-tab labels and no circle behind the AD monogram (19 Nov user nav choice).
+    expect(bar).toContain('"#16181C"');
+    expect(bar).not.toContain("fontSize:9");
   });
   it("puts Home in the centre with the AD monogram and Services beside it",()=>{
     const bar=read("src/ui/RaisedTabBar.tsx");

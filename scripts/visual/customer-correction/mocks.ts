@@ -26,3 +26,7 @@ export const requestAccountDeletion=async()=>{throw new Error('LOCAL READ ONLY')
 export const cancelAccountDeletion=async()=>{throw new Error('LOCAL READ ONLY')};
 export const signOut=async()=>{document.body.dataset.signOut='1'};
 export const uploadLicensePhoto=async()=>{throw new Error('LOCAL READ ONLY')};
+export const getCatalogueDisplayTotals=()=>null;
+export const cachedServiceTotal=()=>null;
+export const priceLabel=()=>null;
+export const calculateServicePrice=async()=>({breakdown:{total:0},durationMinutes:0});
