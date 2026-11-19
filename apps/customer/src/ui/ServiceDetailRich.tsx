@@ -35,12 +35,12 @@ export function ServiceDetailRich({service,siblings,priceLabel,eligible,added,on
   <ServiceIdentityMedia service={s}/>
   <View style={{gap:7}}>
    <View style={{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between',gap:10}}>
-    <Text accessibilityRole="header" style={[font,{flex:1,minWidth:0,fontSize:24,lineHeight:30,letterSpacing:-.7,fontWeight:'600'}]}>{s.brand&&s.brand!=='Standard'&&s.brand!=='Add-ons'?productDisplayName(s):s.name}</Text>
+    <Text accessibilityRole="header" style={[font,{flex:1,minWidth:0,fontSize:22,lineHeight:28,letterSpacing:-.7,fontWeight:'600'}]}>{s.brand&&s.brand!=='Standard'&&s.brand!=='Add-ons'?productDisplayName(s):s.name}</Text>
     <Text style={[font,{maxWidth:'43%',flexShrink:0,textAlign:'right',fontSize:quote?13:20,lineHeight:28,fontWeight:'600',letterSpacing:-.4}]}>{price(s)}</Text>
    </View>
    {lines[0]?<Text style={[font,{fontSize:13,lineHeight:20,color:muted}]}>{lines[0]}</Text>:null}
   </View>
-  {points.length?<View testID="service-detail-points" style={{borderRadius:22,borderWidth:1,borderColor:rule,backgroundColor:chosen,padding:16,gap:12}}>
+  {points.length?<View testID="service-detail-points" style={{borderRadius:22,borderWidth:1,borderColor:rule,backgroundColor:colors.surface,padding:16,gap:12}}>
    {points.map((raw,i)=>{const f=productHighlight(raw);return <View key={i} style={{flexDirection:'row',alignItems:'center',gap:12}}>
     <View style={{width:34,height:34,borderRadius:17,borderWidth:1,borderColor:rule,backgroundColor:colors.surface,alignItems:'center',justifyContent:'center'}}><Icon mono name={f.icon} size={16} color={ink}/></View>
     <Text style={[font,{flex:1,fontSize:12,lineHeight:18}]}>{f.text}</Text>
@@ -51,7 +51,7 @@ export function ServiceDetailRich({service,siblings,priceLabel,eligible,added,on
    <View style={{flex:1,gap:2}}><Text style={[font,{fontSize:12,lineHeight:17}]}>{s.warrantyLabel}</Text><Text style={[font,{fontSize:10,lineHeight:15,color:muted}]}>Manufacturer statement. Ask the studio to confirm cover and registration before booking.</Text></View>
   </View>:null}
   {conditions.map((text,i)=><Text key={i} style={[font,{fontSize:10,lineHeight:16,color:muted}]}>Compatibility: {text}</Text>)}
-  {care.length?<View testID="service-detail-care" style={{borderRadius:22,borderWidth:1,borderColor:rule,backgroundColor:chosen,padding:16,gap:12}}>
+  {care.length?<View testID="service-detail-care" style={{borderRadius:22,borderWidth:1,borderColor:rule,backgroundColor:colors.surface,padding:16,gap:12}}>
    {care.map((tip,i)=><View key={i} style={{flexDirection:'row',alignItems:'flex-start',gap:12}}><View style={{paddingTop:1}}><Icon mono name="shield" size={15} color={muted}/></View><Text style={[font,{flex:1,fontSize:12,lineHeight:19,color:muted}]}>{tip}</Text></View>)}
   </View>:null}
   <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12}}>

@@ -46,7 +46,7 @@ export function ServiceProductSelection({title,description,services,priceLabel,o
   <View testID="service-summary-card" style={{...raised(name).card,padding:12,gap:0}}>
   <ServiceIdentityMedia service={s} compact/>
   <View style={{paddingVertical:12,gap:7}}>
-   <View testID="service-title-price" style={{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between',gap:10}}><Text accessibilityRole="header" style={[font,{flex:1,minWidth:0,fontSize:24,lineHeight:30,letterSpacing:-.7,fontWeight:'600'}]}>{productPage&&s.brand!=='Standard'?short(s):s.name}</Text><Text style={[font,{maxWidth:'43%',flexShrink:0,textAlign:'right',fontSize:s.priceOnRequest?13:20,lineHeight:28,fontWeight:'600',letterSpacing:-.4}]}>{price(s)}</Text></View>
+   <View testID="service-title-price" style={{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between',gap:10}}><Text accessibilityRole="header" style={[font,{flex:1,minWidth:0,fontSize:22,lineHeight:28,letterSpacing:-.7,fontWeight:'600'}]}>{productPage&&s.brand!=='Standard'?short(s):s.name}</Text><Text style={[font,{maxWidth:'43%',flexShrink:0,textAlign:'right',fontSize:s.priceOnRequest?13:20,lineHeight:28,fontWeight:'600',letterSpacing:-.4}]}>{price(s)}</Text></View>
    {lines[0]?<Text style={[font,{fontSize:13,lineHeight:20,color:muted}]}>{lines[0]}</Text>:null}
   </View>
   {warranty||application?<View style={{borderTopWidth:1,borderBottomWidth:1,borderColor:rule,flexDirection:'row',alignItems:'flex-start',paddingVertical:12,gap:12}}>

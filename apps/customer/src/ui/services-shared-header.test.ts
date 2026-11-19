@@ -16,7 +16,7 @@ describe('Services root shared-header wiring', () => {
     expect(journey).toContain('showRootHeader=true');
     expect(journey).toContain('{showRootHeader?<SceneIntro compact eyebrow="Services" title="Care for your car"/>:null}');
     expect(journey).toContain("width:h.wide?'100%':tileWidth");
-    expect(journey).toContain("accessibilityLabel=\"Back to all service areas\"");
+    expect(journey).toContain("title:'All services',onPress:()=>onPath({})");
   });
 });
 

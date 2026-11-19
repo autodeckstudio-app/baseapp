@@ -154,8 +154,8 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
   // price block above carries the one action (Garage / Try again), so there is no second, enabled-looking Book button.
   const showBar = !!service && !service.customerMenu?.bookingMode && sheetBarVisible({ priceOnRequest: (service.priceOnRequest === true || reviewedQuoteRequired(service)), loading: priceLoading, hasTotal: priceBreakdown !== null, needsCarType, error: priceError !== null });
   if (loading) return <Loading label="Opening the menu" />;
-  if (loadError) return <Screen onBack={homeBack?()=>router.replace(homeBack as never):undefined}><Notice title="Can't load this service" body="Check your connection and try again." action={<Button icon="refresh" label="Try again" onPress={onRetry}/>} /></Screen>;
-  if (!service) return <Screen onBack={homeBack?()=>router.replace(homeBack as never):undefined}><Notice title="Service not found" body="It may have been taken off the menu." action={<Button kind="quiet" label="Browse services" onPress={()=>router.navigate("/(tabs)/catalogue")}/>} /></Screen>;
+  if (loadError) return <Screen textBack onBack={homeBack?()=>router.replace(homeBack as never):undefined}><Notice title="Can't load this service" body="Check your connection and try again." action={<Button icon="refresh" label="Try again" onPress={onRetry}/>} /></Screen>;
+  if (!service) return <Screen textBack onBack={homeBack?()=>router.replace(homeBack as never):undefined}><Notice title="Service not found" body="It may have been taken off the menu." action={<Button kind="quiet" label="Browse services" onPress={()=>router.navigate("/(tabs)/catalogue")}/>} /></Screen>;
 
   const sc = showcaseFor(service);
   const H = (t: string, extra?: ReactNode) => (
@@ -169,7 +169,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
   const DetailLayout=embedded?PopupDetailLayout:Screen;
   return (
     <View style={{ flex: 1 }}>
-      <DetailLayout onBack={homeBack?()=>router.replace(homeBack as never):undefined}
+      <DetailLayout textBack onBack={homeBack?()=>router.replace(homeBack as never):undefined}
         top={
           <View style={{ gap: space.hair }}>
             <ServicePageHeader context={[SERVICE_HOMES.find(h=>h.key===servicePlacement(service)?.home)?.label,servicePlacement(service)?.family,service.brand].filter(Boolean).join(" · ") || "Service"} title={service.brand==='Standard'?service.name:productDisplayName(service)} crumbs={embedded?[]:[{title:"All services",onPress:()=>router.navigate("/(tabs)/catalogue")}]} />
@@ -258,4 +258,4 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
 }
 
 /** Reuses the existing detail design without an AppBar or route animation inside the popup. */
-function PopupDetailLayout({children,top}:{children:ReactNode;top?:ReactNode;onBack?:(()=>void)|undefined}){return <><View style={{paddingHorizontal:24,paddingBottom:16}}>{top}</View><ScrollView style={{flexGrow:0,flexShrink:1}} testID="popup-detail-scroll" contentContainerStyle={{paddingHorizontal:20,paddingTop:8,gap:22,paddingBottom:28}}>{children}</ScrollView></>}
+function PopupDetailLayout({children,top}:{children:ReactNode;top?:ReactNode;textBack?:boolean;onBack?:(()=>void)|undefined}){return <><View style={{paddingHorizontal:24,paddingBottom:16}}>{top}</View><ScrollView style={{flexGrow:0,flexShrink:1}} testID="popup-detail-scroll" contentContainerStyle={{paddingHorizontal:20,paddingTop:8,gap:22,paddingBottom:28}}>{children}</ScrollView></>}

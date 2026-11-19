@@ -271,7 +271,7 @@ export function ServicesExplorer({
   if (!home)
     return (
       <View style={{ gap: 16 }}>
-        <ServicePageHeader context="AutoDeck care" title="Explore services"/>
+        <ServicePageHeader title="Explore services"/>
         {SERVICE_HOMES.map((h) => (
           <SceneCard
             key={h.key}
@@ -435,7 +435,7 @@ export function ServicesExplorer({
           : (workLabel ?? family);
   return (
     <View style={{ gap: 12 }}>
-      <ServicePageHeader title={activeBrand ?? workLabel ?? family ?? home.label} detail={!family?HOME_COPY[home.key]:family==="PPF"&&!path.work?FAMILY_COPY.PPF:FAMILY_COPY[family]} context={!family?"AutoDeck care":activeBrand&&(family??home.label).toLowerCase()!==activeBrand.toLowerCase()?(family??home.label):undefined} crumbs={!family?[]:[
+      <ServicePageHeader title={activeBrand ?? workLabel ?? family ?? home.label} detail={!family?HOME_COPY[home.key]:family==="PPF"&&!path.work?FAMILY_COPY.PPF:FAMILY_COPY[family]} context={!family?undefined:activeBrand&&(family??home.label).toLowerCase()!==activeBrand.toLowerCase()?(family??home.label):undefined} crumbs={!family?[]:[
         {title:"All services",onPress:()=>onPath({})},
         {title:home.label,onPress:()=>onPath({home:home.key})},
         ...(family?[{title:family,onPress:()=>onPath({home:home.key,family})}]:[]),
