@@ -17,7 +17,9 @@ export function membershipCoversWashService(
   membership: Pick<Membership, "washServiceIds">,
 ): boolean {
   if (membership.washServiceIds !== undefined) {
-    return membership.washServiceIds.includes(service.id);
+    // Fail closed on a malformed binding (present but not an array): cover
+    // nothing rather than throw inside a booking/settlement transaction.
+    return Array.isArray(membership.washServiceIds) && membership.washServiceIds.includes(service.id);
   }
   return service.membershipWashEligible === true;
 }

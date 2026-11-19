@@ -253,7 +253,21 @@ describe("Membership wash service binding", () => {
     expect(result.booking.totalAmount).toBe(0);
   });
 
-  it("6. updateMembershipPlan writes a binding onto an existing plan", async () => {
+  it("6. malformed binding on the membership doc fails closed at booking", async () => {
+    const cust = uid("cust-malformed");
+    const veh = await seedVehicleFor(uid("veh-malformed"), cust);
+    const membership = await purchaseAndActivate(cust, boundPlanId, adminUid);
+    // Corrupt the snapshot: present but not an array.
+    await db.collection("memberships").doc(membership.id).update({ washServiceIds: regularWash.id });
+
+    const result = await bookWash(cust, membership.id, regularWash.id, veh.id);
+    expect(result.booking.membershipWashUsed).toBe(false);
+    expect(result.booking.totalAmount).toBeGreaterThan(0);
+    const snap = await db.collection("memberships").doc(membership.id).get();
+    expect((snap.data() as Membership).washesUsed).toBe(0);
+  });
+
+  it("7. updateMembershipPlan writes a binding onto an existing plan", async () => {
     await updateMembershipPlan.run({
       data: { planId: legacyPlanId, washServiceIds: [regularWash.id] },
       auth: adminAuth(adminUid),

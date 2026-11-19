@@ -60,6 +60,15 @@ describe("membershipCoversWashService", () => {
       ),
     ).toBe(false);
   });
+
+  it("malformed binding (present but not an array) fails closed", () => {
+    expect(
+      membershipCoversWashService(
+        { id: "svc-wash-regular", membershipWashEligible: true },
+        { washServiceIds: "svc-wash-regular" as unknown as string[] },
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("freshGrant washServiceIds snapshot", () => {
