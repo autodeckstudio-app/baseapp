@@ -25,7 +25,8 @@ describe("gift client", () => {
     expect(g.indexOf("days from purchase")).toBeLessThan(pay);
     expect(g.indexOf("<GiftRestrictions")).toBeLessThan(pay);
     const r = read("ui/GiftRestrictions.tsx");
-    expect(r).toContain("After payment:");
+    expect(r).not.toContain("After payment");
+    expect(r).not.toContain("Chip");
     expect(r).toContain("Non-refundable");
     expect(r).toContain("No cash exchange");
     expect(r).toContain("Non-transferable");
