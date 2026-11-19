@@ -42,7 +42,7 @@ const homeProps:any={greeting:'Good morning, Meet',initial:'M',unread:0,
 const shell=(label:string,child:React.ReactNode)=><div style={{maxWidth:430,boxSizing:'border-box',margin:0,padding:'18px 14px 40px',background:glacierGround(isNightPalette),minHeight:'100vh'}}><div style={{font:'11px sans-serif',color:'#EC8638',letterSpacing:1.5,marginBottom:12}}>{label}</div>{child}</div>;
 const tabBar=<RaisedTabBar state={{index:2,routes:['bookings','catalogue','index','garage','profile'].map(name=>({key:name,name}))}} descriptors={Object.fromEntries(['bookings','catalogue','index','garage','profile'].map(name=>[name,{options:{title:name}}]))} navigation={{navigate:noop,emit:()=>({defaultPrevented:false})}} icons={{index:'home',catalogue:'services',bookings:'bookings',garage:'garage',profile:'profile'}}/>;
 const giftService={serviceId:'wash-regular',serviceName:'Regular Wash',amountPaise:60000};
-const giftsPreview=<div style={{display:'flex',flexDirection:'column',gap:28}}>
+const giftsPreview=<div style={{display:'flex',flexDirection:'column',gap:20}}>
  <Pane pad="inset"><T role="heading">Choose a service to gift</T><SelectField label="Gift service" value="wash-regular" onChange={noop} options={[{value:'',label:'Choose washing or detailing'},{value:'wash-regular',label:'Regular Wash · ₹600'},{value:'wash-foam',label:'Foam wash · ₹900'}]}/></Pane>
  <GiftBuy serviceName="Regular Wash" amountPaise={60000} canPay={true} busy={false} onPay={noop}/>
  <GiftCard code="GWABCDEFGH" expiresAt={new Date(Date.now()+45*86400000).toISOString()} buyerName="Meet" serviceName="Regular Wash"/>
