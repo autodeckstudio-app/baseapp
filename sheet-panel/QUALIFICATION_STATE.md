@@ -48,3 +48,15 @@ The proposed source worker uses1vCPU/256MiB, min0/max1,60second request timeout.
 Official operating sources read November19:
 - https://developers.google.com/workspace/sheets/api/limits
 - https://cloud.google.com/run/pricing
+
+
+## Final bounded Admin refresh
+
+A read-only attempt at16:28-16:30 on https://admin.autodeck.in/services did
+not establish a stable fresh app read. Cached menu content appeared, followed
+by a redirect to login and an access-unavailable notice. No login or role change
+was attempted. Do not use that transient render as fresh publication evidence.
+The visible current Admin chrome said Pricing, so the feature patch must merge
+into the then-current Admin ancestry rather than deploy this whole older tree.
+The browser session was released. This is a remaining execution-time validation,
+not a reinstated Google approval or permission blocker for private preparation.
