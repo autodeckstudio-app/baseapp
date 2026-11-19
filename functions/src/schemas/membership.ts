@@ -11,6 +11,9 @@ export const createMembershipPlanSchema = z.object({
   freePickups: z.number().int().min(0).max(31).nullish(),
   prioritySlot: z.boolean().nullish(),
   includedInteriorRefreshes: z.number().int().min(0).max(31).nullish(),
+  // Optional plan-level wash binding: only these services consume a wash for
+  // purchases under this plan. Absent/null = legacy global-flag behavior.
+  washServiceIds: z.array(z.string().min(1).max(128)).min(1).max(50).nullish(),
 }).strict();
 
 // Optional fields are .nullish() not .optional(): the Firebase JS callable
@@ -27,6 +30,7 @@ export const updateMembershipPlanSchema = z.object({
   freePickups: z.number().int().min(0).max(31).nullish(),
   prioritySlot: z.boolean().nullish(),
   includedInteriorRefreshes: z.number().int().min(0).max(31).nullish(),
+  washServiceIds: z.array(z.string().min(1).max(128)).min(1).max(50).nullish(),
 }).strict();
 
 export const setMembershipPlanActiveSchema = z.object({

@@ -82,13 +82,15 @@ const studioConfig: Omit<StudioConfig, "updatedAt"> = {
 //   Silver Rs 1,700 = 4 washes + 1 free pickup
 //   Gold Rs 2,400 = 6 washes + 2 free pickups
 //   Platinum Rs 3,000 = 8 washes + 3 free pickups + priority slot + 1 interior refresh
-// All member washes are Regular Wash; plans run one month, no rollover.
+// All member washes are Regular Wash (washServiceIds binds every plan to
+// svc-wash-regular only); plans run one month, no rollover.
 // The live plans are data: change them in the admin Memberships page. Monthly (MEMBERSHIP_DURATION_DAYS = 30).
-const PLANS: Array<{ id: string; tier: MembershipTier; name: string; priceInPaise: number; includedWashes: number; discountPercent: number; freePickups: number; prioritySlot: boolean; includedInteriorRefreshes: number }> = [
-  { id: "plan-starter", tier: "starter", name: "Starter", priceInPaise: 900_00, includedWashes: 2, discountPercent: 0, freePickups: 0, prioritySlot: false, includedInteriorRefreshes: 0 },
-  { id: "plan-silver", tier: "silver", name: "Silver", priceInPaise: 1700_00, includedWashes: 4, discountPercent: 0, freePickups: 1, prioritySlot: false, includedInteriorRefreshes: 0 },
-  { id: "plan-gold", tier: "gold", name: "Gold", priceInPaise: 2400_00, includedWashes: 6, discountPercent: 0, freePickups: 2, prioritySlot: false, includedInteriorRefreshes: 0 },
-  { id: "plan-platinum", tier: "platinum", name: "Platinum", priceInPaise: 3000_00, includedWashes: 8, discountPercent: 0, freePickups: 3, prioritySlot: true, includedInteriorRefreshes: 1 },
+const REGULAR_WASH_SERVICE_ID = "svc-wash-regular";
+const PLANS: Array<{ id: string; tier: MembershipTier; name: string; priceInPaise: number; includedWashes: number; discountPercent: number; freePickups: number; prioritySlot: boolean; includedInteriorRefreshes: number; washServiceIds: string[] }> = [
+  { id: "plan-starter", tier: "starter", name: "Starter", priceInPaise: 900_00, includedWashes: 2, discountPercent: 0, freePickups: 0, prioritySlot: false, includedInteriorRefreshes: 0, washServiceIds: [REGULAR_WASH_SERVICE_ID] },
+  { id: "plan-silver", tier: "silver", name: "Silver", priceInPaise: 1700_00, includedWashes: 4, discountPercent: 0, freePickups: 1, prioritySlot: false, includedInteriorRefreshes: 0, washServiceIds: [REGULAR_WASH_SERVICE_ID] },
+  { id: "plan-gold", tier: "gold", name: "Gold", priceInPaise: 2400_00, includedWashes: 6, discountPercent: 0, freePickups: 2, prioritySlot: false, includedInteriorRefreshes: 0, washServiceIds: [REGULAR_WASH_SERVICE_ID] },
+  { id: "plan-platinum", tier: "platinum", name: "Platinum", priceInPaise: 3000_00, includedWashes: 8, discountPercent: 0, freePickups: 3, prioritySlot: true, includedInteriorRefreshes: 1, washServiceIds: [REGULAR_WASH_SERVICE_ID] },
 ];
 
 async function seedStudio(): Promise<void> {
@@ -131,6 +133,7 @@ async function seedPlans(): Promise<void> {
       freePickups: p.freePickups,
       prioritySlot: p.prioritySlot,
       includedInteriorRefreshes: p.includedInteriorRefreshes,
+      washServiceIds: p.washServiceIds,
       active: true,
       createdAt: now,
       updatedAt: now,

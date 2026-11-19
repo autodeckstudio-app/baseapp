@@ -81,6 +81,8 @@ export const recordMembershipRefresh = onCall(
         );
       const total = membership.refreshesTotal ?? 0;
       const used = membership.refreshesUsed ?? 0;
+      if (!Number.isSafeInteger(total) || !Number.isSafeInteger(used) || total < 0 || used < 0 || used > total)
+        throw new HttpsError("failed-precondition", "Refresh counters need staff review before use.");
       if (total <= 0)
         throw new HttpsError(
           "failed-precondition",
@@ -91,8 +93,7 @@ export const recordMembershipRefresh = onCall(
       const existingSnap = await tx.get(
         db
           .collection(SUBCOLLECTIONS.membershipRefreshUsage(membership.id))
-          .where("jobId", "==", job.id)
-          .limit(2),
+          .where("jobId", "==", job.id),
       );
       const live = existingSnap.docs
         .map((d) => d.data() as MembershipRefreshUsage)

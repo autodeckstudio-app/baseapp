@@ -9,6 +9,7 @@ import type {
   ServiceJob,
 } from "@autodeck/core";
 import { COLLECTIONS, SUBCOLLECTIONS } from "@autodeck/database";
+import { membershipCoversWashService } from "./membership-eligibility.js";
 const deny = () => {
   throw new HttpsError(
     "failed-precondition",
@@ -64,7 +65,7 @@ export async function readCoveredLink(
     m.customerId !== job.customerId ||
     !s ||
     s.tenantId !== job.tenantId ||
-    !s.membershipWashEligible
+    !membershipCoversWashService(s, m)
   )
     return deny();
   const washes = us.docs

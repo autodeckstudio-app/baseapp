@@ -5,7 +5,7 @@ import type { MembershipPlan } from "@autodeck/core";
  * Owner rule (18 Oct): no washes carry forward. Unused washes end when the plan ends,
  * for a renewal and for an upgrade alike. Nothing here takes a previous plan as input on purpose.
  */
-export function freshGrant(plan: Pick<MembershipPlan, "includedWashes" | "freePickups" | "prioritySlot" | "discountPercent" | "includedInteriorRefreshes">) {
+export function freshGrant(plan: Pick<MembershipPlan, "includedWashes" | "freePickups" | "prioritySlot" | "discountPercent" | "includedInteriorRefreshes" | "washServiceIds">) {
   return {
     washesTotal: plan.includedWashes,
     washesUsed: 0,
@@ -15,5 +15,10 @@ export function freshGrant(plan: Pick<MembershipPlan, "includedWashes" | "freePi
     refreshesTotal: plan.includedInteriorRefreshes ?? 0,
     refreshesUsed: 0,
     discountPercent: plan.discountPercent,
+    // Snapshot the plan's service binding only when the plan has one, so
+    // purchases under legacy plans keep the legacy global-flag behavior.
+    ...(plan.washServiceIds !== undefined
+      ? { washServiceIds: [...plan.washServiceIds] }
+      : {}),
   };
 }

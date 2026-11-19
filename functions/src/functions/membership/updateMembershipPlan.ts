@@ -41,6 +41,7 @@ export const updateMembershipPlan = onCall({ region: "asia-south1", enforceAppCh
     if (data.freePickups !== undefined && data.freePickups !== null) updates["freePickups"] = data.freePickups;
     if (data.prioritySlot !== undefined && data.prioritySlot !== null) updates["prioritySlot"] = data.prioritySlot;
     if (data.includedInteriorRefreshes !== undefined && data.includedInteriorRefreshes !== null) updates["includedInteriorRefreshes"] = data.includedInteriorRefreshes;
+    if (data.washServiceIds !== undefined && data.washServiceIds !== null) updates["washServiceIds"] = data.washServiceIds;
 
     tx.update(ref, updates);
     writeAuditLog(tx, {
@@ -57,6 +58,7 @@ export const updateMembershipPlan = onCall({ region: "asia-south1", enforceAppCh
         freePickups: existing.freePickups ?? 0,
         prioritySlot: existing.prioritySlot ?? false,
         includedInteriorRefreshes: existing.includedInteriorRefreshes ?? 0,
+        washServiceIds: existing.washServiceIds ?? null,
       },
       after: updates,
     });

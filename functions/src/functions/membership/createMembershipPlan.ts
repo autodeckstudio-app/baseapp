@@ -33,6 +33,11 @@ export const createMembershipPlan = onCall({ region: "asia-south1", enforceAppCh
     freePickups: data.freePickups ?? 0,
     prioritySlot: data.prioritySlot ?? false,
     includedInteriorRefreshes: data.includedInteriorRefreshes ?? 0,
+    // Only set when a binding is given: absence is the legacy global-flag
+    // behavior and Firestore rejects undefined field values.
+    ...(data.washServiceIds !== undefined && data.washServiceIds !== null
+      ? { washServiceIds: data.washServiceIds }
+      : {}),
     active: true,
     createdAt: now,
     updatedAt: now,

@@ -2,6 +2,7 @@ import{serviceOnlineBookingIssue}from'@autodeck/core';
 import{isDeepStrictEqual}from "node:util";
 import{combinedCheckoutEnabled,combinedGiftCheckoutEnabled,combinedWashCheckoutEnabled,combinedPickupBenefitEnabled,combinedQuoteCheckoutEnabled,reviewCombinedBooking,combinedReviewIdentity}from'../../lib/combined-booking.js';
 import { membershipForFreePickup } from "../../lib/pickup-benefit.js";
+import { membershipCoversWashService } from "../../lib/membership-eligibility.js";
 import{pickupRoadKmForDisplay}from'@autodeck/core';
 import { freezeConsultQuoteApproval } from "../../lib/consult-approval-binding.js";
 import {acceptedServiceQuote,acceptedQuoteBreakdown} from "../../lib/accepted-service-quote.js";
@@ -368,9 +369,9 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
 
       if(data.combinedReview){
         if(membership.startDate&&membership.startDate.slice(0,10)>data.scheduledDate)throw new HttpsError("failed-precondition","Membership has not started for this visit.");
-        if(!service.membershipWashEligible||!Number.isSafeInteger(membership.washesTotal)||!Number.isSafeInteger(membership.washesUsed)||membership.washesUsed<0||membership.washesUsed>=membership.washesTotal)throw new HttpsError("failed-precondition","This included wash is no longer available. Review the price again.");
+        if(!membershipCoversWashService(service,membership)||!Number.isSafeInteger(membership.washesTotal)||!Number.isSafeInteger(membership.washesUsed)||membership.washesUsed<0||membership.washesUsed>=membership.washesTotal)throw new HttpsError("failed-precondition","This included wash is no longer available. Review the price again.");
       }
-      const consumeWash = service.membershipWashEligible && membership.washesUsed < membership.washesTotal;
+      const consumeWash = membershipCoversWashService(service,membership) && membership.washesUsed < membership.washesTotal;
       finalBreakdown = applyMembershipBenefit(breakdown, {
         discountPercent: membership.discountPercent,
         consumeWash,

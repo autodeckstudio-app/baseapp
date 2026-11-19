@@ -99,6 +99,11 @@ export const createWalkinMembership = onCall({ region: "asia-south1" , enforceAp
       prioritySlot: plan.prioritySlot ?? false,
       refreshesTotal: plan.includedInteriorRefreshes ?? 0,
       refreshesUsed: 0,
+      // Snapshot the plan's wash binding only when it has one (absence =
+      // legacy global-flag behavior; Firestore rejects undefined values).
+      ...(plan.washServiceIds !== undefined
+        ? { washServiceIds: [...plan.washServiceIds] }
+        : {}),
       startDate: upiClaim ? null : startDate,
       endDate: upiClaim ? null : endDate,
       activatedAt: upiClaim ? null : nowIso,

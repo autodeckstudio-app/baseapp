@@ -295,6 +295,65 @@ describe("Membership interior refresh benefit", () => {
     expect((await refreshRows(membership.id)).length).toBe(2);
   });
 
+  it("repeated restore/reuse cycles keep replay idempotent (custodian regression: history-query truncation)", async () => {
+    const cust = uid("cust-cycles");
+    const membership = await purchaseAndActivate(cust, platinumPlanId, adminUid);
+    const jobId = uid("job");
+    await seedJob(jobId, cust);
+    const arg = { data: { membershipId: membership.id, jobId }, auth: studioAuth(staffUid) };
+
+    // Concurrent double-record serializes to one consumption.
+    const pair = (await Promise.all([
+      recordMembershipRefresh.run(arg as never),
+      recordMembershipRefresh.run(arg as never),
+    ])) as Array<{ refreshUsageId: string }>;
+    expect(pair[0]?.refreshUsageId).toBe(pair[1]?.refreshUsageId);
+
+    // Four restore/reuse cycles: each restore must find the current live row
+    // no matter how many restored historical rows accumulate.
+    for (let i = 0; i < 4; i++) {
+      const live = await db
+        .collection(`memberships/${membership.id}/refreshUsage`)
+        .where("jobId", "==", jobId)
+        .get();
+      const row = live.docs.find((d) => !d.data().restoredAt);
+      expect(row).toBeTruthy();
+      await restoreMembershipRefresh.run({
+        data: { membershipId: membership.id, refreshUsageId: row!.id, reason: "Correction" },
+        auth: adminAuth(adminUid),
+      } as never);
+      await recordMembershipRefresh.run(arg as never);
+    }
+
+    const last = (await Promise.all([
+      recordMembershipRefresh.run(arg as never),
+      recordMembershipRefresh.run(arg as never),
+    ])) as Array<{ refreshUsageId: string }>;
+    expect(last[0]?.refreshUsageId).toBe(last[1]?.refreshUsageId);
+
+    const rows = await refreshRows(membership.id);
+    expect(rows.filter((r) => !r.restoredAt).length).toBe(1);
+    const after = (await db.collection("memberships").doc(membership.id).get()).data() as Membership;
+    expect(after.refreshesUsed).toBe(1);
+  });
+
+  it("corrupt refresh counters fail closed without writes (custodian regression: counter validation)", async () => {
+    for (const value of [-1, 0.5, 5, "0"] as unknown[]) {
+      const cust = uid("cust-corrupt");
+      const membership = await purchaseAndActivate(cust, platinumPlanId, adminUid);
+      await db.collection("memberships").doc(membership.id).update({ refreshesUsed: value });
+      const jobId = uid("job");
+      await seedJob(jobId, cust);
+      await expect(
+        recordMembershipRefresh.run({
+          data: { membershipId: membership.id, jobId },
+          auth: studioAuth(staffUid),
+        } as never),
+      ).rejects.toThrow(/staff review/);
+      expect((await refreshRows(membership.id)).length).toBe(0);
+    }
+  });
+
   it("expired membership cannot consume a refresh (lazy expiry parity with wash credits)", async () => {
     const cust = uid("cust-expired");
     const membership = await purchaseAndActivate(cust, platinumPlanId, adminUid);
