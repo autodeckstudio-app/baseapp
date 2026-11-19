@@ -72,7 +72,7 @@ export default function RescheduleBookingScreen() {
         <Notice
           title="This booking can no longer be rescheduled"
           body="It may have changed since you opened this screen. Go back to see the latest status."
-          action={<Button label="Go back" onPress={() => router.back()} />}
+          action={<Button label="Go back" onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/bookings")} />}
         />
       </Screen>
     );
@@ -127,7 +127,7 @@ export default function RescheduleBookingScreen() {
           body={requested
             ? `You've asked for ${when}. Your booking stays at its current time until the studio confirms - one request per booking.`
             : `Your booking is now set for ${when}.`}
-          action={<Button label="Done" onPress={() => router.back()} />}
+          action={<Button label="Done" onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/bookings")} />}
         />
       </Screen>
     );
@@ -210,7 +210,7 @@ export default function RescheduleBookingScreen() {
 
       {actionError ? <Notice title="Couldn't reschedule" body={actionError} /> : null}
 
-      <Button label="Cancel" kind="quiet" disabled={submitting} onPress={() => router.back()} />
+      <Button label="Cancel" kind="quiet" disabled={submitting} onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/bookings")} />
     </Screen>
   );
 }

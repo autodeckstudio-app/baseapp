@@ -96,7 +96,7 @@ export default function YouScreen() {
           <View style={{ width: 44, height: 44, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: light ? "#E7EDF5" : "#29384C" }}><NavIcon name={it.key === "cars" ? "garage" : it.key === "membership" ? "club" : it.key === "friends-gifts" ? "gift" : "bell"} size={23} color={colors.textPrimary} cut={light ? "#E7EDF5" : "#29384C"} /></View>
           <View style={{ flex: 1, minWidth: 0, gap: 4 }}><T role="bodyStrong">{it.label}</T>{it.sub ? <T role="caption" tone="secondary">{it.sub}</T> : null}</View><T role="caption" tone="secondary">Open</T>
         </Pressable>)}
-        <ListRow last icon="chat" title="Your quotes" detail="Review work and prices" onPress={() => router.push("/(tabs)/quotes")} />
+        <ListRow last icon="chat" title="Your quotes" detail="Review work and prices" onPress={() => router.navigate("/(tabs)/quotes")} />
       </View></Pane>
       <View style={{ ...glassPane(light), paddingHorizontal: 16 }}>
         <LicenceSection customerId={auth.status==="ready"?auth.customerDocId:null} scope={scopeKey} upload={uploadLicensePhoto} lock={saveLock} epoch={generation} />

@@ -266,7 +266,7 @@ export default function CoordinateVisit() {
             label="Choose a car"
             kind="quiet"
             disabled={busy || attempted === key}
-            onPress={() => router.push("/(tabs)/garage")}
+            onPress={() => router.navigate("/(tabs)/garage")}
           />
           {loaded === key && !valid ? (
             <T>

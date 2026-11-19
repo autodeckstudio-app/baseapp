@@ -1,3 +1,4 @@
+import { useCarsEntry } from "../../../hooks/useCarsEntry";
 import { JourneySteps } from "../../../ui/JourneySteps";
 import { readPendingListing, writePendingListing, clearPendingListing } from "../../../lib/cars-pending";
 import { randomUUID } from "expo-crypto";
@@ -21,6 +22,7 @@ import { validateSellStep, sellNumber, type SellForm as F, type SellErrors } fro
 const FUELS = ["petrol", "diesel", "cng", "electric", "hybrid"];
 
 export default function SellScreen() {
+  const originBack = useCarsEntry("sell");
   const router = useRouter();
   const auth = useAuth();
   const { name: themeName, colors: ink } = useExperienceTheme();
@@ -143,13 +145,13 @@ export default function SellScreen() {
   }
   if (done) {
     return (
-      <Screen>
+      <Screen onBack={originBack}>
         <Notice title="Listing saved" body="Track status under Your cars for sale on the Cars page." action={<Button label="Done" onPress={() => router.replace("/(tabs)/cars?tab=sell")} />} />
       </Screen>
     );
   }
   return (
-    <Screen appBar="Sell your car" header={<PageHeader title="List your car" sub="Add your car for studio review." />}>
+    <Screen onBack={originBack} appBar="Sell your car" header={<PageHeader title="List your car" sub="Add your car for studio review." />}>
       <JourneySteps labels={steps} current={step} />
       {step===0 && garage.length > 0 && <View style={{ gap: space.hair }}>
         <Kicker tone="accent">Pick your car</Kicker>

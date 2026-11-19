@@ -526,7 +526,7 @@ describe("Cars pages follow the common design rules", () => {
   it("no second title block: the one header names the screen", () => {
     expect(read("src/ui/CarsHub.tsx")).toContain('title="Buy & Sell"');
     expect(read(pages[1]!)).toContain('<PageHeader');
-    expect(read(pages[2]!)).toContain("<Screen>");
+    expect(read(pages[2]!)).toContain("<Screen onBack={originBack}>");
   });
   it("only the allowed radii and no fixed dark-only surfaces", () => {
     for (const p of pages) {

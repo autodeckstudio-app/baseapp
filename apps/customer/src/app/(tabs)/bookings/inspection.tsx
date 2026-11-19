@@ -55,7 +55,7 @@ export default function InspectionScreen() {
         <Notice
           title="No inspection report yet"
           body="The studio hasn't finalized an inspection report for this job yet."
-          action={<Button label="Go back" onPress={() => router.back()} />}
+          action={<Button label="Go back" onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/bookings")} />}
         />
       </Screen>
     );
@@ -103,7 +103,7 @@ export default function InspectionScreen() {
         </View>
       ) : null}
 
-      <Button label="Go back" kind="quiet" onPress={() => router.back()} />
+      <Button label="Go back" kind="quiet" onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/bookings")} />
     </Screen>
   );
 }

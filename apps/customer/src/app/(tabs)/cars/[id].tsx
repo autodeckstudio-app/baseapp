@@ -1,3 +1,4 @@
+import { useCarsEntry } from "../../../hooks/useCarsEntry";
 // One car: photos, plain facts, "I'm interested" (goes to the studio, never to the seller) and "Report this listing".
 import { STUDIO_INFO } from "../../../lib/studio-info";
 import { listOwnerKey } from "../../../lib/owner-key";
@@ -15,6 +16,7 @@ import { IconAction } from "../../../ui/IconAction";
 import { useAuth } from "../../../hooks/useAuth";
 
 export default function CarDetail() {
+  const originBack = useCarsEntry("[id]");
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const authState = useAuth();
@@ -84,14 +86,14 @@ export default function CarDetail() {
     const scope=scopeKey,gen=operation.current;const current=()=>scopeRef.current===scope&&operation.current===gen;busyRef.current=true;setPhotoBusy(true);setPhotoError(null);
     try{if(mode==='replace'&&replacement)await replaceListingPhoto(car.id,photoIndex,car.photoUrls.length,replacement.blob,replacement.type);else await removeListingPhoto(car.id,photoIndex,car.photoUrls.length);if(!current())return;setConfirmPhoto(false);setReplacing(false);setReplacement(null);setPhotoIndex(0);setAttempt(n=>n+1)}catch{if(current())setPhotoError('The photo change was not confirmed. Refresh this listing before trying again.')}finally{if(current()){busyRef.current=false;setPhotoBusy(false)}}
   }
-  if (loadError) return <Screen><Notice title="Could not load this car" body="Check your connection and try again." action={<Button kind="quiet" label="Retry" onPress={() => setAttempt(n=>n+1)}/>}/></Screen>;
-  if (car === undefined) return <Screen><Skeleton height={300} /><Skeleton height={120} /></Screen>;
-  if (car === null) return <Screen><Notice title="Car not found" body="It may have been sold or taken down." action={<Button kind="quiet" label="Back to cars" onPress={() => router.replace("/(tabs)/cars")} />} /></Screen>;
+  if (loadError) return <Screen onBack={originBack}><Notice title="Could not load this car" body="Check your connection and try again." action={<Button kind="quiet" label="Retry" onPress={() => setAttempt(n=>n+1)}/>}/></Screen>;
+  if (car === undefined) return <Screen onBack={originBack}><Skeleton height={300} /><Skeleton height={120} /></Screen>;
+  if (car === null) return <Screen onBack={originBack}><Notice title="Car not found" body="It may have been sold or taken down." action={<Button kind="quiet" label="Back to cars" onPress={() => router.replace("/(tabs)/cars")} />} /></Screen>;
 
   const facts: Array<[string, string]> = [["Year", String(car.year)], ["Driven", kmLabel(car.kmDriven)], ["Fuel", car.fuel], ["Gearbox", car.gearbox], ...(car.bodyType ? [["Body", car.bodyType] as [string, string]] : []), ...(typeof car.owners === "number" ? [["Owners", String(car.owners)] as [string, string]] : []), ["Colour", car.colour], ...(car.area ? [["Area", car.area] as [string, string]] : []), ...(car.insuranceValidTill ? [["Insurance till", car.insuranceValidTill] as [string, string]] : [])];
 
   return (
-    <Screen>
+    <Screen onBack={originBack}>
       <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={e => setPhotoIndex(Math.round(e.nativeEvent.contentOffset.x / photoWidth))} style={{ borderRadius: 24 }}>
         {car.photoUrls.map((u) => (
           <Image key={u} source={{ uri: u }} resizeMode="cover" style={{ width: photoWidth, aspectRatio: 3 / 2, borderRadius: 24 }} />

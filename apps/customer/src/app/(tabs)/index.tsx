@@ -288,9 +288,9 @@ export default function HomeScreen() {
         onAvatar={() => router.navigate("/(tabs)/profile")}
         displayName={(m.customer.firstName ?? auth.user.displayName ?? "AutoDeck").trim()}
         carsList={homeCars(carListings)}
-        onOpenCar={(id) => router.push(`/(tabs)/cars/${id}` as never)}
+        onOpenCar={(id) => router.push({pathname: "/(tabs)/cars/[id]", params: {id, returnTo: "home"}})}
         onBuyCar={() => router.navigate("/(tabs)/cars")}
-        onSellCar={() => router.navigate("/(tabs)/cars/sell")}
+        onSellCar={() => router.navigate({pathname: "/(tabs)/cars/sell", params: {returnTo: "home"}})}
         drawer={buildDrawerItems((path) => router.push(path as never), myCode)}
         onBook={() => router.navigate("/(tabs)/catalogue")}
         onStudio={() => router.navigate("/(tabs)/studio")}

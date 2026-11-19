@@ -493,7 +493,7 @@ export default function BookingDetailScreen() {
         </Pane>
       ) : null}
 
-      {job?.status==='READY_FOR_DELIVERY'&&!job.visitId&&!bookingClosed?<Button label="Confirm collection with studio" kind="quiet" onPress={()=>router.push('/(tabs)/studio')}/>:null}
+      {job?.status==='READY_FOR_DELIVERY'&&!job.visitId&&!bookingClosed?<Button label="Confirm collection with studio" kind="quiet" onPress={()=>router.navigate('/(tabs)/studio')}/>:null}
       {job && !["CANCELLED","EXPIRED"].includes(booking.status) && jobStage(job.status) && job.status !== "PENDING_VEHICLE" ? job.visitId&&!sharedProgress?null:<JobTimeline status={sharedProgress?.status??job.status} history={sharedProgress?.history??job.statusHistory??[]} finalLabel={sharedProgress?.finalLabel} /> : null}
 
 
@@ -638,7 +638,7 @@ export default function BookingDetailScreen() {
           if (entry.mode === "none") {
             return <T role="caption" tone="secondary">{entry.reason}</T>;
           }
-          if(job?.visitId||booking.visitId)return <Button label="Reschedule visit with studio" kind="quiet" onPress={()=>router.push("/(tabs)/studio")}/>;
+          if(job?.visitId||booking.visitId)return <Button label="Reschedule visit with studio" kind="quiet" onPress={()=>router.navigate("/(tabs)/studio")}/>;
           return rescheduleEligibility.eligible ? (
           <View style={{ gap: space.breath }}>
             {hasPendingApproval ? (

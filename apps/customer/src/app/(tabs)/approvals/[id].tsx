@@ -99,7 +99,7 @@ export default function ApprovalDetailScreen() {
   if (!approval) {
     return (
       <Screen onBack={originBack}>
-        <Notice title="Approval not found" body="It may have been withdrawn." action={<Button label="Go back" onPress={() => router.back()} />} />
+        <Notice title="Approval not found" body="It may have been withdrawn." action={<Button label="Go back" onPress={originBack ?? (() => router.canGoBack() ? router.back() : router.replace("/(tabs)/bookings"))} />} />
       </Screen>
     );
   }
@@ -160,7 +160,7 @@ export default function ApprovalDetailScreen() {
           </View>
         )
       ) : (
-        <Button label="Back to booking" kind="quiet" onPress={() => router.back()} />
+        <Button label="Back to booking" kind="quiet" onPress={originBack ?? (() => router.canGoBack() ? router.back() : router.replace("/(tabs)/bookings"))} />
       )}
     </Screen>
   );

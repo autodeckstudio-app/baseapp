@@ -1,3 +1,4 @@
+import { useCarsEntry } from "../../../hooks/useCarsEntry";
 // Cars: one screen with a Buy | Sell switch. The layout lives in ui/CarsHub.
 import { useCallback, useState } from "react";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
@@ -8,6 +9,7 @@ import { listOwnerKey } from "../../../lib/owner-key";
 import { getCarListings } from "../../../lib/carsale-service";
 
 export default function CarsScreen() {
+  useCarsEntry("index");
   const router = useRouter();
   const auth=useAuth();
   const scope=JSON.stringify([auth.status,listOwnerKey(auth)?.key,auth.status==='ready'?auth.claims.tenantId:null]);
