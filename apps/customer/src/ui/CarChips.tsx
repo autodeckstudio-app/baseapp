@@ -26,28 +26,40 @@ export function CarChips({ cars, active, onActive, onOpen, onAdd, contained = fa
   // The 160px frame returns the moment a photo exists (loading states stay inside CarThumb).
   const framed = !!car.vehicle?.photoUrl;
   return (
-    <View style={{ padding: metrics.cardPad, gap: 12, ...raised(name).card, ...(contained ? {overflow:"hidden", ...(Platform.OS === "web" ? {boxShadow:"inset 0 1px 0 rgba(255,255,255,0.12)",backdropFilter:"none",WebkitBackdropFilter:"none"} : {shadowOpacity:0,elevation:0})} as object : {}) }}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`Open ${car.title}`} onPress={() => onOpen(car)} style={({ pressed }) => ({ gap: 12, minHeight:framed?104:60, justifyContent:"center", paddingRight:framed?"36%":0, opacity: pressed ? 0.88 : 1 })}>
-        {framed ? <View style={{position:"absolute",right:0,top:0,bottom:0,width:"34%",borderRadius:18,overflow:"hidden"}}><CarThumb car={car.vehicle} height={104} radius={18} /></View> : null}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          {!framed ? (
-            <View style={{ width: 44, height: 44, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: light ? "rgba(29,27,38,0.06)" : "rgba(255,255,255,0.07)" }}>
-              <Icon name="car" color={colors.textSecondary} size={22} />
+    <View style={{ padding: framed ? 0 : metrics.cardPad, gap: 12, ...raised(name).card, overflow: "hidden", ...(contained ? { ...(Platform.OS === "web" ? {boxShadow:"inset 0 1px 0 rgba(255,255,255,0.12)",backdropFilter:"none",WebkitBackdropFilter:"none"} : {shadowOpacity:0,elevation:0})} as object : {}) }}>
+      {framed ? <View>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Open ${car.title}`} onPress={() => onOpen(car)} style={({ pressed }) => ({ minHeight: 168, justifyContent: "flex-end", opacity: pressed ? 0.88 : 1 })}>
+          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}><CarThumb car={car.vehicle} height={168} width="100%" radius={0} /></View>
+          <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, ...(Platform.OS === "web" ? { backgroundImage: "linear-gradient(180deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.62) 100%)" } as object : { backgroundColor: "rgba(0,0,0,0.30)" }) }} />
+          <View style={{ padding: metrics.cardPad, gap: 6 }}>
+            <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "600" }}>{car.title}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              {car.plate ? <Plate value={car.plate} /> : null}
+              {seg ? <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.85)", fontSize: 12 }}>{seg}</Text> : null}
             </View>
-          ) : null}
+            {car.story ? <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.85)", fontSize: 12 }}>{car.story}</Text> : null}
+          </View>
+        </Pressable>
+      </View> : (
+      <Pressable accessibilityRole="button" accessibilityLabel={`Open ${car.title}`} onPress={() => onOpen(car)} style={({ pressed }) => ({ gap: 12, minHeight: 60, justifyContent: "center", opacity: pressed ? 0.88 : 1 })}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <View style={{ width: 44, height: 44, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: light ? "rgba(29,27,38,0.06)" : "rgba(255,255,255,0.07)" }}>
+            <Icon name="car" color={colors.textSecondary} size={22} />
+          </View>
           <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
-            <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "600" }}>{car.title}</Text>
+            <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "600" }}>{car.title}</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               {car.plate ? <Plate value={car.plate} /> : null}
               {seg ? <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{seg}</Text> : null}
-              {!framed ? <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>Add a photo from the car page</Text> : null}
+              <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>Add a photo from the car page</Text>
             </View>
             {car.story ? <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{car.story}</Text> : null}
           </View>
         </View>
       </Pressable>
+      )}
       {cars.length > 1 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={framed ? { paddingHorizontal: metrics.cardPad } : undefined} contentContainerStyle={{ gap: 8, paddingBottom: framed ? metrics.cardPad : 0 }}>
           {cars.map((c, i) => {
             const on = i === active;
             return (

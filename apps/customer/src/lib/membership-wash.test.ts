@@ -46,6 +46,27 @@ describe("membership wash rules", () => {
   });
 });
 
+describe("wash service binding snapshot (server parity)", () => {
+  const bound = { ...plan, washServiceIds: ["svc-regular-wash"] };
+  it("a bound membership covers a snapshotted service even when the global flag is off", () => {
+    expect(evaluateWash({ membership: bound, service: { id: "svc-regular-wash", membershipWashEligible: false }, today })).toEqual({ ok: true, membershipId: "m1", washesLeft: 3, expiresOn: "2026-11-01" });
+  });
+  it("a bound membership refuses a flag-eligible service outside the snapshot", () => {
+    expect(evaluateWash({ membership: bound, service: { id: "svc-wash-and-wax", membershipWashEligible: true }, today })).toEqual({ ok: false, reason: "service_not_eligible" });
+  });
+  it("an unbound membership keeps the legacy global-flag behavior", () => {
+    expect(evaluateWash({ membership: plan, service: { id: "svc-wash-and-wax", membershipWashEligible: true }, today }).ok).toBe(true);
+    expect(evaluateWash({ membership: plan, service: { id: "svc-regular-wash", membershipWashEligible: false }, today })).toEqual({ ok: false, reason: "service_not_eligible" });
+  });
+  it("an empty snapshot binds to nothing", () => {
+    expect(evaluateWash({ membership: { ...plan, washServiceIds: [] }, service: { id: "svc-regular-wash", membershipWashEligible: true }, today })).toEqual({ ok: false, reason: "service_not_eligible" });
+  });
+  it("pickWash prefers a bound plan that covers the service over an unbound one that does not", () => {
+    const d = pickWash([{ ...plan, id: "legacy" }, bound], { id: "svc-regular-wash", membershipWashEligible: false }, today);
+    expect(d).toMatchObject({ ok: true, membershipId: "m1" });
+  });
+});
+
 import { readFileSync } from "node:fs";
 import { daysLeft, cardState, valueRedeemed, compareCols } from "./membership-view";
 import { carryOverLine } from "./membership-rules";

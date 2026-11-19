@@ -52,7 +52,7 @@ export default function GiftsScreen() {
   useEffect(() => {setStateOwner(owner);setGifts([]);setOffer(null);setOffers([]);setSelectedId("");setClaimed(null);setCard(null);setCode("");setInfo(null);setError(null);setBusy(false);if (GIFT_LIVE&&owner) load(); return()=>{loadGeneration.current+=1}; }, [load,owner]);
   const referralCode = auth.status === "ready" ? referralCodeFor(auth.user.uid) : null;
   const friendPanel = <Pane pad="gap"><T role="heading">Share AutoDeck</T>{referralSubtitle(referralCode)!=="Share AutoDeck"?<T tone="secondary">{referralSubtitle(referralCode)}</T>:null}<Button icon="share" label="Share AutoDeck" onPress={() => void Share.share({ message: referralShareMessage(referralCode) }).catch(() => undefined)} /></Pane>;
-  if (!GIFT_LIVE) return <Screen appBar="Friends & gifts" header={<PageHeader title="Friends & gifts" />}>{friendPanel}<StatePanel icon="gift" title="Gift a wash" body="Wash gifting is not available yet." /></Screen>;
+  if (!GIFT_LIVE) return <Screen appBar="Friends & gifts" header={<PageHeader title="Friends & gifts" />}>{friendPanel}<StatePanel compact icon="gift" title="Gift a wash" body="Wash gifting is not available yet." /></Screen>;
 
   const offer=offers.find(o=>o.serviceId===selectedId)??(offers.length?null:legacyOffer);
   async function buy() {
@@ -106,7 +106,7 @@ export default function GiftsScreen() {
       {card ? <GiftCard code={card.code} expiresAt={card.expiresAt} buyerName={buyerName} serviceName={card.serviceName} /> : null}
       {loadFailed ? <Notice title="Could not load gifts" body="Check your connection and try again." action={<Button icon="refresh" label="Retry" onPress={load} />} /> : null}
       {loading?<T role="caption" tone="secondary">Loading gifts</T>:null}
-      {!loading&&!loadFailed&&gifts.length===0?<StatePanel icon="gift" title="No gifts bought yet" body="You can add a code below, or buy a gift when available."/>:null}
+      {!loading&&!loadFailed&&gifts.length===0?<StatePanel compact icon="gift" title="No gifts bought yet" body="You can add a code below, or buy a gift when available."/>:null}
       {offers.length?<Pane pad="inset"><T role="heading">Choose a service to gift</T><SelectField label="Gift service" value={selectedId} onChange={setSelectedId} options={[{value:"",label:"Choose washing or detailing"},...offers.map(o=>({value:o.serviceId!,label:`${o.serviceName} · ${rupees(o.amountPaise)}`}))]}/></Pane>:null}
       {offer ? <GiftBuy serviceName={offer.serviceName} amountPaise={offer.amountPaise} canPay={checkoutSupported || NATIVE_GIFT_PAYMENT_ENABLED} busy={busy} onPay={() => void buy()} /> : null}
       <Pane pad="inset"><View style={{gap:18}}>

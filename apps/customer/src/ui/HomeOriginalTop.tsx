@@ -20,10 +20,10 @@ export function HomeOriginalTop({p,onMenu}:{p:HomeViewProps;onMenu:()=>void}){
   </View>
   <View style={{gap:8}}><Text testID="home-greeting" style={{color:colors.textSecondary,fontSize:10,letterSpacing:1.6,textTransform:'uppercase'}}>{p.greeting}</Text><Text accessibilityRole="header" style={{fontSize:30,lineHeight:37,fontWeight:'600',letterSpacing:-1.2,color:colors.textPrimary}}>Welcome to AutoDeck</Text></View>
   {p.stories}
-  <Pressable accessibilityRole="button" accessibilityLabel="Explore services" onPress={p.onAllServices} style={{height:260,borderRadius:28,overflow:'hidden',backgroundColor:'#19232d'}}>
+  <Pressable accessibilityRole="button" accessibilityLabel="Explore services" onPress={p.onAllServices} style={{height:170,borderRadius:28,overflow:'hidden',backgroundColor:'#19232d'}}>
    <Image source={hero} accessibilityLabel="Illustrative car photography" resizeMode="cover" style={{position:'absolute',width:'100%',height:'100%'}}/>
    <View pointerEvents="none" style={{position:'absolute',inset:0,backgroundColor:'#08121a25',...(Platform.OS==='web'?{backgroundImage:'linear-gradient(180deg,transparent,#0c1722bb)'} as object:{})}}/>
-   <View style={{padding:22,flex:1,justifyContent:'space-between',alignItems:'flex-start'}}><Text style={{fontSize:9,letterSpacing:1,backgroundColor:'#eef3f5de',color:'#252c32',paddingHorizontal:12,paddingVertical:7,borderRadius:20}}>DETAILING & CAR CARE</Text><View style={{gap:15}}><Text style={{fontSize:31,lineHeight:33,fontWeight:'500',letterSpacing:-.8,color:'#fff'}}>{'Car care &\ndetailing'}</Text><View style={{backgroundColor:'#f7f9fb',paddingHorizontal:20,paddingVertical:14,borderRadius:24,alignSelf:'flex-start'}}><Text style={{fontSize:13,fontWeight:'600',color:'#252c32'}}>Explore services</Text></View></View></View>
+   <View style={{padding:16,flex:1,justifyContent:'space-between',alignItems:'flex-start'}}><Text style={{fontSize:9,letterSpacing:1,backgroundColor:'#eef3f5de',color:'#252c32',paddingHorizontal:12,paddingVertical:7,borderRadius:20}}>DETAILING & CAR CARE</Text><View style={{gap:10}}><Text style={{fontSize:23,lineHeight:26,fontWeight:'500',letterSpacing:-.8,color:'#fff'}}>{'Car care &\ndetailing'}</Text><View style={{backgroundColor:'#f7f9fb',paddingHorizontal:20,paddingVertical:14,borderRadius:24,alignSelf:'flex-start'}}><Text style={{fontSize:13,fontWeight:'600',color:'#252c32'}}>Explore services</Text></View></View></View>
   </Pressable>
   <HomeOwnedCars p={p}/>
  </View>;

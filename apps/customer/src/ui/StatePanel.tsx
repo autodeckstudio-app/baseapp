@@ -5,11 +5,11 @@ import { NavIcon, type NavIconName } from "./NavIcon";
 import { Pane, T } from "./kit";
 
 /** A full, deliberate destination for an empty section, not an error banner. */
-export function StatePanel({ icon, title, body, action }: { icon: NavIconName; title: string; body: string; action?: ReactNode }) {
+export function StatePanel({ icon, title, body, action, compact = false }: { icon: NavIconName; title: string; body: string; action?: ReactNode; /** Smaller card for inline empty states: reduced padding and icon, centred action. */ compact?: boolean }) {
   const { colors, name } = useExperienceTheme();
-  return <Pane pad="inset"><View style={{ alignItems: "center", paddingVertical: 28, paddingHorizontal: 10, gap: 18 }}>
-    <View style={{ width: 80, height: 80, borderRadius: 28, backgroundColor: name === "light" ? "#E8EDF4" : "#253447", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.borderSubtle }}><NavIcon name={icon} size={36} color={colors.textPrimary} cut={name === "light" ? "#E8EDF4" : "#253447"} /></View>
-    <View style={{ alignItems: "center", gap: 10, maxWidth: 320 }}><T role="heading" style={{ textAlign: "center", fontSize: 23, lineHeight: 29 }}>{title}</T><T tone="secondary" style={{ textAlign: "center", lineHeight: 22 }}>{body}</T></View>
-    {action ? <View style={{ alignSelf: "stretch", marginTop: 6 }}>{action}</View> : null}
+  return <Pane pad="inset"><View style={{ alignItems: "center", paddingVertical: compact ? 18 : 28, paddingHorizontal: 10, gap: compact ? 12 : 18 }}>
+    <View style={{ width: compact ? 56 : 80, height: compact ? 56 : 80, borderRadius: compact ? 20 : 28, backgroundColor: name === "light" ? "#E8EDF4" : "#253447", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.borderSubtle }}><NavIcon name={icon} size={compact ? 26 : 36} color={colors.textPrimary} cut={name === "light" ? "#E8EDF4" : "#253447"} /></View>
+    <View style={{ alignItems: "center", gap: compact ? 6 : 10, maxWidth: 320 }}><T role="heading" style={{ textAlign: "center", fontSize: compact ? 18 : 23, lineHeight: compact ? 24 : 29 }}>{title}</T><T tone="secondary" style={{ textAlign: "center", lineHeight: 22 }}>{body}</T></View>
+    {action ? <View style={compact ? { alignSelf: "center", marginTop: 2 } : { alignSelf: "stretch", marginTop: 6 }}>{action}</View> : null}
   </View></Pane>;
 }

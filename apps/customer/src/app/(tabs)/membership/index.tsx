@@ -69,6 +69,8 @@ export default function MembershipScreen() {
   }, [uid, tenantId,retryTick]);
 
   const currentId = current?.status === "active" ? current.id : null;
+  const washBinding = current?.status === "active" ? current.washServiceIds : undefined;
+  const washBindingKey = washBinding?.join("|") ?? "";
   const washesUsedNow = current?.washesUsed ?? 0;
   useEffect(() => {
     if (!currentId) { setRedeemed(null); return; }
@@ -79,8 +81,10 @@ export default function MembershipScreen() {
   // The "book with my membership" button exists only once the server records included washes (see lib/membership-wash.ts).
   useEffect(() => {
     setWashIds([]);if (!MEMBERSHIP_WASH_LIVE || !currentId) return;let alive=true;
-    void getServiceCatalogue().then((all) => {if(alive)setWashIds(all.filter((x) => x.membershipWashEligible === true).map((x) => x.id))}).catch(() => undefined);return()=>{alive=false};
-  }, [currentId]);
+    // Snapshot parity with the server: a membership carrying washServiceIds covers only those
+    // services; without it the legacy global flag decides. Never offer a wash the server would refuse.
+    void getServiceCatalogue().then((all) => {if(alive)setWashIds(all.filter((x) => washBinding !== undefined ? washBinding.includes(x.id) : x.membershipWashEligible === true).map((x) => x.id))}).catch(() => undefined);return()=>{alive=false};
+  }, [currentId, washBindingKey]);
 
   const loading = plansLoading || membershipsLoading;
   if (loading) return <Loading label="Opening membership" />;

@@ -273,7 +273,7 @@ export default function HomeScreen() {
         initial={(m.customer.firstName ?? auth.user.displayName ?? "A").trim().charAt(0).toUpperCase() || "A"}
         progress={m.liveJob ? m.liveJob.visitId?sharedProgress?LIVE_PROGRESS[sharedProgress.status]??10:null:LIVE_PROGRESS[m.liveJob.status]??10 : null}
         membership={m.membership && m.membership.status === "active" ? { title: `${Math.max(0, m.membership.washesTotal - m.membership.washesUsed)} washes`, detail: `left${m.membership.endDate ? `, until ${formatDateShort(m.membership.endDate)}` : ""}` } : null}
-        studio={{ address: STUDIO_INFO.address.replace(", Gujarat", ""), hours: liveInfo?.operatingHours?.length?formatHours(liveInfo.operatingHours):"Opening hours unavailable", openText: openStatus(liveInfo?.operatingHours, liveInfo?.holidays,new Date(now),liveInfo?.timezone)?.text ?? null }}
+        studio={{ address: STUDIO_INFO.address.replace(", Gujarat", ""), hours: liveInfo?.operatingHours?.length?formatHours(liveInfo.operatingHours):"Opening hours unavailable", openText: openStatus(liveInfo?.operatingHours, liveInfo?.holidays,new Date(now),liveInfo?.timezone)?.text ?? null, open: openStatus(liveInfo?.operatingHours, liveInfo?.holidays,new Date(now),liveInfo?.timezone)?.open }}
         campaign={offerToCampaign(offers, (h) => router.push(h as never),now)}
         need={(() => { const n = carNeed(carJobs, Object.fromEntries(catalogue.map((x) => [x.id, { id: x.id, name: x.name, category: x.category }]))); return n ? { title: n.title, detail: n.detail, onPress: () => router.push(`/(tabs)/book/${n.serviceId}`) } : null; })()}
         social={[

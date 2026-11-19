@@ -188,7 +188,7 @@ export default function BookingsScreen() {
       <WalkinVisitEstimates selectedId={typeof estimateId==="string"?estimateId:null} owner={owner} customerId={auth.customerDocId} vehicleLabel={id=>{const c=cars[id];return c?[c.make,c.model,c.registrationNumber].filter(Boolean).join(' '):'Car'}} onAccepted={()=>void load()}/>
       <TabPills tabs={[{ key: "active", label: "Active" }, { key: "upcoming", label: "Upcoming" }, { key: "past", label: "Past" }]} value={seg} onChange={setSegPick} />
 
-      {seg === "active" && !liveJob && approvals.filter((a) => a.status === "pending").length === 0 ? <StatePanel icon="history" title="Nothing active" body="When your car is in the studio, you can follow it here." /> : null}
+      {seg === "active" && !liveJob && approvals.filter((a) => a.status === "pending").length === 0 ? <StatePanel compact icon="history" title="Nothing active" body="When your car is in the studio, you can follow it here." /> : null}
 
       {seg === "active" && liveJob?.visitId&&!stage?<Pane pad="inset"><T role="heading">{sharedVisit?.error?"Visit unavailable":"Checking visit…"}</T></Pane>:null}
       {seg === "active" && liveJob && stage ? (
@@ -242,7 +242,7 @@ export default function BookingsScreen() {
       ) : null}
 
       {seg === "upcoming" && !error && !next ? (
-        <StatePanel icon="bookings" title="Nothing booked" body="Pick a service and a time. The studio confirms it." action={<Button label="Book a service" onPress={() => router.navigate("/(tabs)/catalogue")} />} />
+        <StatePanel compact icon="bookings" title="Nothing booked" body="Pick a service and a time. The studio confirms it." action={<Button label="Book a service" onPress={() => router.navigate("/(tabs)/catalogue")} />} />
       ) : null}
 
       {seg === "upcoming" && !error && !next && selCar ? <BookingSuggestions vehicle={selCar} suggestions={suggestions} onChooseTime={(serviceId,vehicleId)=>router.push({pathname:"/(tabs)/book/[serviceId]",params:{serviceId,vehicleId}})} /> : null}
@@ -266,7 +266,7 @@ export default function BookingsScreen() {
           <View style={{ gap: space.line }}>
             {groupByMonth(past).map((g) => <View key={g.key} style={{ gap: space.line }}><T role="label" tone="secondary">{g.label.toUpperCase()}</T>{list(g.items)}</View>)}
           </View>
-        ) : <StatePanel icon="bookings" title="No past visits" body="Finished and cancelled visits show here." />
+        ) : <StatePanel compact icon="bookings" title="No past visits" body="Finished and cancelled visits show here." />
       ) : null}
       </View>
     </Screen>

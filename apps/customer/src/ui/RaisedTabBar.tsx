@@ -75,7 +75,7 @@ export function RaisedTabBar({ state, descriptors, navigation, icons }: Props) {
                 <NavIcon name={route.name==="catalogue"?"grid":icons[route.name] ?? "home"} color={focused ? colors.textPrimary : colors.textSecondary} size={26} filled={focused} cut={light ? "#FFFFFF" : "#18181C"} />
               </View>
               )}
-              <Text style={{fontSize:9,lineHeight:13,color:focused?colors.textPrimary:colors.textSecondary,marginTop:route.name==='index'?4:0}}>{route.name==='bookings'?'Visits':route.name==='catalogue'?'Services':route.name==='index'?'Home':route.name==='garage'?'Garage':'You'}</Text>
+              {route.name==='index'?null:<Text style={{fontSize:9,lineHeight:13,color:focused?colors.textPrimary:colors.textSecondary}}>{route.name==='bookings'?'Visits':route.name==='catalogue'?'Services':route.name==='garage'?'Garage':'You'}</Text>}
             </Pressable>
           );
         })}

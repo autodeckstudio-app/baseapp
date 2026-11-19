@@ -13,7 +13,14 @@ export interface MembershipPlan {
   includedWashes: number;
   discountPercent: number; // applied to non-wash-eligible services
   freePickups?: number; // pickup and drop requests per month whose fee is waived. Missing = 0
+  includedInteriorRefreshes?: number; // interior refreshes per month (vacuuming, dashboard/door-panel wipe, interior glass). Missing = 0
   prioritySlot?: boolean; // member gets the priority slot. Missing = false
+  // Services this plan's included washes cover. Present = ONLY these services consume a wash,
+  // and the global Service.membershipWashEligible flag no longer decides for purchases under
+  // this plan. Missing = legacy behavior: any service with membershipWashEligible=true qualifies.
+  // Snapshotted onto the Membership at purchase so a bought entitlement stays stable under
+  // later global flag edits.
+  washServiceIds?: string[];
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -33,6 +40,10 @@ export interface Membership {
   pickupsTotal?: number; // snapshot of plan.freePickups. Missing = 0
   pickupsUsed?: number;
   prioritySlot?: boolean; // snapshot of plan.prioritySlot
+  // Snapshot of plan.washServiceIds. Present = only these services consume a wash, regardless
+  // of the global service flag. Missing = legacy behavior (Service.membershipWashEligible decides),
+  // preserving entitlements of memberships bought before plan-level binding existed.
+  washServiceIds?: string[];
   startDate: string | null; // ISO date
   endDate: string | null; // ISO date
   activatedAt: string | null;

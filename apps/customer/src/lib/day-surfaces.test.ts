@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 const read = (f: string) => readFileSync(`${__dirname}/../${f}`, "utf8");
 
 describe("Day surfaces are never the night colour", () => {
-  it('approved pale card and ground stay in the light colour family',()=>{expect(read('lib/customer-glacier.ts')).toContain("canvas:'#edf1f5'");expect(read('lib/customer-glacier.ts')).toContain("surface:'#f7f9fb'");expect(read('lib/raised.ts')).toContain('backgroundColor: c.surface')});
+  it('approved pale card and ground stay in the light colour family',()=>{expect(read('lib/customer-glacier.ts')).toContain("canvas:'#ffffff'");expect(read('lib/customer-glacier.ts')).toContain("surface:'#f7f9fb'");expect(read('lib/raised.ts')).toContain('backgroundColor: c.surface')});
   it("glassPane delegates to the customer mode-aware material",()=>{
     expect(read("lib/glass-pane.ts")).toContain("raised(light?'light':'night').card");
     expect(read("lib/raised.ts")).toContain("backgroundColor: c.surface");

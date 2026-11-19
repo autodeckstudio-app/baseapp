@@ -227,7 +227,7 @@ it("Garage last service and the service reminder count delivered visits only", (
 });
 
 describe("Home hero stage", () => {
-  it('approved Home retains the photographic service hero with compact canonical car context',()=>{const s=read('src/ui/HomeOriginalTop.tsx');expect(s).toContain('height:260');expect(s).toContain('<HomeOwnedCars p={p}/>');expect(s.indexOf('{p.stories}')).toBeLessThan(s.indexOf('accessibilityLabel="Explore services"'));expect(read('src/ui/HomeScene.tsx')).toContain('testID="home-state-dock"')});
+  it('approved Home retains the photographic service hero with compact canonical car context',()=>{const s=read('src/ui/HomeOriginalTop.tsx');expect(s).toContain('height:170');expect(s).toContain('<HomeOwnedCars p={p}/>');expect(s.indexOf('{p.stories}')).toBeLessThan(s.indexOf('accessibilityLabel="Explore services"'));expect(read('src/ui/HomeScene.tsx')).toContain('testID="home-state-dock"')});
   it("Home keeps orange to small highlights: no orange kicker or orange text links", () => {
     const home = read("src/ui/HomeView.tsx");
     expect(home).not.toMatch(/colors\.accentStrong, fontSize: 14, fontWeight: "600"/);
@@ -262,7 +262,7 @@ describe("home cars", () => {
   it("shows each car once: no tripled looping list", () => {
     expect(read("src/ui/HomeView.tsx")).not.toContain("[...cars, ...cars, ...cars]");
   });
-  it('approved pale surfaces have soft raised depth',()=>{expect(read('src/lib/raised.ts')).toContain('backgroundColor: c.surface');expect(read('src/lib/customer-glacier.ts')).toContain("canvas:'#edf1f5'")});
+  it('approved pale surfaces have soft raised depth',()=>{expect(read('src/lib/raised.ts')).toContain('backgroundColor: c.surface');expect(read('src/lib/customer-glacier.ts')).toContain("canvas:'#ffffff'")});
 });
 
 describe("home menu", () => {

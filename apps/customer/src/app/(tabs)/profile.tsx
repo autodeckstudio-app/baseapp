@@ -25,6 +25,8 @@ import { glassPane } from "../../lib/glass-pane";
 import { metrics } from "../../lib/metrics";
 import { Button, Field, Kicker, Loading, Notice, PageHeader, Pane, Screen, T } from "../../ui/kit";
 
+const THEME_FONT = "Inter, system-ui, sans-serif";
+
 export default function YouScreen() {
   const { colors, name: themeName } = useExperienceTheme();
   const auth = useAuth();
@@ -110,7 +112,7 @@ export default function YouScreen() {
             const on = pref === m;
             return (
               <Pressable key={m} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => { setThemePref(m); setPref(m); }} style={{ flex: 1, flexBasis: 0, height: 40, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: on ? (light ? "#16181C" : "#4a596b") : "transparent" }}>
-                <Text style={{ color: on ? (light ? "#F4F1EC" : "#F5EDE2") : colors.textSecondary, fontSize: 14, fontWeight: "700" }}>{m === "auto" ? "Auto" : m === "light" ? "Day" : "Night"}</Text>
+                <Text style={{ fontFamily: THEME_FONT, color: on ? (light ? "#F4F1EC" : "#F5EDE2") : colors.textSecondary, fontSize: 14, fontWeight: "700" }}>{m === "auto" ? "Auto" : m === "light" ? "Day" : "Night"}</Text>
               </Pressable>
             );
           })}
@@ -140,8 +142,8 @@ export default function YouScreen() {
           </View>
         ) : (
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 6 }}>
-            <Pressable accessibilityRole="button" onPress={() => setConfirm(true)} style={{ minHeight: 44, justifyContent: "center" }}><Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{t("Sign out")}</Text></Pressable>
-            <Pressable accessibilityRole="button" onPress={() => setDelStep("ask")} style={{ minHeight: 44, justifyContent: "center" }}><Text style={{ color: colors.textSecondary, fontSize: 13 }}>Delete my account</Text></Pressable>
+            <Pressable accessibilityRole="button" onPress={() => setConfirm(true)} style={{ minHeight: 44, justifyContent: "center" }}><Text style={{ fontFamily: THEME_FONT, color: colors.textPrimary, fontSize: 15, lineHeight: 22, fontWeight: "500" }}>{t("Sign out")}</Text></Pressable>
+            <Pressable accessibilityRole="button" onPress={() => setDelStep("ask")} style={{ minHeight: 44, justifyContent: "center" }}><Text style={{ fontFamily: THEME_FONT, color: colors.textSecondary, fontSize: 12, lineHeight: 16 }}>Delete my account</Text></Pressable>
           </View>
         )}
       </View>
