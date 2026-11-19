@@ -82,6 +82,8 @@ export { activateMembership } from "./functions/membership/activateMembership.js
 export { cancelMembership } from "./functions/membership/cancelMembership.js";
 export { getMyMemberships } from "./functions/membership/getMyMemberships.js";
 export { getMembershipUsage } from "./functions/membership/getMembershipUsage.js";
+export { recordMembershipRefresh } from "./functions/membership/recordMembershipRefresh.js";
+export { restoreMembershipRefresh } from "./functions/membership/restoreMembershipRefresh.js";
 export { expireStaleMemberships } from "./functions/membership/expireStaleMemberships.js";
 export { expirePendingBookingsScheduled } from "./functions/booking/expirePendingBookingsScheduled.js";
 export { expireStalePendingMembershipsScheduled } from "./functions/membership/expireStalePendingMembershipsScheduled.js";

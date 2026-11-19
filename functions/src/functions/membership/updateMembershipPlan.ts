@@ -40,6 +40,7 @@ export const updateMembershipPlan = onCall({ region: "asia-south1", enforceAppCh
 
     if (data.freePickups !== undefined && data.freePickups !== null) updates["freePickups"] = data.freePickups;
     if (data.prioritySlot !== undefined && data.prioritySlot !== null) updates["prioritySlot"] = data.prioritySlot;
+    if (data.includedInteriorRefreshes !== undefined && data.includedInteriorRefreshes !== null) updates["includedInteriorRefreshes"] = data.includedInteriorRefreshes;
 
     tx.update(ref, updates);
     writeAuditLog(tx, {
@@ -55,6 +56,7 @@ export const updateMembershipPlan = onCall({ region: "asia-south1", enforceAppCh
         discountPercent: existing.discountPercent,
         freePickups: existing.freePickups ?? 0,
         prioritySlot: existing.prioritySlot ?? false,
+        includedInteriorRefreshes: existing.includedInteriorRefreshes ?? 0,
       },
       after: updates,
     });

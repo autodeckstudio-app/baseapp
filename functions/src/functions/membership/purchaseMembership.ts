@@ -135,6 +135,8 @@ export const purchaseMembership = onCall(
       pickupsTotal: plan.freePickups ?? 0,
       pickupsUsed: 0,
       prioritySlot: plan.prioritySlot ?? false,
+      refreshesTotal: plan.includedInteriorRefreshes ?? 0,
+      refreshesUsed: 0,
       startDate: null,
       endDate: null,
       activatedAt: null,

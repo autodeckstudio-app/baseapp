@@ -97,6 +97,8 @@ export const createWalkinMembership = onCall({ region: "asia-south1" , enforceAp
       pickupsTotal: plan.freePickups ?? 0,
       pickupsUsed: 0,
       prioritySlot: plan.prioritySlot ?? false,
+      refreshesTotal: plan.includedInteriorRefreshes ?? 0,
+      refreshesUsed: 0,
       startDate: upiClaim ? null : startDate,
       endDate: upiClaim ? null : endDate,
       activatedAt: upiClaim ? null : nowIso,

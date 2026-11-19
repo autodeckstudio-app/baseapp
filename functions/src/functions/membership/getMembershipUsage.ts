@@ -2,7 +2,11 @@ import { assertMembershipIdentityCompatible } from "../../lib/membership-identit
 import { requireCustomerDocId } from "../../lib/customer-identity.js";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import type { Membership, MembershipUsage } from "@autodeck/core";
+import type {
+  Membership,
+  MembershipRefreshUsage,
+  MembershipUsage,
+} from "@autodeck/core";
 import { COLLECTIONS, SUBCOLLECTIONS } from "@autodeck/database";
 import { extractUser, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -63,8 +67,15 @@ export const getMembershipUsage = onCall(
       .collection(SUBCOLLECTIONS.membershipUsage(data.membershipId))
       .orderBy("usedAt", "desc")
       .get();
+    // Interior refresh records live in their own subcollection (see
+    // MembershipRefreshUsage); returned alongside, never merged into `usage`.
+    const refreshSnap = await db
+      .collection(SUBCOLLECTIONS.membershipRefreshUsage(data.membershipId))
+      .orderBy("usedAt", "desc")
+      .get();
 
     const usage = snap.docs.map((doc) => doc.data() as MembershipUsage);
-    return { usage };
+    const refreshUsage = refreshSnap.docs.map((doc) => doc.data() as MembershipRefreshUsage);
+    return { usage, refreshUsage };
   },
 );

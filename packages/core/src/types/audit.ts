@@ -64,6 +64,8 @@ export type AuditAction =
   | "membership.activated"
   | "membership.cancelled"
   | "membership.wash_used"
+  | "membership.refresh_used"
+  | "membership.refresh_restored"
   | "membership.discount_applied"
   | "membership.wash_restored"
   | "membership.restored"

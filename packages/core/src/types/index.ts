@@ -40,6 +40,7 @@ export type {
   MembershipUsage,
   MembershipTier,
   MembershipStatus,
+  MembershipRefreshUsage,
 } from "./membership.js";
 export type { AuditLog, AuditAction } from "./audit.js";
 export type { Warranty } from "./warranty.js";

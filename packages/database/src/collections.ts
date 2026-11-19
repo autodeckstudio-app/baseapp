@@ -102,6 +102,8 @@ export const COLLECTIONS = {
 // Subcollection paths
 export const SUBCOLLECTIONS = {
   membershipUsage: (membershipId: string) => `memberships/${membershipId}/usage`,
+  // Interior refresh records live apart from `usage`: see MembershipRefreshUsage.
+  membershipRefreshUsage: (membershipId: string) => `memberships/${membershipId}/refreshUsage`,
   // jobPhotos: deferred capability (Phase 3F/3H audit) — job.statusHistory[]
   // is the embedded-array successor to the old jobStatusHistory subcollection
   // design, which has been removed; jobPhotos has no superseding mechanism

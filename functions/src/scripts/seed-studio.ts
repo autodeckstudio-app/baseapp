@@ -74,18 +74,21 @@ const studioConfig: Omit<StudioConfig, "updatedAt"> = {
   ],
 };
 
-// Club structure from the 17 Oct 2026 owner chat (comment is a note, not authority; no % discounts in this version).
-// Every plan is Rs 900 per wash. Free pickups waive the whole pickup fee (flat and per km); one pickup request uses one.
-//   Starter Rs 1,800 = 2 washes, no pickup
-//   Silver Rs 3,600 = 4 washes + 1 free pickup
-//   Gold Rs 5,400 = 6 washes + 3 free pickups
-//   Platinum Rs 9,000 = 10 washes + 5 free pickups + priority slot
+// Club structure approved by the owner 18 Nov 2026 and kept 19 Nov against the Rs600
+// Regular Wash basis (supersedes the 17 Oct 2026 ladder; comment is a note, not authority;
+// no % discounts in this version).
+// Free pickups waive the whole pickup fee (flat and per km); one pickup request uses one.
+//   Starter Rs 900 = 2 washes, no pickup
+//   Silver Rs 1,700 = 4 washes + 1 free pickup
+//   Gold Rs 2,400 = 6 washes + 2 free pickups
+//   Platinum Rs 3,000 = 8 washes + 3 free pickups + priority slot + 1 interior refresh
+// All member washes are Regular Wash; plans run one month, no rollover.
 // The live plans are data: change them in the admin Memberships page. Monthly (MEMBERSHIP_DURATION_DAYS = 30).
-const PLANS: Array<{ id: string; tier: MembershipTier; name: string; priceInPaise: number; includedWashes: number; discountPercent: number; freePickups: number; prioritySlot: boolean }> = [
-  { id: "plan-starter", tier: "starter", name: "Starter", priceInPaise: 1800_00, includedWashes: 2, discountPercent: 0, freePickups: 0, prioritySlot: false },
-  { id: "plan-silver", tier: "silver", name: "Silver", priceInPaise: 3600_00, includedWashes: 4, discountPercent: 0, freePickups: 1, prioritySlot: false },
-  { id: "plan-gold", tier: "gold", name: "Gold", priceInPaise: 5400_00, includedWashes: 6, discountPercent: 0, freePickups: 3, prioritySlot: false },
-  { id: "plan-platinum", tier: "platinum", name: "Platinum", priceInPaise: 9000_00, includedWashes: 10, discountPercent: 0, freePickups: 5, prioritySlot: true },
+const PLANS: Array<{ id: string; tier: MembershipTier; name: string; priceInPaise: number; includedWashes: number; discountPercent: number; freePickups: number; prioritySlot: boolean; includedInteriorRefreshes: number }> = [
+  { id: "plan-starter", tier: "starter", name: "Starter", priceInPaise: 900_00, includedWashes: 2, discountPercent: 0, freePickups: 0, prioritySlot: false, includedInteriorRefreshes: 0 },
+  { id: "plan-silver", tier: "silver", name: "Silver", priceInPaise: 1700_00, includedWashes: 4, discountPercent: 0, freePickups: 1, prioritySlot: false, includedInteriorRefreshes: 0 },
+  { id: "plan-gold", tier: "gold", name: "Gold", priceInPaise: 2400_00, includedWashes: 6, discountPercent: 0, freePickups: 2, prioritySlot: false, includedInteriorRefreshes: 0 },
+  { id: "plan-platinum", tier: "platinum", name: "Platinum", priceInPaise: 3000_00, includedWashes: 8, discountPercent: 0, freePickups: 3, prioritySlot: true, includedInteriorRefreshes: 1 },
 ];
 
 async function seedStudio(): Promise<void> {
@@ -127,6 +130,7 @@ async function seedPlans(): Promise<void> {
       discountPercent: p.discountPercent,
       freePickups: p.freePickups,
       prioritySlot: p.prioritySlot,
+      includedInteriorRefreshes: p.includedInteriorRefreshes,
       active: true,
       createdAt: now,
       updatedAt: now,

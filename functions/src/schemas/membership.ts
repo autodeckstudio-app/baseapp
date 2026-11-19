@@ -10,6 +10,7 @@ export const createMembershipPlanSchema = z.object({
   discountPercent: z.number().int().min(0).max(100),
   freePickups: z.number().int().min(0).max(31).nullish(),
   prioritySlot: z.boolean().nullish(),
+  includedInteriorRefreshes: z.number().int().min(0).max(31).nullish(),
 }).strict();
 
 // Optional fields are .nullish() not .optional(): the Firebase JS callable
@@ -25,6 +26,7 @@ export const updateMembershipPlanSchema = z.object({
   discountPercent: z.number().int().min(0).max(100).nullish(),
   freePickups: z.number().int().min(0).max(31).nullish(),
   prioritySlot: z.boolean().nullish(),
+  includedInteriorRefreshes: z.number().int().min(0).max(31).nullish(),
 }).strict();
 
 export const setMembershipPlanActiveSchema = z.object({
@@ -65,6 +67,19 @@ export const getMembershipUsageSchema = z.object({
 
 export const expireStaleMembershipsSchema = z.object({}).strict();
 
+// One interior refresh per visit job: the (membershipId, jobId) pair is the
+// idempotency key, so no separate key is needed.
+export const recordMembershipRefreshSchema = z.object({
+  membershipId: z.string().min(1),
+  jobId: z.string().min(1),
+}).strict();
+
+export const restoreMembershipRefreshSchema = z.object({
+  membershipId: z.string().min(1),
+  refreshUsageId: z.string().min(1),
+  reason: z.string().min(1).max(500),
+}).strict();
+
 export const confirmMembershipPaymentSchema = z.object({
   membershipId: z.string().min(1),
   method: z.enum(["cash", "upi_manual", "bank_transfer"]),
@@ -88,3 +103,5 @@ export type GetMyMembershipsInput = z.infer<typeof getMyMembershipsSchema>;
 export type GetMembershipUsageInput = z.infer<typeof getMembershipUsageSchema>;
 export type ConfirmMembershipPaymentInput = z.infer<typeof confirmMembershipPaymentSchema>;
 export type CreateWalkinMembershipInput = z.infer<typeof createWalkinMembershipSchema>;
+export type RecordMembershipRefreshInput = z.infer<typeof recordMembershipRefreshSchema>;
+export type RestoreMembershipRefreshInput = z.infer<typeof restoreMembershipRefreshSchema>;

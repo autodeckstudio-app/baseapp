@@ -52,6 +52,8 @@ export type RateLimitAction =
   | "membership.planCreate"
   | "membership.planUpdate"
   | "membership.planSetActive"
+  | "membership.refreshRecord"
+  | "membership.refreshRestore"
   | "service.create"
   | "service.update"
   | "service.setActive"
@@ -195,6 +197,8 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "membership.planCreate": { limit: 30, windowMs: 60_000 },
   "membership.planUpdate": { limit: 60, windowMs: 60_000 },
   "membership.planSetActive": { limit: 60, windowMs: 60_000 },
+  "membership.refreshRecord": { limit: 30, windowMs: 60_000 },
+  "membership.refreshRestore": { limit: 30, windowMs: 60_000 },
   "vehicle.photoUpload": { limit: 20, windowMs: 60_000 },
   "customer.licenseUpload": { limit: 20, windowMs: 60_000 },
   "booking.review": { limit: 10, windowMs: 60_000 },
