@@ -1,0 +1,1 @@
+import{initializeApp}from 'firebase-admin/app';initializeApp();export{catalogueSheetPanelBridge}from './functions/service/cataloguePanel.js';
