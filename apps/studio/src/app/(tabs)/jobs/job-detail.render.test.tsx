@@ -22,12 +22,17 @@ vi.mock("expo-router", () => ({
 }));
 
 type Snap = { exists: () => boolean; data: () => unknown };
+const bookingDocs = vi.hoisted(() => ({ map: new Map<string, { exists: () => boolean; data: () => unknown }>() }));
+const membershipRead = vi.hoisted(() => ({ getCustomerMembership: vi.fn(async () => null as any) }));
 const bookingErrors=new Map<string,()=>void>();
 const bookingListeners = new Map<string, (s: Snap) => void>();
 const jobListeners = new Map<string, (s: Snap) => void>();
 vi.mock("firebase/firestore", () => ({
   doc: (_db: unknown, ...parts: string[]) => ({ parts }),
-  getDoc: async () => ({ exists: () => false, data: () => undefined }),
+  getDoc: async (ref: { parts?: string[] }) =>
+    ref.parts?.[0] === "bookings" && ref.parts[1] && bookingDocs.map.has(ref.parts[1])
+      ? bookingDocs.map.get(ref.parts[1])
+      : { exists: () => false, data: () => undefined },
   onSnapshot: (ref: { parts?: string[] }, cb: (s: Snap) => void,err?:()=>void) => {
     if (ref.parts && ref.parts[0] === "jobs" && ref.parts[1]) jobListeners.set(ref.parts[1], cb);
     if(ref.parts?.[0] === "bookings") {bookingListeners.set(ref.parts[1]!,cb);if(err)bookingErrors.set(ref.parts[1]!,err);}
@@ -77,7 +82,7 @@ vi.mock("../../../lib/payment-service", () => ({
   },
   listenToInvoiceForJob: () => () => {},
 }));
-vi.mock("../../../lib/membership-service", () => ({ getCustomerMembership: async () => null }));
+vi.mock("../../../lib/membership-service", () => ({ getCustomerMembership: membershipRead.getCustomerMembership }));
 vi.mock("../../../lib/approval-service", () => ({
   createApproval: vi.fn(),
   cancelApproval: vi.fn(),
@@ -610,3 +615,41 @@ it('a new cash hold kills an armed counter confirmation and old callbacks cannot
 it('one Send to quality check click binds the displayed job version and never advances Ready implicitly',async()=>{advanceJobStatus.mockResolvedValue({newStatus:'QUALITY_CHECK'});let el:any;await act(async()=>{el=create(createElement(JobDetailScreen))});emitJob('jA',mkJob('jA',{status:'IN_PROGRESS',updatedAt:'stage-v2'}));await flush();press(el,'Send to quality check');await flush();expect(advanceJobStatus).toHaveBeenCalledTimes(1);expect(advanceJobStatus.mock.calls[0]![6]).toEqual({expectedStatus:'IN_PROGRESS',expectedUpdatedAt:'stage-v2',operationId:'IN_PROGRESS:stage-v2:forward'});await act(async()=>el.unmount())});
 
 it('bay source distinguishes loaded unassigned, exact reservation, missing bay and unavailable config',async()=>{getStudioConfig.mockResolvedValue({tenantId:'t',bays:[{id:'wash',name:'Wash Bay 1',active:true,bayType:'wash'}]});let el:any;await act(async()=>{el=create(createElement(JobDetailScreen))});emitJob('jA',mkJob('jA',{bayId:''}));await flush();expect(textOf(el)).toContain('No bay assigned');expect(textOf(el)).not.toContain('Loading bay');emitJob('jA',mkJob('jA',{bayId:'wash'}));await flush();expect(textOf(el)).toContain('Wash Bay 1');emitJob('jA',mkJob('jA',{bayId:'removed'}));await flush();expect(textOf(el)).toContain('Bay needs review');getStudioConfig.mockRejectedValue(Error('unavailable'));emitJob('jA',mkJob('jA',{studioId:'s2',bayId:'wash'}));await flush();expect(textOf(el)).toContain('Bay unavailable');expect(textOf(el)).not.toContain('Wash Bay 1');await act(async()=>el.unmount())});
+
+it('membership badge and refresh panel follow the current job and clear when it has no membership', async () => {
+  membershipRead.getCustomerMembership.mockResolvedValue({ id: 'm1', tier: 'platinum', status: 'active', endDate: '2099-01-01', refreshesTotal: 1, refreshesUsed: 0 });
+  bookingDocs.map.set('bA', { exists: () => true, data: () => ({ membershipId: 'm1', membershipWashUsed: false, membershipDiscountApplied: false }) });
+  bookingDocs.map.set('bB', { exists: () => true, data: () => ({}) });
+  let el: any;
+  await act(async () => { el = create(createElement(JobDetailScreen)); });
+  emitJob('jA', mkJob('jA', { bookingId: 'bA', customerId: 'cA' }));
+  await flush();
+  expect(textOf(el)).toContain('platinum member');
+  expect(textOf(el)).toContain('Interior refresh: 0 of 1 used');
+  emitJob('jA', mkJob('jA', { bookingId: 'bB', customerId: 'cB' }));
+  await flush();
+  expect(textOf(el)).not.toContain('platinum member');
+  expect(textOf(el)).not.toContain('Interior refresh');
+  membershipRead.getCustomerMembership.mockReset();
+  bookingDocs.map.clear();
+  await act(async () => el.unmount());
+});
+
+it('a late membership read from a previous booking never lands on the new job view', async () => {
+  let resolveMembership: (m: unknown) => void = () => {};
+  membershipRead.getCustomerMembership.mockImplementationOnce(() => new Promise((r) => { resolveMembership = r; }));
+  bookingDocs.map.set('bA', { exists: () => true, data: () => ({ membershipId: 'm1', membershipWashUsed: false, membershipDiscountApplied: false }) });
+  bookingDocs.map.set('bB', { exists: () => true, data: () => ({}) });
+  let el: any;
+  await act(async () => { el = create(createElement(JobDetailScreen)); });
+  emitJob('jA', mkJob('jA', { bookingId: 'bA', customerId: 'cA' }));
+  await flush();
+  emitJob('jA', mkJob('jA', { bookingId: 'bB', customerId: 'cB' }));
+  await flush();
+  act(() => resolveMembership({ id: 'm1', tier: 'platinum', status: 'active', endDate: '2099-01-01', refreshesTotal: 1, refreshesUsed: 0 }));
+  await flush();
+  expect(textOf(el)).not.toContain('platinum member');
+  expect(textOf(el)).not.toContain('Interior refresh');
+  bookingDocs.map.clear();
+  await act(async () => el.unmount());
+});

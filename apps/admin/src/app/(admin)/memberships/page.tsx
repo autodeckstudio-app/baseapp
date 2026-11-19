@@ -268,7 +268,7 @@ function WalkinSale({ tenantId, plans, onChanged }: { tenantId: string; plans: M
   );
 }
 
-function RefreshUsagePanel({ membershipId }: { membershipId: string }) {
+export function RefreshUsagePanel({ membershipId }: { membershipId: string }) {
   const [rows, setRows] = useState<MembershipRefreshUsage[] | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -316,7 +316,7 @@ function RefreshUsagePanel({ membershipId }: { membershipId: string }) {
   );
 }
 
-function MembersPanel({ members, plans }: { members: Membership[]; plans: MembershipPlan[] }) {
+export function MembersPanel({ members, plans }: { members: Membership[]; plans: MembershipPlan[] }) {
   const names = useLabels(COLLECTIONS.customers(), members.map((m) => m.customerId), (d) => (d as Customer).name || (d as Customer).phone || "Customer");
   const planName = Object.fromEntries(plans.map((p) => [p.id, p.name]));
   const priceOf = Object.fromEntries(plans.map((p) => [p.id, p.priceInPaise]));

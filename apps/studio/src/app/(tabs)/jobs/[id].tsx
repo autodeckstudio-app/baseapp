@@ -20,6 +20,7 @@ import { claimUpiPayment } from "../../../lib/payment-service";
 import { RecordPaymentFields } from "../../../components/RecordPaymentFields";
 import { membershipCoveredLabel } from "../../../lib/membership-covered-label";
 import { refreshVisitState } from "../../../lib/membership-refresh";
+import { RefreshBenefitPanel } from "../../../components/RefreshBenefitPanel";
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
 import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
@@ -240,40 +241,45 @@ export default function JobDetailScreen() {
   }, [bookingKey]);
 
   // Read-only membership status for this job's booking (if any) — studio can
-  // see it but has no authority to alter it (doc08 §8.2).
+  // see it but has no authority to alter it (doc08 §8.2). Keyed on the whole
+  // job/customer/booking identity: a late read from an earlier job must never
+  // write the previous customer's membership into this view, and a job whose
+  // booking has no membership must not inherit the previous job's badge.
   useEffect(() => {
-    if (!job?.bookingId) {
-      setBookingMembership(null);
-      return;
-    }
+    setBookingMembership(null);
+    if (!job?.bookingId || !job.customerId) return;
+    let alive = true;
     void (async () => {
       const freshBookingSnap = await getDoc(doc(db, COLLECTIONS.bookings(), job.bookingId as string));
-      if (!freshBookingSnap.exists()) return;
+      if (!alive || !freshBookingSnap.exists()) return;
       const membershipBooking = freshBookingSnap.data() as Booking;
       if (!membershipBooking.membershipId) return;
       const membership = await getCustomerMembership(job.customerId, membershipBooking.membershipId);
-      if (membership) {
-        // Interior refresh readout: the balance rides on the membership doc;
-        // this visit's record comes from the separate refresh usage list.
-        let refresh: { used: number; total: number; recordedRowId: string | null } | null = null;
-        const refreshTotal = membership.refreshesTotal ?? 0;
-        if (refreshTotal > 0) {
-          refresh = { used: membership.refreshesUsed ?? 0, total: refreshTotal, recordedRowId: null };
-          try {
-            const usageResult = await httpsCallable<{ membershipId: string }, { refreshUsage?: { id: string; jobId: string; restoredAt: string | null }[] }>(functions, "getMembershipUsage")({ membershipId: membership.id });
-            const live = (usageResult.data.refreshUsage ?? []).find((r) => r.jobId === job.id && !r.restoredAt);
-            if (live) refresh.recordedRowId = live.id;
-          } catch { /* the doc balance still renders without the visit record */ }
-        }
-        setBookingMembership({
-          membership,
-          washUsed: membershipBooking.membershipWashUsed,
-          discountApplied: membershipBooking.membershipDiscountApplied,
-          refresh,
-        });
+      if (!alive || !membership) return;
+      // Interior refresh readout: the balance rides on the membership doc;
+      // this visit's record comes from the separate refresh usage list.
+      let refresh: { used: number; total: number; recordedRowId: string | null } | null = null;
+      const refreshTotal = membership.refreshesTotal ?? 0;
+      if (refreshTotal > 0) {
+        refresh = { used: membership.refreshesUsed ?? 0, total: refreshTotal, recordedRowId: null };
+        try {
+          const usageResult = await httpsCallable<{ membershipId: string }, { refreshUsage?: { id: string; jobId: string; restoredAt: string | null }[] }>(functions, "getMembershipUsage")({ membershipId: membership.id });
+          const live = (usageResult.data.refreshUsage ?? []).find((r) => r.jobId === job.id && !r.restoredAt);
+          if (live) refresh.recordedRowId = live.id;
+        } catch { /* the doc balance still renders without the visit record */ }
       }
-    })();
-  }, [job?.id]);
+      if (!alive) return;
+      setBookingMembership({
+        membership,
+        washUsed: membershipBooking.membershipWashUsed,
+        discountApplied: membershipBooking.membershipDiscountApplied,
+        refresh,
+      });
+    })().catch(() => {
+      if (alive) setBookingMembership(null);
+    });
+    return () => { alive = false; };
+  }, [job?.id, job?.tenantId, job?.customerId, job?.bookingId]);
 
   // Live update: studio sees the customer's approve/reject decision the
   // moment it happens, via the same real-time listener pattern as
@@ -294,22 +300,34 @@ export default function JobDetailScreen() {
     return listenToInspection(job.id, setInspection, () => undefined);
   }, [job?.id]);
 
+  // Current job identity for in-flight action responses: an answer that
+  // lands after the view moved to another job belongs to the old job.
+  const jobIdRef = useRef<string | undefined>(undefined);
+  jobIdRef.current = job?.id;
+
   // Staff action for the Platinum interior refresh benefit: one record per
   // visit job, idempotent on the backend (replay returns the same row).
   async function handleRecordRefresh() {
     if (!job || !bookingMembership?.refresh || recordingRefresh) return;
+    const jobId = job.id;
+    const membershipId = bookingMembership.membership.id;
     setActionError(null);
     setRecordingRefresh(true);
     try {
       const res = await httpsCallable<
         { membershipId: string; jobId: string },
         { refreshUsageId: string; refreshesUsed: number }
-      >(functions, "recordMembershipRefresh")({ membershipId: bookingMembership.membership.id, jobId: job.id });
-      setBookingMembership({
-        ...bookingMembership,
-        refresh: { ...bookingMembership.refresh, used: res.data.refreshesUsed, recordedRowId: res.data.refreshUsageId },
-      });
+      >(functions, "recordMembershipRefresh")({ membershipId, jobId });
+      // The job may have changed under the in-flight action; never write the
+      // response into another job's view.
+      if (jobIdRef.current !== jobId) return;
+      setBookingMembership((prev) =>
+        prev && prev.membership.id === membershipId && prev.refresh
+          ? { ...prev, refresh: { ...prev.refresh, used: res.data.refreshesUsed, recordedRowId: res.data.refreshUsageId } }
+          : prev,
+      );
     } catch (e) {
+      if (jobIdRef.current !== jobId) return;
       setActionError(e instanceof Error ? e.message : "Could not record the interior refresh.");
     } finally {
       setRecordingRefresh(false);
@@ -677,38 +695,15 @@ export default function JobDetailScreen() {
         </View>
       )}
 
-      {bookingMembership?.refresh ? (() => {
-        const state = refreshVisitState(bookingMembership.membership, job, bookingMembership.refresh.recordedRowId);
-        if (state === "unavailable") return null;
-        return (
-        <View
-          style={{
-            backgroundColor: colors.accentMuted,
-            borderRadius: radius.lg,
-            padding: spacing.md,
-            marginBottom: spacing.lg,
-            gap: spacing.xs,
-          }}
-        >
-          <Text style={{ ...typography.caption, color: colors.accentPressed }}>
-            Interior refresh: {bookingMembership.refresh.used} of {bookingMembership.refresh.total} used
-          </Text>
-          {state === "recorded" ? (
-            <Text style={{ ...typography.caption, color: colors.textMuted }}>Recorded for this visit.</Text>
-          ) : state === "recordable" ? (
-            <Button
-              label="Record interior refresh"
-              accessibilityLabel="Record the included interior refresh for this visit"
-              variant="secondary"
-              loading={recordingRefresh}
-              onPress={() => void handleRecordRefresh()}
-            />
-          ) : (
-            <Text style={{ ...typography.caption, color: colors.textMuted }}>All refreshes used this term.</Text>
-          )}
-        </View>
-        );
-      })() : null}
+      {bookingMembership?.refresh ? (
+        <RefreshBenefitPanel
+          used={bookingMembership.refresh.used}
+          total={bookingMembership.refresh.total}
+          state={refreshVisitState(bookingMembership.membership, job, bookingMembership.refresh.recordedRowId)}
+          recording={recordingRefresh}
+          onRecord={() => void handleRecordRefresh()}
+        />
+      ) : null}
 
       {job.statusHistory.length?<><Text style={sectionTitle}>Job stage history</Text>
       <Section>

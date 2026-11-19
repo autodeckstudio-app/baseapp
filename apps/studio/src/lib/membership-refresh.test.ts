@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { refreshVisitState } from "./membership-refresh";
 
-const active = { status: "active" as const, refreshesTotal: 1, refreshesUsed: 0 };
+const active = { status: "active" as const, endDate: "2099-01-01", refreshesTotal: 1, refreshesUsed: 0 };
 const job = { status: "IN_PROGRESS" as const };
 
 describe("refreshVisitState", () => {
   it("plan without the benefit never offers it", () => {
-    expect(refreshVisitState({ status: "active", refreshesTotal: 0, refreshesUsed: 0 }, job, null)).toBe("unavailable");
-    expect(refreshVisitState({ status: "active" }, job, null)).toBe("unavailable");
+    expect(refreshVisitState({ status: "active" as const, endDate: "2099-01-01", refreshesTotal: 0, refreshesUsed: 0 }, job, null)).toBe("unavailable");
+    expect(refreshVisitState({ status: "active" as const, endDate: null }, job, null)).toBe("unavailable");
   });
 
   it("an active membership with credit is recordable", () => {
@@ -25,5 +25,13 @@ describe("refreshVisitState", () => {
   it("inactive membership or cancelled job is never recordable", () => {
     expect(refreshVisitState({ ...active, status: "expired" as const }, job, null)).toBe("unavailable");
     expect(refreshVisitState(active, { status: "CANCELLED" as const }, null)).toBe("unavailable");
+  });
+
+  it("stale-active membership past its endDate is never recordable (lazy-expiry parity)", () => {
+    const expired = { ...active, endDate: "2020-10-31" };
+    expect(refreshVisitState(expired, job, null, "2026-11-19")).toBe("unavailable");
+    const live = { ...active, endDate: "2026-12-01" };
+    expect(refreshVisitState(live, job, null, "2026-11-19")).toBe("recordable");
+    expect(refreshVisitState({ ...active, endDate: null }, job, null, "2026-11-19")).toBe("unavailable");
   });
 });

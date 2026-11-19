@@ -7,16 +7,21 @@ export type RefreshVisitState = "recorded" | "recordable" | "exhausted" | "unava
  * benefit on this visit. Recording authority itself is enforced by the
  * recordMembershipRefresh callable (studio/admin role, active non-expired
  * membership, idempotent per job); this is display logic only.
+ * Lazy-expiry parity with the backend: a stale-active plan past its endDate
+ * shows nothing recordable even before the sweeper runs.
  */
 export function refreshVisitState(
-  membership: Pick<Membership, "status" | "refreshesTotal" | "refreshesUsed">,
+  membership: Pick<Membership, "status" | "endDate" | "refreshesTotal" | "refreshesUsed">,
   job: Pick<ServiceJob, "status">,
   recordedRowId: string | null,
+  today: string = new Date().toISOString().slice(0, 10),
 ): RefreshVisitState {
   const total = membership.refreshesTotal ?? 0;
   const used = membership.refreshesUsed ?? 0;
   if (total <= 0) return "unavailable";
   if (recordedRowId) return "recorded";
-  if (membership.status !== "active" || job.status === "CANCELLED") return "unavailable";
+  if (membership.status !== "active" || !membership.endDate || membership.endDate < today)
+    return "unavailable";
+  if (job.status === "CANCELLED") return "unavailable";
   return used < total ? "recordable" : "exhausted";
 }
