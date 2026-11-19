@@ -16,7 +16,8 @@ export interface GiftPurchaseSlot { giftId: string; paymentId: string; amountPai
 export const GIFT_PURCHASE_REUSE_MS = 24 * 3_600_000;
 
 /** The slot's purchase can still be used: same price, fresh, and nothing has moved on. */
-export function slotReusable(slot: GiftPurchaseSlot, gift: Gift | undefined, payment: Payment | undefined, amountPaise: number, nowMs: number): boolean {
+export function slotReusable(slot: GiftPurchaseSlot, gift: Gift | undefined, payment: Payment | undefined, amountPaise: number, nowMs: number, serviceId = GIFT_SERVICE_ID): boolean {
+  if (gift?.serviceId !== serviceId) return false;
   if (slot.amountPaise !== amountPaise) return false;
   if (nowMs - Date.parse(slot.updatedAt) > GIFT_PURCHASE_REUSE_MS) return false;
   if (!gift || !payment) return false;
@@ -26,7 +27,7 @@ export function slotReusable(slot: GiftPurchaseSlot, gift: Gift | undefined, pay
 
 export interface GiftPurchaseStart { giftId: string; paymentId: string; amountPaise: number; reused: boolean }
 
-export async function createGiftPurchase(db: Firestore, user: AuthorizedUser, customerDocId: string, amountPaise: number): Promise<GiftPurchaseStart> {
+export async function createGiftPurchase(db: Firestore, user: AuthorizedUser, customerDocId: string, amountPaise: number, entitlement: {serviceId:string;serviceName?:string} = {serviceId:GIFT_SERVICE_ID}): Promise<GiftPurchaseStart> {
   const slotRef = db.collection(COLLECTIONS.giftPurchaseSlots()).doc(customerDocId);
   return db.runTransaction(async (tx) => {
     const nowMs = Date.now();
@@ -40,7 +41,7 @@ export async function createGiftPurchase(db: Firestore, user: AuthorizedUser, cu
       const paySnap = await tx.get(db.collection(COLLECTIONS.payments()).doc(slot.paymentId));
       const g = giftSnap.exists ? (giftSnap.data() as Gift) : undefined;
       const p = paySnap.exists ? (paySnap.data() as Payment) : undefined;
-      if (slotReusable(slot, g, p, amountPaise, nowMs)) {
+      if (g?.tenantId===user.claims.tenantId && g.buyerId===customerDocId && p?.tenantId===user.claims.tenantId && p.customerId===customerDocId && p.giftId===g.id && p.amount===amountPaise && slotReusable(slot, g, p, amountPaise, nowMs, entitlement.serviceId)) {
         return { giftId: g!.id, paymentId: p!.id, amountPaise, reused: true };
       }
     }
@@ -49,12 +50,12 @@ export async function createGiftPurchase(db: Firestore, user: AuthorizedUser, cu
     const recent = await tx.get(db.collection(COLLECTIONS.gifts()).where("buyerId", "==", customerDocId).limit(25));
     const candidates = recent.docs
       .map((d) => d.data() as Gift)
-      .filter((g) => g.status === "PENDING_PAYMENT" && g.amountPaise === amountPaise && nowMs - Date.parse(g.createdAt) <= GIFT_PURCHASE_REUSE_MS)
+      .filter((g) => g.tenantId === user.claims.tenantId && g.serviceId === entitlement.serviceId && g.status === "PENDING_PAYMENT" && g.amountPaise === amountPaise && nowMs - Date.parse(g.createdAt) <= GIFT_PURCHASE_REUSE_MS)
       .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
     for (const g of candidates) {
       const pq = await tx.get(db.collection(COLLECTIONS.payments()).where("giftId", "==", g.id).limit(1));
       const pay = pq.empty ? null : (pq.docs[0]!.data() as Payment);
-      if (pay && (pay.status === "pending" || pay.status === "processing")) {
+      if (pay && pay.tenantId===user.claims.tenantId && pay.customerId===customerDocId && pay.amount===amountPaise && (pay.status === "pending" || pay.status === "processing")) {
         tx.set(slotRef, { giftId: g.id, paymentId: pay.id, amountPaise, updatedAt: nowIso } satisfies GiftPurchaseSlot);
         return { giftId: g.id, paymentId: pay.id, amountPaise, reused: true };
       }
@@ -66,7 +67,7 @@ export async function createGiftPurchase(db: Firestore, user: AuthorizedUser, cu
     const ref = db.collection(COLLECTIONS.gifts()).doc();
     const payRef = db.collection(COLLECTIONS.payments()).doc();
     const gift: Gift = {
-      id: ref.id, tenantId: user.claims.tenantId, buyerId: customerDocId, serviceId: GIFT_SERVICE_ID, amountPaise, codeHash, codeTail: code.slice(-4),
+      id: ref.id, tenantId: user.claims.tenantId, buyerId: customerDocId, serviceId: entitlement.serviceId, ...(entitlement.serviceName?{serviceName:entitlement.serviceName}:{}), amountPaise, codeHash, codeTail: code.slice(-4),
       status: "PENDING_PAYMENT", createdAt: nowIso, purchasedAt: null, expiresAt: null, claimedBy: null, redeemedBy: null, redeemedAt: null,
       bookingId: null, voidedAt: null, voidReason: null, refundRequested: false, paymentId: null,
     };

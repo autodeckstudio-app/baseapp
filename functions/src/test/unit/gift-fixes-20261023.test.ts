@@ -53,7 +53,7 @@ describe("createGiftPurchase", () => {
 
   it("adopts a slotless recent unpaid gift instead of duplicating it", async () => {
     const old = { id: "g-old", tenantId: "t", buyerId: "c1", serviceId: "menu-wash-foam", amountPaise: 90000, codeHash: "h", codeTail: "1", status: "PENDING_PAYMENT", createdAt: new Date().toISOString(), purchasedAt: null, expiresAt: null, claimedBy: null, redeemedBy: null, redeemedAt: null, bookingId: null, voidedAt: null, voidReason: null, refundRequested: false, paymentId: null };
-    const oldPay = { id: "p-old", status: "pending", giftId: "g-old" };
+    const oldPay = { id: "p-old", status: "pending", giftId: "g-old",tenantId:"t",customerId:"c1",amount:90000 };
     const { db, data } = fakeFirestore({ gifts: { "g-old": old }, payments: { "p-old": oldPay } } as never);
     const r = await createGiftPurchase(db as never, user(), "c1", 90000);
     expect(r).toMatchObject({ giftId: "g-old", paymentId: "p-old", reused: true });
@@ -72,7 +72,7 @@ describe("createGiftPurchase", () => {
 
 describe("slotReusable", () => {
   const slot: GiftPurchaseSlot = { giftId: "g", paymentId: "p", amountPaise: 90000, updatedAt: T };
-  const g = { status: "PENDING_PAYMENT" } as never;
+  const g = { serviceId: "menu-wash-foam", status: "PENDING_PAYMENT" } as never;
   const p = { status: "pending" } as never;
   it("rejects wrong amount, stale slot, missing docs and moved-on states", () => {
     const now = Date.parse(T) + 60_000;

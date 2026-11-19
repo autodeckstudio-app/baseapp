@@ -6,9 +6,9 @@ import { GIFT_TERMS, formatGiftCode, giftDaysLeft, giftValidityLine } from "@aut
 import { Button, Kicker, Pane, T } from "./kit";
 import { giftMessage, shareGift } from "../lib/gift-share";
 
-export function GiftCard({ code, expiresAt, buyerName, now = Date.now() }: { code: string; expiresAt: string; buyerName: string | null; now?: number }) {
+export function GiftCard({ code, expiresAt, buyerName, serviceName, now = Date.now() }: { code: string; expiresAt: string; buyerName: string | null; serviceName?:string|undefined; now?: number }) {
   const [note, setNote] = useState<string | null>(null);
-  const text = giftMessage({ code, expiresAt, buyerName });
+  const text = giftMessage({ code, expiresAt, buyerName,serviceName });
   async function share() {
     const r = await shareGift(text);
     setNote(r === "copied" ? "Message copied. Paste it in a chat." : r === "failed" ? "Could not share from here. Copy the code above." : null);
@@ -17,7 +17,7 @@ export function GiftCard({ code, expiresAt, buyerName, now = Date.now() }: { cod
   return (
     <Pane pad="inset" testID="gift-card"><View style={{gap:20}}>
       <Kicker tone="accent">Gift</Kicker>
-      <T role="heading">Foam wash, any car</T>
+      <T role="heading">{serviceName??"Foam wash"}, any car</T>
       <View style={{ gap: 10, padding:18,borderRadius:18,borderWidth:1,borderStyle:"dashed",borderColor:"rgba(128,128,128,.4)" }}>
         <T role="caption" tone="tertiary">Gift code</T>
         <T role="title">{formatGiftCode(code)}</T>

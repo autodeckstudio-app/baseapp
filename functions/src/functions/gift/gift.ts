@@ -1,3 +1,4 @@
+import { currentGiftOffers, giftServiceEligible } from "../../lib/gift-offers.js";
 // Gift a wash. Buyer side: createGift, listMyGifts, cancelGift. Recipient side: redeemGift (claims the code for the
 // account; the wash itself is booked through createBooking with giftCode). Studio side: lookupGift, voidGift.
 // Buying: createGift makes a PENDING_PAYMENT gift and its payment (amount from the catalogue, never from the client). The
@@ -25,16 +26,18 @@ import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { requireCustomerDocId } from "../../lib/customer-identity.js";
 
 const empty = z.object({}).strict();
+const purchaseSchema = z.object({serviceId:z.string().min(1).max(150).optional()}).strict();
 const codeSchema = z.object({ code: z.string().min(1).max(40) }).strict();
 const idSchema = z.object({ giftId: z.string().min(1) }).strict();
 const voidSchema = z.object({ giftId: z.string().min(1), reason: z.string().min(1).max(300) }).strict();
 
 /** The price of the gift: the server catalogue's gifted wash at the flat any-car rate. Clients never send a price. */
-export async function giftPricePaise(db: FirebaseFirestore.Firestore, tenantId: string): Promise<number> {
-  const svc = await db.collection(COLLECTIONS.services()).doc(GIFT_SERVICE_ID).get();
+export async function giftPricePaise(db: FirebaseFirestore.Firestore, tenantId: string, serviceId = GIFT_SERVICE_ID): Promise<number> {
+  const svc = await db.collection(COLLECTIONS.services()).doc(serviceId).get();
   if (!svc.exists) throw new HttpsError("failed-precondition", "Gifts are not available right now.");
   const service = svc.data() as Service;
   if (service.tenantId !== tenantId || !service.active || service.catalogueEntryKind==='enquiry') throw new HttpsError("failed-precondition", "Gifts are not available right now.");
+  if(serviceId!==GIFT_SERVICE_ID&&!giftServiceEligible(service,tenantId))throw new HttpsError("failed-precondition","This service is not available to gift.");
   const cfg = await db.collection(COLLECTIONS.studioConfig()).where("tenantId", "==", tenantId).limit(1).get();
   const config = cfg.empty ? null : (cfg.docs[0]!.data() as StudioConfig);
   return calculatePrice({
@@ -49,7 +52,7 @@ export async function giftPricePaise(db: FirebaseFirestore.Firestore, tenantId: 
 
 /** What a client may see of a gift. Never the hash. */
 function view(g: Gift, now: number) {
-  return { id: g.id, state: giftState(g, now), tail: g.codeTail, amountPaise: g.amountPaise, expiresAt: g.expiresAt, purchasedAt: g.purchasedAt, redeemedAt: g.redeemedAt, refundRequested: g.refundRequested, refundable: false };
+  return { id: g.id, serviceId:g.serviceId, serviceName:g.serviceName ?? (g.serviceId===GIFT_SERVICE_ID?"Foam wash":"Gifted service"), state: giftState(g, now), tail: g.codeTail, amountPaise: g.amountPaise, expiresAt: g.expiresAt, purchasedAt: g.purchasedAt, redeemedAt: g.redeemedAt, refundRequested: g.refundRequested, refundable: false };
 }
 
 /** Buyer starts a gift. Makes the gift and its payment (both unpaid) and returns the payment id for checkout. The code is made now but
@@ -57,13 +60,17 @@ function view(g: Gift, now: number) {
 export const createGift = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer", "studio", "admin", "superadmin");
-  validate(empty, request.data ?? {});
+  const data = validate(purchaseSchema, request.data ?? {});
   await enforceRateLimit(subjectFrom(user), "gift.create");
   const db = getFirestore();
   const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
-  const amountPaise = await giftPricePaise(db, user.claims.tenantId);
-  const { giftId, paymentId } = await createGiftPurchase(db, user, customerDocId, amountPaise);
-  return { giftId, paymentId, amountPaise };
+  // Legacy clients remain bound to the legacy service, never silently substituted.
+  const selected = data.serviceId ? (await currentGiftOffers(db,user.claims.tenantId)).find(o=>o.serviceId===data.serviceId) : null;
+  if(data.serviceId&&!selected)throw new HttpsError("failed-precondition","This service is not available to gift. Refresh the service choices.");
+  const amountPaise = await giftPricePaise(db, user.claims.tenantId, selected?.serviceId);
+  if(selected&&selected.amountPaise!==amountPaise)throw new HttpsError("failed-precondition","The price changed. Refresh the service choices.");
+  const { giftId, paymentId } = await createGiftPurchase(db, user, customerDocId, amountPaise, selected?{serviceId:selected.serviceId,serviceName:selected.serviceName}:undefined);
+  return { giftId, paymentId, amountPaise, serviceId:selected?.serviceId??GIFT_SERVICE_ID,serviceName:selected?.serviceName??"Foam wash" };
 });
 
 /** The buyer's code, only once the payment is verified (gift ACTIVE) and only to the buyer. This is how a buyer who closed the app
@@ -82,7 +89,7 @@ export const getGiftCode = onCall({ region: "asia-south1" , enforceAppCheck: sho
   const sec = await db.collection(COLLECTIONS.giftSecrets()).doc(g.id).get();
   const code = sec.exists ? ((sec.data() as { code?: string }).code ?? null) : null;
   if (!code || hashGiftCode(code) !== g.codeHash) throw new HttpsError("not-found", "Gift not found.");
-  return { code, expiresAt: g.expiresAt };
+  return { code, expiresAt: g.expiresAt, serviceId:g.serviceId,serviceName:g.serviceName??(g.serviceId===GIFT_SERVICE_ID?"Foam wash":"Gifted service") };
 });
 
 export const listMyGifts = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
@@ -94,7 +101,8 @@ export const listMyGifts = onCall({ region: "asia-south1" , enforceAppCheck: sho
   const snap = await db.collection(COLLECTIONS.gifts()).where("buyerId", "==", customerDocId).orderBy("createdAt", "desc").limit(50).get();
   const now = Date.now();
   const offer = await giftPricePaise(db, user.claims.tenantId).then((amountPaise) => ({ amountPaise })).catch(() => null);
-  return { gifts: snap.docs.map((d) => d.data() as Gift).filter((g) => g.status !== "PENDING_PAYMENT" || now - Date.parse(g.createdAt) <= 24 * 3_600_000).map((g) => view(g, now)), offer };
+  const offers = await currentGiftOffers(db,user.claims.tenantId).catch(()=>[]);
+  return { offers, gifts: snap.docs.map((d) => d.data() as Gift).filter((g) => g.status !== "PENDING_PAYMENT" || now - Date.parse(g.createdAt) <= 24 * 3_600_000).map((g) => view(g, now)), offer };
 });
 
 /** Recipient claims a code. It binds to this account; a second account cannot claim it. Wrong codes are counted and locked out. */

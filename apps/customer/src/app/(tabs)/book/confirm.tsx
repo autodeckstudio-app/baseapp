@@ -71,7 +71,7 @@ export default function BookingConfirmScreen() {
   const router = useRouter();
   const auth = useAuth();
   const [friendCode, setFriendCode] = useState("");
-  const [giftCode] = useState(() => (GIFT_LIVE ? takePendingGiftCode() : null));
+  const [giftCode] = useState(() => (GIFT_LIVE ? takePendingGiftCode(params.serviceId) : null));
 
   const[selectionMinutes,setSelectionMinutes]=useState<number|null>(null);
   const [service, setService] = useState<Service | null>(null);
@@ -460,7 +460,7 @@ export default function BookingConfirmScreen() {
 
       {REFERRAL_LIVE ? (
         <Pane pad="gap">
-          {giftCode ? <Notice title="Covered by your gift" body="You will not pay for this wash. The studio confirms the price is covered." /> : null}
+          {giftCode ? <Notice title="Covered by your gift" body="You will not pay for this service. The studio confirms the price is covered." /> : null}
           {!giftCode ? <Field label="Have a friend's code? (optional)" value={friendCode} onChangeText={setFriendCode} autoCapitalize="characters" placeholder="AD2K7QX" maxLength={12} error={friendCode.trim() !== "" && !normaliseReferralCode(friendCode) ? "That does not look like a code" : undefined} /> : null}
         </Pane>
       ) : null}

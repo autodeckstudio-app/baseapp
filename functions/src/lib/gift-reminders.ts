@@ -18,7 +18,7 @@ export async function sendGiftReminders(db: Firestore, nowMs: number = Date.now(
     const end = istDay(Date.parse(g.expiresAt));
     const daysLeft = end === today ? 0 : end === in7 ? 7 : null;
     if (daysLeft === null) continue;
-    const text = giftReminderText(daysLeft);
+    const text = giftReminderText(daysLeft,g.serviceName);
     const id = `giftrem-${g.id}-${end}-${daysLeft}`;
     const n: Notification = { id, tenantId: g.tenantId, userId: to, auditLogId: id, type: "expiry_reminder", title: text.title, body: text.body, entityType: "Gift", entityId: g.id, createdAt: new Date(nowMs).toISOString(), readAt: null };
     try { await db.collection(COLLECTIONS.notifications()).doc(id).create(n); sent++; } catch (e) { if ((e as { code?: number }).code !== 6) throw e; }

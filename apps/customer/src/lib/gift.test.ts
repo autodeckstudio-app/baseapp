@@ -7,7 +7,7 @@ describe("gift client", () => {
   it("is live (owner said go live, 19 Oct 10:00 PM; server deployed 6:35 PM)", () => expect(GIFT_LIVE).toBe(true));
   it("never sends a gift code while dark, and never computes a price", () => {
     const c = read("app/(tabs)/book/confirm.tsx");
-    expect(c).toContain("GIFT_LIVE ? takePendingGiftCode()");
+    expect(c).toContain("GIFT_LIVE ? takePendingGiftCode(params.serviceId)");
     expect(read("lib/gift-service.ts")).not.toMatch(/amount\s*:\s*\d/);
   });
   it("one combined friends and gifts entry opens the shared page", () => expect(read("lib/drawer-items.ts")).toContain("friends-gifts"));
@@ -43,3 +43,5 @@ describe("gift client", () => {
     expect(m).toMatch(/Asha/); expect(m).toMatch(/AutoDeck/);
   });
 });
+
+it("a claimed code applies only to its purchased service",()=>{setPendingGiftCode("GWABCD2345","glass");expect(takePendingGiftCode("wash")).toBeNull();expect(takePendingGiftCode("glass")).toBe("GWABCD2345");setPendingGiftCode(null);});
