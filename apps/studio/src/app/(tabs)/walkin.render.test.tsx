@@ -1,3 +1,4 @@
+vi.mock('../../hooks/usePublishedServices',async()=>{const React=await import('react');const api=await import('../../lib/approval-service');return {usePublishedServices:()=>{const [services,setServices]=React.useState<any[]>([]);React.useEffect(()=>{void api.getActiveServices().then(setServices)},[]);return{services,loading:false,error:null,revision:0,refresh:()=>{},isCurrent:()=>true}}}});
 vi.mock('expo-crypto',()=>({randomUUID:()=> '318c5ddc-de7c-4427-b36f-e4981ed97530'}));
 vi.mock('../../lib/visit-intake-service',()=>({prepareVisitIntake:async()=>{throw Error('not used')}}));
 // Walk-in intake render proof: after a FRESH staged registration the counter

@@ -31,7 +31,7 @@ function warranty(s:Service):string|null{return isOnCustomerMenu(s)?alignedCusto
 export function ServicesView(p: {
   services: Service[];
   draftMode?: boolean;
-  onOpenLive?:()=>void;
+  onOpenLive?:(service?:Service)=>boolean|void;
   onCloseDraft?:()=>void;
   incomingDraft?: {key:string;value:ServiceDraft}|null;
   loading: boolean;
@@ -121,7 +121,7 @@ export function ServicesView(p: {
                           <span className="ax-sub">{duration(s.estimatedDurationMinutes)}{warranty(s) ? ` · ${warranty(s)}` : ""}{s.membershipWashEligible ? " · member wash" : ""}</span>
                         </div>
                         <div className="ax-row-actions">
-                          <button type="button" className="ax-button" onClick={() => {p.onOpenLive?.();setDraft(draftFromService(s))}}>Edit</button>
+                          <button type="button" className="ax-button" onClick={() => {if(!p.onOpenLive?.(s))setDraft(draftFromService(s))}}>Edit</button>
                           {confirmId === s.id ? (
                             <>
                               <button type="button" className={`ax-button${s.active ? " ax-button--danger" : ""}`} disabled={p.busy} onClick={() => { p.onToggle(s); setConfirmId(null); }}>{p.draftMode ? (s.active ? "Draft removal from menu" : "Draft show on menu") : s.active ? "Remove from menu" : "Show on menu"}</button>
@@ -133,7 +133,7 @@ export function ServicesView(p: {
                         </div>
                       </div>
                     ))}
-                    {inRefs.filter(r=>(r.brand||'')===b).map(r=><div key={'reference:'+r.key} className="ax-svc-card"><div className="ax-svc-card-top"><span className="ax-person-name">{r.brand&& !r.name.toLowerCase().startsWith(r.brand.toLowerCase())?`${r.brand} ${r.name}`:r.name}</span><span className="ax-chip">{referencePlacement(r).family}</span></div><p className="ax-sub ax-svc-desc">{r.note}</p><div className="ax-svc-card-price"><span className="ax-data ax-svc-from">Quote to confirm</span><span className="ax-sub">Customer enquiry option, not a priced booking</span></div>{(()=>{const record=p.services.find(s=>s.catalogueEntryKind==='enquiry'&&s.referenceKey===r.key);return record?<div className="ax-svc-card-actions"><button type="button" className="ax-button" disabled={p.busy} onClick={()=>setDraft(draftFromService(record))}>Edit</button>{confirmId===record.id?<><p className="ax-sub">Remove from new enquiries? Existing quotes are kept.</p><button type="button" className="ax-button ax-button--danger" disabled={p.busy} onClick={()=>{p.onToggle(record);setConfirmId(null)}}>{p.draftMode?'Draft removal from menu':'Remove from menu'}</button><button type="button" className="ax-button" onClick={()=>setConfirmId(null)}>Cancel</button></>:<button type="button" className="ax-button" onClick={()=>setConfirmId(record.id)}>Remove from menu</button>}</div>:<p className="ax-sub">Available to edit after catalogue setup.</p>})()}</div>)}
+                    {inRefs.filter(r=>(r.brand||'')===b).map(r=><div key={'reference:'+r.key} className="ax-svc-card"><div className="ax-svc-card-top"><span className="ax-person-name">{r.brand&& !r.name.toLowerCase().startsWith(r.brand.toLowerCase())?`${r.brand} ${r.name}`:r.name}</span><span className="ax-chip">{referencePlacement(r).family}</span></div><p className="ax-sub ax-svc-desc">{r.note}</p><div className="ax-svc-card-price"><span className="ax-data ax-svc-from">Quote to confirm</span><span className="ax-sub">Customer enquiry option, not a priced booking</span></div>{(()=>{const record=p.services.find(s=>s.catalogueEntryKind==='enquiry'&&s.referenceKey===r.key);return record?<div className="ax-svc-card-actions"><button type="button" className="ax-button" disabled={p.busy} onClick={()=>{if(!p.onOpenLive?.(record))setDraft(draftFromService(record))}}>Edit</button>{confirmId===record.id?<><p className="ax-sub">Remove from new enquiries? Existing quotes are kept.</p><button type="button" className="ax-button ax-button--danger" disabled={p.busy} onClick={()=>{p.onToggle(record);setConfirmId(null)}}>{p.draftMode?'Draft removal from menu':'Remove from menu'}</button><button type="button" className="ax-button" onClick={()=>setConfirmId(null)}>Cancel</button></>:<button type="button" className="ax-button" onClick={()=>setConfirmId(record.id)}>Remove from menu</button>}</div>:<p className="ax-sub">Available to edit after catalogue setup.</p>})()}</div>)}
                   </div>
                 </div>
               ))}
@@ -142,7 +142,7 @@ export function ServicesView(p: {
         })
       )}
 
-      {storedReferences.map(s=><div className="ax-svc-card" key={s.id}><span className="ax-person-name">{s.name}</span><p className="ax-sub">Removed enquiry. Existing quote records are kept.</p><div className="ax-svc-card-actions"><button type="button" className="ax-button" disabled={p.busy} onClick={()=>setDraft(draftFromService(s))}>Edit</button><button type="button" className="ax-button" disabled={p.busy} onClick={()=>p.onToggle(s)}>{p.draftMode?'Draft show on menu':'Show on menu'}</button></div></div>)}
+      {storedReferences.map(s=><div className="ax-svc-card" key={s.id}><span className="ax-person-name">{s.name}</span><p className="ax-sub">Removed enquiry. Existing quote records are kept.</p><div className="ax-svc-card-actions"><button type="button" className="ax-button" disabled={p.busy} onClick={()=>{if(!p.onOpenLive?.(s))setDraft(draftFromService(s))}}>Edit</button><button type="button" className="ax-button" disabled={p.busy} onClick={()=>p.onToggle(s)}>{p.draftMode?'Draft show on menu':'Show on menu'}</button></div></div>)}
       {draft && (
         <Drawer portal eyebrow={draft.serviceId ? "Edit service" : "New service"} title={draft.name || "Untitled service"} onClose={() => {setDraft(null);p.onCloseDraft?.()}}>
           <form className="ax-service-editor" onSubmit={async(e) => { e.preventDefault(); if (result?.ok) { const saved=await p.onSave(draft.serviceId, result.payload);if(saved!==false)setDraft(null); } }}>
@@ -245,7 +245,7 @@ export function ServicesView(p: {
 
             {result && !result.ok && draft.name && <p className="ax-note" style={{ color: "var(--ad-warning)" }}>{result.problem}</p>}
             <div className="ax-panel-actions">
-              <button type="submit" className="ax-button ax-button--primary" disabled={p.busy || !result?.ok}>{p.draftMode ? "Save draft" : draft.serviceId ? "Save changes" : "Add to menu"}</button>
+              <button type="submit" className="ax-button ax-button--primary" disabled={p.busy || !result?.ok}>{p.draftMode ? "Save changes" : draft.serviceId ? "Save changes" : "Add to menu"}</button>
               <button type="button" className="ax-button" onClick={() => {setDraft(null);p.onCloseDraft?.()}}>Cancel</button>
             </div>
             <p className="ax-note">Past bookings, bills and warranties stay unchanged.</p><details><summary>Photo and pricing details</summary><p className="ax-note">Use a real photo of the work, at least 1200px wide. PPF size rules add to the starting price and time; smaller cars pay the starting price. Non-PPF services keep one price per car.</p></details>
