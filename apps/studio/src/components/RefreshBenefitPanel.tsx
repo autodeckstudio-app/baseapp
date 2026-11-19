@@ -13,6 +13,13 @@ export function RefreshBenefitPanel(p: {
   state: RefreshVisitState;
   recording: boolean;
   onRecord: () => void;
+  // Set when the backend refused recording with the fail-closed counters
+  // review: retrying cannot succeed until staff review, so no retry button.
+  blocked?: boolean;
+  // Set when this visit's refresh record could not be read: the action is
+  // hidden until the record verifies (retry affordance via onRetry).
+  usageUnverified?: boolean;
+  onRetry?: () => void;
 }) {
   if (p.state === "unavailable") return null;
   return (
@@ -28,7 +35,21 @@ export function RefreshBenefitPanel(p: {
       <Text style={{ ...typography.caption, color: colors.accentPressed }}>
         Interior refresh: {p.used} of {p.total} used
       </Text>
-      {p.state === "recorded" ? (
+      {p.usageUnverified ? (
+        <>
+          <Text style={{ ...typography.caption, color: colors.textMuted }}>Refresh history unavailable - verify before recording.</Text>
+          {p.onRetry ? (
+            <Button
+              label="Retry refresh status"
+              accessibilityLabel="Retry reading this visit's refresh status"
+              variant="secondary"
+              onPress={p.onRetry}
+            />
+          ) : null}
+        </>
+      ) : p.blocked ? (
+        <Text style={{ ...typography.caption, color: colors.textMuted }}>Recording paused - staff review needed.</Text>
+      ) : p.state === "recorded" ? (
         <Text style={{ ...typography.caption, color: colors.textMuted }}>Recorded for this visit.</Text>
       ) : p.state === "recordable" ? (
         <Button

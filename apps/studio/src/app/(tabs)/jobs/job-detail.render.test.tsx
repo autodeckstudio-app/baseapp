@@ -39,7 +39,8 @@ vi.mock("firebase/firestore", () => ({
     return () => {};
   },
 }));
-vi.mock("firebase/functions", () => ({ httpsCallable: () => async () => ({ data: {} }) }));
+const callableHandlers = vi.hoisted(() => ({ map: new Map<string, (args: unknown) => Promise<unknown>>() }));
+vi.mock("firebase/functions", () => ({ httpsCallable: (_f: unknown, name: string) => async (args: unknown) => callableHandlers.map.get(name)?.(args) ?? ({ data: {} }) }));
 vi.mock("../../../lib/firebase", () => ({ db: {}, functions: {} }));
 
 type JobAuthT = { uid: string; role: string | null; tenantId: string | null; studioId: string | null };
@@ -650,6 +651,94 @@ it('a late membership read from a previous booking never lands on the new job vi
   await flush();
   expect(textOf(el)).not.toContain('platinum member');
   expect(textOf(el)).not.toContain('Interior refresh');
+  bookingDocs.map.clear();
+  await act(async () => el.unmount());
+});
+
+it('a fail-closed counters rejection pauses recording instead of offering a doomed retry', async () => {
+  membershipRead.getCustomerMembership.mockResolvedValue({ id: 'm1', tier: 'platinum', status: 'active', endDate: '2099-01-01', refreshesTotal: 1, refreshesUsed: 0 });
+  bookingDocs.map.set('bA', { exists: () => true, data: () => ({ membershipId: 'm1', membershipWashUsed: false, membershipDiscountApplied: false }) });
+  callableHandlers.map.set('recordMembershipRefresh', async () => { throw Object.assign(new Error('Refresh counters need staff review before use.'), { code: 'functions/failed-precondition' }); });
+  let el: any;
+  await act(async () => { el = create(createElement(JobDetailScreen)); });
+  emitJob('jA', mkJob('jA', { bookingId: 'bA', customerId: 'cA' }));
+  await flush();
+  expect(textOf(el)).toContain('Record interior refresh');
+  press(el, 'Record interior refresh');
+  await flush();
+  expect(textOf(el)).toContain('Refresh counters need staff review before use.');
+  expect(textOf(el)).toContain('Recording paused - staff review needed.');
+  expect(textOf(el)).not.toContain('Record interior refresh');
+  callableHandlers.map.clear();
+  membershipRead.getCustomerMembership.mockReset();
+  bookingDocs.map.clear();
+  await act(async () => el.unmount());
+});
+
+it('a transient recording failure keeps the retryable record action', async () => {
+  membershipRead.getCustomerMembership.mockResolvedValue({ id: 'm1', tier: 'platinum', status: 'active', endDate: '2099-01-01', refreshesTotal: 1, refreshesUsed: 0 });
+  bookingDocs.map.set('bA', { exists: () => true, data: () => ({ membershipId: 'm1', membershipWashUsed: false, membershipDiscountApplied: false }) });
+  callableHandlers.map.set('recordMembershipRefresh', async () => { throw Object.assign(new Error('network unavailable'), { code: 'functions/unavailable' }); });
+  let el: any;
+  await act(async () => { el = create(createElement(JobDetailScreen)); });
+  emitJob('jA', mkJob('jA', { bookingId: 'bA', customerId: 'cA' }));
+  await flush();
+  press(el, 'Record interior refresh');
+  await flush();
+  expect(textOf(el)).toContain('network unavailable');
+  expect(textOf(el)).toContain('Record interior refresh');
+  expect(textOf(el)).not.toContain('Recording paused');
+  callableHandlers.map.clear();
+  membershipRead.getCustomerMembership.mockReset();
+  bookingDocs.map.clear();
+  await act(async () => el.unmount());
+});
+
+it('a failed refresh-usage read shows a retryable error and never Record until verified', async () => {
+  membershipRead.getCustomerMembership.mockResolvedValue({ id: 'm1', tier: 'platinum', status: 'active', endDate: '2099-01-01', refreshesTotal: 1, refreshesUsed: 0 });
+  bookingDocs.map.set('bA', { exists: () => true, data: () => ({ membershipId: 'm1', membershipWashUsed: false, membershipDiscountApplied: false }) });
+  let usageCalls = 0;
+  callableHandlers.map.set('getMembershipUsage', async () => {
+    usageCalls += 1;
+    if (usageCalls === 1) throw Object.assign(new Error('unavailable'), { code: 'functions/unavailable' });
+    return { data: { refreshUsage: [{ id: 'ru1', jobId: 'jA', restoredAt: null }] } };
+  });
+  let el: any;
+  await act(async () => { el = create(createElement(JobDetailScreen)); });
+  emitJob('jA', mkJob('jA', { bookingId: 'bA', customerId: 'cA' }));
+  await flush();
+  expect(textOf(el)).toContain('Refresh history unavailable');
+  expect(textOf(el)).not.toContain('Record interior refresh');
+  press(el, 'Retry refresh status');
+  await flush();
+  expect(textOf(el)).toContain('Recorded for this visit.');
+  expect(textOf(el)).not.toContain('Record interior refresh');
+  callableHandlers.map.clear();
+  membershipRead.getCustomerMembership.mockReset();
+  bookingDocs.map.clear();
+  await act(async () => el.unmount());
+});
+
+it('a record response for a superseded tenant/customer/booking identity is discarded even on the same job id', async () => {
+  membershipRead.getCustomerMembership.mockResolvedValue({ id: 'm1', tier: 'platinum', status: 'active', endDate: '2099-01-01', refreshesTotal: 1, refreshesUsed: 0 });
+  bookingDocs.map.set('bA', { exists: () => true, data: () => ({ membershipId: 'm1', membershipWashUsed: false, membershipDiscountApplied: false }) });
+  let resolveRecord: (v: unknown) => void = () => {};
+  callableHandlers.map.set('recordMembershipRefresh', () => new Promise((r) => { resolveRecord = r; }));
+  let el: any;
+  await act(async () => { el = create(createElement(JobDetailScreen)); });
+  emitJob('jA', mkJob('jA', { bookingId: 'bA', customerId: 'cA' }));
+  await flush();
+  press(el, 'Record interior refresh');
+  await flush();
+  // Same job id, but the context moved to another tenant/customer/booking mid-flight.
+  emitJob('jA', mkJob('jA', { tenantId: 't2', bookingId: 'bB', customerId: 'cB' }));
+  await flush();
+  act(() => resolveRecord({ data: { refreshUsageId: 'ru9', refreshesUsed: 1 } }));
+  await flush();
+  expect(textOf(el)).not.toContain('Recorded for this visit.');
+  expect(textOf(el)).not.toContain('1 of 1 used');
+  callableHandlers.map.clear();
+  membershipRead.getCustomerMembership.mockReset();
   bookingDocs.map.clear();
   await act(async () => el.unmount());
 });

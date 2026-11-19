@@ -20,6 +20,11 @@ export function refreshVisitState(
   const used = membership.refreshesUsed ?? 0;
   if (total <= 0) return "unavailable";
   if (recordedRowId) return "recorded";
+  // Fail closed on malformed counters (non-integer, negative, used past
+  // total): the backend rejects recording on these, so the UI must never
+  // offer the action on numbers it cannot verify.
+  if (!Number.isInteger(total) || !Number.isInteger(used) || used < 0 || used > total)
+    return "unavailable";
   if (membership.status !== "active" || !membership.endDate || membership.endDate < today)
     return "unavailable";
   if (job.status === "CANCELLED") return "unavailable";

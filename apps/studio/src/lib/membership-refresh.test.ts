@@ -34,4 +34,13 @@ describe("refreshVisitState", () => {
     expect(refreshVisitState(live, job, null, "2026-11-19")).toBe("recordable");
     expect(refreshVisitState({ ...active, endDate: null }, job, null, "2026-11-19")).toBe("unavailable");
   });
+
+  it("malformed counters fail closed - recording is never offered on unverifiable numbers", () => {
+    expect(refreshVisitState({ ...active, refreshesTotal: 1.5 }, job, null)).toBe("unavailable");
+    expect(refreshVisitState({ ...active, refreshesUsed: Number.NaN }, job, null)).toBe("unavailable");
+    expect(refreshVisitState({ ...active, refreshesUsed: -1 }, job, null)).toBe("unavailable");
+    expect(refreshVisitState({ ...active, refreshesUsed: 2 }, job, null)).toBe("unavailable"); // used past total = corrupt
+    // ...but a recorded visit still shows as recorded (visit truth rides on the row).
+    expect(refreshVisitState({ ...active, refreshesUsed: 2 }, job, "ru1")).toBe("recorded");
+  });
 });

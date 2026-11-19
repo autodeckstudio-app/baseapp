@@ -152,9 +152,18 @@ export default function JobDetailScreen() {
     washUsed: boolean;
     discountApplied: boolean;
     // Platinum interior refresh benefit: balance plus this visit's live record.
-    refresh: { used: number; total: number; recordedRowId: string | null } | null;
+    // usageUnverified: the visit-record read failed - no Record until verified.
+    refresh: { used: number; total: number; recordedRowId: string | null; usageUnverified?: boolean } | null;
   } | null>(null);
   const [recordingRefresh, setRecordingRefresh] = useState(false);
+  // Fail-closed counters review: the backend rejected recording for this job
+  // with "counters need staff review" - retrying cannot succeed until staff
+  // fix the counters, so the visit surface stops offering the action. Keyed
+  // by job so it never leaks into another job's view; a fresh keyed read
+  // (after review, or on job change) clears it.
+  const [refreshBlockedJobId, setRefreshBlockedJobId] = useState<string | null>(null);
+  // Re-read tick: the retry affordance for a failed refresh-usage read.
+  const [membershipRetryTick, setMembershipRetryTick] = useState(0);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [cancellingApprovalId, setCancellingApprovalId] = useState<string | null>(null);
   const [showApprovalForm, setShowApprovalForm] = useState(false);
@@ -247,6 +256,7 @@ export default function JobDetailScreen() {
   // booking has no membership must not inherit the previous job's badge.
   useEffect(() => {
     setBookingMembership(null);
+    setRefreshBlockedJobId(null);
     if (!job?.bookingId || !job.customerId) return;
     let alive = true;
     void (async () => {
@@ -258,15 +268,19 @@ export default function JobDetailScreen() {
       if (!alive || !membership) return;
       // Interior refresh readout: the balance rides on the membership doc;
       // this visit's record comes from the separate refresh usage list.
-      let refresh: { used: number; total: number; recordedRowId: string | null } | null = null;
+      let refresh: { used: number; total: number; recordedRowId: string | null; usageUnverified?: boolean } | null = null;
       const refreshTotal = membership.refreshesTotal ?? 0;
       if (refreshTotal > 0) {
-        refresh = { used: membership.refreshesUsed ?? 0, total: refreshTotal, recordedRowId: null };
+        refresh = { used: membership.refreshesUsed ?? 0, total: refreshTotal, recordedRowId: null, usageUnverified: false };
         try {
           const usageResult = await httpsCallable<{ membershipId: string }, { refreshUsage?: { id: string; jobId: string; restoredAt: string | null }[] }>(functions, "getMembershipUsage")({ membershipId: membership.id });
           const live = (usageResult.data.refreshUsage ?? []).find((r) => r.jobId === job.id && !r.restoredAt);
           if (live) refresh.recordedRowId = live.id;
-        } catch { /* the doc balance still renders without the visit record */ }
+        } catch {
+          // The visit record could not be verified: showing recordable here
+          // could double-record a visit. Show a retryable error, never Record.
+          refresh.usageUnverified = true;
+        }
       }
       if (!alive) return;
       setBookingMembership({
@@ -279,7 +293,7 @@ export default function JobDetailScreen() {
       if (alive) setBookingMembership(null);
     });
     return () => { alive = false; };
-  }, [job?.id, job?.tenantId, job?.customerId, job?.bookingId]);
+  }, [job?.id, job?.tenantId, job?.customerId, job?.bookingId, membershipRetryTick]);
 
   // Live update: studio sees the customer's approve/reject decision the
   // moment it happens, via the same real-time listener pattern as
@@ -301,15 +315,19 @@ export default function JobDetailScreen() {
   }, [job?.id]);
 
   // Current job identity for in-flight action responses: an answer that
-  // lands after the view moved to another job belongs to the old job.
-  const jobIdRef = useRef<string | undefined>(undefined);
-  jobIdRef.current = job?.id;
+  // lands after ANY part of the identity moved (same job id but another
+  // tenant/customer/booking counts) belongs to the old context.
+  const jobIdentity = (j: ServiceJob | null) =>
+    j ? [j.tenantId, j.customerId, j.bookingId, j.id].join("|") : "";
+  const jobIdentityRef = useRef<string>("");
+  jobIdentityRef.current = jobIdentity(job);
 
   // Staff action for the Platinum interior refresh benefit: one record per
   // visit job, idempotent on the backend (replay returns the same row).
   async function handleRecordRefresh() {
     if (!job || !bookingMembership?.refresh || recordingRefresh) return;
-    const jobId = job.id;
+    if (bookingMembership.refresh.usageUnverified) return; // verify the visit record first
+    const identity = jobIdentity(job);
     const membershipId = bookingMembership.membership.id;
     setActionError(null);
     setRecordingRefresh(true);
@@ -317,18 +335,23 @@ export default function JobDetailScreen() {
       const res = await httpsCallable<
         { membershipId: string; jobId: string },
         { refreshUsageId: string; refreshesUsed: number }
-      >(functions, "recordMembershipRefresh")({ membershipId, jobId });
-      // The job may have changed under the in-flight action; never write the
-      // response into another job's view.
-      if (jobIdRef.current !== jobId) return;
+      >(functions, "recordMembershipRefresh")({ membershipId, jobId: job.id });
+      // The job context may have changed under the in-flight action; never
+      // write the response into another context's view.
+      if (jobIdentityRef.current !== identity) return;
       setBookingMembership((prev) =>
         prev && prev.membership.id === membershipId && prev.refresh
           ? { ...prev, refresh: { ...prev.refresh, used: res.data.refreshesUsed, recordedRowId: res.data.refreshUsageId } }
           : prev,
       );
     } catch (e) {
-      if (jobIdRef.current !== jobId) return;
-      setActionError(e instanceof Error ? e.message : "Could not record the interior refresh.");
+      if (jobIdentityRef.current !== identity) return;
+      const message = e instanceof Error ? e.message : "Could not record the interior refresh.";
+      // The fail-closed counters rejection is permanent until staff review:
+      // pause the action instead of offering a retry that can only fail again.
+      // Transient failures keep the retryable button.
+      if (/staff review/i.test(message)) setRefreshBlockedJobId(job.id);
+      setActionError(message);
     } finally {
       setRecordingRefresh(false);
     }
@@ -701,6 +724,9 @@ export default function JobDetailScreen() {
           total={bookingMembership.refresh.total}
           state={refreshVisitState(bookingMembership.membership, job, bookingMembership.refresh.recordedRowId)}
           recording={recordingRefresh}
+          blocked={refreshBlockedJobId === job.id}
+          usageUnverified={bookingMembership.refresh.usageUnverified === true}
+          onRetry={() => setMembershipRetryTick((t) => t + 1)}
           onRecord={() => void handleRecordRefresh()}
         />
       ) : null}
