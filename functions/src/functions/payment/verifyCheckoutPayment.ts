@@ -2,12 +2,13 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Payment } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractUser } from "../../middleware/auth.js";
+import { extractUser, assertRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { verifyCheckoutPaymentSchema } from "../../schemas/payment.js";
 import { signatureMatches } from "../../lib/razorpay-checkout.js";
 import { completeVerifiedCheckout } from "../../lib/razorpay-verified-checkout.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Step 3: check the signature the checkout modal returned. A match records the
@@ -27,7 +28,12 @@ export const verifyCheckoutPayment = onCall({ region: "asia-south1", secrets: ["
   const snap = await ref.get();
   if (!snap.exists) throw new HttpsError("not-found", "Payment not found.");
   const payment = snap.data() as Payment;
-  if (payment.customerId !== user.uid || payment.tenantId !== user.claims.tenantId) throw new HttpsError("permission-denied", "Cannot verify this payment.");
+  let paymentOwnerId = user.uid;
+  if (payment.targetType === "gift") {
+    assertRole(user, "customer", "studio", "admin", "superadmin");
+    paymentOwnerId = await requireCustomerDocId(getFirestore(), COLLECTIONS.customers(), user.claims.tenantId, user.uid);
+  }
+  if (payment.customerId !== paymentOwnerId || payment.tenantId !== user.claims.tenantId) throw new HttpsError("permission-denied", "Cannot verify this payment.");
   if (!payment.razorpayOrderId || payment.razorpayOrderId !== data.razorpay_order_id) throw new HttpsError("failed-precondition", "Order does not match this payment.");
   if (!signatureMatches(data.razorpay_order_id, data.razorpay_payment_id, data.razorpay_signature, keySecret)) {
     throw new HttpsError("invalid-argument", "Payment could not be verified.");

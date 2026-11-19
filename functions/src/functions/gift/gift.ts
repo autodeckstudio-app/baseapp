@@ -56,7 +56,7 @@ function view(g: Gift, now: number) {
  *  is only handed out by getGiftCode after the payment is verified. A buyer who retries gets the same unpaid gift back. */
 export const createGift = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
-  assertRole(user, "customer");
+  assertRole(user, "customer", "studio", "admin", "superadmin");
   validate(empty, request.data ?? {});
   await enforceRateLimit(subjectFrom(user), "gift.create");
   const db = getFirestore();
@@ -70,7 +70,7 @@ export const createGift = onCall({ region: "asia-south1" , enforceAppCheck: shou
  *  after paying gets it again. An unpaid, void, used or expired gift never returns a code. */
 export const getGiftCode = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
-  assertRole(user, "customer");
+  assertRole(user, "customer", "studio", "admin", "superadmin");
   const data = validate(idSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "gift.read");
   const db = getFirestore();
@@ -87,7 +87,7 @@ export const getGiftCode = onCall({ region: "asia-south1" , enforceAppCheck: sho
 
 export const listMyGifts = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
-  assertRole(user, "customer");
+  assertRole(user, "customer", "studio", "admin", "superadmin");
   await enforceRateLimit(subjectFrom(user), "gift.read");
   const db = getFirestore();
   const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
@@ -100,7 +100,7 @@ export const listMyGifts = onCall({ region: "asia-south1" , enforceAppCheck: sho
 /** Recipient claims a code. It binds to this account; a second account cannot claim it. Wrong codes are counted and locked out. */
 export const redeemGift = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
-  assertRole(user, "customer");
+  assertRole(user, "customer", "studio", "admin", "superadmin");
   if (!user.phone && !user.email) throw new HttpsError("failed-precondition", "Sign in with your phone number or Google account to redeem a gift.");
   const data = validate(codeSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "gift.redeem");
