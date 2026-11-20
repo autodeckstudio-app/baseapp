@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# Approved service journey, exact Customer-only base and path scope.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/services-approved-20261120 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  git merge-base --is-ancestor 5054dffd HEAD || exit 0
+  unexpected="$(git diff --name-only 5054dffd HEAD | grep -vE '^(apps/customer/src/|scripts/vercel-ignore\.sh$)' || true)"
+  [ -z "$unexpected" ] || exit 0
+  case "$1" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
 # Services/Garage header correction: isolate build to Customer on this branch.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = fix/services-shared-header-20261119 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0
