@@ -1,3 +1,4 @@
+import { membershipDay } from "@autodeck/core";
 import type { DocumentReference, Firestore, Transaction } from "firebase-admin/firestore";
 import type { Booking, Membership, MembershipUsage, Payment } from "@autodeck/core";
 import type { AuthorizedUser } from "@autodeck/auth";
@@ -288,7 +289,7 @@ export function restoreUpgradedPredecessorInTx(
     return fail("alert_chain_anomaly");
   }
   if (ev.fullRefundSignal) return "skip_already_refunded";
-  if (!data.endDate || data.endDate < now.slice(0, 10)) return "skip_expired";
+  if (!data.endDate || data.endDate < membershipDay(now)) return "skip_expired";
   if (data.tenantId !== refundedMembership.tenantId || data.customerId !== refundedMembership.customerId) {
     return fail("alert_ownership_drift");
   }

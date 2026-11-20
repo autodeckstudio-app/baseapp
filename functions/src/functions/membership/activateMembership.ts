@@ -1,3 +1,4 @@
+import { membershipTermDates } from "@autodeck/core";
 // Admin-only. Verifies the linked Payment has completed, then activates the
 // membership: sets status=active, startDate=today, endDate=today+30 days
 // (monthly subscription — MEMBERSHIP_DURATION_DAYS). Terms become immutable
@@ -56,10 +57,7 @@ export const activateMembership = onCall({ region: "asia-south1", enforceAppChec
     const upgradeSrc = await readUpgradeSource(tx, db, membership);
     const now = new Date();
     const nowIso = now.toISOString();
-    const startDate = nowIso.slice(0, 10);
-    const endDate = new Date(now.getTime() + MEMBERSHIP_DURATION_DAYS * 86400000)
-      .toISOString()
-      .slice(0, 10);
+    const { startDate, endDate } = membershipTermDates(now, MEMBERSHIP_DURATION_DAYS);
 
     endUpgradedMembership(tx, upgradeSrc, data.membershipId, nowIso);
     tx.update(membershipRef, {

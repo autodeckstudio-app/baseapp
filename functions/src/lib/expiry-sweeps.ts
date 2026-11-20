@@ -1,3 +1,4 @@
+import { membershipDay } from "@autodeck/core";
 // Phase 5C Batch 1: shared sweep logic for expireStaleMemberships and
 // expireStaleApprovals, used by BOTH the existing admin-triggered onCall
 // (single-tenant, real user as actor) and the new daily onSchedule
@@ -40,7 +41,7 @@ export async function sweepStaleMemberships(
   options: { tenantId?: string; actor?: SweepActor } = {},
 ): Promise<SweepResult> {
   const actor = options.actor ?? SYSTEM_ACTOR;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = membershipDay();
 
   let query: FirebaseFirestore.Query = db
     .collection(COLLECTIONS.memberships())

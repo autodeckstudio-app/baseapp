@@ -1,3 +1,4 @@
+import { membershipDay } from "@autodeck/core";
 // Studio/admin records one interior refresh consumed against a visit job.
 // The Platinum interior refresh (vacuuming, dashboard/door-panel wipe and
 // interior glass; never shampoo or deep cleaning - owner-approved definition
@@ -69,7 +70,7 @@ export const recordMembershipRefresh = onCall(
         );
       // Lazy expiry, same rule as a wash-credit booking: a stale-active plan
       // past its endDate grants nothing even before the sweeper runs.
-      const today = now.slice(0, 10);
+      const today = membershipDay();
       if (
         membership.status !== "active" ||
         !membership.endDate ||

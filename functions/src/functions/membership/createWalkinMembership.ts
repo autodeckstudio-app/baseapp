@@ -1,3 +1,4 @@
+import { membershipTermDates } from "@autodeck/core";
 // Studio/admin walk-in sale: the customer is at the studio, staff have found
 // (or just created) their customer record, and cash has been received.
 // Cash/bank creates the membership already ACTIVE with its completed payment in one
@@ -81,8 +82,7 @@ export const createWalkinMembership = onCall({ region: "asia-south1" , enforceAp
 
     const now = new Date();
     const nowIso = now.toISOString();
-    const startDate = nowIso.slice(0, 10);
-    const endDate = new Date(now.getTime() + MEMBERSHIP_DURATION_DAYS * 86400000).toISOString().slice(0, 10);
+    const { startDate, endDate } = membershipTermDates(now, MEMBERSHIP_DURATION_DAYS);
 
     const membership: Membership = {
       id: membershipRef.id,

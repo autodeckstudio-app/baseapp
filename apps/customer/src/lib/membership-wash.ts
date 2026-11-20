@@ -1,3 +1,4 @@
+import { membershipDay } from "@autodeck/core";
 // Membership wash: one included wash per booking. This file only decides whether the wash MAY be offered.
 // The price and the decrement of the plan count are the server's job (createBooking), never the app's.
 import type { Membership, Service } from "@autodeck/core";
@@ -32,7 +33,7 @@ export function membershipCoversWashService(service: S, membership: Pick<Members
 
 /** Calendar date (YYYY-MM-DD) in the studio's timezone, so a plan ending today is still valid today. */
 export function todayInIndia(now = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(now);
+  return membershipDay(now);
 }
 
 export function evaluateWash(input: { membership: M | null | undefined; service: S | null | undefined; today: string; alreadyApplied?: boolean }): WashDecision {

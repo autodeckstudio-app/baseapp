@@ -1,14 +1,14 @@
+import { membershipDay } from "@autodeck/core";
 // Firestore side of the priority slot hold (rule itself is in priority-hold.ts).
 import { HttpsError } from "firebase-functions/v2/https";
 import type { Firestore } from "firebase-admin/firestore";
 import type { Membership, StudioConfig } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { utcToLocalDate } from "./schedule.js";
 import { hasPriorityMembership, heldStartTimes, isPriorityHeld } from "./priority-hold.js";
 
 export async function customerHasPriority(db: Firestore, customerId: string, now: Date, timezone: string): Promise<boolean> {
   const snap = await db.collection(COLLECTIONS.memberships()).where("customerId", "==", customerId).where("status", "==", "active").get();
-  return hasPriorityMembership(snap.docs.map((d) => d.data() as Membership), utcToLocalDate(now, timezone));
+  return hasPriorityMembership(snap.docs.map((d) => d.data() as Membership), membershipDay(now));
 }
 
 /** Customers without a priority slot cannot take a held start time before the hold ends. Staff are never blocked. */

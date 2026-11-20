@@ -1,3 +1,4 @@
+import { membershipTermDates } from "@autodeck/core";
 // Studio/admin confirms a pay-at-studio membership payment (cash / direct UPI /
 // bank transfer). Atomically records the payment as completed AND activates the
 // membership â one secured backend operation, so a membership can never become
@@ -75,8 +76,7 @@ export const confirmMembershipPayment = onCall({ region: "asia-south1" , enforce
 
     const now = new Date();
     const nowIso = now.toISOString();
-    const startDate = nowIso.slice(0, 10);
-    const endDate = new Date(now.getTime() + MEMBERSHIP_DURATION_DAYS * 86400000).toISOString().slice(0, 10);
+    const { startDate, endDate } = membershipTermDates(now, MEMBERSHIP_DURATION_DAYS);
 
     if (payment.status !== "completed") {
       tx.update(payDoc.ref, {

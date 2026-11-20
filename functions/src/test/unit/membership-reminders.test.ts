@@ -29,3 +29,9 @@ describe("sendMembershipReminders", () => {
     for (const d of [7, 0] as const) expect(JSON.stringify(membershipReminderText(d, "silver"))).not.toMatch(/\boff\b|%|discount|\bfree\b|\bRs\b|\u20b9/i);
   });
 });
+
+it("last-day reminders use the same midnight IST boundary as expiry", async () => {
+  const rows = [m({endDate:"2026-11-20"})];
+  expect((await sendMembershipReminders(fakeDb(rows).db, Date.parse("2026-11-20T18:29:59.999Z"))).sent).toBe(1);
+  expect((await sendMembershipReminders(fakeDb(rows).db, Date.parse("2026-11-20T18:30:00Z"))).sent).toBe(0);
+});

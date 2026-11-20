@@ -21,7 +21,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { sweepStaleMemberships } from "../../lib/expiry-sweeps.js";
 
 export const expireStaleMembershipsScheduled = onSchedule(
-  { schedule: "0 2 * * *", timeZone: "Asia/Kolkata", region: "asia-south1" },
+  { schedule: "0 0 * * *", timeZone: "Asia/Kolkata", region: "asia-south1" },
   async () => {
     const db = getFirestore();
     await sweepStaleMemberships(db);

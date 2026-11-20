@@ -1,4 +1,5 @@
 "use client";
+import { membershipDay } from "@autodeck/core";
 
 import { useCallback, useEffect, useState, useRef, Fragment } from "react";
 import type { Customer, Membership, MembershipPlan, MembershipRefreshUsage, PaymentMethod } from "@autodeck/core";
@@ -335,8 +336,8 @@ export function MembersPanel({ members, plans }: { members: Membership[]; plans:
   const names = useLabels(COLLECTIONS.customers(), members.map((m) => m.customerId), (d) => (d as Customer).name || (d as Customer).phone || "Customer");
   const planName = Object.fromEntries(plans.map((p) => [p.id, p.name]));
   const priceOf = Object.fromEntries(plans.map((p) => [p.id, p.priceInPaise]));
-  const today = new Date().toISOString().slice(0, 10);
-  const soon = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
+  const today = membershipDay();
+  const soon = membershipDay(Date.now() + 7 * 864e5);
   const active = members.filter((m) => m.status === "active");
   const expiring = active.filter((m) => m.endDate && m.endDate.slice(0, 10) <= soon && m.endDate.slice(0, 10) >= today);
   const pending = members.filter((m) => m.status === "pending");

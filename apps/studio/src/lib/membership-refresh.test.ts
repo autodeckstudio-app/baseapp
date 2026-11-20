@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { describe, expect, it } from "vitest";
 import { refreshVisitState } from "./membership-refresh";
 
@@ -43,4 +44,16 @@ describe("refreshVisitState", () => {
     // ...but a recorded visit still shows as recorded (visit truth rides on the row).
     expect(refreshVisitState({ ...active, refreshesUsed: 2 }, job, "ru1")).toBe("recorded");
   });
+});
+
+// Actual default clock path, not an injected already-computed date.
+it("stops offering refresh exactly at midnight IST after last valid date", () => {
+  vi.useFakeTimers();
+  try {
+    vi.setSystemTime(new Date("2026-11-20T18:29:59.999Z"));
+    const m = { ...active, endDate: "2026-11-20" };
+    expect(refreshVisitState(m, job, null)).toBe("recordable");
+    vi.setSystemTime(new Date("2026-11-20T18:30:00Z"));
+    expect(refreshVisitState(m, job, null)).toBe("unavailable");
+  } finally { vi.useRealTimers(); }
 });

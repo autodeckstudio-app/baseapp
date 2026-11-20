@@ -1,4 +1,5 @@
 "use client";
+import { getEffectiveMembershipStatus } from "@autodeck/core";
 
 import { collection, query, where, orderBy, limit, onSnapshot, type Unsubscribe } from "firebase/firestore";
 import { db } from "./firebase";
@@ -24,9 +25,8 @@ export function listenToPendingApprovals(
 }
 
 // Soonest-expiring active memberships - reuses the existing
-// tenantId+status+endDate index exactly. Raw stored status, no read-time
-// correction (unlike getMyMemberships' getEffectiveMembershipStatus) -
-// kept accurate instead by the daily expireStaleMembershipsScheduled sweep.
+// tenantId+status+endDate index. Derive effective status at read time,
+// so scheduler latency cannot display an ended plan as active.
 export function listenToExpiringMemberships(
   tenantId: string,
   onData: (memberships: Membership[]) => void,
@@ -39,7 +39,7 @@ export function listenToExpiringMemberships(
     orderBy("endDate", "asc"),
     limit(20),
   );
-  return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data() as Membership)), onError);
+  return onSnapshot(q, (snap) => onData(snap.docs.map((d) => { const m = d.data() as Membership; return { ...m, status: getEffectiveMembershipStatus(m) }; }).filter((m) => m.status === "active")), onError);
 }
 
 /** Staff marked present/half-day at one studio today (Kolkata date). */

@@ -1,3 +1,4 @@
+import { membershipDay } from "@autodeck/core";
 import{serviceOnlineBookingIssue}from'@autodeck/core';
 import{isDeepStrictEqual}from "node:util";
 import{combinedCheckoutEnabled,combinedGiftCheckoutEnabled,combinedWashCheckoutEnabled,combinedPickupBenefitEnabled,combinedQuoteCheckoutEnabled,reviewCombinedBooking,combinedReviewIdentity}from'../../lib/combined-booking.js';
@@ -158,7 +159,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
   // Membership pre-validation (cheap, non-transactional fail-fast). The
   // authoritative check happens again inside the transaction against a fresh
   // read, since washesUsed is mutable and racy across concurrent bookings.
-  const todayStr = now.toISOString().slice(0, 10);
+  const todayStr = membershipDay(now);
   if (data.membershipId !== undefined) {
     const membershipSnap = await db.collection(COLLECTIONS.memberships()).doc(data.membershipId).get();
     if (!membershipSnap.exists) {
@@ -363,7 +364,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       if (membership.tenantId !== user.claims.tenantId || membership.customerId !== customerDocId) {
         throw new HttpsError("permission-denied", "Cannot use another customer's membership.");
       }
-      if (membership.status !== "active" || !membership.endDate || membership.endDate < data.scheduledDate) {
+      if (membership.status !== "active" || !membership.endDate || membership.endDate < membershipDay() || membership.endDate < data.scheduledDate) {
         throw new HttpsError("failed-precondition", "Membership is not active or has expired.");
       }
 

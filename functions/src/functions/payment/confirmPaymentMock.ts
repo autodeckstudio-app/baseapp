@@ -1,3 +1,4 @@
+import { membershipTermDates } from "@autodeck/core";
 // DEV/EMULATOR ONLY: Simulates a payment provider webhook internally.
 // Allows testing the full payment â invoice flow without a real provider.
 // Gated: only runs when FUNCTIONS_EMULATOR=true or USE_PAYMENT_MOCK=true,
@@ -115,10 +116,7 @@ export const confirmPaymentMock = onCall({ region: "asia-south1" , enforceAppChe
       if (membershipRef && membershipSnap?.exists) {
         const membership = membershipSnap.data() as Membership;
         if (membership.status === "pending") {
-          const startDate = now.slice(0, 10);
-          const endDate = new Date(Date.parse(now) + MEMBERSHIP_DURATION_DAYS * 86400000)
-            .toISOString()
-            .slice(0, 10);
+          const { startDate, endDate } = membershipTermDates(now, MEMBERSHIP_DURATION_DAYS);
           endUpgradedMembership(tx, upgradeSrc, membershipRef.id, now);
           tx.update(membershipRef, {
             status: "active",

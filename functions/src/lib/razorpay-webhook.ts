@@ -1,3 +1,4 @@
+import { membershipTermDates } from "@autodeck/core";
 import{readConsultPaymentBinding,assertPaymentConsultBinding}from"./consult-payment.js";
 import{isDeepStrictEqual}from "node:util";
 import {readCombinedPaymentBasis,assertCombinedSettlementPayment,type CombinedPaymentBasis}from "./combined-settlement.js";
@@ -290,8 +291,7 @@ export async function processProviderEvent(
               owedAmountPaise: payment.amount > 0 ? payment.amount : null, currency: payment.currency ?? null }) });
         }
         if (mRef && mSnap?.exists && (mSnap.data() as Membership).status === "pending") {
-          const startDate = now.slice(0, 10);
-          const endDate = new Date(Date.parse(now) + MEMBERSHIP_DURATION_DAYS * 86400000).toISOString().slice(0, 10);
+          const { startDate, endDate } = membershipTermDates(now, MEMBERSHIP_DURATION_DAYS);
           endUpgradedMembership(tx, upgradeSrc, mRef.id, now);
           tx.update(mRef, { status: "active", startDate, endDate, activatedAt: now, activatedBy: "system", updatedAt: now });
           writeAuditLog(tx, { action: "membership.activated", entityType: "Membership", entityId: mRef.id, user, studioId: null,

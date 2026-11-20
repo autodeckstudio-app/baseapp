@@ -97,3 +97,9 @@ describe("pay in the app at booking", () => {
     expect(c).not.toContain("Opens when online payments go live");
   });
 });
+
+it("care ring includes the last IST day then disappears at midnight", () => {
+  const m = { status:"active", washesTotal:4, washesUsed:1, endDate:"2026-11-20" };
+  expect(careRing(m, Date.parse("2026-11-20T18:29:59.999Z"))?.line).toContain("0 days left");
+  expect(careRing(m, Date.parse("2026-11-20T18:30:00Z"))).toBeNull();
+});

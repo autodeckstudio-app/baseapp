@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# Approved membership IST policy, exact base and reviewed paths only.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/membership-ist-20261120 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  [ "$(git rev-parse HEAD^)" = 70964b4b43576495d9936725c40d995d3aba7d86 ] || exit 0
+  reviewed_paths="$(git diff --name-only HEAD^ HEAD | LC_ALL=C sort | sha256sum | cut -d' ' -f1)"
+  [ "$reviewed_paths" = e0cad3f4f8232291a83126b11ecb863112d341790534285ebd7247fffe30da32 ] || exit 0
+  case "$1" in customer|studio|admin) exit 1 ;; *) exit 0 ;; esac
+fi
 # Approved service journey, exact Customer-only base and path scope.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/services-approved-20261120 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0

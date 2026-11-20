@@ -1,3 +1,4 @@
+import { membershipDay } from "@autodeck/core";
 import type { Membership, ServiceJob } from "@autodeck/core";
 
 export type RefreshVisitState = "recorded" | "recordable" | "exhausted" | "unavailable";
@@ -14,7 +15,7 @@ export function refreshVisitState(
   membership: Pick<Membership, "status" | "endDate" | "refreshesTotal" | "refreshesUsed">,
   job: Pick<ServiceJob, "status">,
   recordedRowId: string | null,
-  today: string = new Date().toISOString().slice(0, 10),
+  today: string = membershipDay(),
 ): RefreshVisitState {
   const total = membership.refreshesTotal ?? 0;
   const used = membership.refreshesUsed ?? 0;
