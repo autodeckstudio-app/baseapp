@@ -1,3 +1,4 @@
+import type{SourcePricePreparedReview}from'../experience/SourcePriceReview';
 import {verifyWebsitePublication}from'../experience/catalogue-publish-review';
 import type {Service as ReviewedType0} from '@autodeck/core';
 import type {BrandEnquiry as ReviewedType1} from '@autodeck/core';
@@ -13,7 +14,7 @@ export async function reviewCatalogueDraftVersion(input:{draftId:string;expected
 export async function getManagedCataloguePublishStatus(publishId:string){if(!/^[A-Za-z0-9_-]{1,128}$/.test(publishId))throw Error('Exact operation ID required');const result=(await httpsCallable<{publishId:string},{publishId:string;phase:'reserved'|'sheet-write-in-flight'|'sheet-verified'|'needs-recovery-readback'|'complete';customerPublication?:{publishId:string;hash:string}|null}>(functions,'getManagedCataloguePublishStatus')({publishId})).data;if(result.publishId!==publishId||!['reserved','sheet-write-in-flight','sheet-verified','needs-recovery-readback','complete'].includes(result.phase))throw Error('Exact operation status unavailable');return result;}
 
 export async function reviewManagedCatalogue(input:{draftId:string;expectedVersion:number}){return(await httpsCallable<typeof input,{id:string}>(functions,'reviewManagedCatalogue')(input)).data;}
-export async function publishManagedCatalogue(input:{publishId:string;reviews:{draftId:string;reviewHash:string}[]}){return(await httpsCallable<typeof input,{phase:string}>(functions,'publishManagedCatalogue')(input)).data;}
+export async function publishManagedCatalogue(input:{publishId:string;reviews:{draftId:string;reviewHash:string}[];sourceReview?:{id:string;hash:string};noSheetEdits?:true}){return(await httpsCallable<typeof input,{phase:string}>(functions,'publishManagedCatalogue')(input)).data;}
 export async function inspectManagedCatalogueRecovery(publishId:string){return(await httpsCallable<{publishId:string},{assessment:string;assessmentDigest?:string}>(functions,'inspectManagedCatalogueRecovery')({publishId})).data;}
 export async function reviewManagedCatalogueRecovery(publishId:string){return(await httpsCallable<{publishId:string},{assessmentDigest:string}>(functions,'reviewManagedCatalogueRecovery')({publishId})).data;}
 export async function finishManagedCatalogueRecovery(input:{publishId:string;assessmentDigest:string}){return(await httpsCallable<typeof input,{phase:string}>(functions,'finishManagedCatalogueRecovery')(input)).data;}
@@ -27,4 +28,4 @@ export async function readCustomerPublication():Promise<{publishId:string;hash:s
  verifyWebsitePublication(customer,await response.json());return customer;
 }
 
-export async function reviewManagedCatalogueBatch(drafts:CatalogueDraftView[]){return(await httpsCallable<{drafts:{draftId:string;expectedVersion:number}[]},{drafts:{id:string;version:number;reviewHash:string}[]}>(functions,'reviewManagedCatalogue')({drafts:drafts.map(d=>({draftId:d.id,expectedVersion:d.version}))})).data;}
+export async function reviewManagedCatalogueBatch(drafts:CatalogueDraftView[]){return(await httpsCallable<{drafts:{draftId:string;expectedVersion:number}[]},{drafts:{id:string;version:number;reviewHash:string}[];sourceReview?:Omit<SourcePricePreparedReview,'reviews'>}>(functions,'reviewManagedCatalogue')({drafts:drafts.map(d=>({draftId:d.id,expectedVersion:d.version}))})).data;}

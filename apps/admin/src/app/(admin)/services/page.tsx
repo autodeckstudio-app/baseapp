@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import type { Service } from "@autodeck/core";
 import {PreparedCatalogueImport}from'../../../experience/PreparedCatalogueImport';
 import { ServicesView } from "../../../experience/ServicesView";
@@ -10,8 +10,11 @@ import {
 } from "../../../lib/catalogue-service";
 
 import {readCustomerPublication,reviewManagedCatalogueBatch,reviewManagedCatalogue,publishManagedCatalogue,getManagedCataloguePublishStatus,getCatalogueDrafts,saveCatalogueDraft,discardCatalogueDraft,type CatalogueDraftView}from '../../../lib/catalogue-drafts';
+import type{SourcePricePreparedReview}from'../../../experience/SourcePriceReview';
+// Enabled after exact source-writer, mapping and rollout approval.
+const PRICE_SOURCE_REVIEW_READY=true;
 import {CatalogueReview}from '../../../experience/CatalogueReview';
-import{publishReviewedSelection,publishSelectionProblem}from '../../../experience/catalogue-publish-review';
+import{canonicalDraftSelection,publishReviewedSelection,publishSelectionProblem}from '../../../experience/catalogue-publish-review';
 import{useAdminAuth}from '../../../lib/auth-context';
 import{CatalogueRecovery}from '../../../experience/CatalogueRecovery';
 import{CataloguePublishInspector}from '../../../experience/CataloguePublishInspector';
@@ -105,15 +108,17 @@ export function ServiceCatalogueScope({principal,tenantId}:{principal:string;ten
   }
 
   async function discard(draft:CatalogueDraftView){if(busy||loading||error)return;setBusy(true);setError(null);try{await discardCatalogueDraft({draftId:draft.id,expectedVersion:draft.version});setStatus('Draft discarded. The live service and past bookings were not affected.');await refresh();}catch{setError('Draft was not discarded. Reload and try again.');await refresh();}finally{setBusy(false)}}
-  async function reviewAndPublish(chosen:CatalogueDraftView[]):Promise<boolean>{
+  const prepareSourceReview=useCallback(async(chosen:CatalogueDraftView[]):Promise<SourcePricePreparedReview>=>{const r=await reviewManagedCatalogueBatch(canonicalDraftSelection(chosen));if(!r.sourceReview)throw Error('Actual source review unavailable');return{...r.sourceReview,reviews:r.drafts.map(d=>({draftId:d.id,reviewHash:d.reviewHash}))};},[]);
+  async function reviewAndPublish(chosen:CatalogueDraftView[],sourceReview?:SourcePricePreparedReview):Promise<boolean>{
+    if(PRICE_SOURCE_REVIEW_READY&&!sourceReview){setError('Check the actual sheet prices before publishing.');return false;}
     if(!trackingReady||busy||loading||error||publishFlight.current||unconfirmedOperation||drafts.some(d=>['publishing','blocked'].includes(d.state)))return false;
-    chosen=[...chosen].sort((a,b)=>a.id.localeCompare(b.id));
+    chosen=canonicalDraftSelection(chosen);
     const problem=publishSelectionProblem(chosen,services);if(problem){setError(problem);return false;}
     publishFlight.current=true;setBusy(true);setError(null);setStatus(null);let started=false;let publishId='';
     try{
       const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(chosen.map(d=>d.id+':'+d.version).sort().join('|')));
       publishId='catalogue_'+Array.from(new Uint8Array(digest)).map(v=>v.toString(16).padStart(2,'0')).join('').slice(0,40);
-      await publishReviewedSelection(chosen,{publishId,drafts:async()=>(await getCatalogueDrafts()).drafts,review:d=>reviewManagedCatalogue({draftId:d.id,expectedVersion:d.version}),reviewBatch:reviewManagedCatalogueBatch,publish:(id,reviews)=>publishManagedCatalogue({publishId:id,reviews}),status:getManagedCataloguePublishStatus,customerCatalogue:readCustomerPublication,services:getServicesIncludingHidden,onPublishStarted:()=>{localStorage.setItem(operationKey,publishId);started=true;setUnconfirmedOperation(publishId)}});
+      await publishReviewedSelection(chosen,{publishId,drafts:async()=>(await getCatalogueDrafts()).drafts,review:d=>reviewManagedCatalogue({draftId:d.id,expectedVersion:d.version}),reviewBatch:reviewManagedCatalogueBatch,...(sourceReview?{preparedReviews:sourceReview.reviews}:{}),publish:(id,reviews)=>publishManagedCatalogue({publishId:id,reviews,...(sourceReview?{sourceReview:{id:sourceReview.id,hash:sourceReview.hash},noSheetEdits:true as const}:{})}),status:getManagedCataloguePublishStatus,customerCatalogue:readCustomerPublication,services:getServicesIncludingHidden,onPublishStarted:()=>{localStorage.setItem(operationKey,publishId);started=true;setUnconfirmedOperation(publishId)}});
       localStorage.removeItem(operationKey);setUnconfirmedOperation(null);await refresh();rememberRecent(recentIds.filter(id=>!chosen.some(d=>d.id===id)));setStatus('Published. Your menu is up to date.');return true;
     }catch{
       if(started)setUnconfirmedOperation(publishId);
@@ -127,7 +132,7 @@ export function ServiceCatalogueScope({principal,tenantId}:{principal:string;ten
 
  <ServicesView draftMode onOpenLive={svc=>{const existing=svc?drafts.find(d=>(recentIds.includes(d.id)||sharedDraftIds.includes(d.id))&&d.serviceId===svc.id&&['draft','reviewed'].includes(d.state)):null;setEditing(existing??null);return Boolean(existing)}} onCloseDraft={()=>setEditing(null)} incomingDraft={editing?{key:editing.id+editing.version,value:draftFromService({...services.find(s=>s.id===editing.serviceId),id:editing.serviceId as string,...editing.payload,vehicleCategoryPricing:editing.payload.vehicleCategoryPricing??[],requiredBayType:editing.payload.requiredBayType??'general',membershipWashEligible:editing.payload.membershipWashEligible??false,displayOrder:editing.payload.displayOrder??0}as Service)}:null} services={services} loading={loading} error={recoveryNeeded?null:error} message={status} busy={busy||recoveryNeeded} onSave={handleSave} onToggle={(svc)=>void handleToggleActive(svc)}/>
  {recoveryNeeded?<section className="ax-publish-strip" role="status"><div><strong>Publish not confirmed</strong><p>Your changes are protected. Don't publish again yet.</p></div>{recoveryId?<button className="ax-button" disabled={busy} onClick={()=>void checkPending(recoveryId).catch(()=>{})}>Check status</button>:null}</section>:null}
- <CatalogueReview drafts={drafts} blocked={recoveryNeeded} primaryIds={[...recentIds,...preparedIds]} publishedCount={publishedCount} services={services} busy={!trackingReady||busy||loading||Boolean(error)||recoveryNeeded} error={error} onReviewAndPublish={reviewAndPublish} onEdit={setEditing} onDiscard={discard}/>
+ <CatalogueReview drafts={drafts} blocked={recoveryNeeded} primaryIds={[...recentIds,...preparedIds]} publishedCount={publishedCount} services={services} busy={!trackingReady||busy||loading||Boolean(error)||recoveryNeeded} error={error} onReviewAndPublish={reviewAndPublish} {...(PRICE_SOURCE_REVIEW_READY?{onPrepareSourceReview:prepareSourceReview}:{})} onEdit={setEditing} onDiscard={discard}/>
  <details className="ax-catalogue-tools"><summary>Catalogue tools</summary><PreparedCatalogueImport services={services} drafts={drafts} disabled={busy||loading||Boolean(error)||recoveryNeeded} onStaged={async ids=>{setPreparedIds(ids);rememberRecent([...new Set([...recentIds,...ids])]);await refresh()}}/>{recoveryNeeded?<details className="ax-panel ax-publishing-help"><summary>Publishing help</summary><CataloguePublishInspector key={'inspect-'+recoveryId} initialOperationId={recoveryId??''} principal={principal} tenantId={tenantId} onCheck={checkPending}/><details><summary>Recovery review</summary><CatalogueRecovery key={'recover-'+recoveryId} initialOperationId={recoveryId??''}/></details></details>:null}</details>
  </>;
 }

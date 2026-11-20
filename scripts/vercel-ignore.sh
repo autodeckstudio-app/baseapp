@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# Build only the reviewed Admin full-sync integration atop live membership/pilot source.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/admin-full-sync-preserved-20261121 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  [ "$(git rev-parse HEAD^)" = 18fdca30f10839c90de74ae284cf37adff2a3398 ] || exit 0
+  paths="$(git diff --name-only HEAD^ HEAD | LC_ALL=C sort | sha256sum | cut -d' ' -f1)"
+  [ "$paths" = 56055d9a62443dd4db836aed034e08819d42c6dccdeb48e75347478f15a8b014 ] || exit 0
+  case "$1" in admin) exit 1 ;; *) exit 0 ;; esac
+fi
 # Preserve actual Admin shared-draft pilot ancestry while applying approved IST dates.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/admin-membership-ist-preserved-20261120 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0
