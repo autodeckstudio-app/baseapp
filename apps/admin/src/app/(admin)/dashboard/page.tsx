@@ -1,4 +1,5 @@
 "use client";
+import { membershipDay } from "@autodeck/core";
 
 import { owedFromBookings, refundsOwedTotalText } from "../../../lib/refund-owed-copy";
 import { BOOKINGS_LIST_LIMIT } from "../../../lib/bookings-service";
@@ -72,7 +73,7 @@ export default function DashboardPage() {
       return true;
     });
     const owed = owedFromBookings(bookings, bookings.length >= BOOKINGS_LIST_LIMIT);
-    const soonExpiring = expiringMemberships.filter((m) => m.endDate && m.endDate <= new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
+    const soonExpiring = expiringMemberships.filter((m) => m.endDate && m.endDate <= membershipDay(Date.now() + 7 * 86400000));
 
     const floor = {
       arriving: jobs.filter((j) => j.status === "PENDING_VEHICLE" && j.scheduledDate === today).length,

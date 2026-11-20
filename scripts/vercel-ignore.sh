@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# Preserve actual Admin shared-draft pilot ancestry while applying approved IST dates.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/admin-membership-ist-preserved-20261120 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  [ "$(git rev-parse HEAD^)" = e3a258b0c8aa3cf8a8b5dabe6bd71a5e413a1dd4 ] || exit 0
+  paths="$(git diff --name-only HEAD^ HEAD | LC_ALL=C sort | sha256sum | cut -d' ' -f1)"
+  [ "$paths" = de44755a6037746c2a558d079c0da2b2e5c5ca1dc97d54f812e198f81d87c379 ] || exit 0
+  case "$1" in admin) exit 1 ;; *) exit 0 ;; esac
+fi
 # Services/Garage header correction: isolate build to Customer on this branch.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = fix/services-shared-header-20261119 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0
