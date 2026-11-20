@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Source archive only. Never build or change an app alias from this branch.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = archive/qualified-price-sync-20261121 ]; then exit 0; fi
 # Services/Garage header correction: isolate build to Customer on this branch.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = fix/services-shared-header-20261119 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0

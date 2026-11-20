@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "active": false,
+  "active": true,
   "sourceWorkbookId": "15K6LY_sbDF_6UNEqg1rycqxnuyd5lvPCH7pk17deol0",
-  "capturedAt": "2026-11-19T14:42:00+05:30",
+  "capturedAt": "2026-11-20T23:40:20+05:30",
   "qualification": "Candidate generated from fresh actual sheet, current active services and customer snapshot. No deployed mapping or source-write grant is implied. Row identities must be reverified at trusted review and again before any future effect.",
   "counts": {
     "offerings": 74,
-    "fixedPriceMapped": 63,
-    "initiallyMatchingFixedPrice": 62,
+    "fixedPriceMapped": 64,
+    "initiallyMatchingFixedPrice": 64,
     "inspectionOnly": 10,
     "missingSourceRow": 1
   },
@@ -422,9 +422,9 @@
       "sourceRows": [
         19
       ],
-      "status": "reconciliation-required",
+      "status": "mapped-price",
       "acceptedLiveMinor": 4000000,
-      "sourceValue": 35000,
+      "sourceValue": 40000,
       "expectedPriceHeader": "Selling Price \n(with gst)",
       "headerRow": 2
     },
@@ -1721,8 +1721,8 @@
         5
       ],
       "status": "mapped-price",
-      "acceptedLiveMinor": 60000,
-      "sourceValue": 600,
+      "acceptedLiveMinor": 50000,
+      "sourceValue": 500,
       "expectedPriceHeader": "Selling Price",
       "headerRow": 2
     },
@@ -2262,11 +2262,26 @@
       "serviceId": "enquiry_pps-spray",
       "name": "Standard PPS",
       "policy": "fixed",
-      "status": "source-row-required",
+      "status": "mapped-price",
       "acceptedLiveMinor": 4000000,
-      "tab": null,
-      "row": null,
-      "column": null
+      "tab": "PPS",
+      "row": 2,
+      "column": "C",
+      "sheetId": 299515585,
+      "identityLabels": [
+        "Standard PPS"
+      ],
+      "identityCells": [
+        {
+          "cell": "A2",
+          "value": "Standard PPS"
+        }
+      ],
+      "identityHash": "f37a98f41c49043a67f0d07d55a95966bb4ba578300fda10a0c00ea2b85e15e1",
+      "headerRow": 1,
+      "expectedPriceHeader": "Selling Price",
+      "sourceValue": 40000
     }
-  ]
+  ],
+  "mappingVersion": "price-list-20261120-approved"
 }

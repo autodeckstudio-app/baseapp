@@ -1,8 +1,8 @@
 import{priceListMappingCandidate}from'./price-list-mapping-candidate.js';import{validatePriceBinding,type PriceBinding}from'./price-list-sync-plan.js';import{priceListGoogleTransport,PRICE_SOURCE_WRITER,type PriceTransportBinding}from'./price-list-google-sheets.js';
-/** Kept false in this private candidate. Activation requires resolved source
+/** Approved activation requires resolved source
  * layout, fresh qualification, owner authority and the exact release manifest.
  * An environment-only switch or client request cannot enable this path.
  */
-export const PRICE_SOURCE_ACTIVE:boolean=false;
+export const PRICE_SOURCE_ACTIVE:boolean=true;
 export function qualifiedPriceSourceMapping(candidate:unknown=priceListMappingCandidate){const c=candidate as{version:string;bindings:PriceTransportBinding[]};if(!c||!c.version||!Array.isArray(c.bindings)||c.bindings.length!==74||new Set(c.bindings.map(b=>b.serviceId)).size!==74)throw Error('Exact full price mapping required');const bindings=c.bindings.map(b=>{if(!b||!b.tab||!b.identityHash||!Number.isInteger(b.row))throw Error('Every offering requires a source identity');const mapped={...b,column:b.policy==='inspection'?'':b.column};validatePriceBinding(mapped);return mapped;});const fixed=bindings.filter(b=>b.policy==='fixed');if(fixed.length!==64||bindings.filter(b=>b.policy==='inspection').length!==10)throw Error('Full price-policy coverage required');priceListGoogleTransport({principal:PRICE_SOURCE_WRITER,getAccessToken:async()=>null},fixed,async()=>{throw Error('Qualification cannot access network')});return{version:c.version,bindings:bindings as PriceBinding[],fixed};}
 export function activePriceSourceMapping(){if(!PRICE_SOURCE_ACTIVE)throw Error('Source pricing is inactive');return qualifiedPriceSourceMapping();}

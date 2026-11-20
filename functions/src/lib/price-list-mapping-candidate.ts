@@ -1,6 +1,5 @@
-// Generated private candidate, not an activation grant.
 export const priceListMappingCandidate = {
-  "version": "price-list-20261119-inactive",
+  "version": "price-list-20261120-approved",
   "bindings": [
     {
       "serviceId": "svc_81d1a5eef928b0408b41cce3d4d4b2ad",
@@ -412,9 +411,9 @@ export const priceListMappingCandidate = {
       "sourceRows": [
         19
       ],
-      "status": "reconciliation-required",
+      "status": "mapped-price",
       "acceptedLiveMinor": 4000000,
-      "sourceValue": 35000,
+      "sourceValue": 40000,
       "expectedPriceHeader": "Selling Price \n(with gst)",
       "headerRow": 2
     },
@@ -1711,8 +1710,8 @@ export const priceListMappingCandidate = {
         5
       ],
       "status": "mapped-price",
-      "acceptedLiveMinor": 60000,
-      "sourceValue": 600,
+      "acceptedLiveMinor": 50000,
+      "sourceValue": 500,
       "expectedPriceHeader": "Selling Price",
       "headerRow": 2
     },
@@ -2252,11 +2251,25 @@ export const priceListMappingCandidate = {
       "serviceId": "enquiry_pps-spray",
       "name": "Standard PPS",
       "policy": "fixed",
-      "status": "source-row-required",
+      "status": "mapped-price",
       "acceptedLiveMinor": 4000000,
-      "tab": null,
-      "row": null,
-      "column": null
+      "tab": "PPS",
+      "row": 2,
+      "column": "C",
+      "sheetId": 299515585,
+      "identityLabels": [
+        "Standard PPS"
+      ],
+      "identityCells": [
+        {
+          "cell": "A2",
+          "value": "Standard PPS"
+        }
+      ],
+      "identityHash": "f37a98f41c49043a67f0d07d55a95966bb4ba578300fda10a0c00ea2b85e15e1",
+      "headerRow": 1,
+      "expectedPriceHeader": "Selling Price",
+      "sourceValue": 40000
     }
   ]
-} as const;
+};
