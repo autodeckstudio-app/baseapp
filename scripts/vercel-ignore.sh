@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# This spacing-only release may build the website, never sibling applications.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/site-terms-spacing-20261120 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  [ "$(git rev-parse HEAD^)" = f49de1d1088f6c8c6f9e493bb9d2be92b65748cb ] || exit 0
+  unexpected="$(git diff --name-only HEAD^ HEAD | grep -vE '^(apps/site/src/data/redesign/terms.html|apps/site/tests/terms-spacing.test.mjs|scripts/vercel-ignore.sh)$' || true)"
+  [ -z "$unexpected" ] || exit 0
+  case "$1" in site) exit 1 ;; *) exit 0 ;; esac
+fi
 # Vercel "Ignored Build Step". Exit 0 = SKIP the build, exit 1 = BUILD.
 # Usage (from vercel.json ignoreCommand): bash ../../scripts/vercel-ignore.sh <app>
 # An app builds only when its own files or a package it imports change.
