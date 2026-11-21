@@ -1,4 +1,14 @@
 #!/usr/bin/env bash
+# Exact three slim-layout release. Customer only, all sibling projects skip.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-slim-actions-20261121 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  [ "$(git rev-parse HEAD^)" = 11440a97153b0870c7522c644d12cbd853895333 ] || exit 0
+  [ "$(git diff --name-only HEAD^ HEAD)" = scripts/vercel-ignore.sh ] || exit 0
+  [ "$(sha256sum 'apps/customer/src/ui/ServiceJourney.tsx' | cut -d' ' -f1)" = b6119843127c3030e1e2edef62efd93acb8dfb9719c673859dd85c127a97a492 ] || exit 0
+  [ "$(sha256sum 'apps/customer/src/ui/ServiceDetailRich.tsx' | cut -d' ' -f1)" = 65b75127851c72376ff002a8ce184526c7c64753201cec194dcac1fa4bbb380e ] || exit 0
+  [ "$(sha256sum 'apps/customer/src/app/(tabs)/catalogue/index.tsx' | cut -d' ' -f1)" = 743ba909c3190e85d177dd8cc457b94219c78e479facb867d2cf1a36a7bfd4b5 ] || exit 0
+  case "$1" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
 # Exact empty-cart display continuation. Customer only, all other projects skip.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-empty-cart-20261121 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0
