@@ -1,27 +1,19 @@
-import { Text, View } from "react-native";
-import { useExperienceTheme } from "@autodeck/ui/native";
-import { jobTimeline } from "./job-stage";
-import { metrics } from "../lib/metrics";
-import { raised } from "../lib/raised";
-
-const clock = (iso: string) => new Date(iso).toLocaleString("en-IN", { timeZone:"Asia/Kolkata", day:"numeric",month:"short",hour: "numeric", minute: "2-digit" });
-
-/** Four steps, each with the time it began. No photos, no staff notes. */
-export function JobTimeline({ status, history,finalLabel }: { status: string; history: Array<{ status: string; changedAt: string }>;finalLabel?:string|undefined }) {
-  const { name, colors } = useExperienceTheme();
-  const r = raised(name);
-  const steps = jobTimeline(status, history);
-  if(finalLabel)steps[3]={...steps[3]!,label:finalLabel,at:null};
-  return (
-    <View style={{ borderRadius: metrics.cardRadius, padding: metrics.cardPad, gap: 12, ...r.card }}>
-      <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>Progress</Text>
-      {steps.map((s,i) => (
-        <View key={s.label} accessibilityLabel={`${s.label}${s.at ? `, ${clock(s.at)}` : s.state === "next" ? ", next" : ""}`} style={{ flexDirection: "row", alignItems: "flex-start", gap: 16, minHeight:60 }}>
-          <View style={{width:24,alignItems:"center",alignSelf:"stretch"}}><View style={{ width: 18, height: 18, borderRadius: 10, backgroundColor: s.state === "next" ? "transparent" : colors.textPrimary, borderWidth: 1.5, borderColor: s.state === "next" ? colors.textTertiary : colors.textPrimary }} />{i<steps.length-1?<View style={{width:1,flex:1,marginTop:6,backgroundColor:colors.borderSubtle}}/>:null}</View>
-          <View style={{flex:1,gap:6,paddingBottom:18}}><Text style={{ color: s.state === "next" ? colors.textTertiary : colors.textPrimary, fontSize: 15, fontWeight: s.state === "now" ? "800" : "600" }}>{s.label}</Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{s.at ? clock(s.at) : ""}</Text></View>
-        </View>
-      ))}
-    </View>
-  );
+import { Text, View } from 'react-native';
+import { useExperienceTheme } from '@autodeck/ui/native';
+import { jobTimeline } from './job-stage';
+import { metrics } from '../lib/metrics';
+import { raised } from '../lib/raised';
+const date = (iso:string) => new Date(iso).toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',day:'numeric',month:'short'});
+const clock = (iso:string) => new Date(iso).toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata',hour:'numeric',minute:'2-digit'});
+/** Same recorded stages and timestamps, arranged as a horizontal progress strip. */
+export function JobTimeline({status,history,finalLabel}:{status:string;history:Array<{status:string;changedAt:string}>;finalLabel?:string|undefined}) {
+ const {name,colors}=useExperienceTheme();const steps=jobTimeline(status,history);
+ if(finalLabel)steps[3]={...steps[3]!,label:finalLabel,at:null};
+ return <View style={{borderRadius:metrics.cardRadius,padding:metrics.cardPad,gap:16,...raised(name).card}}>
+ <Text style={{color:colors.textTertiary,fontSize:12,fontWeight:'800',letterSpacing:1.2,textTransform:'uppercase'}}>Progress</Text>
+ <View style={{flexDirection:'row'}}>{steps.map((s,i)=><View key={s.label} accessibilityLabel={`${s.label}, ${s.state}${s.at?`, ${date(s.at)}, ${clock(s.at)}`:''}`} style={{flex:1,minWidth:0,gap:7,alignItems:'center'}}>
+ <View style={{height:18,width:'100%',justifyContent:'center',alignItems:'center'}}>{i>0?<View style={{position:'absolute',left:0,right:'50%',height:2,backgroundColor:s.state==='next'?colors.borderSubtle:colors.textPrimary}}/>:null}{i<3?<View style={{position:'absolute',left:'50%',right:0,height:2,backgroundColor:s.state==='done'?colors.textPrimary:colors.borderSubtle}}/>:null}<View style={{width:16,height:16,borderRadius:8,borderWidth:2,borderColor:s.state==='next'?colors.textTertiary:colors.textPrimary,backgroundColor:s.state==='next'?colors.surfaceElevated:colors.textPrimary}}/></View>
+ <Text style={{color:s.state==='next'?colors.textTertiary:colors.textPrimary,fontSize:11,lineHeight:15,textAlign:'center',fontWeight:s.state==='now'?'800':'600',paddingHorizontal:2,minHeight:30}}>{s.label==='Ready status recorded'?'Ready recorded':s.label}</Text>
+ {s.at?<View><Text style={{fontSize:10,lineHeight:14,textAlign:'center',color:colors.textSecondary}}>{date(s.at)}</Text><Text style={{fontSize:10,lineHeight:14,textAlign:'center',color:colors.textSecondary}}>{clock(s.at)}</Text></View>:null}
+ </View>)}</View></View>;
 }

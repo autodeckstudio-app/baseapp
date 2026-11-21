@@ -222,9 +222,9 @@ export default function PurchaseMembershipScreen() {
 
       {error ? <Notice title="Purchase failed" body={error} /> : null}
 
-      <View style={{ gap: space.breath }}>
-        <Button label="Pay online" busy={purchasing} onPress={() => void handlePurchase("razorpay_payment_link")} />
-        <Button label="Pay at studio" kind="quiet" busy={purchasing} onPress={() => void handlePurchase("cash")} />
+      <View style={{ flexDirection:"row",gap:8,alignItems:"stretch" }}>
+        <View style={{flex:1,minWidth:0}}><Button style={{alignSelf:"stretch",paddingHorizontal:8}} label="Pay online" busy={purchasing} onPress={() => void handlePurchase("razorpay_payment_link")} /></View>
+        <View style={{flex:1,minWidth:0}}><Button style={{alignSelf:"stretch",paddingHorizontal:8}} label="Pay at studio" busy={purchasing} onPress={() => void handlePurchase("cash")} /></View>
       </View>
     </Screen>
   );

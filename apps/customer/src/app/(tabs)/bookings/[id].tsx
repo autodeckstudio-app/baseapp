@@ -5,9 +5,7 @@ import{VisitCharges}from'../../../ui/VisitCharges';
 import {useSharedVisit} from '../../../hooks/useSharedVisit';
 import {recordedReadyAt,visitProgress} from '@autodeck/core';
 import {VisitFeedback} from '../../../ui/VisitFeedback';
-import {VisitRecords} from '../../../ui/VisitRecords';
 import { cancellationErrorMessage } from "../../../lib/cancellation-error";
-import { JobWorkAndCoverage } from "../../../ui/JobWorkAndCoverage";
 import{verifyMyCustomerDocId}from'../../../lib/auth-service';
 import { bookingPayOutcomeMessage } from "../../../lib/native-pay-core";
 import { listOwnerKey } from "../../../lib/owner-key";
@@ -110,8 +108,6 @@ export default function BookingDetailScreen() {
   // but a persisted Firebase session can exist in this browser - so every write and
   // every navigation into a write flow is blocked explicitly, never relying on the
   // fake ids being rejected by the backend.
-  const [workOpen, setWorkOpen] = useState(false);
-  useEffect(()=>setWorkOpen(false),[id]);
   const isMock = __DEV__ && !!devSample && (mock === "1" || mock === "2");
   const router = useRouter();
   useLang();
@@ -370,6 +366,8 @@ export default function BookingDetailScreen() {
   const giftCovered = Boolean(booking.giftId) && booking.priceBreakdown.total === 0;
   const waitingCancel = booking.cancelIntent?.state === "waiting" || booking.cancelIntent?.state === "needs_review";
   const noPaymentDue=booking.totalAmount===0&&booking.priceBreakdown.total===0;
+  const displayNoPaymentDue=noPaymentDue&&(!job||job.totalAmount===0&&(!job.combinedSettlement||job.combinedSettlement.balanceDuePaise===0));
+  const membershipPaymentCopy=membershipCoveredLabel(booking)&&displayNoPaymentDue?"Covered by your membership - nothing to pay":null;
   const canPay = !job?.visitId&&!job?.cashReconciliationId&&!noPaymentDue&&!membershipCoveredLabel(booking) && !waitingCancel && (booking.paymentStatus === "unpaid" || Boolean(job?.combinedSettlement&&job.combinedSettlement.balanceDuePaise>0&&!job.offlineSettlement&&booking.paymentStatus==="partial")) && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
   // Just booked (placed=1 landing view): offering to reschedule seconds after
   // booking is noise, so the section stays hidden. Opened later from the
@@ -497,8 +495,6 @@ export default function BookingDetailScreen() {
       {job && !["CANCELLED","EXPIRED"].includes(booking.status) && jobStage(job.status) && job.status !== "PENDING_VEHICLE" ? job.visitId&&!sharedProgress?null:<JobTimeline status={sharedProgress?.status??job.status} history={sharedProgress?.history??job.statusHistory??[]} finalLabel={sharedProgress?.finalLabel} /> : null}
 
 
-      {!isMock && ownerVerified && job && booking.status==='COMPLETED' ? <VisitRecords key={routeScope+job.id} jobId={job.id} vehicle={car?`${car.make} ${car.model}`:'This visit'} hasInspection={inspection?.status==='finalized'} onInspection={()=>router.push({pathname:'/(tabs)/bookings/inspection',params:{jobId:job.id}})}/> : <>
-      {!isMock && ownerVerified && job ? <View style={{gap:12}}>{job.status!=="READY_FOR_DELIVERY"?<Pane pad="gap"><Row title="Work record" trailing={<View />} expanded={workOpen} detail={workOpen?"Hide performed work":"View performed work and QC"} onPress={()=>setWorkOpen(v=>!v)} last/></Pane>:null}{workOpen||job.status==="READY_FOR_DELIVERY"?<JobWorkAndCoverage key={job.id} jobId={job.id} vehicle={car?`${car.make} ${car.model}`:"This visit"}/>:null}</View>:null}
 
       {inspection?.status === "finalized" && job ? (
         <Pane pad="inset">
@@ -511,7 +507,6 @@ export default function BookingDetailScreen() {
         </Pane>
       ) : null}
 
-      </>}
 
       {approvals
         .filter((a) => a.status === "pending" && !(job && jobStage(job.status)))
@@ -567,7 +562,7 @@ export default function BookingDetailScreen() {
           {booking.priceBreakdown.roundOffPaise ? <Row title="Round off" trailing={<T role="data">{rupees(booking.priceBreakdown.roundOffPaise)}</T>} /> : null}
           {booking.priceBreakdown.tax > 0 ? <Row title={booking.priceBreakdown.taxDescription} trailing={<T role="data">{rupees(booking.priceBreakdown.tax)}</T>} /> : null}
           <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(booking.priceBreakdown.total)}</T>} />
-          <Row detailTone="secondary" title="Payment" detail={groupedPaymentLabel??(job?.cashReconciliationId&&job.paymentStatus!=="paid"?"Cash receipt under review - do not pay again":membershipCoveredLabel(booking) ?? (noPaymentDue?giftCovered?"Included with your gift - no payment needed":"No payment needed":job?.offlineSettlement && job.paymentStatus==="partial" ? "Part payment recorded - balance due" : payment?.status==='completed'&&job?.paymentStatus!=='paid'&&!(payment as Payment & {invoiceReviewNeeded?:boolean}).invoiceReviewNeeded?'Payment records syncing - do not pay again':customerPaymentLabel(payment,paymentIsCurrent||isMock?'ready':paymentOwnerCurrent&&paymentScope===currentPaymentScope?paymentRead:'loading')))} last />
+          <Row detailTone="secondary" title="Payment" detail={groupedPaymentLabel??(job?.cashReconciliationId&&job.paymentStatus!=="paid"?"Cash receipt under review - do not pay again":membershipPaymentCopy ?? (noPaymentDue&&!displayNoPaymentDue?"Additional charges may be due - check with the studio":displayNoPaymentDue?giftCovered?"Included with your gift - no payment needed":"No payment needed":job?.offlineSettlement && job.paymentStatus==="partial" ? "Part payment recorded - balance due" : payment?.status==='completed'&&job?.paymentStatus!=='paid'&&!(payment as Payment & {invoiceReviewNeeded?:boolean}).invoiceReviewNeeded?'Payment records syncing - do not pay again':customerPaymentLabel(payment,paymentIsCurrent||isMock?'ready':paymentOwnerCurrent&&paymentScope===currentPaymentScope?paymentRead:'loading')))} last />
           {canPay&&!job?.cashReconciliationId&&booking.combinedPayment?.choice==="advance20"&&booking.paymentStatus==="partial"&&paymentIsCurrent&&(!payment||payment.status==="failed"||payment.status==="cancelled")?<View style={{marginTop:space.line}}><Button label={`Pay balance ${rupees(job?.combinedSettlement?.balanceDuePaise??0)}`} busy={payingNow} disabled={payingNow} onPress={()=>void handlePayNow()}/></View>:null}
           {resumeAllowed?<View style={{gap:space.line,marginTop:space.line}}><Button label="Continue online payment" busy={payingNow} disabled={payingNow} onPress={()=>void resumePayment()}/></View>:null}
           {job?.combinedSettlement?<View><Row title="Verified advance" detail={rupees(job.combinedSettlement.advanceCapturedPaise)}/><Row title={job.offlineSettlement?"Balance after advance":"Balance due"} detail={rupees(booking.status==="CANCELLED"?0:job.combinedSettlement.balanceDuePaise)}/></View>:null}
