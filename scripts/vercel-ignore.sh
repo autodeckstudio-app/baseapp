@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# Exact approved held UI release. Only the matching app builds.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-held-approved-20261121 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  [ "$(git rev-parse HEAD^)" = b18971febd1cd391806d4e2eff9df4606aaee575 ] || exit 0
+  [ "$(git diff --name-only HEAD^ HEAD)" = scripts/vercel-ignore.sh ] || exit 0
+  case "$1" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
+#!/usr/bin/env bash
 # Reviewed Customer-only rescheduling release. Other apps must not rebuild.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/rescheduling-approved-20261121 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0
