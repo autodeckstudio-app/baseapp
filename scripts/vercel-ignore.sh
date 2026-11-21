@@ -2,7 +2,7 @@
 # Approved information-formatting batch, exact Customer-only source.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-information-20261121 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0
-  [ "$(git rev-parse HEAD^)" = 188b5466475417bc943b4443729cdbe5616c45bd ] || exit 0
+  [ "$(git rev-parse HEAD^)" = a22b95e55c6d59c7d23cce2426b2c1a44adfc733 ] || exit 0
   [ "$(git diff --name-only HEAD^ HEAD)" = scripts/vercel-ignore.sh ] || exit 0
   case "$1" in customer) exit 1 ;; *) exit 0 ;; esac
 fi
