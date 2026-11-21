@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# Exact empty-cart display continuation. Customer only, all other projects skip.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-empty-cart-20261121 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  [ "$(git rev-parse HEAD^)" = 37ff1be09e9897262ad57f81519b445002fde36a ] || exit 0
+  [ "$(git diff --name-only HEAD^ HEAD)" = scripts/vercel-ignore.sh ] || exit 0
+  [ "$(sha256sum apps/customer/src/ui/ServiceJourney.tsx | cut -d' ' -f1)" = 8a701c4bc50f25922d205b17caadd8f99094c56e00071873b0f92aaf11ff10dc ] || exit 0
+  case "$1" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
 # Exact approved R2 Customer release. All unrelated apps stay skipped.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-r2-approved-20261121 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0
