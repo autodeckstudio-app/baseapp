@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# Reviewed Customer-only rescheduling release. Other apps must not rebuild.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/rescheduling-approved-20261121 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  [ "$(git rev-parse HEAD^)" = 32c29a3b0cbdb8c02bcc9b39bd5a3f96b582bd8e ] || exit 0
+  [ "$(git diff --name-only HEAD^ HEAD)" = scripts/vercel-ignore.sh ] || exit 0
+  case "$1" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
+#!/usr/bin/env bash
 # Approved information-formatting batch, exact Customer-only source.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-information-20261121 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0
