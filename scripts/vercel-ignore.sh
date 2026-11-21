@@ -1,4 +1,13 @@
 #!/usr/bin/env bash
+# Exact approved Membership and inspection layout batch. Customer only.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-membership-inspection-20261121 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  [ "$(git rev-parse HEAD^)" = 5d6b85273c12bc4cf933ba57d5e5dfd30f8ad25d ] || exit 0
+  [ "$(git diff --name-only HEAD^ HEAD)" = scripts/vercel-ignore.sh ] || exit 0
+  [ "$(sha256sum 'apps/customer/src/app/(tabs)/membership/index.tsx' | cut -d' ' -f1)" = 45905a8e809a7d2c09fac620451372c3e24192267c46c3c4d44668e7ff9c5e10 ] || exit 0
+  [ "$(sha256sum 'apps/customer/src/app/(tabs)/quote-request.tsx' | cut -d' ' -f1)" = 6b9d14a771ea96a54c9043d3f51a13065db5008fab5982df157d8a100aa7be45 ] || exit 0
+  case "$1" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
 # Exact three slim-layout release. Customer only, all sibling projects skip.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-slim-actions-20261121 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0
