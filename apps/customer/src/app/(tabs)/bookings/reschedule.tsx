@@ -5,7 +5,7 @@ import { Pressable, ScrollView, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getBookingById, getAvailability, rescheduleBooking, requestBookingReschedule, generateIdempotencyKey, todayIST, type AvailableSlot } from "../../../lib/booking-service";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
-import { extraServiceIdsOf } from "../../../lib/booking-rules";
+import { extraServiceIdsOf, rescheduleEntry, formatStudioLocal } from "../../../lib/booking-rules";
 import type { Booking } from "@autodeck/core";
 import { rescheduleRule, isBiggerService, isBookingMissed, intentKey, PREMIUM_REQUEST_CUTOFF_HOURS } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
@@ -56,13 +56,15 @@ export default function RescheduleBookingScreen() {
   // Premium (pay-at-studio) bookings use the request-and-approve flow (item 6,
   // PREVIEW): the customer sends a request and the studio confirms. The callable
   // enforces the one-request and >=24h rules authoritatively.
-  const isPremiumRequest = isBiggerService(svcCategory) && !isBookingMissed(booking);
+  const isPremiumRequest = isBiggerService(svcCategory);
+  const entry = rescheduleEntry(booking, svcCategory);
+  const unsupportedVisit = Boolean(booking.visitId) || (booking.lines?.length ?? 0) > 1;
   const rule = rescheduleRule(svcCategory);
   const hoursUntil = (new Date(booking.scheduledAt).getTime() - Date.now()) / 3600000;
   const eligible =
-    booking.status === "CONFIRMED" &&
+    booking.status === "CONFIRMED" && !unsupportedVisit &&
     (isPremiumRequest
-      ? (booking.rescheduleRequestCount ?? 0) === 0 && booking.rescheduleRequest?.status !== "pending" && hoursUntil >= PREMIUM_REQUEST_CUTOFF_HOURS
+      ? entry.mode === "request" && hoursUntil >= PREMIUM_REQUEST_CUTOFF_HOURS
       : (isBookingMissed(booking) || (booking.rescheduleCount < rule.maxCount &&
       hoursUntil >= rule.cutoffHours)));
 
@@ -70,8 +72,11 @@ export default function RescheduleBookingScreen() {
     return (
       <Screen>
         <Notice
-          title="This booking can no longer be rescheduled"
-          body="It may have changed since you opened this screen. Go back to see the latest status."
+          title={entry.mode === "request-pending" ? "Change request pending" : entry.mode === "request-used" ? "Request already used" : unsupportedVisit ? "Move this visit with the studio" : "Contact the studio"}
+          facts={entry.mode === "request-pending" ? [
+            {label:"Requested time",text:formatStudioLocal(entry.requestedDate,entry.requestedTime)},
+            {label:"Current booking",text:"Stays at its current time until the studio confirms."}
+          ] : [{label:"Next step",text:unsupportedVisit ? "Contact the studio so the visit's services stay together." : entry.mode === "request-used" ? "The request has been used. Contact the studio for another change." : "Contact the studio to change this booking."},{label:"Current booking",text:"No time change confirmed."}]}
           action={<Button label="Go back" onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/bookings")} />}
         />
       </Screen>
@@ -204,7 +209,7 @@ export default function RescheduleBookingScreen() {
           action={
             <ButtonRow>
               <Button label={isPremiumRequest ? "Send request" : "Confirm new time"} busy={submitting} onPress={() => void handleConfirm()} />
-              <Button label="Keep looking" kind="quiet" onPress={() => setPendingSlot(null)} />
+              <Button label="Back" kind="quiet" onPress={() => setPendingSlot(null)} />
             </ButtonRow>
           }
         />

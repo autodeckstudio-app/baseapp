@@ -1,6 +1,6 @@
 // Reschedule and cancel rules for a customer booking, shared by the booking page and the Bookings list.
 import type { Booking } from "@autodeck/core";
-import { rescheduleRule, isBiggerService, isBookingMissed, cancellationTerms, combinedCancellationTerms, cancellationLine } from "@autodeck/core";
+import { rescheduleRule, PREMIUM_REQUEST_CUTOFF_HOURS, isBiggerService, isBookingMissed, cancellationTerms, combinedCancellationTerms, cancellationLine } from "@autodeck/core";
 
 const NON_RESCHEDULABLE_STATUS_REASONS: Record<string, string> = {
   PENDING: "This booking is still awaiting studio confirmation.",
@@ -11,6 +11,13 @@ const NON_RESCHEDULABLE_STATUS_REASONS: Record<string, string> = {
 };
 
 export function getRescheduleEligibility(booking: Booking, category?: string | null): { eligible: boolean; reason: string | null } {
+  if (booking.visitId || (booking.lines?.length ?? 0) > 1) return { eligible: false, reason: "Contact the studio to move this visit so its services stay together." };
+  if (isBiggerService(category)) {
+    const entry = rescheduleEntry(booking, category);
+    if (entry.mode !== "request") return { eligible: false, reason: entry.mode === "request-pending" ? "A change request is already pending." : "Contact the studio to change this premium booking." };
+    const hoursUntil = (Date.parse(booking.scheduledAt) - Date.now()) / 3600000;
+    return hoursUntil >= PREMIUM_REQUEST_CUTOFF_HOURS ? { eligible: true, reason: null } : { eligible: false, reason: "Less than 24 hours before your appointment - contact the studio." };
+  }
   // Category-aware (basket item 6): wash gets one free move up to 4h ahead; other categories keep the legacy rule.
   const rule = rescheduleRule(category);
   if (isBookingMissed(booking)) return { eligible: false, reason: "This booking was auto-cancelled at studio close. Make a new booking." };
@@ -97,6 +104,7 @@ export function rescheduleEntry(
   // undefined category = the service catalogue has not loaded yet; render nothing
   // rather than flashing the wrong path (null = definitively unknown -> direct/legacy).
   if (category === undefined) return { mode: "loading" };
+  if (booking.visitId || (booking.lines?.length ?? 0) > 1) return { mode: "none", reason: "Contact the studio to move this visit so its services stay together." };
   if (!isBiggerService(category)) return { mode: "direct" };
   // Missed premium bookings (owner decision 2 Nov 2026, "All 3"): changes after a
   // missed premium appointment go through the studio. The server's missed-move
