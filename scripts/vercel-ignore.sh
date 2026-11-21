@@ -1,4 +1,20 @@
 #!/usr/bin/env bash
+# Exact approved R2 Customer release. All unrelated apps stay skipped.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-r2-approved-20261121 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  [ "$(git rev-parse HEAD^)" = 6da7639d63c5fa60cedc918a58aba267bd6ba34a ] || exit 0
+  [ "$(git diff --name-only HEAD^ HEAD)" = scripts/vercel-ignore.sh ] || exit 0
+  [ "$(sha256sum 'apps/customer/src/app/(tabs)/bookings/[id].tsx' | cut -d' ' -f1)" = e933146ef9fbbe55f5851f69d56d5417b7203de935106fa4c41ece5e9cfc0400 ] || exit 0
+  [ "$(sha256sum 'apps/customer/src/app/(tabs)/membership/purchase.tsx' | cut -d' ' -f1)" = 76b1d1d877f2246d02f6248dc2a099030146ed5c135a872c8b5062110dc74a92 ] || exit 0
+  [ "$(sha256sum 'apps/customer/src/ui/BookingTerms.tsx' | cut -d' ' -f1)" = cf86ccc90f78068c09f18858ff1081bcd04e87213174bd1501dbf651ea1c22a0 ] || exit 0
+  [ "$(sha256sum 'apps/customer/src/ui/JobTimeline.tsx' | cut -d' ' -f1)" = 533c02cfedc799a09cf01cd01a4c20fcfecaea35675e768f730bb000110d2ec3 ] || exit 0
+  [ "$(sha256sum 'apps/customer/src/ui/ServiceDetailRich.tsx' | cut -d' ' -f1)" = c7a83aee095feef07e0a42563b88e1f16751fbf0a0f6357a350ce09e107d7967 ] || exit 0
+  [ "$(sha256sum 'apps/customer/src/ui/ServiceJourney.tsx' | cut -d' ' -f1)" = 960d3f96977f1899272507eb2134a07ce5cf952fc488c5e9b43761676a0742a2 ] || exit 0
+  [ "$(sha256sum 'apps/customer/src/ui/ServiceProductSelection.tsx' | cut -d' ' -f1)" = b8fb107316eac202d5328dbc6bba39ece956737c19a562fd0d18ddb901ce836a ] || exit 0
+  [ "$(sha256sum 'apps/customer/src/ui/ServiceSelectionBar.tsx' | cut -d' ' -f1)" = ce43304f53754e39051a7d72c62609ef40f1b7c41dddc91d817f9a6d7d7bed06 ] || exit 0
+  [ "$(sha256sum 'apps/customer/src/lib/selection-price-preview.ts' | cut -d' ' -f1)" = 8f7970dd9e8b8034f2a3ca659bc2300037ef4f7c7615250deae59de4aac674c2 ] || exit 0
+  case "$1" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
 # Approved membership IST policy, exact base and reviewed paths only.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/membership-ist-20261120 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0
