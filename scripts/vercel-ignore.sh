@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# Exact approved held UI release. Only the matching app builds.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/admin-held-approved-20261121 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  [ "$(git rev-parse HEAD^)" = 7ab30bd43cd682468c7d07e44a7965701628429b ] || exit 0
+  [ "$(git diff --name-only HEAD^ HEAD)" = scripts/vercel-ignore.sh ] || exit 0
+  case "$1" in admin) exit 1 ;; *) exit 0 ;; esac
+fi
+#!/usr/bin/env bash
 # Build only the reviewed Admin full-sync integration atop live membership/pilot source.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/admin-full-sync-preserved-20261121 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0
