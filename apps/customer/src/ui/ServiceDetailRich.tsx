@@ -65,12 +65,15 @@ export function ServiceDetailRich({service,siblings,priceLabel,eligible,added,on
   {care.length?<View testID="service-detail-care" style={{borderRadius:22,borderWidth:1,borderColor:rule,backgroundColor:colors.surface,padding:16,gap:12}}>
    {care.map((tip,i)=><View key={i} style={{flexDirection:'row',alignItems:'flex-start',gap:12}}><View style={{paddingTop:1}}><Icon mono name="shield" size={15} color={muted}/></View><Text style={[font,{flex:1,fontSize:12,lineHeight:19,color:muted}]}>{tip}</Text></View>)}
   </View>:null}
-  <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12}}>
-   {quote?<Text style={[font,{flex:1,fontSize:11,lineHeight:16,color:muted}]}>Scope and price are agreed after inspection.</Text>:<View style={{flex:1}}/>}
-   <Pressable accessibilityRole="button" accessibilityLabel={eligible?(added?'Remove ':'Add ')+s.name:quote?`Discuss requirements for ${s.name}`:`Review booking for ${s.name}`} accessibilityState={eligible?{selected:added}:undefined} onPress={actionPress} style={({pressed})=>({...serviceActionSurface(name,eligible&&added,pressed),minHeight:40,paddingHorizontal:18,borderRadius:12,alignItems:'center',justifyContent:'center'})}>{eligible&&added?<Icon name="close" size={18} color={ink}/>:<Text style={[font,{fontSize:12,fontWeight:'600',color:ink}]}>{actionLabel}</Text>}</Pressable>
+  <View style={{gap:12}}>
+   {quote?<Text style={[font,{flex:1,fontSize:11,lineHeight:16,color:muted}]}>Scope and price are agreed after inspection.</Text>:null}
+   <View style={{flexDirection:'row',alignItems:'stretch',justifyContent:'flex-end',gap:10}}>
+   <Pressable accessibilityRole="button" accessibilityLabel={eligible?(added?'Remove ':'Add ')+s.name:quote?`Discuss requirements for ${s.name}`:`Review booking for ${s.name}`} accessibilityState={eligible?{selected:added}:undefined} onPress={actionPress} style={quote?{flex:1,minWidth:0,minHeight:44,justifyContent:'center'}:undefined}>{({pressed})=><View pointerEvents="none" style={{...serviceActionSurface(name,eligible&&added,pressed),minHeight:quote?36:40,paddingHorizontal:quote?8:18,paddingVertical:quote?3:0,borderRadius:quote?10:12,alignItems:'center',justifyContent:'center',...(quote?{borderColor:colors.borderStrong,backgroundColor:colors.surface}:{})}}>{eligible&&added?<Icon name="close" size={18} color={ink}/>:<Text style={[font,{fontSize:quote?11:12,fontWeight:'600',color:ink,...(quote?{lineHeight:15,textAlign:'center' as const}:{})}]}>{actionLabel}</Text>}</View>}</Pressable>
+   {quote?<Pressable accessibilityRole="button" accessibilityLabel={`Full details for ${s.name}`} onPress={()=>onOpen(s)} style={{flex:1,minWidth:0,minHeight:44,justifyContent:'center'}}>{({pressed})=><View pointerEvents="none" style={{...serviceActionSurface(name,false,pressed),minHeight:36,paddingHorizontal:8,paddingVertical:3,borderRadius:10,justifyContent:'center',alignItems:'center'}}><Text style={[font,{fontSize:11,lineHeight:15,color:ink,textAlign:'center'}]}>Full service details</Text></View>}</Pressable>:null}
+   </View>
   </View>
   {s.customerMenu?.bookingMode?<Text style={[font,{fontSize:11,lineHeight:16,color:muted}]}>{s.customerMenu.bookingMode==='walk_in'?'Free initial walk-in check. No online slot.':'Specialist timing must be confirmed. No online slot.'}</Text>:null}
-  {quote?<Pressable accessibilityRole="button" accessibilityLabel={`Full details for ${s.name}`} onPress={()=>onOpen(s)} style={{minHeight:44,justifyContent:'center',alignItems:'flex-start'}}><Text style={[font,{fontSize:11,color:muted,textDecorationLine:'underline'}]}>Full service details</Text></Pressable>:null}
+
 
  </View>;
 }
