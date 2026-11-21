@@ -10,7 +10,7 @@ export function MembershipUpgradeTerms({tier,paysFullPrice}:{tier:string;paysFul
   <Term label="Current plan">Your {tier} plan ends when the upgrade is paid.</Term>
   <Term label="Unused benefits">Unused washes and pickups do not carry over.</Term>
   <Term label="Upgrade price">{paysFullPrice?'You have used part of this plan, so the full new price applies.':'Nothing used yet, so you pay only the difference.'}</Term>
-  <Term label="New plan">The new plan runs 30 days from the day it starts.</Term>
+  <Term label="New plan">Starts after payment is confirmed. Last-valid date is start date plus 30 calendar days. Valid through that date; expires at midnight IST as the next day begins.</Term>
  </View>;
 }
 export function MembershipActivationTerms(){

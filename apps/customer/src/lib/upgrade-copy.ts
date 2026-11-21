@@ -11,7 +11,9 @@ export function upgradeConfirmCopy(i: { lostWashes: number; lostPickups: number;
     { label: "Benefits lost", text: lost || "No unused washes or pickups." },
     { label: `Current ${i.tier} plan`, text: "Ends when you pay." },
     { label: "You pay", text: i.fullPrice ? `${i.priceLabel}. Full ${i.newName} price because part of your ${i.tier} plan has been used.` : `${i.priceLabel}. Only the difference.` },
-    { label: `New ${i.newName} plan`, text: "Starts fresh today for 30 days." },
+    { label: `New ${i.newName} plan`, text: "Starts after payment is confirmed." },
+    { label: "Last-valid date", text: "Start date plus 30 calendar days." },
+    { label: "Expiry", text: "Midnight IST after the last-valid date." },
   ];
-  return { facts, title: "Confirm upgrade", body: `${loss} Your ${i.tier} plan ends when you pay. ${price} Your ${i.newName} plan starts fresh today for 30 days.`, cancel: "Cancel", confirm: "Confirm upgrade" };
+  return { facts, title: "Confirm upgrade", body: `${loss} Your ${i.tier} plan ends when you pay. ${price} Your ${i.newName} plan starts after payment is confirmed. Its last-valid date is the start date plus 30 calendar days; expiry is midnight IST after that date.`, cancel: "Cancel", confirm: "Confirm upgrade" };
 }

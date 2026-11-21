@@ -152,11 +152,13 @@ export default function PurchaseMembershipScreen() {
               <ScrollView contentContainerStyle={{padding:24,gap:20}}>
               <T role="heading">{copy.title}</T>
               <InformationFacts items={copy.facts} />
-              <ButtonRow>
-              <Button label={copy.confirm} onPress={() => void confirmUpgrade("razorpay_payment_link")} />
-              <Button kind="quiet" label="Pay at studio instead" onPress={() => void confirmUpgrade("cash")} />
-              <Button kind="quiet" label={copy.cancel} onPress={() => setAskUpgrade(false)} />
-              </ButtonRow>
+              <View style={{gap:8}}>
+                <View style={{flexDirection:"row",gap:8}}>
+                  <View style={{flex:1,minWidth:0}}><Button style={{alignSelf:"stretch",paddingHorizontal:6,marginTop:0,marginBottom:0}} label="Pay online" onPress={() => void confirmUpgrade("razorpay_payment_link")} /></View>
+                  <View style={{flex:1,minWidth:0}}><Button style={{alignSelf:"stretch",paddingHorizontal:6,marginTop:0,marginBottom:0}} kind="quiet" label="At studio" onPress={() => void confirmUpgrade("cash")} /></View>
+                </View>
+                <Button style={{alignSelf:"flex-end",marginTop:0,marginBottom:0}} kind="quiet" label={copy.cancel} onPress={() => setAskUpgrade(false)} />
+              </View>
               </ScrollView>
             </View>
           </View>
