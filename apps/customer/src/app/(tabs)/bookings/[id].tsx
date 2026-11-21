@@ -416,7 +416,7 @@ export default function BookingDetailScreen() {
       {placed === "1" && booking.status === "PENDING" && booking.payMode !== "online" && !booking.holdExpiresAt ? (
         <Notice
           title="Request sent"
-          body="The studio has your request and will confirm your slot. Status updates here. Nothing is charged now."
+          facts={[{"label": "Slot", "text": "The studio has your request and will confirm your slot."}, {"label": "Status", "text": "Updates here."}, {"label": "Payment", "text": "Nothing is charged now."}]}
         />
       ) : null}
 
@@ -592,9 +592,9 @@ export default function BookingDetailScreen() {
       ) : null}
       {booking.status === "EXPIRED" ? <Pane><Kicker>Slot released</Kicker><Row title="Booking" detail="Expired. This slot is no longer held."/><Row title="Next step" detail={paymentRead!=="ready"||payment?.status==="pending"||awaitingLinkId?"Payment is not confirmed yet. Check payment status with the studio before booking or paying again.":"You can book again."} last/></Pane> : null}
       {combinedReturn?<Pane pad="gap"><Kicker>Original-method returns</Kicker><Row title="Return amount" detail={rupees(combinedReturn.refundPaise)}/>{combinedReturn.feePaise>0?<Row title="Fee retained" detail={rupees(combinedReturn.feePaise)}/>:null}<Row title="Status" detail={combinedReturn.status==="awaiting_admin"?"Awaiting Admin approval":combinedReturn.status==="returned"?"Returns recorded":"Returns still pending"}/>{combinedReturn.entries.some(e=>e.method==="cash"&&e.returnedPaise<e.returnPaise)?<Row title="Cash return" detail="Still owed. Not an automatic refund."/>:null}</Pane>:null}
-      {!combinedReturn&&!(booking as Booking&{visitServiceReturnId?:string}).visitServiceReturnId&&(booking.refundStatus === "reserved" || booking.refundStatus === "requested") ? <Notice title="Refund requested" body="Your refund request is recorded. This page shows its status as it changes." /> : null}
-      {!combinedReturn&&!(booking as Booking&{visitServiceReturnId?:string}).visitServiceReturnId&&booking.refundStatus === "initiated" ? <Notice title="Refund recorded" body="The studio has recorded your refund. Paid online? When it reaches you depends on your bank or payment provider." /> : null}
-      {!combinedReturn&&!(booking as Booking&{visitServiceReturnId?:string}).visitServiceReturnId&&booking.refundStatus === "processed" ? <Notice title="Refund processed by Razorpay" body="Razorpay reports your refund as processed. When it reaches you depends on your bank or payment provider." /> : null}
+      {!combinedReturn&&!(booking as Booking&{visitServiceReturnId?:string}).visitServiceReturnId&&(booking.refundStatus === "reserved" || booking.refundStatus === "requested") ? <Notice title="Refund requested" facts={[{"label": "Request", "text": "Your refund request is recorded."}, {"label": "Status", "text": "This page shows its status as it changes."}]} /> : null}
+      {!combinedReturn&&!(booking as Booking&{visitServiceReturnId?:string}).visitServiceReturnId&&booking.refundStatus === "initiated" ? <Notice title="Refund recorded" facts={[{"label": "Record", "text": "The studio has recorded your refund."}, {"label": "Paid online?", "text": "When it reaches you depends on your bank or payment provider."}]} /> : null}
+      {!combinedReturn&&!(booking as Booking&{visitServiceReturnId?:string}).visitServiceReturnId&&booking.refundStatus === "processed" ? <Notice title="Refund processed by Razorpay" facts={[{"label": "Provider status", "text": "Razorpay reports your refund as processed."}, {"label": "Arrival", "text": "When it reaches you depends on your bank or payment provider."}]} /> : null}
       {actionError === EXISTING_PAYMENT_PENDING && booking.status!=="EXPIRED" && (!paymentIsCurrent||!payment||payment.status==='pending'||payment.status==='processing') ? <Pane>
         <Kicker>Payment check</Kicker>
         <Row title="Status" detail="Payment is not confirmed yet." />
@@ -604,7 +604,7 @@ export default function BookingDetailScreen() {
         <Row title="Could not open" detail="The existing payment link." />
         <Row title="Do not pay again" detail="Contact the studio for help." />
       </Pane> : actionError && actionError !== EXISTING_PAYMENT_PENDING ? <Notice title="We could not finish that" body={actionError} /> : null}
-      {pickup === "failed" ? <Notice title="Pickup request not sent" body="Your booking stands. The pickup or drop-off request could not be sent - please call the studio to arrange it." /> : null}
+      {pickup === "failed" ? <Notice title="Pickup request not sent" facts={[{"label": "Booking", "text": "Your booking stands."}, {"label": "Transport", "text": "The pickup or drop-off request could not be sent - please call the studio to arrange it."}]} /> : null}
 
       {showRescheduleSection ? (
         (() => {
@@ -656,9 +656,9 @@ export default function BookingDetailScreen() {
 
       {!isMock && !walkIn && (RETAINED_TRANSPORT_PREVIEW||booking.status !== "CANCELLED" && booking.status !== "EXPIRED") ? <PickupCard transportScope={authB.status==="ready"?JSON.stringify([authB.user.uid,authB.claims.role,authB.claims.tenantId,authB.claims.studioId]):null} bookingId={booking.id} combinedPayment={Boolean(booking.combinedPayment)} /> : null}
 
-      {isBookingLateToday(booking) ? <Notice title="Your booking is still valid today" body="Your slot has passed, but you can still come today during studio hours. If not checked in by close (7 pm Sunday, 9 pm other days), the booking auto-cancels." /> : null}
+      {isBookingLateToday(booking) ? <Notice title="Your booking is still valid today" facts={[{"label": "Today", "text": "Your slot has passed, but you can still come today during studio hours."}, {"label": "Check-in deadline", "text": "If not checked in by close (7 pm Sunday, 9 pm other days), the booking auto-cancels."}]} /> : null}
       {autoCancelled ? (
-        <Notice title="Booking auto-cancelled" body="Not checked in by studio close (7 pm Sunday, 9 pm other days), so this booking is closed. Book again any time." />
+        <Notice title="Booking auto-cancelled" facts={[{"label": "Reason", "text": "Not checked in by studio close (7 pm Sunday, 9 pm other days), so this booking is closed."}, {"label": "Next step", "text": "Book again any time."}]} />
       ) : null}
 
       {canCancel ? (

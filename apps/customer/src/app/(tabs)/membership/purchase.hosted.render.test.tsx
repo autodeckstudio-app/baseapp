@@ -9,7 +9,7 @@ vi.mock("../../../lib/firebase",()=>({db:{},functions:{}}));
 vi.mock("../../../hooks/useAuth",()=>({useAuth:()=>({status:"ready",customerDocId:h.owner,user:{uid:"auth-different"},claims:{tenantId:"t"}})}));
 vi.mock("../../../lib/membership-service",()=>({purchaseMembership:(...args:any[])=>(h.purchase as any)(...args),upgradeMembership:vi.fn(),generateIdempotencyKey:()=>`key-${++h.key}`}));
 vi.mock("../../../lib/home-service",()=>({listenToMyMemberships:(_t:unknown,_u:unknown,cb:(s:unknown[])=>void)=>{h.memberOwner=_u;h.member=cb;cb([]);return()=>{};}}));
-vi.mock("../../../ui/kit",()=>({Screen:({children}:any)=><section>{children}</section>,Notice:({title,body,action}:any)=><article>{title}{body}{action}</article>,Button:({label,onPress}:any)=><button onClick={onPress}>{label}</button>,Loading:()=>null,Kicker:({children}:any)=><span>{children}</span>,Pane:({children}:any)=><div>{children}</div>,Row:()=>null,T:({children}:any)=><span>{children}</span>,rupees:(n:number)=>String(n)}));
+vi.mock("../../../ui/kit",()=>({Screen:({children}:any)=><section>{children}</section>,Notice:({title,body,action}:any)=><article>{title}{body}{action}</article>,ButtonRow:({children}:any)=><div>{children}</div>,Button:({label,onPress}:any)=><button onClick={onPress}>{label}</button>,Loading:()=>null,Kicker:({children}:any)=><span>{children}</span>,Pane:({children}:any)=><div>{children}</div>,Row:()=>null,T:({children}:any)=><span>{children}</span>,rupees:(n:number)=>String(n)}));
 import {__params} from "../../../../test/stubs/expo-router";
 import Screen from "./purchase";
 beforeEach(()=>{__params.current={planId:"plan"};vi.clearAllMocks();});

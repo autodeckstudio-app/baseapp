@@ -26,3 +26,13 @@ describe("upgrade confirmation", () => {
     expect(s).toMatch(/confirmUpgrade[\s\S]*upgradeMembership\(/);
   });
 });
+
+it('structured facts keep amount, price basis, benefit loss and duration precise',()=>{
+ const x=c({lostWashes:2,lostPickups:1,fullPrice:true});
+ expect(x.facts.map(f=>f.text).join(' ')).toContain('2 unused washes and 1 free pickup');
+ expect(x.facts[1]?.text).toBe('Ends when you pay.');
+ expect(x.facts[2]?.text).toContain('Rs 1,800. Full Gold price');
+ expect(c().facts[2]?.text).toContain('Only the difference.');
+ expect(c({lostWashes:0,lostPickups:0}).facts[0]?.text).toBe('No unused washes or pickups.');
+ expect(x.facts[3]?.text).toBe('Starts fresh today for 30 days.');
+});

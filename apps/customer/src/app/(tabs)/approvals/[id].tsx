@@ -5,7 +5,7 @@ import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import type { ApprovalRequest, Vehicle, Booking, ServiceJob } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { space } from "@autodeck/ui/theme";
-import { Button, Chip, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { Button, Chip, Loading, Notice, Pane, Row, Screen, T, rupees , ButtonRow } from "../../../ui/kit";
 import { listenToApproval, respondToApproval } from "../../../lib/approval-service";
 import { db } from "../../../lib/firebase";
 
@@ -136,13 +136,15 @@ export default function ApprovalDetailScreen() {
         confirming ? (
           <Notice
             title={confirming === "approved" ? "Approve additional work?" : "Decline additional work?"}
-            body={
-              confirming === "approved"
-                ? `This authorizes ${approval.serviceName} for ${rupees(approval.priceImpact)}. Your new total will be ${rupees(approval.newTotal)}.`
-                : `The studio will not proceed with ${approval.serviceName}. Your original service continues as planned.`
-            }
+            facts={confirming === "approved" ? [
+              { label: "You authorize", text: `${approval.serviceName} for ${rupees(approval.priceImpact)}.` },
+              { label: "New total", text: rupees(approval.newTotal) },
+            ] : [
+              { label: "Additional work", text: `The studio will not proceed with ${approval.serviceName}.` },
+              { label: "Original service", text: "Continues as planned." },
+            ]}
             action={
-              <View style={{ gap: space.breath }}>
+              <ButtonRow>
                 <Button
                   label={confirming === "approved" ? "Approve" : "Decline"}
                   kind={confirming === "approved" ? "primary" : "danger"}
@@ -150,14 +152,14 @@ export default function ApprovalDetailScreen() {
                   onPress={() => void handleDecision(confirming)}
                 />
                 <Button label="Back" kind="quiet" onPress={() => setConfirming(null)} />
-              </View>
+              </ButtonRow>
             }
           />
         ) : (
-          <View style={{ gap: space.breath }}>
-            {quoteScopeRead!=="ready" ? <Notice title={quoteScopeRead==="loading"?"Checking the original quote":"Original quote could not load"} body="Your request stays here. Open the booking to check its original quote before approving additional work." action={<Button label="Open booking" onPress={()=>router.push(`/(tabs)/bookings/${approval.bookingId??approval.jobId}`)} />} /> : initialQuotePending ? <Notice title="Original quote approval needed" body="Your additional-work request stays here. Review the original quote on your booking first, then return to this request." action={<Button label="Open booking quote" onPress={()=>router.push(`/(tabs)/bookings/${linkedBooking?.id}`)} />} /> : <Button label="Approve" onPress={() => setConfirming("approved")} />}
+          <ButtonRow>
+            {quoteScopeRead!=="ready" ? <Notice title={quoteScopeRead==="loading"?"Checking the original quote":"Original quote could not load"} facts={[{"label": "Request", "text": "Your request stays here."}, {"label": "Before approval", "text": "Open the booking to check its original quote before approving additional work."}]} action={<Button label="Open booking" onPress={()=>router.push(`/(tabs)/bookings/${approval.bookingId??approval.jobId}`)} />} /> : initialQuotePending ? <Notice title="Original quote approval needed" facts={[{"label": "Additional work", "text": "Your additional-work request stays here."}, {"label": "Before approval", "text": "Review the original quote on your booking first, then return to this request."}]} action={<Button label="Open booking quote" onPress={()=>router.push(`/(tabs)/bookings/${linkedBooking?.id}`)} />} /> : <Button label="Approve" onPress={() => setConfirming("approved")} />}
             <Button label="Decline" kind="danger" onPress={() => setConfirming("rejected")} />
-          </View>
+          </ButtonRow>
         )
       ) : (
         <Button label="Back to booking" kind="quiet" onPress={originBack ?? (() => router.canGoBack() ? router.back() : router.replace("/(tabs)/bookings"))} />

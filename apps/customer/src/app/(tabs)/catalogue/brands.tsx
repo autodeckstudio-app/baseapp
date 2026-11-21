@@ -59,7 +59,7 @@ export default function BrandProduct() {
             ? "Can't load the current menu"
             : "Product not currently listed"
         }
-        body="Choose a confirmed offering from Services. Manufacturer information alone does not confirm availability."
+        facts={[{label:"Next step",text:"Choose a confirmed offering from Services."},{label:"Availability",text:"Manufacturer information alone does not confirm availability."}]}
         action={
           <Button
             label="Browse services"

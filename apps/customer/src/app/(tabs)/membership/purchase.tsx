@@ -2,14 +2,14 @@ import { JourneySteps } from "../../../ui/JourneySteps";
 import {MembershipActivationTerms,MembershipUpgradeTerms} from "../../../ui/MembershipTerms";
 import { useReduceMotion } from "../../../lib/reduce-motion";
 import { useState, useEffect, useRef } from "react";
-import { View, Modal } from "react-native";
+import { View, Modal, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { COLLECTIONS } from "@autodeck/database";
 import { pickupsLostOnUpgrade, upgradePaysFullPrice, upgradePricePaise, washesLostOnUpgrade, type Membership, type MembershipPlan } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
-import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { Button, InformationFacts, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees , ButtonRow } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { purchaseMembership, upgradeMembership, generateIdempotencyKey } from "../../../lib/membership-service";
 import { listenToMyMemberships } from "../../../lib/home-service";
@@ -148,12 +148,16 @@ export default function PurchaseMembershipScreen() {
         <Button label="Upgrade" busy={purchasing} onPress={() => setAskUpgrade(true)} />
         <Modal visible={askUpgrade} transparent animationType={reduce ? "none" : "fade"} onRequestClose={() => setAskUpgrade(false)}>
           <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 24 }}>
-            <View style={{ width: "100%", maxWidth: 420, borderRadius: 28, padding: 24, gap: 20, borderWidth:1,borderColor:colors.borderSubtle,backgroundColor: colors.surface }}>
+            <View style={{ width: "100%", maxWidth: 420, maxHeight: "90%", borderRadius: 28, overflow: "hidden", borderWidth:1,borderColor:colors.borderSubtle,backgroundColor: colors.surface }}>
+              <ScrollView contentContainerStyle={{padding:24,gap:20}}>
               <T role="heading">{copy.title}</T>
-              <T tone="secondary">{copy.body}</T>
+              <InformationFacts items={copy.facts} />
+              <ButtonRow>
               <Button label={copy.confirm} onPress={() => void confirmUpgrade("razorpay_payment_link")} />
               <Button kind="quiet" label="Pay at studio instead" onPress={() => void confirmUpgrade("cash")} />
               <Button kind="quiet" label={copy.cancel} onPress={() => setAskUpgrade(false)} />
+              </ButtonRow>
+              </ScrollView>
             </View>
           </View>
         </Modal>
@@ -180,15 +184,16 @@ export default function PurchaseMembershipScreen() {
       <Screen>
         <Notice
           title={isStudio ? "Pay at the studio to activate" : payCopy.title}
-          body={
-            isStudio
-              ? "Request saved. Pay at the studio front desk - benefits unlock once payment is confirmed. Unpaid requests are cancelled automatically."
-              : payCopy.body
-          }
+          body={isStudio ? undefined : payCopy.body}
+          facts={isStudio ? [
+            { label: "Request", text: "Request saved." },
+            { label: "Activation", text: "Pay at the studio front desk - benefits unlock once payment is confirmed." },
+            { label: "Unpaid requests", text: "Unpaid requests are cancelled automatically." },
+          ] : payCopy.facts}
           action={
             <View style={{ gap: space.hair }}>
-              {!isStudio ? <Button label="Pay online" busy={purchasing} onPress={() => void handlePurchase("razorpay_payment_link")} /> : null}
-              <Button label="View status" kind="quiet" onPress={() => router.replace("/(tabs)/membership")} />
+              <ButtonRow>{!isStudio ? <Button label="Pay online" busy={purchasing} onPress={() => void handlePurchase("razorpay_payment_link")} /> : null}
+              <Button label="View status" kind="quiet" onPress={() => router.replace("/(tabs)/membership")} /></ButtonRow>
               {error ? <T role="caption" tone="tertiary">{error}</T> : null}
             </View>
           }

@@ -10,7 +10,7 @@ import type { Booking } from "@autodeck/core";
 import { rescheduleRule, isBiggerService, isBookingMissed, intentKey, PREMIUM_REQUEST_CUTOFF_HOURS } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
-import { Button, Kicker, Loading, Notice, Pane, Screen, T } from "../../../ui/kit";
+import { Button, Kicker, Loading, Notice, Pane, Screen, T , ButtonRow } from "../../../ui/kit";
 
 export default function RescheduleBookingScreen() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
@@ -124,9 +124,9 @@ export default function RescheduleBookingScreen() {
       <Screen>
         <Notice
           title={requested ? "Reschedule request sent" : "Booking rescheduled"}
-          body={requested
-            ? `You've asked for ${when}. Your booking stays at its current time until the studio confirms - one request per booking.`
-            : `Your booking is now set for ${when}.`}
+          facts={requested
+            ? [{label:'Requested time',text:when},{label:'Current booking',text:'Stays at its current time until the studio confirms.'},{label:'Request limit',text:'One request per booking.'}]
+            : [{label:'New booking time',text:when}]}
           action={<Button label="Done" onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/bookings")} />}
         />
       </Screen>
@@ -196,14 +196,16 @@ export default function RescheduleBookingScreen() {
       {pendingSlot ? (
         <Notice
           title={isPremiumRequest ? "Confirm reschedule request" : "Confirm reschedule"}
-          body={isPremiumRequest
-            ? `Ask the studio to move this booking from ${currentDisplay} to ${formatSlot(new Date(pendingSlot.startAt))}. Your booking stays put until the studio confirms, and your price and advance stay the same.`
-            : `Move this booking from ${currentDisplay} to ${formatSlot(new Date(pendingSlot.startAt))}. Your price stays the same.`}
+          facts={[
+            {label:'Current time',text:currentDisplay},
+            {label:isPremiumRequest?'Requested time':'New time',text:formatSlot(new Date(pendingSlot.startAt))},
+            ...(isPremiumRequest?[{label:'Confirmation',text:'Your booking stays put until the studio confirms.'},{label:'Price and advance',text:'Stay the same.'}]:[{label:'Price',text:'Stays the same.'}])
+          ]}
           action={
-            <View style={{ gap: space.breath }}>
+            <ButtonRow>
               <Button label={isPremiumRequest ? "Send request" : "Confirm new time"} busy={submitting} onPress={() => void handleConfirm()} />
               <Button label="Keep looking" kind="quiet" onPress={() => setPendingSlot(null)} />
-            </View>
+            </ButtonRow>
           }
         />
       ) : null}

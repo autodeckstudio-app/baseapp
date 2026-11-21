@@ -262,6 +262,13 @@ export function Plate({ value }: { value: string }) {
   );
 }
 
+const ButtonRowContext = createContext(false);
+
+/** Intrinsic slim actions share a line when they fit, otherwise wrap in order. */
+export function ButtonRow({ children }: { children: ReactNode }) {
+  return <ButtonRowContext.Provider value={true}><View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>{children}</View></ButtonRowContext.Provider>;
+}
+
 export function Button({
   label,
   icon,
@@ -284,6 +291,7 @@ export function Button({
 }) {
   const { colors, name } = useExperienceTheme();
   const reduce=useReduceTransparency();
+  const inButtonRow = useContext(ButtonRowContext);
   const primary = kind === "primary";
   const off = disabled || busy;
   return (
@@ -298,8 +306,8 @@ export function Button({
         {
           minHeight: 44,
           alignSelf: "flex-start",
-          marginTop: primary ? 8 : 0,
-          marginBottom: icon ? 0 : 8,
+          marginTop: inButtonRow ? 0 : primary ? 8 : 0,
+          marginBottom: inButtonRow || icon ? 0 : 8,
           borderRadius: 12,
           paddingHorizontal: 14,
           alignItems: "center",
@@ -472,12 +480,22 @@ export function Loading({ label = "Loading" }: { label?: string }) {
   </View></View></Ambient>;
 }
 
+/** Explicit facts only. The caller owns wording and grouping; never split unknown text. */
+export function InformationFacts({ items }: { items: { label?: string; text: string }[] }) {
+  return <View style={{ gap: 12 }}>{items.map((item, i) => (
+    <View key={i} style={{ minWidth: 0, gap: 3 }}>
+      {item.label ? <T role="caption" tone="tertiary" style={{ fontSize: 10, fontWeight: "600", letterSpacing: .6 }}>{item.label.toUpperCase()}</T> : null}
+      <T tone="secondary" style={{ fontSize: 13, lineHeight: 20 }}>{item.text}</T>
+    </View>
+  ))}</View>;
+}
+
 /** Compact status or retry panel. The route owns every action and its meaning. */
-export function Notice({ title, body, action }: { title: string; body?: string; action?: ReactNode }) {
+export function Notice({ title, body, facts, action }: { title: string; body?: string | undefined; facts?: { label?: string; text: string }[] | undefined; action?: ReactNode }) {
   const { colors, name } = useExperienceTheme();
   return <Pane pad="inset"><View style={{ gap: 18 }}><View style={{ flexDirection: "row", alignItems: "flex-start", gap: 14 }}>
     <View style={{ width: 4, minHeight: 42, alignSelf: "stretch", borderRadius: 4, backgroundColor: name === "light" ? "#A9B9CD" : "#758CA9" }} />
-    <View style={{ flex: 1, minWidth: 0, gap: 8 }}><T role="heading">{title}</T>{body ? <T tone="secondary" style={{ lineHeight: 22 }}>{body}</T> : null}</View>
+    <View style={{ flex: 1, minWidth: 0, gap: 8 }}><T role="heading">{title}</T>{facts?.length ? <InformationFacts items={facts} /> : body ? <T tone="secondary" style={{ lineHeight: 22 }}>{body}</T> : null}</View>
   </View>{action ? <View style={{ paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.borderSubtle }}>{action}</View> : null}</View></Pane>;
 }
 
