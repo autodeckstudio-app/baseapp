@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# Exact approved Services presentation release. Customer only.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-services-copy-20261123 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  [ "$(git rev-parse HEAD^)" = 39491814af3f0353f1d6da5083228001a572bc46 ] || exit 0
+  [ "$(git diff --name-only HEAD^ HEAD)" = scripts/vercel-ignore.sh ] || exit 0
+  case "$1" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
+#!/usr/bin/env bash
 # Consolidated Customer branch: other apps fail closed for every commit.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-batch-20261123 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0
