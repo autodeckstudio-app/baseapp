@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# Exact approved profile picker interaction. Customer only, no account uploads.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/gauri-photo-picker-20261122 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  [ "$(git rev-parse HEAD^)" = 2635b4e6dafcea32a5e63f886d4ac5ec2bd7d05c ] || exit 0
+  [ "$(git diff --name-only HEAD^ HEAD)" = scripts/vercel-ignore.sh ] || exit 0
+  case "$1" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
+#!/usr/bin/env bash
 # Approved independent Gauri UI changes, exact Customer-only release.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/gauri-customer-20261122 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0
