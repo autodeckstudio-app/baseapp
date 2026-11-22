@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# Approved independent Gauri UI changes, exact Customer-only release.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/gauri-customer-20261122 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  [ "$(git rev-parse HEAD^)" = 41667e873d85df66baa626f1e4291d2be16d1458 ] || exit 0
+  [ "$(git diff --name-only HEAD^ HEAD)" = scripts/vercel-ignore.sh ] || exit 0
+  case "$1" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
+#!/usr/bin/env bash
 # Exact approved held UI release. Only the matching app builds.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-held-approved-20261121 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0
