@@ -1,3 +1,4 @@
+import {presentationScope} from './service-presentation';
 // Showcase copy for the Services screen and service pages.
 //
 // Service scope is read from the current catalogue record. No extra deliverables
@@ -40,9 +41,9 @@ export const FAQS: Record<string, { q: string; a: string }[]> = {
 
 /** Customer service scope comes from the current catalogue record, never a
  * name-matched marketing template. Admin changes therefore appear on every page. */
-export function showcaseFor(s: Pick<Service, "name" | "description">): Showcase {
-  const lines = (s.description ?? "").split(/\n+/).map(x => x.replace(/^\s*[-•]\s*/, "").trim()).filter(Boolean);
-  return { tagline: lines[0] ?? "", included: [...new Set(lines)], benefits: [] };
+export function showcaseFor(s: Pick<Service, "name" | "description"> & Partial<Pick<Service,"id">>): Showcase {
+  const scope=presentationScope(s);
+  return {tagline:scope.summary,included:scope.included,benefits:[]};
 }
 
 /** Brand blurbs: catalogue brands only. Draft. */

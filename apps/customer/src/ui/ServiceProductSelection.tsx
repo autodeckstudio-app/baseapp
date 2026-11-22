@@ -1,3 +1,4 @@
+import {presentationScope,presentationTitle,reviewedPresentation,isScopeLimit} from '../lib/service-presentation';
 import{raised}from'../lib/raised';
 import{serviceActionSurface}from'../lib/service-action-surface';
 import {ProtectionFamilyIntro,type ProtectionFamily} from './ProtectionFamilyIntro';
@@ -39,14 +40,14 @@ export function ServiceProductSelection({title,description,services,priceLabel,o
  if(!s)return <Text style={[font,{padding:18,fontSize:13,lineHeight:20}]}>Tell us what you have in mind and discuss the options.</Text>;
  const turnaround=customerTurnaround(s);const duration=s.estimatedDurationMinutes;const workingTime=!Number.isFinite(duration)||duration<=0?'Confirm timing':duration<60?`${duration} min`:duration%60===0?`${duration/60} ${duration===60?'hour':'hours'}`:`${Math.floor(duration/60)}h ${duration%60}min`;const warranty=s.customerMenu?null:manufacturerWarranty(s.name);const application=manufacturerApplicationTerms(s.name);
  const explanation=serviceExplanation(s);const servicePage=true;const productPage=s.customerMenu?.home==='paint';
- const lines=(explanation.length?explanation.join('\n'):productSelectionDescription(s)).split('\n').filter(Boolean),conditions=lines.slice(1).filter(x=>/^(?:Not|Only for|Requires|Do not)\b/i.test(x)&&x!=='Not an automotive warranty'),highlights=lines.slice(1).filter(x=>!conditions.includes(x)&&x!=='Not an automotive warranty');
+ const scope=presentationScope(s),lines=[scope.summary,...scope.included.filter(x=>x!==scope.summary)],conditions=scope.limits,highlights=lines.slice(1);
  const featured=highlights;
  const price=(item:Service)=>item.priceOnRequest?'Quote on request':priceLabel(item)??'Quote on request';
  return <View style={{padding:0,gap:0,minWidth:0}}>
   <View testID="service-summary-card" style={{...raised(name).card,padding:12,gap:0}}>
   <ServiceIdentityMedia service={s} compact/>
   <View style={{paddingVertical:12,gap:7}}>
-   <View testID="service-title-price" style={{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between',gap:10}}><Text accessibilityRole="header" style={[font,{flex:1,minWidth:0,fontSize:22,lineHeight:28,letterSpacing:-.7,fontWeight:'600'}]}>{productPage&&s.brand!=='Standard'?short(s):s.name}</Text><Text style={[font,{maxWidth:'43%',flexShrink:0,textAlign:'right',fontSize:s.priceOnRequest?13:20,lineHeight:28,fontWeight:'600',letterSpacing:-.4}]}>{price(s)}</Text></View>
+   <View testID="service-title-price" style={{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between',gap:10}}><Text accessibilityRole="header" style={[font,{flex:1,minWidth:0,fontSize:22,lineHeight:28,letterSpacing:-.7,fontWeight:'600'}]}>{presentationTitle(s)}</Text><Text style={[font,{maxWidth:'43%',flexShrink:0,textAlign:'right',fontSize:s.priceOnRequest?13:20,lineHeight:28,fontWeight:'600',letterSpacing:-.4}]}>{price(s)}</Text></View>
    {lines[0]?<Text style={[font,{fontSize:13,lineHeight:20,color:muted}]}>{lines[0]}</Text>:null}
   </View>
   {warranty||application?<View style={{borderTopWidth:1,borderBottomWidth:1,borderColor:rule,flexDirection:'row',alignItems:'flex-start',paddingVertical:12,gap:12}}>
@@ -57,7 +58,7 @@ export function ServiceProductSelection({title,description,services,priceLabel,o
   {warranty&&showWarranty?<View style={{gap:5,paddingVertical:10}}><Text style={[font,{fontSize:11,lineHeight:17,color:muted}]}>{warranty.terms}</Text><Text style={[font,{fontSize:11,lineHeight:17,color:muted}]}>Applies only to eligible installations under the manufacturer's terms.</Text></View>:null}
 
   <View style={{gap:9,paddingVertical:featured.length?12:6}}>{featured.map((raw,i)=>{const f=productHighlight(raw);return <View key={i} style={{flexDirection:'row',alignItems:'center',gap:9}}><Icon mono name="check" size={15} color={accent}/><Text style={[font,{flex:1,fontSize:12,lineHeight:18}]}>{f.text}</Text></View>})}</View>
-  {conditions.filter(text=>!(application&&text==='Requires a brand-selected installer')).map((text,i)=><Text key={i} style={[font,{fontSize:10,lineHeight:16,color:muted,marginBottom:7}]}>Compatibility: {text}</Text>)}
+  {conditions.filter(text=>!(application&&text==='Requires a brand-selected installer')).map((text,i)=><Text key={i} style={[font,{fontSize:10,lineHeight:16,color:muted,marginBottom:7}]}>Details: {text}</Text>)}
 
 
   <Pressable accessibilityRole="button" accessibilityLabel={onSelectForVisit?(selectedForVisit?.includes(s.id)?'Remove ':'Add ')+s.name:`${s.priceOnRequest?'Discuss requirements for':'Review booking for'} ${s.name}`} onPress={()=>onSelectForVisit?onSelectForVisit(s):s.priceOnRequest&&onInspect?onInspect(s):onOpen(s)} style={({pressed})=>({...serviceActionSurface(name,!!selectedForVisit?.includes(s.id),pressed),minHeight:46,paddingHorizontal:16,flexDirection:'row',alignItems:'center',justifyContent:'center'})}>{onSelectForVisit&&selectedForVisit?.includes(s.id)?<Icon name="close" size={18} color={ink}/>:<Text style={[font,{fontSize:12,fontWeight:'600',color:ink}]}>{onSelectForVisit?'Add to cart':s.priceOnRequest?'Discuss your requirements':'Review & book'}</Text>}</Pressable>

@@ -10,7 +10,7 @@ it('renders one rich detail with canonical lines, price beside the name and a qu
  let r:any;const open=vi.fn(),toggle=vi.fn();
  await act(async()=>{r=create(<ServiceDetailRich service={wash} siblings={[wash,foam]} priceLabel={s=>s.id==='wash-regular'?'₹600':'₹900'} eligible={true} added={false} onToggle={toggle} onOpen={open} onInspect={()=>{}} onSelect={()=>{}}/>)});
  const text=JSON.stringify(r.toJSON());
- for(const value of ['Regular Wash','₹600','Thorough exterior and interior wash','Two-bucket hand wash','Wheel and tyre cleaning','Compatibility: ','Not a detailing service','Wash weekly to keep the paint clear of dust.'])expect(text).toContain(value);
+ for(const value of ['Regular Wash','₹600','Thorough exterior and interior wash','Two-bucket hand wash','Wheel and tyre cleaning','Details: ','Not a detailing service','Wash weekly to keep the paint clear of dust.'])expect(text).toContain(value);
  const add=r.root.findAllByType(Pressable).find((x:any)=>x.props.accessibilityLabel==='Add Regular Wash');
  await act(async()=>add.props.onPress());expect(toggle).toHaveBeenCalledWith(wash);expect(open).not.toHaveBeenCalled();
  await act(async()=>r.unmount());
