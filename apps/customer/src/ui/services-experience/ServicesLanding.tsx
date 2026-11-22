@@ -1,4 +1,4 @@
-import React from 'react';
+import React,{useEffect,useRef} from 'react';
 import {Asset} from 'expo-asset';
 import detailing from '../../../assets/imagery/category/detailing.jpg';
 import paint from '../../../assets/imagery/category/paint-protection.jpg';
@@ -8,10 +8,16 @@ const uri=(source:string|number)=>typeof source==='string'?source:Asset.fromModu
 const scenes={detailing:uri(detailing),paint:uri(paint),garage:uri(garage),modifications:uri(modifications)};
 import {Home,labels} from './model';
 
+const categoryTabs:[Home|null,string][]=[[null,'All'],['washing','Wash & care'],['paint','Paint protection'],['detailing','Detailing'],['garage','Garage'],['modifications','Modifications & wraps']];
+export function ServiceCategoryTabs({selected,onBrowse}:{selected:Home|null;onBrowse:(home:Home|null)=>void}){
+ const nav=useRef<HTMLElement>(null);
+ useEffect(()=>{nav.current?.querySelector('[aria-current="page"]')?.scrollIntoView({inline:'nearest',block:'nearest',behavior:'instant'})},[selected]);
+ return <nav ref={nav} className="service-area-shortcuts" aria-label="Service areas">{categoryTabs.map(([home,label])=><button type="button" key={home??'all'} aria-current={selected===home?'page':undefined} onClick={()=>onBrowse(home)}>{label}</button>)}</nav>;
+}
 /** Photo-led entry only. All routes continue through the existing catalogue flow. */
 export function ServicesLanding({onBrowse}:{onBrowse:(home:Home)=>void}){
  const tile=(home:Home,title:string,kind:string)=><button type="button" className={'service-scene '+kind} onClick={()=>onBrowse(home)} aria-label={'Browse '+labels[home]}><img src={scenes[home as keyof typeof scenes]} alt=""/><span className="service-scene-shade"/><span className="service-scene-copy">{kind==='service-scene-hero'?<small>DETAILING</small>:null}<strong>{title}</strong></span></button>;
- return <div className="services-editorial"><nav className="service-area-shortcuts" aria-label="Service areas"><span aria-current="page">All</span><button type="button" onClick={()=>onBrowse('washing')}>Wash &amp; care</button><button type="button" onClick={()=>onBrowse('paint')}>Paint protection</button></nav><div className="service-scene-grid">{tile('detailing','Complete detailing','service-scene-hero')}{tile('paint','Paint protection','service-scene-half')}{tile('garage','Garage','service-scene-half')}{tile('modifications','Modifications','service-scene-wide')}</div><p className="service-scene-note">Service illustrations</p></div>;
+ return <div className="services-editorial"><div className="service-scene-grid">{tile('detailing','Complete detailing','service-scene-hero')}{tile('paint','Paint protection','service-scene-half')}{tile('garage','Garage','service-scene-half')}{tile('modifications','Modifications','service-scene-wide')}</div><p className="service-scene-note">Service illustrations</p></div>;
 }
 export const servicesLandingCSS=`
 .services-experience .root-screen{max-width:1040px;margin:0 auto;padding:24px 20px 30px}
@@ -19,7 +25,7 @@ export const servicesLandingCSS=`
 .services-experience .root-intro{margin:0 0 18px;color:var(--muted);font-size:14px}
 .services-experience .root-screen .search-field{margin:0 0 15px}
 .services-experience .root-screen .search-field>span{display:none}
-.services-experience .service-area-shortcuts{display:flex;gap:22px;align-items:center;margin:0 0 20px;min-height:44px;font-size:13px}
+.services-experience .service-area-shortcuts{display:flex;flex-wrap:nowrap;gap:22px;align-items:center;margin:0 0 20px;min-height:44px;font-size:13px;max-width:100%;overflow-x:auto;white-space:nowrap;scrollbar-width:none}.services-experience .service-area-shortcuts::-webkit-scrollbar{display:none}.services-experience .service-area-shortcuts>*{flex-shrink:0}.services-experience .category-tabs-wrap{max-width:1040px;margin:0 auto;padding:0 20px}.services-experience .service-area-shortcuts button[aria-current="page"]{color:var(--ink);border-bottom:2px solid var(--accent)}
 .services-experience .service-area-shortcuts>span{align-self:stretch;display:flex;align-items:center;position:relative;color:var(--ink)}
 .services-experience .service-area-shortcuts>span:after{content:'';position:absolute;height:2px;bottom:0;left:0;right:0;background:var(--accent)}
 .services-experience .service-area-shortcuts button{padding:0;min-height:44px;border:0;background:transparent;color:var(--muted);font:inherit}

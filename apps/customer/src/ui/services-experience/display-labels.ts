@@ -17,3 +17,12 @@ export function displayName(s:MenuService,context:{brandShown?:boolean;familySho
 export function serviceCaption(s:MenuService){
  return s.customerMenu.family+(s.brand&&s.brand!=='Standard'?' · '+s.brand:'');
 }
+
+/** Context-aware card copy only; original identity and action targets stay untouched. */
+export function cardIdentity(s:MenuService,selectedFamily?:string){
+ if(!selectedFamily||selectedFamily!==s.customerMenu.family)return {title:s.name,caption:serviceCaption(s)};
+ const brand=s.brand&&s.brand!=='Standard'?s.brand:'';
+ const title=displayName(s,{brandShown:!!brand,familyShown:true});
+ if(title.toLowerCase()===selectedFamily.toLowerCase()&&brand)return {title:brand,caption:''};
+ return {title,caption:brand&&title.toLowerCase()!==brand.toLowerCase()?brand:''};
+}
