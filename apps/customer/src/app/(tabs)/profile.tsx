@@ -77,6 +77,7 @@ export default function YouScreen() {
   return (
     <Screen appBar="You" header={<PageHeader title="Your account" sub="Your AutoDeck profile and preferences." />}>
       <ProfileHero
+        photoScope={scopeKey}
         name={name}
         photoUrl={auth.user.photoURL ?? auth.user.providerData?.find(p=>p.providerId==='google.com')?.photoURL ?? null}
         email={auth.user.email}
