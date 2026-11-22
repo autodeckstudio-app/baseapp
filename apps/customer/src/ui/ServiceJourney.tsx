@@ -1,3 +1,4 @@
+import{isCartEligible as eligible,toggleCartService,cartSelectionState}from'../lib/service-cart';
 import {useScreenScrollCheckpoint} from './kit';
 import {detailingServices,detailingServiceFor,detailingOptionLabel} from '../lib/detailing-services';
 import {ServicePageHeader} from './ServicePageHeader';
@@ -16,7 +17,6 @@ import React,{useState,useEffect,useRef}from'react';
 import{useServiceSelection}from'../hooks/useServiceSelection';
 import{usePricingVehicle}from'../lib/vehicle-size';
 import{previewSelectionPrice}from'../lib/selection-price-preview';
-import{selectionScopeIssue}from'@autodeck/core';
 import{Image,Pressable,Text,View,ScrollView,useWindowDimensions}from'react-native';
 import{Icon}from'@autodeck/ui/native';
 import{useExperienceTheme}from'@autodeck/ui/native';
@@ -28,21 +28,20 @@ import{customerTurnaround}from'../lib/customer-turnaround';
 const garageGroup=(s:Service)=>{const f=servicePlacement(s)?.family;return f==='Assessment'?'Checks & diagnosis':f==='Wheels & tyres'?'Wheels & tyres':['Brakes','Battery & electrical'].includes(f??'')?'Repairs & replacements':'Regular care'};
 const detailGroup=(s:Service)=>{const f=servicePlacement(s)?.family??'';return['Fabric','Leather'].includes(f)?'Interior surfaces':['Film aftercare','Maintenance','Paint sealant'].includes(f)?'Protection aftercare':'Exterior surfaces'};
 const servicePicture=(s:Service)=>s.name==='Wash & Wax'?require('../../assets/imagery/stock/wash-foam.jpg'):serviceTypeImage(servicePlacement(s)?.home??'garage',servicePlacement(s)?.family??'');
-const eligible=(s:Service)=>s.active&&!s.customerMenu?.bookingMode&&!s.priceOnRequest&&s.basePrice>0&&(s.estimatedDurationMinutes>0||['ceramic','ppf'].includes(s.category));
 export function ServiceJourney({showRootHeader=true,onInnerBack,onViewIdentity,services,path,query,onPath,onOpen,onHelp,priceLabel,reviewing,onReview,onBookSelection,onCoordinate}:{showRootHeader?:boolean;onViewIdentity?:((identity:string)=>void)|undefined;onInnerBack?:((back:(()=>void)|null)=>void)|undefined;services:Service[];path:ServicesPath;query:string;onPath:(p:ServicesPath)=>void;onOpen:(s:Service)=>void;onHelp:(s:string)=>void;priceLabel:(s:Service)=>string|null|undefined;reviewing:boolean;onReview:(value:boolean)=>void;onCoordinate?:(ids:readonly string[])=>void;onBookSelection:(ids:readonly string[])=>void}){
  const{width:screenWidth}=useWindowDimensions();const[availableWidth,setAvailableWidth]=useState<number|null>(null);const tileWidth=((availableWidth??(Math.min(screenWidth,layout.readingMeasure)-(screenWidth<360?32:40)))-12)/2;
  const{name,colors}=useExperienceTheme(),night=name!=='light',material=raised(name);const ink=colors.textPrimary,muted=colors.textSecondary,rule=colors.borderSubtle,accent=colors.accent,chosen=colors.accentHaze;
  const font={fontFamily:'Inter, system-ui, sans-serif',color:ink};const txt=(s:string,size=12,color=ink)=><Text style={[font,{fontSize:size,lineHeight:size+6,color}]}>{s}</Text>;
- const selection=useServiceSelection(),ids=selection.ids;const[selectionError,setSelectionError]=useState<string|null>(null);const[groupFilter,setGroupFilter]=useState('All');const[need,setNeed]=useState('all');const[filterOpen,setFilterOpen]=useState(false);const cart=reviewing,setCart=onReview;const checkpoint=useScreenScrollCheckpoint();const[info,changeInfo]=useState<Service|null>(null);const setInfo=(next:Service|null)=>{if(info?.id===next?.id)return;checkpoint();onViewIdentity?.(next?'detail:'+next.id:'list');changeInfo(next)};const selected=ids.map(id=>services.find(s=>s.id===id)).filter((s):s is Service=>!!s&&eligible(s));const toggle=(s:Service)=>{if(eligible(s)){if(!ids.includes(s.id)){const choice=detailingServiceFor(s,services);const alternatives=choice?.options.filter(x=>x.id!==s.id).map(x=>x.id)??[];const problem=selectionScopeIssue([...selected.filter(x=>!alternatives.includes(x.id)),s]);if(problem){setSelectionError(problem);return}for(const id of alternatives)if(ids.includes(id))selection.toggle(id);}const ok=selection.toggle(s.id);setSelectionError(ok?null:'Choose up to five services. Remove one before adding another.')}};
+ const selection=useServiceSelection(),ids=selection.ids;const[selectionError,setSelectionError]=useState<string|null>(null);const[groupFilter,setGroupFilter]=useState('All');const[need,setNeed]=useState('all');const[filterOpen,setFilterOpen]=useState(false);const cart=reviewing,setCart=onReview;const checkpoint=useScreenScrollCheckpoint();const[info,changeInfo]=useState<Service|null>(null);const setInfo=(next:Service|null)=>{if(info?.id===next?.id)return;checkpoint();onViewIdentity?.(next?'detail:'+next.id:'list');changeInfo(next)};const cartState=cartSelectionState(services,ids),selected=cartState.selected;const toggle=(s:Service)=>{if(eligible(s)){const result=toggleCartService(s,services,selection);setSelectionError(result.error)}};
  useEffect(()=>{onInnerBack?.(info?()=>setInfo(null):null);return()=>onInnerBack?.(null)},[info,onInnerBack]);
  useEffect(()=>setInfo(null),[path.home,path.family,path.brand]);
  useEffect(()=>{if(reviewing){changeInfo(null);onViewIdentity?.('list')}},[reviewing]);
  useEffect(()=>{setGroupFilter('All');setSelectionError(null)},[path.home,selection.scope]);
  const car=usePricingVehicle();const[review,setReview]=useState<{key:string;total:number;minutes:number}|null>(null),[reviewError,setReviewError]=useState<string|null>(null);const selectedKey=JSON.stringify([selection.scope,ids,car.category,selected]);
- const invalidSelection=selected.length!==ids.length;const scopeIssue=selectionScopeIssue(selected);
+ const invalidSelection=cartState.invalidSelection;const scopeIssue=cartState.scopeIssue;
  useEffect(()=>{setReview(null);setReviewError(null);if(!cart||!selected.length||invalidSelection||scopeIssue||!car.category)return;let alive=true;void previewSelectionPrice(selected,car.category).then(r=>{if(alive)setReview({key:selectedKey,total:r.total,minutes:r.minutes})}).catch(()=>{if(alive)setReviewError('The selected work needs review. Check the services or try again before choosing a time.')});return()=>{alive=false}},[cart,selectedKey]);
 
- const crossBay=new Set(selected.map(s=>s.requiredBayType)).size>1;
+ const crossBay=cartState.crossBay;
  const money=(n:number)=>'₹'+(n/100).toLocaleString('en-IN');const price=(s:Service)=>s.priceOnRequest?'Inspect first':s.basePrice===0?'Free walk-in':priceLabel(s)??money(s.basePrice);
  const mini=(label:string,onPress:()=>void,active=false,aria?:string)=><Pressable accessibilityRole="button" accessibilityLabel={aria??label} accessibilityState={{selected:active}} aria-pressed={active} onPress={onPress} style={{minHeight:44,minWidth:44,paddingHorizontal:4,alignItems:'flex-start',justifyContent:'center'}}><Text style={[font,{fontSize:12,lineHeight:17,fontWeight:active?'700':'500',color:active?accent:ink}]}>{label}</Text></Pressable>;
  const cartButton=(label:string,onPress:()=>void,primary=false,aria?:string)=><Pressable accessibilityRole="button" accessibilityLabel={aria??label} onPress={onPress} style={{flex:1,minWidth:0,minHeight:44,justifyContent:'center'}}>{({pressed})=><View pointerEvents="none" style={{...serviceActionSurface(name,false,pressed),minHeight:32,borderRadius:10,borderColor:primary?colors.borderStrong:rule,backgroundColor:primary?colors.surface:undefined,paddingHorizontal:8,paddingVertical:6,alignItems:'center',justifyContent:'center'}}><Text style={[font,{fontSize:11,lineHeight:16,fontWeight:primary?'600':'500',textAlign:'center',color:ink}]}>{label}</Text></View>}</Pressable>;

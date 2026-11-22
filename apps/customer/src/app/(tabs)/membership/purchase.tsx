@@ -33,12 +33,13 @@ export default function PurchaseMembershipScreen() {
   const [askUpgrade, setAskUpgrade] = useState(false);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
+  const [paymentAction,setPaymentAction]=useState<"razorpay_payment_link"|"cash"|null>(null);
   const [error, setError] = useState<string | null>(null);
   const [payOutcome, setPayOutcome] = useState<OnlinePayOutcome | null>(null);
   const [done, setDone] = useState<"online" | "studio" | null>(null);
   const idempotencyKey=useRef(generateIdempotencyKey());const purchaseBusy=useRef(false),generation=useRef(0);
   const scopeKey=JSON.stringify([planId,auth.status,auth.status==='ready'?auth.customerDocId:null,auth.status==='ready'?auth.user.uid:null,auth.status==='ready'?auth.claims.tenantId:null]);const scopeRef=useRef(scopeKey);scopeRef.current=scopeKey;
-  useEffect(()=>{generation.current++;purchaseBusy.current=false;idempotencyKey.current=generateIdempotencyKey();setPurchasing(false);setDone(null);setPayOutcome(null);setError(null);setAskUpgrade(false);return()=>{generation.current++}},[scopeKey]);
+  useEffect(()=>{generation.current++;purchaseBusy.current=false;idempotencyKey.current=generateIdempotencyKey();setPurchasing(false);setPaymentAction(null);setDone(null);setPayOutcome(null);setError(null);setAskUpgrade(false);return()=>{generation.current++}},[scopeKey]);
 
   const uid = auth.status === "ready" ? auth.customerDocId : null;
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
@@ -87,8 +88,7 @@ export default function PurchaseMembershipScreen() {
     if (!plan || purchasing) return;
     if(purchaseBusy.current)return;
     const scope=scopeKey,gen=generation.current;const current=()=>scopeRef.current===scope&&generation.current===gen;purchaseBusy.current=true;
-    setAskUpgrade(false);
-    setPurchasing(true);
+    setPaymentAction(method);setPurchasing(true);
     setError(null);
     try {
       const result = await upgradeMembership(plan.id, method, idempotencyKey.current);
@@ -102,7 +102,7 @@ export default function PurchaseMembershipScreen() {
     } catch (err) {
       if(current())setError(err instanceof Error ? err.message : "Please try again.");
     } finally {
-      if(current()){purchaseBusy.current=false;setPurchasing(false);}
+      if(current()){purchaseBusy.current=false;setPurchasing(false);setPaymentAction(null);}
     }
   }
 
@@ -110,7 +110,7 @@ export default function PurchaseMembershipScreen() {
     if (!plan || purchasing) return;
     if(purchaseBusy.current)return;
     const scope=scopeKey,gen=generation.current;const current=()=>scopeRef.current===scope&&generation.current===gen;purchaseBusy.current=true;
-    setPurchasing(true);
+    setPaymentAction(method);setPurchasing(true);
     setError(null);
     try {
       // A pending upgrade is paid again through the same call (the server replays it, never makes a second one).
@@ -125,7 +125,7 @@ export default function PurchaseMembershipScreen() {
     } catch (err) {
       if(current())setError(err instanceof Error ? err.message : "Please try again.");
     } finally {
-      if(current()){purchaseBusy.current=false;setPurchasing(false);}
+      if(current()){purchaseBusy.current=false;setPurchasing(false);setPaymentAction(null);}
     }
   }
 
@@ -145,19 +145,20 @@ export default function PurchaseMembershipScreen() {
         </Pane>
         <MembershipUpgradeTerms tier={active.tier} paysFullPrice={upgradePaysFullPrice(active)}/>
         {error ? <Notice title="Upgrade failed" body={error} /> : null}
-        <Button label="Upgrade" busy={purchasing} onPress={() => setAskUpgrade(true)} />
-        <Modal visible={askUpgrade} transparent animationType={reduce ? "none" : "fade"} onRequestClose={() => setAskUpgrade(false)}>
+        <Button label="Upgrade" disabled={purchasing} onPress={() => setAskUpgrade(true)} />
+        <Modal visible={askUpgrade} transparent animationType={reduce ? "none" : "fade"} onRequestClose={() => {if(!purchasing)setAskUpgrade(false)}}>
           <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 24 }}>
             <View style={{ width: "100%", maxWidth: 420, maxHeight: "90%", borderRadius: 28, overflow: "hidden", borderWidth:1,borderColor:colors.borderSubtle,backgroundColor: colors.surface }}>
               <ScrollView contentContainerStyle={{padding:24,gap:20}}>
               <T role="heading">{copy.title}</T>
+              {error?<T role="caption" tone="danger">{error}</T>:null}
               <InformationFacts items={copy.facts} />
               <View style={{gap:8}}>
                 <View style={{flexDirection:"row",gap:8}}>
-                  <View style={{flex:1,minWidth:0}}><Button style={{alignSelf:"stretch",paddingHorizontal:6,marginTop:0,marginBottom:0}} label="Pay online" onPress={() => void confirmUpgrade("razorpay_payment_link")} /></View>
-                  <View style={{flex:1,minWidth:0}}><Button style={{alignSelf:"stretch",paddingHorizontal:6,marginTop:0,marginBottom:0}} kind="quiet" label="At studio" onPress={() => void confirmUpgrade("cash")} /></View>
+                  <View style={{flex:1,minWidth:0}}><Button style={{alignSelf:"stretch",paddingHorizontal:2,gap:2,marginTop:0,marginBottom:0}} label="Pay online" disabled={purchasing} busy={purchasing&&paymentAction==="razorpay_payment_link"} onPress={() => void confirmUpgrade("razorpay_payment_link")} /></View>
+                  <View style={{flex:1,minWidth:0}}><Button style={{alignSelf:"stretch",paddingHorizontal:2,gap:2,marginTop:0,marginBottom:0}} kind="quiet" label="At studio" disabled={purchasing} busy={purchasing&&paymentAction==="cash"} onPress={() => void confirmUpgrade("cash")} /></View>
                 </View>
-                <Button style={{alignSelf:"flex-end",marginTop:0,marginBottom:0}} kind="quiet" label={copy.cancel} onPress={() => setAskUpgrade(false)} />
+                <Button style={{alignSelf:"flex-end",marginTop:0,marginBottom:0}} kind="quiet" label={copy.cancel} disabled={purchasing} onPress={() => setAskUpgrade(false)} />
               </View>
               </ScrollView>
             </View>
@@ -194,7 +195,7 @@ export default function PurchaseMembershipScreen() {
           ] : payCopy.facts}
           action={
             <View style={{ gap: space.hair }}>
-              <ButtonRow>{!isStudio ? <Button label="Pay online" busy={purchasing} onPress={() => void handlePurchase("razorpay_payment_link")} /> : null}
+              <ButtonRow>{!isStudio ? <Button label="Pay online" busy={purchasing&&paymentAction==="razorpay_payment_link"} disabled={purchasing} onPress={() => void handlePurchase("razorpay_payment_link")} /> : null}
               <Button label="View status" kind="quiet" onPress={() => router.replace("/(tabs)/membership")} /></ButtonRow>
               {error ? <T role="caption" tone="tertiary">{error}</T> : null}
             </View>
@@ -230,8 +231,8 @@ export default function PurchaseMembershipScreen() {
       {error ? <Notice title="Purchase failed" body={error} /> : null}
 
       <View style={{ flexDirection:"row",gap:8,alignItems:"stretch" }}>
-        <View style={{flex:1,minWidth:0}}><Button style={{alignSelf:"stretch",paddingHorizontal:8}} label="Pay online" busy={purchasing} onPress={() => void handlePurchase("razorpay_payment_link")} /></View>
-        <View style={{flex:1,minWidth:0}}><Button style={{alignSelf:"stretch",paddingHorizontal:8}} label="Pay at studio" busy={purchasing} onPress={() => void handlePurchase("cash")} /></View>
+        <View style={{flex:1,minWidth:0}}><Button style={{alignSelf:"stretch",paddingHorizontal:4,gap:4}} label="Pay online" busy={purchasing&&paymentAction==="razorpay_payment_link"} disabled={purchasing} onPress={() => void handlePurchase("razorpay_payment_link")} /></View>
+        <View style={{flex:1,minWidth:0}}><Button style={{alignSelf:"stretch",paddingHorizontal:4,gap:4}} label="Pay at studio" busy={purchasing&&paymentAction==="cash"} disabled={purchasing} onPress={() => void handlePurchase("cash")} /></View>
       </View>
     </Screen>
   );

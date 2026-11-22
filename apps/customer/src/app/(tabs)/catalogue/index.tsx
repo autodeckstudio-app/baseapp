@@ -1,3 +1,4 @@
+import ServiceExperience from '../../../ui/ServiceExperience';
 import {useServiceSelection} from '../../../hooks/useServiceSelection';
 import{ServiceJourney}from'../../../ui/ServiceJourney';
 import{ServiceSelectionBar}from'../../../ui/ServiceSelectionBar';
@@ -9,7 +10,7 @@ import {useAuth} from '../../../hooks/useAuth';
 import {useForegroundRefresh} from '../../../hooks/useForegroundRefresh';
 import {homeCatalogueBack,catalogueReturnParams} from "../../../lib/home-service-navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Text, Pressable, TextInput, View, useWindowDimensions } from "react-native";
+import { Text, Pressable, TextInput, View, useWindowDimensions, Platform } from "react-native";
 import { useLocalSearchParams, usePathname, useRouter } from "expo-router";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { SERVICE_HOMES, GST_ENABLED, type Service } from "@autodeck/core";
@@ -132,6 +133,10 @@ export default function CatalogueScreen() {
       </>
     </View>
   );
+  if(Platform.OS==='web')return <View style={{flex:1,minHeight:0}}>
+    {!services&&!error?<Screen><Skeleton height={64}/><Skeleton height={180}/></Screen>:<ServiceExperience key={selection.scope??ownerScope??'signed-out'} services={all} path={path} selection={selection} pricingVehicle={pricingVehicle} priceLabel={s=>servicePriceText(s,pricingVehicle.category,prices)} refreshError={error} onRefresh={()=>void load()} onPath={next=>{setReviewing(false);navigate(next,next.home===path.home)}} onOpen={s=>setDetailId(s.id)} onHelp={text=>router.push({pathname:'/(tabs)/help',params:{service:text}})} onCoordinate={ids=>router.push({pathname:'/(tabs)/coordinate',params:{services:ids.join(',')}})} onBookSelection={ids=>{if(ids.length)router.push({pathname:'/(tabs)/book/[serviceId]',params:{serviceId:ids[0],...(ids.length>1?{extras:ids.slice(1).join(',')}:{})}})}} onChooseCar={()=>router.navigate('/(tabs)/garage')} onVisitRequests={()=>router.navigate('/(tabs)/coordinate')} onBack={params.returnTo==='home'?()=>{const parent=homeCatalogueBack(path,params.homeEntry);if(parent)navigate(parent,true);else router.navigate('/(tabs)')}:path.home?()=>router.canGoBack()?router.back():navigate(parentPath(path),true):undefined}/>}
+    <ServiceDetailPopup visible={detailId!==null} onClose={()=>setDetailId(null)}>{detailId?<ServiceDetailScreen key={detailId} serviceId={detailId} embedded/>:null}</ServiceDetailPopup>
+  </View>;
   return (
     <View style={{flex:1}}><Screen scrollCheckpointRef={scrollCheckpoint} textBack compactContent={!sharedRootHeader} viewportBottomInset={selection.ids.length&&!reviewing?152:88} bottomClearance={24}
       scrollIdentity={JSON.stringify([path,reviewing?'cart':innerView])}

@@ -32,6 +32,7 @@ export default function GiftsScreen() {
   const visible=stateOwner===owner;
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+  const [giftAction,setGiftAction]=useState<"buy"|"open"|"redeem"|null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [claimed, setClaimed] = useState<GiftView | null>(null);
@@ -49,19 +50,19 @@ export default function GiftsScreen() {
     setLoadFailed(false);setLoading(true);
     void listMyGifts().then((r) => { if(generation!==loadGeneration.current||ownerRef.current!==loadOwner||ownerEpoch.current!==epoch||!mounted.current)return;setGifts(r.gifts); setOffer(r.offer);setOffers(r.offers??[]);setSelectedId(id=>(r.offers??[]).some(o=>o.serviceId===id)?id:""); }).catch(() => {if(generation===loadGeneration.current&&ownerRef.current===loadOwner&&ownerEpoch.current===epoch&&mounted.current)setLoadFailed(true)}).finally(()=>{if(generation===loadGeneration.current&&ownerRef.current===loadOwner&&ownerEpoch.current===epoch&&mounted.current)setLoading(false)});
   }, [owner]);
-  useEffect(() => {setStateOwner(owner);setGifts([]);setOffer(null);setOffers([]);setSelectedId("");setClaimed(null);setCard(null);setCode("");setInfo(null);setError(null);setBusy(false);if (GIFT_LIVE&&owner) load(); return()=>{loadGeneration.current+=1}; }, [load,owner]);
+  useEffect(() => {setStateOwner(owner);setGifts([]);setOffer(null);setOffers([]);setSelectedId("");setClaimed(null);setCard(null);setCode("");setInfo(null);setError(null);setBusy(false);setGiftAction(null);if (GIFT_LIVE&&owner) load(); return()=>{loadGeneration.current+=1}; }, [load,owner]);
   const referralCode = auth.status === "ready" ? referralCodeFor(auth.user.uid) : null;
-  const friendPanel = <Pane pad="gap"><T role="heading">Share AutoDeck</T>{referralSubtitle(referralCode)!=="Share AutoDeck"?<T tone="secondary">{referralSubtitle(referralCode)}</T>:null}<Button icon="share" label="Share AutoDeck" onPress={() => void Share.share({ message: referralShareMessage(referralCode) }).catch(() => undefined)} /></Pane>;
+  const friendPanel = <Pane pad="inset"><View style={{gap:16}}><View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:12}}><T role="heading" style={{flex:1}}>Share AutoDeck</T><Button icon="share" label="Share AutoDeck" onPress={() => void Share.share({ message: referralShareMessage(referralCode) }).catch(() => undefined)} /></View>{referralSubtitle(referralCode)!=="Share AutoDeck"?<T tone="secondary">{referralSubtitle(referralCode)}</T>:null}</View></Pane>;
   if (!GIFT_LIVE) return <Screen appBar="Friends & gifts" header={<PageHeader title="Friends & gifts" />}>{friendPanel}<StatePanel compact icon="gift" title="Gift a wash" body="Wash gifting is not available yet." /></Screen>;
 
   const offer=offers.find(o=>o.serviceId===selectedId)??(offers.length?null:legacyOffer);
   async function buy() {
-    if(!offer)return;
+    if(!offer||busy)return;
     if (!checkoutSupported && !NATIVE_GIFT_PAYMENT_ENABLED) { setInfo("Buying a gift is not available in this app build yet. Use app.autodeck.in."); return; }
     if (buyBusy.current) return; // double-tap: one in-flight purchase; the server slot is the second line
     buyBusy.current = true;
     const buyOwner=owner;const buyEpoch=ownerEpoch.current;
-    setBusy(true); setError(null); setInfo(null); setCard(null);
+    setGiftAction("buy");setBusy(true); setError(null); setInfo(null); setCard(null);
     try {
       const g = await startGiftPurchase(offer.serviceId);if((ownerRef.current!==buyOwner||ownerEpoch.current!==buyEpoch||!mounted.current))return;
       if(offer.serviceId&&g.serviceId!==offer.serviceId){setError("The selected gift service was not confirmed. Refresh before paying.");load();return;}
@@ -80,23 +81,25 @@ export default function GiftsScreen() {
       catch { if((ownerRef.current!==buyOwner||ownerEpoch.current!==buyEpoch||!mounted.current))return;setInfo("Payment received. Your gift is under Gifts you bought. Tap it to see the code."); }
       if((ownerRef.current===buyOwner&&ownerEpoch.current===buyEpoch&&mounted.current))load();
     } catch (e) {if((ownerRef.current!==buyOwner||ownerEpoch.current!==buyEpoch||!mounted.current))return;setError(msg(e, "Could not start the payment. Please try again.")); }
-    finally { buyBusy.current = false;if((ownerRef.current===buyOwner&&ownerEpoch.current===buyEpoch&&mounted.current))setBusy(false); }
+    finally { buyBusy.current = false;if((ownerRef.current===buyOwner&&ownerEpoch.current===buyEpoch&&mounted.current)){setBusy(false);setGiftAction(null);} }
   }
   async function open(g: GiftView) {
+    if(busy)return;
     const openOwner=owner;const openEpoch=ownerEpoch.current;
-    setBusy(true); setError(null); setInfo(null);
+    setGiftAction("open");setBusy(true); setError(null); setInfo(null);
     try { const c = await fetchGiftCode(g.id); if ((ownerRef.current===openOwner&&ownerEpoch.current===openEpoch&&mounted.current)&&c.expiresAt) setCard({ code: c.code, expiresAt: c.expiresAt,serviceName:c.serviceName }); }
     catch (e) {if((ownerRef.current===openOwner&&ownerEpoch.current===openEpoch&&mounted.current))setError(msg(e, "Could not open this gift.")); }
-    finally {if((ownerRef.current===openOwner&&ownerEpoch.current===openEpoch&&mounted.current))setBusy(false); }
+    finally {if((ownerRef.current===openOwner&&ownerEpoch.current===openEpoch&&mounted.current)){setBusy(false);setGiftAction(null);} }
   }
   async function redeem() {
+    if(busy)return;
     const c = normaliseGiftCode(code);
     if (!c) { setError(giftCodeProblem(code)); return; }
-    setBusy(true); setError(null); setInfo(null);
+    setGiftAction("redeem");setBusy(true); setError(null); setInfo(null);
     const claimOwner=owner;const claimEpoch=ownerEpoch.current;
     try { const g = await claimGift(c);if((ownerRef.current!==claimOwner||ownerEpoch.current!==claimEpoch||!mounted.current))return;setClaimed(g); setPendingGiftCode(c,g.serviceId); setCode("");setInfo("Gift added");load(); }
     catch (e) {if((ownerRef.current===claimOwner&&ownerEpoch.current===claimEpoch&&mounted.current))setError(msg(e, "That code did not work. Check it and try again.")); }
-    finally {if((ownerRef.current===claimOwner&&ownerEpoch.current===claimEpoch&&mounted.current))setBusy(false); }
+    finally {if((ownerRef.current===claimOwner&&ownerEpoch.current===claimEpoch&&mounted.current)){setBusy(false);setGiftAction(null);} }
   }
   const now = Date.now();
   if(!visible)return <Screen appBar="Friends & gifts" header={<PageHeader title="Friends & gifts" />}><T role="caption" tone="secondary">Loading gifts</T></Screen>;
@@ -107,12 +110,14 @@ export default function GiftsScreen() {
       {loadFailed ? <Notice title="Could not load gifts" body="Check your connection and try again." action={<Button icon="refresh" label="Retry" onPress={load} />} /> : null}
       {loading?<T role="caption" tone="secondary">Loading gifts</T>:null}
       {!loading&&!loadFailed&&gifts.length===0?<StatePanel compact icon="gift" title="No gifts bought yet" body="You can add a code below, or buy a gift when available."/>:null}
-      {offers.length?<Pane pad="inset"><T role="heading">Choose a service to gift</T><SelectField label="Gift service" value={selectedId} onChange={setSelectedId} options={[{value:"",label:"Choose washing or detailing"},...offers.map(o=>({value:o.serviceId!,label:`${o.serviceName} · ${rupees(o.amountPaise)}`}))]}/></Pane>:null}
-      {offer ? <GiftBuy serviceName={offer.serviceName} amountPaise={offer.amountPaise} canPay={checkoutSupported || NATIVE_GIFT_PAYMENT_ENABLED} busy={busy} onPay={() => void buy()} /> : null}
-      <Pane pad="inset"><View style={{gap:18}}>
-        <T role="heading">Got a gift code?</T>
+      {offers.length?<Pane pad="inset"><View style={{gap:16}}><T role="heading">Choose a service to gift</T><SelectField label="Gift service" value={selectedId} onChange={setSelectedId} options={[{value:"",label:"Choose washing or detailing"},...offers.map(o=>({value:o.serviceId!,label:`${o.serviceName} · ${rupees(o.amountPaise)}`}))]}/></View></Pane>:null}
+      {offer ? <GiftBuy serviceName={offer.serviceName} amountPaise={offer.amountPaise} canPay={checkoutSupported || NATIVE_GIFT_PAYMENT_ENABLED} busy={busy&&giftAction==="buy"} disabled={busy} onPay={() => void buy()} /> : null}
+      <Pane pad="inset"><View style={{gap:16}}>
+        <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:8}}>
+          <T role="heading" style={{fontSize:14,lineHeight:20,flexShrink:1}}>Got a gift code?</T>
+          <Button style={{marginTop:0,marginBottom:0,paddingHorizontal:8,flexShrink:0}} label="Use this code" busy={busy&&giftAction==="redeem"} onPress={() => void redeem()} disabled={busy || code.trim() === ""} />
+        </View>
         <Field label="Gift code" value={code} onChangeText={setCode} autoCapitalize="characters" placeholder="GW-XXXX-XXXX" maxLength={14} {...(error ? { error } : {})} />
-        <Button label="Use this code" onPress={() => void redeem()} disabled={busy || code.trim() === ""} />
       </View></Pane>
       {info ? <T role="caption" tone="secondary">{info}</T> : null}
       {claimed?.expiresAt ? (

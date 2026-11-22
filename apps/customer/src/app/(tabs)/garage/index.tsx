@@ -228,14 +228,14 @@ export default function GarageScreen() {
                 <View style={{ gap: 8 }}>
                   <GarageDisclosure kind="delete"/>
                   <View style={{ flexDirection: "row", flexWrap:"wrap", gap: 10 }}>
-                    <Button label="Yes, delete forever" kind="danger" busy={archiveActionBusy === v.id} onPress={() => void confirmDeletePermanently()} />
-                    <Button label="Keep it" kind="quiet" onPress={() => setDeleting(null)} />
+                    <Button label="Yes, delete forever" kind="danger" busy={archiveActionBusy === v.id} disabled={!!archiveActionBusy} onPress={() => void confirmDeletePermanently()} />
+                    <Button label="Keep it" kind="quiet" disabled={!!archiveActionBusy} onPress={() => setDeleting(null)} />
                   </View>
                 </View>
               ) : (
                 <View style={{ flexDirection: "row", flexWrap:"wrap", gap: 10 }}>
-                  <Button label="Restore" kind="quiet" busy={archiveActionBusy === v.id} onPress={() => void restore(v)} />
-                  <Button label="Delete permanently" kind="danger" onPress={() => setDeleting(v)} />
+                  <Button label="Restore" kind="quiet" busy={archiveActionBusy === v.id} disabled={!!archiveActionBusy} onPress={() => void restore(v)} />
+                  <Button label="Delete permanently" kind="danger" disabled={!!archiveActionBusy} onPress={() => setDeleting(v)} />
                 </View>
               )}
             </View>

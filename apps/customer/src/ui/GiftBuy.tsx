@@ -6,7 +6,7 @@ import { NavIcon } from "./NavIcon";
 import { GiftRestrictions } from "./GiftRestrictions";
 import { Button, InfoLine, Pane, Row, T, rupees } from "./kit";
 
-export function GiftBuy({ amountPaise, canPay, busy, onPay,serviceName="Foam wash" }: { amountPaise: number; canPay: boolean; busy: boolean; onPay: () => void;serviceName?:string|undefined }) {
+export function GiftBuy({ amountPaise, canPay, busy, disabled, onPay,serviceName="Foam wash" }: { amountPaise: number; canPay: boolean; busy: boolean; disabled?:boolean; onPay: () => void;serviceName?:string|undefined }) {
   const { colors, name } = useExperienceTheme();
   const tileBg = name === "light" ? "#E8EDF4" : "#253447";
   return (
@@ -26,7 +26,7 @@ export function GiftBuy({ amountPaise, canPay, busy, onPay,serviceName="Foam was
         <GiftRestrictions />
       </View>
       {canPay
-        ? <Button label={`Pay ${rupees(amountPaise)}`} busy={busy} onPress={onPay} style={{alignSelf:"flex-end"}} />
+        ? <Button label={`Pay ${rupees(amountPaise)}`} busy={busy} disabled={disabled??false} onPress={onPay} style={{alignSelf:"flex-end"}} />
         : <T role="caption" tone="tertiary">Buying a gift works in the browser at app.autodeck.in.</T>}
     </View></Pane>
   );

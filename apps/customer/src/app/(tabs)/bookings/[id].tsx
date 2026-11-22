@@ -126,7 +126,7 @@ export default function BookingDetailScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [awaitingLinkId,setAwaitingLinkId]=useState<string|null>(null);
   const routeScope=JSON.stringify([id,authB.status,authB.status==='ready'?listOwnerKey(authB)?.key??null:null,authB.status==='ready'?authB.claims.tenantId:null,retryTick]);const routeRef=useRef(routeScope);routeRef.current=routeScope;const actionEpoch=useRef(0),actionLock=useRef(false);
-  useEffect(()=>{actionEpoch.current++;actionLock.current=false;setCancelling(false);setPayingNow(false);setConfirmingCancel(false);setActionError(null);setAwaitingLinkId(null);setStars(0);setNote('');setRated(false);setRateBusy(false);setRateError(null);setDecidingId(null);setDecideError(null);setQuoteBusy(false);return()=>{actionEpoch.current++}},[routeScope]);
+  useEffect(()=>{actionEpoch.current++;actionLock.current=false;setCancelling(false);setPayingNow(false);setConfirmingCancel(false);setActionError(null);setAwaitingLinkId(null);setStars(0);setNote('');setRated(false);setRateBusy(false);setRateError(null);setDecidingId(null);setDecideError(null);setQuoteBusy(false);setQuoteAction(null);return()=>{actionEpoch.current++}},[routeScope]);
   const mockWriteBlocked = (): boolean => {
     if (!isMock) return false;
     setActionError("Sample preview - changes are not saved.");
@@ -273,6 +273,7 @@ export default function BookingDetailScreen() {
   const quoteWorkOpen = !!job && ["PENDING_VEHICLE", "VEHICLE_RECEIVED", "STANDBY"].includes(job.status);
   const quoteExpired = !booking?.quoteExpiresAt || !Number.isFinite(Date.parse(booking.quoteExpiresAt)) || Date.now() >= Date.parse(booking.quoteExpiresAt);
   const [quoteBusy, setQuoteBusy] = useState(false);
+  const [quoteAction,setQuoteAction]=useState<"approve"|"decline"|null>(null);
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [decideError, setDecideError] = useState<string | null>(null);
   async function handleDecide(approvalId: string, decision: "approved" | "rejected") {
@@ -289,14 +290,14 @@ export default function BookingDetailScreen() {
     if (mockWriteBlocked()) return;
     if (!id||!booking||!ownerVerified||!quoteWorkOpen||quoteExpired||quoteBusy||livePaymentRef.current?.status==='completed'||liveBookingRef.current?.status==='CANCELLED'||liveBookingRef.current?.status==='EXPIRED'||liveBookingRef.current?.status==='COMPLETED'||routeRef.current!==routeScope||actionLock.current) return;
     const scope=routeScope,gen=actionEpoch.current;const current=()=>routeRef.current===scope&&actionEpoch.current===gen;actionLock.current=true;
-    setQuoteBusy(true);
+    setQuoteAction(decline?"decline":"approve");setQuoteBusy(true);
     try {
       await (decline ? declineBookingQuote : approveBookingQuote)(booking.id,booking.totalAmount,booking.updatedAt);
       // The live booking listener, not a stale request closure, projects approval.
     } catch (err) {
       if(current())setActionError(err instanceof Error ? err.message : "Could not approve the quote.");
     } finally {
-      if(current()){actionLock.current=false;setQuoteBusy(false);}
+      if(current()){actionLock.current=false;setQuoteBusy(false);setQuoteAction(null);}
     }
   }
 
@@ -541,7 +542,7 @@ export default function BookingDetailScreen() {
             <T role="caption" tone="secondary">{booking.quoteExpiresAt && Number.isFinite(Date.parse(booking.quoteExpiresAt)) ? `Valid until ${new Date(booking.quoteExpiresAt).toLocaleString("en-IN")}.` : "Ask the office to reissue this quote with a validity date."}</T>
             {!quoteWorkOpen ? <T role="body" tone="secondary">This job needs an office review before the quote can be answered.</T> : null}
             {quoteExpired ? <T role="body" tone="secondary">This quote expired or needs a validity date. Ask the office for a new quote. No work is approved.</T> : null}
-            <View style={{ marginTop: space.line }}><Button label="Approve quote" disabled={!ownerVerified||!quoteWorkOpen||quoteExpired||quoteBusy||["CANCELLED","COMPLETED","EXPIRED"].includes(booking.status)||payment?.status==='completed'} busy={quoteBusy} onPress={() => void handleApproveQuote()} /><Button label="Decline quote" kind="quiet" disabled={!ownerVerified || !quoteWorkOpen || quoteBusy || quoteExpired} onPress={() => void handleApproveQuote(true)} /></View>
+            <View style={{ marginTop: space.line }}><Button label="Approve quote" disabled={!ownerVerified||!quoteWorkOpen||quoteExpired||quoteBusy||["CANCELLED","COMPLETED","EXPIRED"].includes(booking.status)||payment?.status==='completed'} busy={quoteBusy&&quoteAction==="approve"} onPress={() => void handleApproveQuote()} /><Button label="Decline quote" kind="quiet" busy={quoteBusy&&quoteAction==="decline"} disabled={!ownerVerified || !quoteWorkOpen || quoteBusy || quoteExpired} onPress={() => void handleApproveQuote(true)} /></View>
           </Pane>
         ) : null}
         {booking.quoteStatus === "declined" ? <Pane><T role="body">Quote declined. Work has not been approved. Contact the office for a new quote.</T></Pane> : null}

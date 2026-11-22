@@ -97,13 +97,12 @@ export default function YouScreen() {
       <Pane pad="inset"><View style={{ gap: 6 }}><Kicker>Your AutoDeck</Kicker>
         {buildDrawerItems((path) => router.push(path as never), null).filter(it => it.key !== "help").map((it) => <Pressable key={it.key} accessibilityRole="button" accessibilityLabel={it.label} onPress={it.onPress} style={({ pressed }) => ({ flexDirection: "row", gap: 14, alignItems: "center", minHeight: 76, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle, opacity: pressed ? 0.7 : 1 })}>
           <View style={{ width: 44, height: 44, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: light ? "#E7EDF5" : "#29384C" }}><NavIcon name={it.key === "cars" ? "garage" : it.key === "membership" ? "club" : it.key === "friends-gifts" ? "gift" : "bell"} size={23} color={colors.textPrimary} cut={light ? "#E7EDF5" : "#29384C"} /></View>
-          <View style={{ flex: 1, minWidth: 0, gap: 4 }}><T role="bodyStrong">{it.label}</T>{it.sub ? <T role="caption" tone="secondary">{it.sub}</T> : null}</View><T role="caption" tone="secondary">Open</T>
+          <View style={{ flex: 1, minWidth: 0, gap: 4 }}><T role="bodyStrong">{it.label}</T>{it.sub ? <T role="caption" tone="secondary">{it.sub}</T> : null}</View>
         </Pressable>)}
         <ListRow last icon="chat" title="Your quotes" detail="Review work and prices" onPress={() => router.navigate("/(tabs)/quotes")} />
       </View></Pane>
       <View style={{ ...glassPane(light), paddingHorizontal: 16 }}>
         <LicenceSection customerId={auth.status==="ready"?auth.customerDocId:null} scope={scopeKey} upload={uploadLicensePhoto} lock={saveLock} epoch={generation} />
-        <ListRow last icon="chat" title="Help & contact" detail="Call or WhatsApp the studio" onPress={() => router.navigate("/(tabs)/help")} />
       </View>
 
       <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.breath }}>

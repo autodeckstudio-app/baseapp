@@ -44,7 +44,8 @@
     "expo-print": "~14.1.4",
     "expo-sharing": "~13.1.5",
     "expo-file-system": "~18.1.11",
-    "leaflet": "^1.9.4"
+    "leaflet": "^1.9.4",
+    "expo-asset": "~11.1.7"
   },
   "devDependencies": {
     "@autodeck/config": "workspace:*",

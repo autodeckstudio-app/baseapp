@@ -44,6 +44,7 @@ export default function SellScreen() {
     return () => urls.forEach(u=>URL.revokeObjectURL(u));
   },[photos]);
   const [busy, setBusy] = useState(false);
+  const [busyAction,setBusyAction]=useState<"submit"|"check"|"retry"|null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<SellErrors>({});
   const [restoring, setRestoring] = useState(true);
@@ -63,7 +64,7 @@ export default function SellScreen() {
   const n = sellNumber;
 
   const owner=JSON.stringify([uid,tenantId,auth.status==='ready'?auth.user.uid:null]);const ownerRef=useRef(owner);ownerRef.current=owner;const generation=useRef(0),submitLock=useRef(false);
-  useEffect(()=>{generation.current++;submitLock.current=false;setBusy(false);setDone(false);setError(null);setPicked(null);setPhotos([]);setPhase(null);setUncertain(null);setStep(0);setF({make:'',model:'',variant:'',year:'',km:'',fuel:'petrol',gearbox:'manual',body:'',owners:'1',colour:'',area:'',price:'',description:'',name:'',phone:'',reg:''});return()=>{generation.current++}},[owner]);
+  useEffect(()=>{generation.current++;submitLock.current=false;setBusy(false);setBusyAction(null);setDone(false);setError(null);setPicked(null);setPhotos([]);setPhase(null);setUncertain(null);setStep(0);setF({make:'',model:'',variant:'',year:'',km:'',fuel:'petrol',gearbox:'manual',body:'',owners:'1',colour:'',area:'',price:'',description:'',name:'',phone:'',reg:''});return()=>{generation.current++}},[owner]);
   useEffect(()=>{
     let active=true;setRestoring(true);
     if(!uid||!tenantId){setRestoring(false);return;}
@@ -82,7 +83,7 @@ export default function SellScreen() {
     const errors = validateSellStep(f, 2, photos.length);
     setFieldErrors(errors);
     if (Object.keys(errors).length) return;
-    const scope=owner,gen=generation.current;const current=()=>ownerRef.current===scope&&generation.current===gen;submitLock.current=true;setBusy(true); setError(null);
+    const scope=owner,gen=generation.current;const current=()=>ownerRef.current===scope&&generation.current===gen;submitLock.current=true;setBusyAction("submit");setBusy(true); setError(null);
     let uploadComplete=false,submissionStarted=false;
     try {
       setPhase(`Uploading photos: 0/${photos.length}`);
@@ -110,13 +111,13 @@ export default function SellScreen() {
       if(current()){await clearPendingListing(scope);if(current()){setUncertain(null);setDone(true);}}
     } catch (e) {
       if(current())setError(submissionStarted ? "Submission not confirmed. Check your saved submission before sending again." : uploadComplete ? "Your draft could not be saved on this device. Nothing was sent. Try again." : "Photos could not finish uploading. Try again.");
-    } finally { if(current()){submitLock.current=false;setBusy(false);setPhase(null);} }
+    } finally { if(current()){submitLock.current=false;setBusy(false);setBusyAction(null);setPhase(null);} }
   }
 
   async function checkSaved() {
     if (!uncertain || submitLock.current) return;
     const scope=owner,gen=generation.current;const current=()=>ownerRef.current===scope&&generation.current===gen;
-    submitLock.current=true;setBusy(true);setError(null);
+    submitLock.current=true;setBusyAction("check");setBusy(true);setError(null);
     try {
       if(uncertain.operationId){
         const outcome=await getMyListingSubmission(uncertain.operationId);
@@ -132,16 +133,16 @@ export default function SellScreen() {
         if(current())router.replace("/(tabs)/cars?tab=sell");
       }
     } catch {if(current())setError("Saved listings could not be checked. Do not send again yet.");}
-    finally {if(current()){submitLock.current=false;setBusy(false);}}
+    finally {if(current()){submitLock.current=false;setBusy(false);setBusyAction(null);}}
   }
   async function retrySaved(){
     if(!uncertain?.operationId||submitLock.current||busy)return;
     const payload=uncertain,scope=owner,gen=generation.current;
     const current=()=>ownerRef.current===scope&&generation.current===gen;
-    submitLock.current=true;setBusy(true);setError(null);setPhase('Retrying the same saved submission');
+    submitLock.current=true;setBusyAction("retry");setBusy(true);setError(null);setPhase('Retrying the same saved submission');
     try{await submitMyListing(payload);if(!current())return;await clearPendingListing(scope);if(current()){setUncertain(null);setDone(true);}}
     catch{if(current())setError('Still not confirmed. Your saved submission is kept. Check again or retry the same submission.');}
-    finally{if(current()){submitLock.current=false;setBusy(false);setPhase(null);}}
+    finally{if(current()){submitLock.current=false;setBusy(false);setBusyAction(null);setPhase(null);}}
   }
   if (done) {
     return (
@@ -213,8 +214,8 @@ export default function SellScreen() {
       {error ? <Notice title={uncertain ? "Submission not confirmed" : "Check these details"} body={error} /> : null}
       {phase ? <T role="caption" tone="secondary">{phase}</T> : null}
       {uncertain ? <T role="caption" tone="secondary">{uncertain.photoPaths.length} photos uploaded. Submission not confirmed.</T> : null}
-      {uncertain?.operationId ? <Button label="Retry same submission" busy={busy} onPress={()=>void retrySaved()}/> : null}
-      {uncertain ? <Button label={uncertain.operationId?'Check submission':'Check saved listings'} busy={busy} onPress={() => void checkSaved()}/> : step===2 ? <Button label="Send for studio review" busy={busy} disabled={restoring} onPress={() => void submit()}/> : <Button label={step===0 ? "Continue to photos & price" : "Continue to review"} onPress={next}/>}
+      {uncertain?.operationId ? <Button label="Retry same submission" busy={busy&&busyAction==="retry"} disabled={busy} onPress={()=>void retrySaved()}/> : null}
+      {uncertain ? <Button label={uncertain.operationId?'Check submission':'Check saved listings'} busy={busy&&busyAction==="check"} disabled={busy} onPress={() => void checkSaved()}/> : step===2 ? <Button label="Send for studio review" busy={busy} disabled={restoring} onPress={() => void submit()}/> : <Button label={step===0 ? "Continue to photos & price" : "Continue to review"} onPress={next}/>}
       {step>0 && <Button kind="quiet" label="Previous step" disabled={busy || !!uncertain} onPress={() => {setError(null);setFieldErrors({});setStep(step-1);}}/>}
       <T role="caption" tone="tertiary">The studio reviews your listing. Your number is not shown to buyers.</T>
     </Screen>

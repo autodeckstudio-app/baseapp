@@ -601,9 +601,9 @@ export default function AddVehicleScreen() {
             <GarageDisclosure kind="unfinished"/>
             <Button label="Resume unfinished save" busy={loading} onPress={() => void retryPendingStages()} />
             <Button label="Continue to your car" kind="quiet" onPress={() => router.replace(`/(tabs)/garage/${savedId}`)} />
-            <Button label="Start over with a new car" kind="quiet" busy={loading} onPress={() => abandonPendingJournal()} />
+            <Button label="Start over with a new car" kind="quiet" disabled={loading} onPress={() => abandonPendingJournal()} />
           </View>
-        ) : savedId && !photoFailed && !protectionFailed ? <Button label="View saved car" onPress={() => router.replace(`/(tabs)/garage/${savedId}`)} /> : photoFailed ? <View style={{ gap: space.breath }}><Button label="Try the photo again" busy={loading} onPress={() => void retryPendingStages()} /><Button label="Done" kind="quiet" onPress={() => router.replace(GARAGE_ROUTE)} /></View> : protectionFailed && savedId ? <View style={{ gap: space.breath }}><Button label="Continue to your car" onPress={() => router.replace(`/(tabs)/garage/${savedId}`)} /><Button label="Try the protection details again" kind="quiet" busy={loading} onPress={() => void retryPendingStages()} /></View> : <Button label="Add car" busy={loading || auth.status !== "ready" || !!archivedMatch} onPress={() => void handleAdd()} />}
+        ) : savedId && !photoFailed && !protectionFailed ? <Button label="View saved car" onPress={() => router.replace(`/(tabs)/garage/${savedId}`)} /> : photoFailed ? <View style={{ gap: space.breath }}><Button label="Try the photo again" busy={loading} onPress={() => void retryPendingStages()} /><Button label="Done" kind="quiet" onPress={() => router.replace(GARAGE_ROUTE)} /></View> : protectionFailed && savedId ? <View style={{ gap: space.breath }}><Button label="Continue to your car" onPress={() => router.replace(`/(tabs)/garage/${savedId}`)} /><Button label="Try the protection details again" kind="quiet" busy={loading} onPress={() => void retryPendingStages()} /></View> : <Button label="Add car" busy={loading} disabled={auth.status !== "ready" || !!archivedMatch} onPress={() => void handleAdd()} />}
       </Screen>
     </KeyboardAvoidingView>
   );

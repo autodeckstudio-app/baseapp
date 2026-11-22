@@ -18,3 +18,13 @@ it('synchronously masks already-visible bought gifts, claim receipt and code on 
  await act(async()=>finish({code:'PRIVATE-LATE',expiresAt:'2026-12-01'}));expect(JSON.stringify(r.toJSON())).not.toContain('PRIVATE');expect(JSON.stringify(r.toJSON())).not.toContain('Your gift is ready');
  await act(async()=>r.unmount());
 });
+
+it('old claim completion cannot stop the new owner selected-action spinner',async()=>{
+ h.owner='spinner-old';h.list.mockReset().mockResolvedValue({gifts:[],offer:null});const finishes:((value:any)=>void)[]=[];h.claim.mockReset().mockImplementation(()=>new Promise(resolve=>finishes.push(resolve)));let r:any;await act(async()=>{r=create(<Page/>)});
+ const button=()=>r.root.findAllByType('Button').find((n:any)=>n.props.label==='Use this code');
+ await act(async()=>r.root.findByType('Field').props.onChangeText('GWABCD2345'));await act(async()=>button().props.onPress());
+ await act(async()=>{h.owner='spinner-new';r.update(<Page/>)});
+ await act(async()=>r.root.findByType('Field').props.onChangeText('GWABCD2346'));await act(async()=>button().props.onPress());expect(button().props.busy).toBe(true);
+ await act(async()=>finishes[0]!({id:'old',expiresAt:'2026-12-01'}));expect(button().props.busy).toBe(true);
+ await act(async()=>finishes[1]!({id:'new',expiresAt:'2026-12-01'}));expect(button().props.busy).toBe(false);await act(async()=>r.unmount());
+});

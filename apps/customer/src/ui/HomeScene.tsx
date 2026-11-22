@@ -1,10 +1,8 @@
-import {useState} from 'react';
 import {Image,Platform,Pressable,Text,View} from 'react-native';
 import {useExperienceTheme} from '@autodeck/ui/native';
 import {SERVICE_HOMES} from '@autodeck/core';
 import {pickIdleNudge,type HomeViewProps} from './HomeView';
 import {HomeOriginalTop} from './HomeOriginalTop';
-import {SideDrawer} from './SideDrawer';
 import {HomeClub} from './HomeClub';
 import {HomeShowroom} from './HomeShowroom';
 import {CampaignSlot} from './CampaignSlot';
@@ -14,14 +12,13 @@ import {raised} from '../lib/raised';
 const icons:Record<string,NavIconName>={washing:'wash',paint:'ceramic',detailing:'surface',garage:'garage',modifications:'layers'};
 /** Every control keeps its connected adapter callback. No preview records or prices enter production. */
 export function HomeScene({p}:{p:HomeViewProps}){
- const{name,colors}=useExperienceTheme(),r=raised(name),[menu,setMenu]=useState(false);
+ const{name,colors}=useExperienceTheme(),r=raised(name);
  const event=p.live&&!p.live.idle?p.live:null;
  const nudge=event?null:pickIdleNudge({reminder:p.reminders[0]??null,need:p.need,rebook:p.rebook,onReminder:p.onReminders});
  const action=event?(event.kicker==='Needs your OK'?'Review':event.kicker==='Next visit'||event.kicker==='Payment due'?'View':'Track'):nudge?.cta??'Book a service';
  const actionPress=event?.onPress??nudge?.onPress??p.onBook;
  return <View testID="home-scene" style={{gap:18}}>
-  {p.drawer?.length?<SideDrawer open={menu} onClose={()=>setMenu(false)} name={p.displayName??'AutoDeck'} initial={p.initial} items={p.drawer}/>:null}
-  <HomeOriginalTop p={p} onMenu={()=>p.drawer?.length?setMenu(true):p.onAvatar()}/>
+  <HomeOriginalTop p={p}/>
   {event||nudge?<Pressable testID="home-state-dock" accessibilityRole="button" accessibilityLabel={action} onPress={actionPress} style={{...r.card,padding:17,gap:9,marginTop:-10}}>
    <Text style={{fontSize:9,letterSpacing:1.4,textTransform:'uppercase',color:colors.textSecondary}}>{event?.kicker??nudge?.kicker}</Text>
    <View style={{flexDirection:'row',alignItems:'center',gap:12}}><NavIcon cut={colors.surface} name={event?'history':'garage'} color={colors.textSecondary} size={24}/><View style={{flex:1,gap:4}}><Text style={{fontSize:17,lineHeight:23,fontWeight:'600',color:colors.textPrimary}}>{event?.title??nudge?.title}</Text>{event?.detail||nudge?.detail?<Text style={{fontSize:12,lineHeight:18,color:colors.textSecondary}}>{event?.detail??nudge?.detail}</Text>:null}{event?.ready?<Text style={{fontSize:11,color:colors.textSecondary}}>Ready by {event.ready}</Text>:null}</View><Text style={{fontSize:12,color:colors.textPrimary}}>{action}</Text></View>

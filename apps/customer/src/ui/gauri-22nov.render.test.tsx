@@ -1,5 +1,5 @@
 import React from'react';import{it,expect,vi}from'vitest';import{act,create}from'react-test-renderer';import{Pressable}from'react-native';
-vi.mock('react-native',async()=>({...await vi.importActual<any>('react-native'),TextInput:(p:any)=>React.createElement('TextInput',p),Modal:(p:any)=>React.createElement('Modal',p,p.visible?p.children:null)}));
+vi.mock('react-native',async()=>({...await vi.importActual<any>('react-native'),Image:(p:any)=>React.createElement('Image',p),TextInput:(p:any)=>React.createElement('TextInput',p),Modal:(p:any)=>React.createElement('Modal',p,p.visible?p.children:null)}));
 vi.mock('../hooks/useAuth',()=>({useAuth:()=>({status:'ready',user:{uid:'offline-ui'},claims:{tenantId:'offline'}})}));
 vi.mock('../hooks/useForegroundRefresh',()=>({useForegroundRefresh:()=>{},useForegroundNow:()=>1795334400000}));
 vi.mock('../lib/booking-service',()=>({getStudioInfo:async()=>null}));

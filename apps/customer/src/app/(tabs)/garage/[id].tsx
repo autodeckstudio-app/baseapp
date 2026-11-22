@@ -167,6 +167,7 @@ export default function VehicleDetailScreen() {
   const [confirmRemoveDocPhoto, setConfirmRemoveDocPhoto] = useState(false);
   const [docOpen, setDocOpen] = useState(false);
   const [docBusy, setDocBusy] = useState(false);
+  const [docAction,setDocAction]=useState<"save"|"delete"|null>(null);
   const [docError, setDocError] = useState<string | null>(null);
   const [docNotice, setDocNotice] = useState<string | null>(null); // post-save note shown outside the form
   const [upcomingBooking, setUpcomingBooking] = useState<Booking | null>(null);
@@ -302,7 +303,7 @@ export default function VehicleDetailScreen() {
     if (docForm.kind === "OTHER" && !docForm.title.trim()) { setDocError("Give this document a name."); return; }
     const clash = numberClash(allPapers, documentReference(docForm.kind, docForm.reference), docEditing, docEditing ? null : docSubmissionId);
     if (clash) { setNumberError(clash); return; }
-    mutationBusy.current=true;setDocBusy(true);
+    mutationBusy.current=true;setDocAction("save");setDocBusy(true);
     try {
       if (docEditing) {
         await updateMyPaper({
@@ -341,15 +342,15 @@ export default function VehicleDetailScreen() {
       if(ctxRef.current!==scope)return;
       setDocError(docSaveErrorMessage(e));
     } finally {
-      if(ctxRef.current===scope){mutationBusy.current=false;setDocBusy(false);}
+      if(ctxRef.current===scope){mutationBusy.current=false;setDocBusy(false);setDocAction(null);}
     }
   }
   async function handleDeleteDoc(paperId: string) {
     if (mockWriteBlocked(setDocError)) return;
-    if(mutationBusy.current)return;const scope=contextKey;mutationBusy.current=true;setDocBusy(true); setDocError(null);
+    if(mutationBusy.current)return;const scope=contextKey;mutationBusy.current=true;setDocAction("delete");setDocBusy(true); setDocError(null);
     try { await deleteMyPaper(paperId); if(ctxRef.current===scope)setDeleteId(null); }
     catch { if(ctxRef.current===scope)setDocError("The delete was not confirmed. Refresh documents before trying again."); }
-    finally { if(ctxRef.current===scope){mutationBusy.current=false;setDocBusy(false);} }
+    finally { if(ctxRef.current===scope){mutationBusy.current=false;setDocBusy(false);setDocAction(null);} }
   }
 
   useEffect(() => {
@@ -874,7 +875,7 @@ export default function VehicleDetailScreen() {
             </Pane>
           ) : null}
           {deleteId ? (
-            <Notice title="Delete this document?" body={`${(() => { const t = papers.find((x) => x.id === deleteId); return t ? `${paperName(t)}${t.reference ? ` · ${t.reference}` : ""}. ` : ""; })()}The document and its photo will no longer be available in the garage. Your car and bookings are not affected.`} action={<View style={{ gap: space.breath }}><Button label="Delete" busy={docBusy} onPress={() => void handleDeleteDoc(deleteId)} /><Button label="Cancel" kind="quiet" onPress={() => setDeleteId(null)} /></View>} />
+            <Notice title="Delete this document?" body={`${(() => { const t = papers.find((x) => x.id === deleteId); return t ? `${paperName(t)}${t.reference ? ` · ${t.reference}` : ""}. ` : ""; })()}The document and its photo will no longer be available in the garage. Your car and bookings are not affected.`} action={<View style={{ gap: space.breath }}><Button label="Delete" busy={docBusy&&docAction==="delete"} disabled={docBusy} onPress={() => void handleDeleteDoc(deleteId)} /><Button label="Cancel" kind="quiet" onPress={() => setDeleteId(null)} /></View>} />
           ) : null}
           {docOpen ? (
             <Pane pad="inset"><View style={{ gap: 22 }}><View style={{gap:8}}><Kicker>YOUR DOCUMENT</Kicker><T role="heading">{docEditing?"Edit document":"Add a document"}</T></View>
@@ -907,7 +908,7 @@ export default function VehicleDetailScreen() {
                 {docPhoto ? <T role="caption" tone="tertiary">Photo selected - it uploads when you save.</T> : null}
               </View>
               {docError ? <Notice title={/^Saved, but automatic checks/.test(docError) ? "Document saved, checks unfinished" : /^Saved, but the photo did not upload/.test(docError) ? "Photo did not upload" : docEditing ? "Can't save this document" : "Can't add this document"} body={docError} /> : null}
-              <Button label={docEditing ? "Save changes" : "Submit for verification"} busy={docBusy} onPress={() => void handleSaveDoc()} />
+              <Button label={docEditing ? "Save changes" : "Submit for verification"} busy={docBusy&&docAction==="save"} disabled={docBusy} onPress={() => void handleSaveDoc()} />
               <Button label="Cancel" kind="quiet" onPress={resetDocForm} />
             </View></Pane>
           ) : (
