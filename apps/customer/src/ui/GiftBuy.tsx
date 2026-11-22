@@ -1,3 +1,4 @@
+import { FloatingObject } from "./FloatingObject";
 // The buy panel: what the gift is, the price (from the server), and the terms, all above the pay button.
 import {View} from "react-native";
 import { GIFT_VALID_DAYS } from "@autodeck/core";
@@ -12,7 +13,7 @@ export function GiftBuy({ amountPaise, canPay, busy, disabled, onPay,serviceName
   return (
     <Pane pad="inset"><View style={{gap:16}}>
       <View style={{flexDirection:"row",alignItems:"center",gap:12}}>
-        <View style={{width:40,height:40,borderRadius:14,backgroundColor:tileBg,alignItems:"center",justifyContent:"center",borderWidth:1,borderColor:colors.borderSubtle}}><NavIcon name="gift" size={20} color={colors.textPrimary} cut={tileBg}/></View>
+        <FloatingObject name="gift" size={34}/>
         <View style={{gap:4}}>
           <T role="label" tone="tertiary">GIFT A SERVICE</T>
           <T role="heading">Buy a gift</T>

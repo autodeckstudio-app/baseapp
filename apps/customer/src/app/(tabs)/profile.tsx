@@ -1,3 +1,4 @@
+import { FloatingObject } from "../../ui/FloatingObject";
 import { buildDrawerItems } from "../../lib/drawer-items";
 import { ProfileVisitLinks } from "../../ui/ProfileVisitLinks";
 import { LicenceSection } from "../../ui/LicenceSection";
@@ -96,7 +97,7 @@ export default function YouScreen() {
       {actionMessage ? <Notice title="Account update" body={actionMessage} /> : null}
       <Pane pad="inset"><View style={{ gap: 6 }}><Kicker>Your AutoDeck</Kicker>
         {buildDrawerItems((path) => router.push(path as never), null).filter(it => it.key !== "help").map((it) => <Pressable key={it.key} accessibilityRole="button" accessibilityLabel={it.label} onPress={it.onPress} style={({ pressed }) => ({ flexDirection: "row", gap: 14, alignItems: "center", minHeight: 76, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle, opacity: pressed ? 0.7 : 1 })}>
-          <View style={{ width: 44, height: 44, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: light ? "#E7EDF5" : "#29384C" }}><NavIcon name={it.key === "cars" ? "garage" : it.key === "membership" ? "club" : it.key === "friends-gifts" ? "gift" : "bell"} size={23} color={colors.textPrimary} cut={light ? "#E7EDF5" : "#29384C"} /></View>
+          <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}><FloatingObject name={it.key === "cars" ? "garage" : it.key === "membership" ? "club" : it.key === "friends-gifts" ? "gift" : "bell"} size={38} /></View>
           <View style={{ flex: 1, minWidth: 0, gap: 4 }}><T role="bodyStrong">{it.label}</T>{it.sub ? <T role="caption" tone="secondary">{it.sub}</T> : null}</View>
         </Pressable>)}
         <ListRow last icon="chat" title="Your quotes" detail="Review work and prices" onPress={() => router.navigate("/(tabs)/quotes")} />

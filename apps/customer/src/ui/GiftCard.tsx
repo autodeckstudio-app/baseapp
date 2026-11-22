@@ -1,3 +1,4 @@
+import { FloatingObject } from "./FloatingObject";
 // A gift you bought, as a card: the wash, the code, how long it is valid, and the terms. Shown after payment and when a bought gift is opened.
 import { useState } from "react";
 import { View } from "react-native";
@@ -23,7 +24,7 @@ export function GiftCard({ code, expiresAt, buyerName, serviceName, now = Date.n
   return (
     <Pane pad="inset" testID="gift-card"><View style={{gap:16}}>
       <View style={{flexDirection:"row",alignItems:"center",gap:12}}>
-        <View style={{width:40,height:40,borderRadius:14,backgroundColor:tileBg,alignItems:"center",justifyContent:"center",borderWidth:1,borderColor:colors.borderSubtle}}><NavIcon name="gift" size={20} color={colors.textPrimary} cut={tileBg}/></View>
+        <FloatingObject name="gift" size={34}/>
         <View style={{gap:4}}>
           <Kicker tone="accent">Gift</Kicker>
           <T role="heading">{serviceName??"Foam wash"}, any car</T>

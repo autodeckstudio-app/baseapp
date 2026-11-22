@@ -3,6 +3,7 @@ import { it, expect, vi } from 'vitest';
 import { act, create } from 'react-test-renderer';
 vi.mock('./kit', () => ({ Kicker: 'Kicker', Pane: 'Pane', T: 'T', Chip: 'Chip', InfoLine: 'InfoLine' }));
 vi.mock('./IconAction', () => ({ IconAction: 'IconAction' }));
+vi.mock('./FloatingObject', () => ({ FloatingObject: 'FloatingObject' }));
 vi.mock('./NavIcon', () => ({ NavIcon: 'NavIcon' }));
 vi.mock('../lib/gift-share', () => ({ giftMessage: () => '', shareGift: async () => null }));
 import { GiftCard } from './GiftCard';

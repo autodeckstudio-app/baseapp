@@ -1,3 +1,4 @@
+import { FloatingObject } from "./FloatingObject";
 import wordmarkLight from '../../assets/brand/wordmark-light.png';
 import wordmarkDark from '../../assets/brand/wordmark-dark.png';
 import hero from '../../assets/imagery/hero-home.jpg';
@@ -16,7 +17,7 @@ export function HomeOriginalTop({p}:{p:HomeViewProps}){
   <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12,paddingBottom:8}}>
    <Image testID="home-official-wordmark" accessibilityLabel="AutoDeck" source={name==='light'?wordmarkLight:wordmarkDark} resizeMode="contain" style={{width:164,maxWidth:'52%',height:24}}/>
    <View style={{flexDirection:'row',gap:10}}><Pressable accessibilityRole="button" accessibilityLabel="Help & contact" onPress={()=>router.push("/(tabs)/help" as never)} style={{width:44,height:44,alignItems:"center",justifyContent:"center"}}><Text style={{color:colors.textPrimary,fontSize:12}}>Help</Text></Pressable>
-    <Pressable accessibilityRole="button" accessibilityLabel={p.unread>0?`Notifications, ${p.unread} unread`:'Notifications'} onPress={p.onBell} style={{...r.round,width:44,height:44,alignItems:'center',justifyContent:'center'}}><NavIcon cut={colors.surface} name="bell" color={colors.textPrimary} size={22}/>{p.unread>0?<View style={{position:'absolute',right:10,top:9,width:6,height:6,borderRadius:3,backgroundColor:colors.accent}}/>:null}</Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel={p.unread>0?`Notifications, ${p.unread} unread`:'Notifications'} onPress={p.onBell} style={{width:44,height:44,alignItems:'center',justifyContent:'center'}}><FloatingObject name="bell" size={26}/>{p.unread>0?<View style={{position:'absolute',right:10,top:9,width:6,height:6,borderRadius:3,backgroundColor:colors.accent}}/>:null}</Pressable>
 
    </View>
   </View>
