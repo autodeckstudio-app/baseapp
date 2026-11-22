@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# Exact Customer copy/card release only.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-choice-copy-20261123 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  [ "$(git rev-parse HEAD^)" = 33a3b87a7b4709fc4bf0c796f58d58e26d73b022 ] || exit 0
+  [ "$(git diff --name-only HEAD^ HEAD)" = scripts/vercel-ignore.sh ] || exit 0
+  case "$1" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
+#!/usr/bin/env bash
 # Exact Customer presentation batch; sibling apps do not build.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-header-object-20261123 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0
