@@ -13,7 +13,6 @@ import{reviewedPickupEntitlement}from"../../../lib/pickup-entitlement";
 import type{Membership}from"@autodeck/core";
 import{pickupDraftScope,currentPickupQuote}from'../../../lib/pickup-draft';
 import{usePickupDraft}from'../../../lib/use-pickup-draft';
-import {bookingConfirmCopy}from"../../../lib/booking-confirm-copy";
 import { listOwnerKey } from "../../../lib/owner-key";
 import { formatServiceTime } from "../../../lib/duration";
 import { useState, useEffect, useRef } from "react";
@@ -552,9 +551,6 @@ export default function BookingConfirmScreen() {
 
       {service?.priceOnRequest === true ? <Pane pad="gap"><Row title="Price" detail={<T role="caption" tone="secondary">Quote on request. The studio sets the price for your car and you approve it before work starts.</T>} last /></Pane> : null}
 
-      <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>
-        {combinedNoPayment?"No payment is needed. Confirm your booking below.":combinedMode?"Review the combined total and your payment choice before confirming.":bookingConfirmCopy({quote:service?.priceOnRequest===true,gift:Boolean(giftCode),membership:washOn,online:payNow,advance:advanceDue})}
-      </T>
       {combinedMode||service?.priceOnRequest === true || washOn || giftCode ? null : <View style={{ gap: space.line }}>
         <Kicker>How will you pay</Kicker>
         <Pane pad="gap">
@@ -566,23 +562,10 @@ export default function BookingConfirmScreen() {
           <Pressable accessibilityRole="button" accessibilityState={{ selected: payAtStudio || !payHow.online }} onPress={() => { if (!held) { setPayAtStudio(true); if (studioAdvanceAvailable) setAdvanceSheet(true); } }}>
             <Row title="Pay at studio" detail={<T role="caption" tone="secondary">{studioAdvanceAvailable ? "Pay 20% advance online to confirm. Slot held for 15 minutes; the rest at the studio." : "Confirm your slot below. Pay when you collect your car."}</T>} trailing={payAtStudio || !payHow.online ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last={!advanceDue && !payNow} />
           </Pressable>
-          {/* Disclose the policy for the effective payment route only. */}
-          {ADVANCE_SPLIT_ENABLED && (advanceDue || payNow) ? (
-            <View style={{ paddingHorizontal: space.line, paddingTop: space.line, paddingBottom: space.line }}>
-              {advanceDue ? (
-                <>
-                  <T role="caption" tone="secondary">{advanceDisclosureLines().split}</T>
-                  <T role="caption" tone="secondary">{advanceDisclosureLines().noShow}</T>
-                </>
-              ) : (
-                <T role="caption" tone="secondary">{advanceDisclosureLines().noShowFullOnline}</T>
-              )}
-            </View>
-          ) : null}
         </Pane>
       </View>}
 
-      <BookingTerms key={scopeKey} combinedMode={combinedMode} onHelp={()=>router.navigate("/(tabs)/help")}/>
+      <BookingTerms key={scopeKey} combinedMode={combinedMode} paymentTerms={ADVANCE_SPLIT_ENABLED && !combinedMode && service?.priceOnRequest!==true && !washOn && !giftCode && (advanceDue || payNow) ? advanceDue ? [advanceDisclosureLines().split,advanceDisclosureLines().noShow] : [advanceDisclosureLines().noShowFullOnline] : []} onHelp={()=>router.navigate("/(tabs)/help")}/>
 
       {bookError ? <Notice title={held ? "Payment pending" : "Could not confirm the request"} body={bookError} /> : null}
 

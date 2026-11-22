@@ -26,6 +26,8 @@ it('lists same-family options with prices right; selecting an option never books
  await act(async()=>r.unmount());
 });
 
+it('selected service uses an Add-styled Remove text control and removes without booking',async()=>{let r:any;const toggle=vi.fn(),open=vi.fn();await act(async()=>{r=create(<ServiceDetailRich service={wash} siblings={[wash]} priceLabel={()=>'₹600'} eligible added onToggle={toggle} onOpen={open} onInspect={()=>{}} onSelect={()=>{}}/>)});expect(JSON.stringify(r.toJSON())).toContain('"Remove"');const remove=r.root.findAllByType(Pressable).find((n:any)=>n.props.accessibilityLabel==='Remove Regular Wash');expect(remove.props.accessibilityState.selected).toBe(true);await act(async()=>remove.props.onPress());expect(toggle).toHaveBeenCalledTimes(1);expect(open).not.toHaveBeenCalled();await act(async()=>r.unmount())});
+
 it('quote services discuss requirements and never invent a price',async()=>{
  const quote:any={id:'q',name:'Headlight restoration',priceOnRequest:true,basePrice:0,active:true,description:'Restore clarity\nMachine polish',customerMenu:{home:'detailing',family:'Exterior surfaces'}};
  let r:any;const inspect=vi.fn();

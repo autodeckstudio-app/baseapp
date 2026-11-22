@@ -8,15 +8,15 @@ it('shows only response-priced totals and prices the exact ordered extras',async
 it('a slow price response cannot leak into changed service or owner scope',async()=>{let old!:(v:any)=>void,next!:(v:any)=>void;h.price.mockImplementationOnce(()=>new Promise(r=>old=r)).mockImplementationOnce(()=>new Promise(r=>next=r));let r:any;await act(async()=>{r=create(view())});h.ids=['b'];h.scope='owner-b';await act(async()=>r.update(view()));await act(async()=>old({breakdown:{total:11111}}));expect(text(r)).not.toContain('PRICE:11111');await act(async()=>next({breakdown:{total:22222}}));expect(text(r)).toContain('PRICE:22222');await act(async()=>r.unmount())});
 it.each(['withdrawn','no-car','alternative-coating'])('does not invent or request a payable total for %s scope',async kind=>{h.ids=['a','b'];let services=rows.map(s=>({...s}));if(kind==='withdrawn')services[1].active=false;if(kind==='no-car')h.category=null;if(kind==='alternative-coating')services=services.map(s=>({...s,category:'ceramic'}));let r:any;await act(async()=>{r=create(view(services))});expect(h.price).not.toHaveBeenCalled();expect(text(r)).not.toContain('PRICE:');await act(async()=>r.unmount())});
 
-it('mixed bays show only complete server-priced service subtotal with settlement exclusions',async()=>{
+it('mixed bays retain truthful complete service subtotal without the removed explanatory fine print',async()=>{
  h.ids=['a','b'];const services=rows.map(s=>({...s}));services[1].requiredBayType='wash';
  h.price.mockResolvedValueOnce({breakdown:{total:50000,currency:'INR'}}).mockResolvedValueOnce({breakdown:{total:60000,currency:'INR'}});
  let r:any;await act(async()=>{r=create(view(services))});
  expect(h.price.mock.calls).toEqual([['a','sedan'],['b','sedan']]);
  expect(text(r)).toContain('Service subtotal PRICE:110000');
- expect(text(r)).toContain('Membership/transport not included.');
- expect(text(r)).toContain('Not final booking price.');
- expect(text(r)).toContain('Timing by studio');
+ expect(text(r)).not.toContain('Membership/transport not included.');
+ expect(text(r)).not.toContain('Not final booking price.');
+ expect(text(r)).not.toContain('Timing by studio');
  await act(async()=>r.unmount());
 });
 it.each(['missing-currency','foreign-currency','negative','fractional','unsafe','failed'])('mixed subtotal stays unknown for %s response',async kind=>{

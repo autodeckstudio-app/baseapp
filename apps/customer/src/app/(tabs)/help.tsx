@@ -3,7 +3,7 @@ import {useForegroundRefresh,useForegroundNow} from '../../hooks/useForegroundRe
 // Help: call, WhatsApp, location, hours and a short FAQ.
 import { useEffect, useRef, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
-import { Linking, View } from "react-native";
+import { Linking, Pressable, View } from "react-native";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { NavIcon } from "../../ui/NavIcon";
@@ -61,7 +61,7 @@ export default function HelpScreen() {
         <Pane pad="gap">
           {shown.map((f, i) => (
             <View key={f.q} style={{paddingHorizontal:4}}>
-              <Row title={f.q} onPress={() => setOpen(open === i ? null : i)} last={i === shown.length - 1 && open !== i} />
+              <Pressable accessibilityRole="button" accessibilityLabel={f.q} accessibilityState={{expanded:open===i}} onPress={() => setOpen(open === i ? null : i)} style={{minHeight:48,paddingVertical:10,paddingHorizontal:8,flexDirection:'row',alignItems:'center',gap:12,borderBottomWidth:open===i||i<shown.length-1?1:0,borderBottomColor:colors.borderSubtle}}><T {...(open===i?{}:{numberOfLines:1})} style={{flex:1,minWidth:0,fontSize:14,lineHeight:20}}>{f.q}</T><View style={{transform:[{rotate:open===i?'270deg':'180deg'}]}}><NavIcon name="back" size={18} color={colors.textSecondary} cut={cut}/></View></Pressable>
               {open === i ? <View style={{ paddingHorizontal: space.line, paddingBottom: space.line }}><View style={{gap:space.line}}>{f.facts.map((fact,index)=><View key={fact.label} style={{gap:6,paddingVertical:12,borderBottomWidth:index<f.facts.length-1?1:0,borderBottomColor:colors.borderSubtle}}><T role="caption" tone="tertiary">{fact.label}</T><T tone="secondary">{fact.detail}</T></View>)}</View></View> : null}
             </View>
           ))}
