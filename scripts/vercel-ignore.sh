@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 # Exact Customer presentation batch; sibling apps do not build.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-header-object-20261123 ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  [ "$(git rev-parse HEAD^)" = 7443385885c11d4c63a29f937af7adfce485237e ] || exit 0
+  [ "$(git diff --name-only HEAD^ HEAD)" = scripts/vercel-ignore.sh ] || exit 0
+  case "$1" in customer) exit 1 ;; *) exit 0 ;; esac
+fi
+#!/usr/bin/env bash
+# Exact Customer presentation batch; sibling apps do not build.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = release/customer-floating-objects-20261123 ]; then
   cd "$(git rev-parse --show-toplevel)" || exit 0
   [ "$(git rev-parse HEAD^)" = 41284db81acb172868c90100a1eda446093345eb ] || exit 0
