@@ -1,4 +1,5 @@
 import React,{useEffect,useRef} from 'react';
+import {installCategorySwipe} from './category-swipe';
 import {Asset} from 'expo-asset';
 import detailing from '../../../assets/imagery/category/detailing.jpg';
 import paint from '../../../assets/imagery/category/paint-protection.jpg';
@@ -12,6 +13,7 @@ import {labels} from './model';
 const categoryTabs:[Home|null,string][]=[[null,'All'],['washing','Wash & care'],['paint','Paint protection'],['detailing','Detailing'],['garage','Garage'],['modifications','Modifications & wraps']];
 export function ServiceCategoryTabs({selected,onBrowse}:{selected:Home|null;onBrowse:(home:Home|null)=>void}){
  const nav=useRef<HTMLElement>(null);
+ useEffect(()=>nav.current?installCategorySwipe(nav.current):undefined,[]);
  useEffect(()=>{nav.current?.querySelector('[aria-current="page"]')?.scrollIntoView({inline:'nearest',block:'nearest',behavior:'instant'})},[selected]);
  return <nav ref={nav} className="service-area-shortcuts" aria-label="Service areas">{categoryTabs.map(([home,label])=><button type="button" key={home??'all'} aria-current={selected===home?'page':undefined} onClick={()=>onBrowse(home)}>{label}</button>)}</nav>;
 }
@@ -26,7 +28,7 @@ export const servicesLandingCSS=`
 .services-experience .root-intro{margin:0 0 18px;color:var(--muted);font-size:14px}
 .services-experience .root-screen .search-field{margin:0 0 15px}
 .services-experience .root-screen .search-field>span{display:none}
-.services-experience .service-area-shortcuts{display:flex;flex-wrap:nowrap;gap:22px;align-items:center;margin:0 0 20px;min-height:44px;font-size:13px;max-width:100%;overflow-x:auto;white-space:nowrap;scrollbar-width:none}.services-experience .service-area-shortcuts::-webkit-scrollbar{display:none}.services-experience .service-area-shortcuts>*{flex-shrink:0}.services-experience .category-tabs-wrap{max-width:1040px;margin:0 auto;padding:0 20px}.services-experience .service-area-shortcuts button[aria-current="page"]{color:var(--ink);border-bottom:2px solid var(--accent)}
+.services-experience .service-area-shortcuts{display:flex;flex-wrap:nowrap;gap:22px;align-items:center;margin:0 0 20px;min-height:44px;font-size:13px;max-width:100%;overflow-x:auto;overflow-y:hidden;touch-action:pan-y pinch-zoom;-webkit-overflow-scrolling:touch;white-space:nowrap;scrollbar-width:none}.services-experience .service-area-shortcuts::-webkit-scrollbar{display:none}.services-experience .service-area-shortcuts>*{flex-shrink:0}.services-experience .category-tabs-wrap{max-width:1040px;margin:0 auto;padding:0 20px}.services-experience .service-area-shortcuts button[aria-current="page"]{color:var(--ink);border-bottom:2px solid var(--accent)}
 .services-experience .service-area-shortcuts>span{align-self:stretch;display:flex;align-items:center;position:relative;color:var(--ink)}
 .services-experience .service-area-shortcuts>span:after{content:'';position:absolute;height:2px;bottom:0;left:0;right:0;background:var(--accent)}
 .services-experience .service-area-shortcuts button{padding:0;min-height:44px;border:0;background:transparent;color:var(--muted);font:inherit}
