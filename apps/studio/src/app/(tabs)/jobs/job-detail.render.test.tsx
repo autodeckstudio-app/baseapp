@@ -22,19 +22,27 @@ vi.mock("expo-router", () => ({
 }));
 
 type Snap = { exists: () => boolean; data: () => unknown };
+const catalogueEvents:any[]=[];const publishedReads:any[]=[];
+const bookingDocs = vi.hoisted(() => ({ map: new Map<string, { exists: () => boolean; data: () => unknown }>() }));
+const membershipRead = vi.hoisted(() => ({ getCustomerMembership: vi.fn(async () => null as any) }));
 const bookingErrors=new Map<string,()=>void>();
 const bookingListeners = new Map<string, (s: Snap) => void>();
 const jobListeners = new Map<string, (s: Snap) => void>();
 vi.mock("firebase/firestore", () => ({
   doc: (_db: unknown, ...parts: string[]) => ({ parts }),
-  getDoc: async () => ({ exists: () => false, data: () => undefined }),
+  getDoc: async (ref: { parts?: string[] }) =>
+    ref.parts?.[0] === "bookings" && ref.parts[1] && bookingDocs.map.has(ref.parts[1])
+      ? bookingDocs.map.get(ref.parts[1])
+      : { exists: () => false, data: () => undefined },
   onSnapshot: (ref: { parts?: string[] }, cb: (s: Snap) => void,err?:()=>void) => {
+    if(ref.parts?.[0]==='cataloguePublishedVersions')catalogueEvents.push(cb);
     if (ref.parts && ref.parts[0] === "jobs" && ref.parts[1]) jobListeners.set(ref.parts[1], cb);
     if(ref.parts?.[0] === "bookings") {bookingListeners.set(ref.parts[1]!,cb);if(err)bookingErrors.set(ref.parts[1]!,err);}
     return () => {};
   },
 }));
-vi.mock("firebase/functions", () => ({ httpsCallable: () => async () => ({ data: {} }) }));
+const callableHandlers = vi.hoisted(() => ({ map: new Map<string, (args: unknown) => Promise<unknown>>() }));
+vi.mock("firebase/functions", () => ({ httpsCallable: (_f: unknown, name: string) => async (args: unknown) => callableHandlers.map.get(name)?.(args) ?? ({ data: {} }) }));
 vi.mock("../../../lib/firebase", () => ({ db: {}, functions: {} }));
 
 type JobAuthT = { uid: string; role: string | null; tenantId: string | null; studioId: string | null };
@@ -77,11 +85,12 @@ vi.mock("../../../lib/payment-service", () => ({
   },
   listenToInvoiceForJob: () => () => {},
 }));
-vi.mock("../../../lib/membership-service", () => ({ getCustomerMembership: async () => null }));
+vi.mock("../../../lib/membership-service", () => ({ getCustomerMembership: membershipRead.getCustomerMembership }));
 vi.mock("../../../lib/approval-service", () => ({
   createApproval: vi.fn(),
   cancelApproval: vi.fn(),
   getActiveServices: async () => [],
+  getPublishedServices:()=>new Promise(resolve=>publishedReads.push(resolve)),
   listenToApprovalsForJob: () => () => {},
 }));
 vi.mock("../../../lib/inspection-service", () => ({ listenToInspection: () => () => {}, startInspection: vi.fn() }));
@@ -153,7 +162,7 @@ const capturePress = (el: any, label: string): (() => void) => {
 const emitJob = (id: string, j: ServiceJob) => act(() => { jobListeners.get(id)?.({ exists: () => true, data: () => j }); });
 
 beforeEach(() => {
-  paneRenders.length = 0;
+  paneRenders.length = 0;catalogueEvents.length=0;publishedReads.length=0;
   paymentListeners.length = 0;
   jobListeners.clear();
   jobAuthListeners.clear();
@@ -610,3 +619,171 @@ it('a new cash hold kills an armed counter confirmation and old callbacks cannot
 it('one Send to quality check click binds the displayed job version and never advances Ready implicitly',async()=>{advanceJobStatus.mockResolvedValue({newStatus:'QUALITY_CHECK'});let el:any;await act(async()=>{el=create(createElement(JobDetailScreen))});emitJob('jA',mkJob('jA',{status:'IN_PROGRESS',updatedAt:'stage-v2'}));await flush();press(el,'Send to quality check');await flush();expect(advanceJobStatus).toHaveBeenCalledTimes(1);expect(advanceJobStatus.mock.calls[0]![6]).toEqual({expectedStatus:'IN_PROGRESS',expectedUpdatedAt:'stage-v2',operationId:'IN_PROGRESS:stage-v2:forward'});await act(async()=>el.unmount())});
 
 it('bay source distinguishes loaded unassigned, exact reservation, missing bay and unavailable config',async()=>{getStudioConfig.mockResolvedValue({tenantId:'t',bays:[{id:'wash',name:'Wash Bay 1',active:true,bayType:'wash'}]});let el:any;await act(async()=>{el=create(createElement(JobDetailScreen))});emitJob('jA',mkJob('jA',{bayId:''}));await flush();expect(textOf(el)).toContain('No bay assigned');expect(textOf(el)).not.toContain('Loading bay');emitJob('jA',mkJob('jA',{bayId:'wash'}));await flush();expect(textOf(el)).toContain('Wash Bay 1');emitJob('jA',mkJob('jA',{bayId:'removed'}));await flush();expect(textOf(el)).toContain('Bay needs review');getStudioConfig.mockRejectedValue(Error('unavailable'));emitJob('jA',mkJob('jA',{studioId:'s2',bayId:'wash'}));await flush();expect(textOf(el)).toContain('Bay unavailable');expect(textOf(el)).not.toContain('Wash Bay 1');await act(async()=>el.unmount())});
+
+it('an already-open additional-service picker refreshes in place and clears its old selection after publication',async()=>{let el:any;await act(async()=>{el=create(createElement(JobDetailScreen))});emitJob('jA',mkJob('jA',{status:'IN_PROGRESS'}));await flush();press(el,'Request Approval');await flush();expect(publishedReads).toHaveLength(1);await act(async()=>publishedReads[0]({services:[{id:'wash',name:'Old listed wash',tenantId:'t'}],publishId:'p1'}));expect(textOf(el)).toContain('Old listed wash');press(el,'Old listed wash');await act(async()=>catalogueEvents[0]({exists:()=>true,data:()=>({publishId:'p2'}),metadata:{fromCache:false}}));expect(textOf(el)).not.toContain('Old listed wash');expect(textOf(el)).toContain('Checking the accepted service list');await act(async()=>publishedReads[1]({services:[{id:'wash',name:'Updated listed wash',tenantId:'t'}],publishId:'p2'}));expect(textOf(el)).toContain('Updated listed wash');const disabled=el.root.findAll((n:any)=>typeof n.props.onPress==='function'&&n.props.disabled===true&&textOfNode(n).includes('approval'));expect(disabled.length).toBeGreaterThan(0);await act(async()=>el.unmount())});
+it('membership badge and refresh panel follow the current job and clear when it has no membership', async () => {
+  membershipRead.getCustomerMembership.mockResolvedValue({ id: 'm1', tier: 'platinum', status: 'active', endDate: '2099-01-01', refreshesTotal: 1, refreshesUsed: 0 });
+  bookingDocs.map.set('bA', { exists: () => true, data: () => ({ membershipId: 'm1', membershipWashUsed: false, membershipDiscountApplied: false }) });
+  bookingDocs.map.set('bB', { exists: () => true, data: () => ({}) });
+  let el: any;
+  await act(async () => { el = create(createElement(JobDetailScreen)); });
+  emitJob('jA', mkJob('jA', { bookingId: 'bA', customerId: 'cA' }));
+  await flush();
+  expect(textOf(el)).toContain('platinum member');
+  expect(textOf(el)).toContain('Interior refresh: 0 of 1 used');
+  emitJob('jA', mkJob('jA', { bookingId: 'bB', customerId: 'cB' }));
+  await flush();
+  expect(textOf(el)).not.toContain('platinum member');
+  expect(textOf(el)).not.toContain('Interior refresh');
+  membershipRead.getCustomerMembership.mockReset();
+  bookingDocs.map.clear();
+  await act(async () => el.unmount());
+});
+
+it('a late membership read from a previous booking never lands on the new job view', async () => {
+  let resolveMembership: (m: unknown) => void = () => {};
+  membershipRead.getCustomerMembership.mockImplementationOnce(() => new Promise((r) => { resolveMembership = r; }));
+  bookingDocs.map.set('bA', { exists: () => true, data: () => ({ membershipId: 'm1', membershipWashUsed: false, membershipDiscountApplied: false }) });
+  bookingDocs.map.set('bB', { exists: () => true, data: () => ({}) });
+  let el: any;
+  await act(async () => { el = create(createElement(JobDetailScreen)); });
+  emitJob('jA', mkJob('jA', { bookingId: 'bA', customerId: 'cA' }));
+  await flush();
+  emitJob('jA', mkJob('jA', { bookingId: 'bB', customerId: 'cB' }));
+  await flush();
+  act(() => resolveMembership({ id: 'm1', tier: 'platinum', status: 'active', endDate: '2099-01-01', refreshesTotal: 1, refreshesUsed: 0 }));
+  await flush();
+  expect(textOf(el)).not.toContain('platinum member');
+  expect(textOf(el)).not.toContain('Interior refresh');
+  bookingDocs.map.clear();
+  await act(async () => el.unmount());
+});
+
+it('a fail-closed counters rejection pauses recording instead of offering a doomed retry', async () => {
+  membershipRead.getCustomerMembership.mockResolvedValue({ id: 'm1', tier: 'platinum', status: 'active', endDate: '2099-01-01', refreshesTotal: 1, refreshesUsed: 0 });
+  bookingDocs.map.set('bA', { exists: () => true, data: () => ({ membershipId: 'm1', membershipWashUsed: false, membershipDiscountApplied: false }) });
+  callableHandlers.map.set('recordMembershipRefresh', async () => { throw Object.assign(new Error('Refresh counters need staff review before use.'), { code: 'functions/failed-precondition' }); });
+  let el: any;
+  await act(async () => { el = create(createElement(JobDetailScreen)); });
+  emitJob('jA', mkJob('jA', { bookingId: 'bA', customerId: 'cA' }));
+  await flush();
+  expect(textOf(el)).toContain('Record interior refresh');
+  press(el, 'Record interior refresh');
+  await flush();
+  expect(textOf(el)).toContain('Refresh counters need staff review before use.');
+  expect(textOf(el)).toContain('Recording paused - staff review needed.');
+  expect(textOf(el)).not.toContain('Record interior refresh');
+  callableHandlers.map.clear();
+  membershipRead.getCustomerMembership.mockReset();
+  bookingDocs.map.clear();
+  await act(async () => el.unmount());
+});
+
+it('a transient recording failure keeps the retryable record action', async () => {
+  membershipRead.getCustomerMembership.mockResolvedValue({ id: 'm1', tier: 'platinum', status: 'active', endDate: '2099-01-01', refreshesTotal: 1, refreshesUsed: 0 });
+  bookingDocs.map.set('bA', { exists: () => true, data: () => ({ membershipId: 'm1', membershipWashUsed: false, membershipDiscountApplied: false }) });
+  callableHandlers.map.set('recordMembershipRefresh', async () => { throw Object.assign(new Error('network unavailable'), { code: 'functions/unavailable' }); });
+  let el: any;
+  await act(async () => { el = create(createElement(JobDetailScreen)); });
+  emitJob('jA', mkJob('jA', { bookingId: 'bA', customerId: 'cA' }));
+  await flush();
+  press(el, 'Record interior refresh');
+  await flush();
+  expect(textOf(el)).toContain('network unavailable');
+  expect(textOf(el)).toContain('Record interior refresh');
+  expect(textOf(el)).not.toContain('Recording paused');
+  callableHandlers.map.clear();
+  membershipRead.getCustomerMembership.mockReset();
+  bookingDocs.map.clear();
+  await act(async () => el.unmount());
+});
+
+it('a failed refresh-usage read shows a retryable error and never Record until verified', async () => {
+  membershipRead.getCustomerMembership.mockResolvedValue({ id: 'm1', tier: 'platinum', status: 'active', endDate: '2099-01-01', refreshesTotal: 1, refreshesUsed: 0 });
+  bookingDocs.map.set('bA', { exists: () => true, data: () => ({ membershipId: 'm1', membershipWashUsed: false, membershipDiscountApplied: false }) });
+  let usageCalls = 0;
+  callableHandlers.map.set('getMembershipUsage', async () => {
+    usageCalls += 1;
+    if (usageCalls === 1) throw Object.assign(new Error('unavailable'), { code: 'functions/unavailable' });
+    return { data: { refreshUsage: [{ id: 'ru1', jobId: 'jA', restoredAt: null }] } };
+  });
+  let el: any;
+  await act(async () => { el = create(createElement(JobDetailScreen)); });
+  emitJob('jA', mkJob('jA', { bookingId: 'bA', customerId: 'cA' }));
+  await flush();
+  expect(textOf(el)).toContain('Refresh history unavailable');
+  expect(textOf(el)).not.toContain('Record interior refresh');
+  press(el, 'Retry refresh status');
+  await flush();
+  expect(textOf(el)).toContain('Recorded for this visit.');
+  expect(textOf(el)).not.toContain('Record interior refresh');
+  callableHandlers.map.clear();
+  membershipRead.getCustomerMembership.mockReset();
+  bookingDocs.map.clear();
+  await act(async () => el.unmount());
+});
+
+it('a record response for a superseded tenant/customer/booking identity is discarded even on the same job id', async () => {
+  membershipRead.getCustomerMembership.mockResolvedValue({ id: 'm1', tier: 'platinum', status: 'active', endDate: '2099-01-01', refreshesTotal: 1, refreshesUsed: 0 });
+  bookingDocs.map.set('bA', { exists: () => true, data: () => ({ membershipId: 'm1', membershipWashUsed: false, membershipDiscountApplied: false }) });
+  let resolveRecord: (v: unknown) => void = () => {};
+  callableHandlers.map.set('recordMembershipRefresh', () => new Promise((r) => { resolveRecord = r; }));
+  let el: any;
+  await act(async () => { el = create(createElement(JobDetailScreen)); });
+  emitJob('jA', mkJob('jA', { bookingId: 'bA', customerId: 'cA' }));
+  await flush();
+  press(el, 'Record interior refresh');
+  await flush();
+  // Same job id, but the context moved to another tenant/customer/booking mid-flight.
+  emitJob('jA', mkJob('jA', { tenantId: 't2', bookingId: 'bB', customerId: 'cB' }));
+  await flush();
+  act(() => resolveRecord({ data: { refreshUsageId: 'ru9', refreshesUsed: 1 } }));
+  await flush();
+  expect(textOf(el)).not.toContain('Recorded for this visit.');
+  expect(textOf(el)).not.toContain('1 of 1 used');
+  callableHandlers.map.clear();
+  membershipRead.getCustomerMembership.mockReset();
+  bookingDocs.map.clear();
+  await act(async () => el.unmount());
+});
+
+it('retained refresh callback after identity roundtrip or unmount cannot send, and stale completion cannot mark new epoch recorded', async () => {
+  membershipRead.getCustomerMembership.mockResolvedValue({ id: 'm1', tier: 'platinum', status: 'active', endDate: '2099-01-01', refreshesTotal: 1, refreshesUsed: 0 });
+  bookingDocs.map.set('bA', { exists: () => true, data: () => ({ membershipId: 'm1' }) });
+  bookingDocs.map.set('bB', { exists: () => true, data: () => ({}) });
+  let resolveRecord: (v: unknown) => void = () => {};
+  const send = vi.fn(() => new Promise(r => { resolveRecord = r; }));
+  callableHandlers.map.set('recordMembershipRefresh', send);
+  let el: any;
+  await act(async () => { el = create(createElement(JobDetailScreen)); });
+  const a = () => emitJob('jA', mkJob('jA', { bookingId: 'bA', customerId: 'cA' }));
+  const b = () => emitJob('jA', mkJob('jA', { bookingId: 'bB', customerId: 'cB' }));
+  a(); await flush();
+  const old = el.root.findAll((n: any) => n.props.label === 'Record interior refresh' && typeof n.props.onPress === 'function')[0].props.onPress;
+  await act(async () => { old(); old(); });
+  expect(send).toHaveBeenCalledTimes(1);
+  b(); await flush(); a(); await flush();
+  await act(async () => old());
+  expect(send).toHaveBeenCalledTimes(1);
+  await act(async () => resolveRecord({ data: { refreshUsageId: 'old-row', refreshesUsed: 1 } }));
+  expect(textOf(el)).not.toContain('Recorded for this visit.');
+  expect(textOf(el)).toContain('Record interior refresh');
+  const fresh = el.root.findAll((n: any) => n.props.label === 'Record interior refresh' && typeof n.props.onPress === 'function')[0].props.onPress;
+  await act(async () => el.unmount());
+  await act(async () => fresh());
+  expect(send).toHaveBeenCalledTimes(1);
+  callableHandlers.map.clear(); bookingDocs.map.clear(); membershipRead.getCustomerMembership.mockReset();
+});
+
+it('operator auth roundtrip invalidates an old refresh record callback', async () => {
+  membershipRead.getCustomerMembership.mockResolvedValue({ id: 'm1', tier: 'platinum', status: 'active', endDate: '2099-01-01', refreshesTotal: 1, refreshesUsed: 0 });
+  bookingDocs.map.set('bA', { exists: () => true, data: () => ({ membershipId: 'm1' }) });
+  const send = vi.fn(async () => ({ data: { refreshUsageId: 'r', refreshesUsed: 1 } }));
+  callableHandlers.map.set('recordMembershipRefresh', send);
+  let el: any; await act(async () => { el = create(createElement(JobDetailScreen)); });
+  emitJob('jA', mkJob('jA', { bookingId: 'bA', customerId: 'cA' })); await flush();
+  const old = el.root.findAll((n: any) => n.props.label === 'Record interior refresh' && typeof n.props.onPress === 'function')[0].props.onPress;
+  fireAuth({ ...STAFF, uid: 'u2' }); await flush(); fireAuth(STAFF); await flush();
+  await act(async () => old()); expect(send).not.toHaveBeenCalled();
+  await act(async () => el.unmount()); callableHandlers.map.clear(); bookingDocs.map.clear(); membershipRead.getCustomerMembership.mockReset();
+});

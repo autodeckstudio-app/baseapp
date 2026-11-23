@@ -13,7 +13,7 @@ it('discard requires the explicit confirm and reports the exact draft; keep canc
  expect(h.discarded).toHaveLength(0);
  // First click only arms the confirm; nothing is discarded.
  await act(async()=>btn('Discard draft').props.onClick());
- expect(JSON.stringify(r.toJSON())).toContain('The live service and past bookings are not affected. This cannot be undone.');
+ expect(JSON.stringify(r.toJSON())).toContain('Your live menu stays unchanged.');
  expect(h.discarded).toHaveLength(0);
  // Keep cancels back to the plain button.
  await act(async()=>btn('Keep draft').props.onClick());

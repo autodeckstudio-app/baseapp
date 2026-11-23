@@ -1,3 +1,4 @@
+import{usePublishedServices}from'../../hooks/usePublishedServices';
 import {randomUUID} from 'expo-crypto';
 import {prepareVisitIntake} from '../../lib/visit-intake-service';
 import type {VisitIntakeRead} from '@autodeck/core';
@@ -21,7 +22,7 @@ import {
   previewServicePrice,
 } from "../../lib/walkin-service";
 import { loadCustomerDirectory, filterDirectory, type CustomerDirectory } from "../../lib/lookup-service";
-import { getActiveServices } from "../../lib/approval-service";
+
 import { STAFF_SEGMENTS, normalizeSegment, jobHoldsBay, SERVICE_HOMES, servicePlacement, alignedCustomerPriceLabel } from "@autodeck/core";
 import type { Customer, Vehicle, Service, ServiceJob, StudioConfig, VehicleCategory, PriceBreakdown } from "@autodeck/core";
 import { colors, spacing, radius, typography, Button, TextInput, StatusBadge, LoadingState, ErrorState } from "@autodeck/ui";
@@ -64,7 +65,8 @@ export default function WalkinScreen() {
   const [newVehicleType, setNewVehicleType] = useState<VehicleCategory | null>(null);
   const [addingVehicle, setAddingVehicle] = useState(false);
 
-  const [services, setServices] = useState<Service[]>([]);
+  const catalogue=usePublishedServices(auth.status==='ready'?auth.user.uid+'|'+auth.claims.role+'|'+auth.claims.studioId:null,auth.status==='ready'?auth.claims.tenantId:null,auth.status==='ready');
+  const services=catalogue.services;
   const [additionalServices,setAdditionalServices]=useState<string[]>([]);
   const [addingService,setAddingService]=useState(false);
   const [estimate,setEstimate]=useState<VisitIntakeRead|null>(null);
@@ -87,10 +89,12 @@ export default function WalkinScreen() {
 
   const studioId = auth.status === "ready" ? auth.claims.studioId : null;
 
-  useEffect(() => {
-    setFeedError(null);
-    void getActiveServices().then(setServices).catch(()=>setFeedError("Could not load services. Try again."));
-  }, [retryTick]);
+  useEffect(()=>{if(retryTick)catalogue.refresh()},[retryTick]);
+  useEffect(()=>{
+    setFeedError(catalogue.error??(catalogue.loading?'Checking the accepted service list…':null));
+    setPriceBreakdown(null);setEstimate(null);setEstimateScope(null);setEstimateOperation(null);
+    setSelectedServiceId(null);setAdditionalServices([]);setSelectedBayId(null);setStep(current=>current==='review'?'service':current);
+  },[catalogue.revision,catalogue.loading,catalogue.error]);
 
   const dirTenant = auth.status === "ready" ? auth.claims.tenantId : null;
   const reloadDirectory = () => { if (dirTenant) void loadCustomerDirectory(dirTenant).then(setDirectory).catch(() => setDirectory({ customers: [], plates: new Map() })); };
@@ -108,7 +112,7 @@ export default function WalkinScreen() {
 
   const selectedService = services.find((s) => s.id === selectedServiceId) ?? null;
   const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId) ?? null;
-  const intakeScope=auth.status==='ready'?JSON.stringify([auth.user.uid,auth.claims,customer?.id,selectedVehicleId,selectedServiceId,additionalServices,notes]):null;
+  const intakeScope=auth.status==='ready'?JSON.stringify([auth.user.uid,auth.claims,catalogue.revision,customer?.id,selectedVehicleId,selectedServiceId,additionalServices,notes]):null;
   const intakeLive=useRef(intakeScope);intakeLive.current=intakeScope;const intakeLock=useRef(false);
   const staffKey=auth.status==='ready'?JSON.stringify([auth.user.uid,auth.claims]):null;
   const priorStaff=useRef(staffKey);
@@ -121,16 +125,16 @@ export default function WalkinScreen() {
   }, [selectedVehicleId]);
 
   useEffect(() => {
-    if (!selectedServiceId || !vehicleCategory) {
-      setPriceBreakdown(null);
-      return;
-    }
+    let alive=true;
+    setPriceBreakdown(null);
+    if (!selectedServiceId || !vehicleCategory || catalogue.loading || catalogue.error) {setPriceLoading(false);return;}
     setPriceLoading(true);
     void previewServicePrice(selectedServiceId, vehicleCategory)
-      .then(({ breakdown }) => setPriceBreakdown(breakdown))
-      .catch(() => setPriceBreakdown(null))
-      .finally(() => setPriceLoading(false));
-  }, [selectedServiceId, vehicleCategory]);
+      .then(({ breakdown }) => {if(alive)setPriceBreakdown(breakdown)})
+      .catch(() => {if(alive)setPriceBreakdown(null)})
+      .finally(() => {if(alive)setPriceLoading(false)});
+    return()=>{alive=false};
+  }, [selectedServiceId, vehicleCategory,catalogue.revision,catalogue.loading,catalogue.error]);
 
   // Bays compatible with the selected service's required type and currently
   // free — the server re-validates this transactionally at submit time
@@ -222,11 +226,14 @@ export default function WalkinScreen() {
   }
 
   async function handleCreateJob() {
+    if(!catalogue.isCurrent()||catalogue.loading||catalogue.error||!selectedServiceId||![selectedServiceId,...additionalServices].every(id=>services.some(s=>s.id===id)))return;
+    if([selectedServiceId,...additionalServices].some(id=>services.find(s=>s.id===id)?.customerMenu?.bookingMode)){showActionError("Service needs separate handling","Initial checks do not create a scheduled job. Coordinated work needs its own agreed timing.");return;}
+
     if(multi){
       if(intakeLock.current||submitting||feedError||!studioId||!customer||!selectedVehicleId||!selectedServiceId||!selectedVehicle?.category)return;
       const scope=intakeScope;intakeLock.current=true;setActionError(null);setSubmitting(true);
       const operationId=estimateOperation??randomUUID();setEstimateOperation(operationId);
-      try{const saved=await prepareVisitIntake({operationId,studioId,customerId:customer.id,vehicleId:selectedVehicleId,serviceIds:[selectedServiceId,...additionalServices],...(notes.trim()?{notes:notes.trim()}:{})});if(intakeLive.current===scope){setEstimateScope(scope);setEstimate(saved)}}catch(err){if(intakeLive.current===scope)showActionError("Estimate not confirmed",err instanceof Error?err.message:"Try again.")}finally{intakeLock.current=false;if(intakeLive.current===scope)setSubmitting(false)}return;
+      try{const saved=await prepareVisitIntake({operationId,studioId,customerId:customer.id,vehicleId:selectedVehicleId,serviceIds:[selectedServiceId,...additionalServices],...(notes.trim()?{notes:notes.trim()}:{})});if(intakeLive.current===scope){setEstimateScope(scope);setEstimate(saved)}}catch(err){if(intakeLive.current===scope)showActionError("Estimate not confirmed",err instanceof Error?err.message:"Try again.")}finally{intakeLock.current=false;setSubmitting(false)}return;
     }
     if (submitting || feedError || !vehicleCategory || !studioId || !customer || !selectedVehicleId || !selectedServiceId || !selectedBayId) return;
     setActionError(null);setSubmitting(true);
@@ -282,7 +289,7 @@ export default function WalkinScreen() {
 
   const CATEGORY_LABELS:Record<string,string>=Object.fromEntries(SERVICE_HOMES.map(h=>[h.key,h.label]));
   const categoriesPresent=useMemo(()=>SERVICE_HOMES.filter(h=>services.some(s=>servicePlacement(s)?.home===h.key)).map(h=>h.key),[services]);
-  const visibleServices = services.filter((s) => catFilter === "all" || servicePlacement(s)?.home === catFilter);
+  const visibleServices = services.filter((s) => !s.customerMenu?.bookingMode).filter((s) => catFilter === "all" || servicePlacement(s)?.home === catFilter);
 
   function goBack() {
     setActionError(null);
@@ -423,6 +430,7 @@ export default function WalkinScreen() {
 
       {step === "service" && (
         <View style={{ gap: spacing.sm }}>
+          {services.some(s=>s.customerMenu?.bookingMode)?<Text style={{...typography.caption,color:colors.textSecondary}}>Initial checks and specialist coordination are not scheduled jobs. Agree any further work separately.</Text>:null}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.xs, paddingBottom: spacing.xs }}>
             {["all", ...categoriesPresent].map((c) => {
               const on = catFilter === c;

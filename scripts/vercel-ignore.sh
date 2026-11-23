@@ -1,33 +1,74 @@
 #!/usr/bin/env bash
-# One-shot Keramik fact and approved image release. Customer only, exact base and paths.
+# Exact live staff and Site source reconciliation. Customer stays held.
 case "${VERCEL_GIT_COMMIT_REF:-}" in
- main|feat/keramik-comparison-20261124)
-  image_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
-  if [ "$image_parent" = "99739b2e37267cc52e418e6b9b2e3806a425e8b2" ]; then
-   image_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-   [ -n "$image_root" ] || exit 0
-   cd "$image_root" || exit 0
-   image_actual="$(git diff --name-only 99739b2e37267cc52e418e6b9b2e3806a425e8b2 HEAD 2>/dev/null)" || exit 0
-   image_expected=$(cat <<'APPROVED_COLOUR_PATHS'
-apps/customer/assets/product-choice/fireball-wizard.webp
-apps/customer/assets/product-choice/keramik-10h.webp
-apps/customer/src/lib/choice-media.ts
-apps/customer/src/lib/service-presentation.json
-apps/customer/src/lib/wizard-official.test.ts
-apps/customer/src/ui/ServiceExperience.web.tsx
-apps/customer/src/ui/services-experience/ExperienceView.tsx
-apps/customer/src/ui/services-experience/KeramikFacts.tsx
-apps/customer/src/ui/services-experience/keramik-facts.render.test.tsx
-apps/customer/src/ui/services-experience/keramik-specs.test.ts
-apps/customer/src/ui/services-experience/keramik-specs.ts
+ main|chore/live-staff-site-source-20261124)
+  source_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  if [ "$source_parent" = "f5a07b1c6171437efab0903f7b7ca4ef50c9a632" ]; then
+   source_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+   [ -n "$source_root" ] || exit 0
+   cd "$source_root" || exit 0
+   source_actual="$(git diff --name-only f5a07b1c6171437efab0903f7b7ca4ef50c9a632 HEAD 2>/dev/null)" || exit 0
+   source_expected=$(cat <<'EXACT_SOURCE_PATHS'
+apps/admin/src/app/(admin)/dashboard/page.tsx
+apps/admin/src/app/(admin)/jobs/[id]/page.tsx
+apps/admin/src/app/(admin)/memberships/page.tsx
+apps/admin/src/app/(admin)/memberships/refresh-lifecycle.render.test.tsx
+apps/admin/src/app/(admin)/services/catalogue-scope.render.test.tsx
+apps/admin/src/app/(admin)/services/page.tsx
+apps/admin/src/app/globals.css
+apps/admin/src/components/JobDelayControl.tsx
+apps/admin/src/components/JobPaymentPanel.tsx
+apps/admin/src/components/job-delay.render.test.tsx
+apps/admin/src/experience/CatalogueReview.discard.render.test.tsx
+apps/admin/src/experience/CatalogueReview.publish.render.test.tsx
+apps/admin/src/experience/CatalogueReview.tsx
+apps/admin/src/experience/GiftVerification.tsx
+apps/admin/src/experience/MembershipsView.tsx
+apps/admin/src/experience/PreparedCatalogueImport.tsx
+apps/admin/src/experience/ServicesView.tsx
+apps/admin/src/experience/SourcePriceReview.tsx
+apps/admin/src/experience/catalogue-publish-review.test.ts
+apps/admin/src/experience/catalogue-publish-review.ts
+apps/admin/src/experience/gift-verification.test.ts
+apps/admin/src/experience/office-rules.test.ts
+apps/admin/src/experience/service-edit-preservation.test.ts
+apps/admin/src/experience/service-edit-preservation.ts
+apps/admin/src/experience/services-draft.test.ts
+apps/admin/src/experience/services-draft.ts
+apps/admin/src/lib/catalogue-drafts.ts
+apps/admin/src/lib/dashboard-service.ts
+apps/admin/src/lib/gift-verification-service.test.ts
+apps/admin/src/lib/gift-verification-service.ts
+apps/admin/src/lib/membership-service.ts
+apps/admin/src/lib/prepared-catalogue.test.ts
+apps/admin/src/lib/prepared-catalogue.ts
+apps/site/src/data/redesign/terms.html
+apps/site/tests/terms-spacing.test.mjs
+apps/studio/src/app/(tabs)/_layout.tsx
+apps/studio/src/app/(tabs)/index.tsx
+apps/studio/src/app/(tabs)/jobs/[id].tsx
+apps/studio/src/app/(tabs)/jobs/job-detail.render.test.tsx
+apps/studio/src/app/(tabs)/visit-requests.render.test.tsx
+apps/studio/src/app/(tabs)/visit-requests.tsx
+apps/studio/src/app/(tabs)/walkin-multiple.render.test.tsx
+apps/studio/src/app/(tabs)/walkin.render.test.tsx
+apps/studio/src/app/(tabs)/walkin.tsx
+apps/studio/src/components/JobDelayControl.tsx
+apps/studio/src/components/RefreshBenefitPanel.tsx
+apps/studio/src/hooks/published-services.render.test.tsx
+apps/studio/src/hooks/usePublishedServices.ts
+apps/studio/src/lib/approval-service.ts
+apps/studio/src/lib/membership-refresh.test.ts
+apps/studio/src/lib/membership-refresh.ts
+packages/core/src/types/index.ts
 scripts/vercel-ignore.sh
-APPROVED_COLOUR_PATHS
+EXACT_SOURCE_PATHS
 )
-   [ "$image_actual" = "$image_expected" ] || exit 0
-   if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$1" = customer ]; then
-    echo 'Keramik comparison: Customer BUILD from main.'; exit 1
+   [ "$source_actual" = "$source_expected" ] || exit 0
+   if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ]; then
+    case "$1" in studio|admin|site) echo 'Live source reconciliation BUILD from main.'; exit 1;; esac
    fi
-   echo 'Keramik comparison: SKIP held app or preview.'; exit 0
+   echo 'Live source reconciliation SKIP Customer or preview.'; exit 0
   fi ;;
 esac
 #!/usr/bin/env bash
