@@ -1,7 +1,7 @@
 export type Home='washing'|'detailing'|'paint'|'garage'|'modifications';
 export interface MenuService {id:string;comparisonScope?:string|undefined;name:string;active:boolean;basePrice:number;currency:string;brand?:string;description?:string;estimatedDurationMinutes:number;priceOnRequest?:boolean;priceEstimate?:boolean;priceFrom?:boolean;customerMenu:{home:Home;family:string;priceMode:string;priceCondition?:string;priceNote?:string;bookingMode?:string};warrantyLabel?:string|null;vehicleCategoryPricing:unknown[]}
 export const homes:Home[]=['washing','detailing','paint','garage','modifications'];
-export const labels:Record<Home,string>={washing:'Washing',detailing:'Detailing',paint:'Paint protection',garage:'Garage',modifications:'Modifications & wraps'};
+export const labels:Record<Home,string>={washing:'Washing',detailing:'Detailing',paint:'Paint protection',garage:'Garage',modifications:'Modifications'};
 export function inHome(all:MenuService[],h:Home){return all.filter(s=>s.active&&s.customerMenu.home===h)}
 export function families(all:MenuService[],h:Home){return [...new Set(inHome(all,h).map(s=>s.customerMenu.family))]}
 export function inFamily(all:MenuService[],h:Home,f:string){return inHome(all,h).filter(s=>s.customerMenu.family===f)}

@@ -9,7 +9,7 @@ import type{BrandEnquiry}from'../lib/brand-enquiries';
 export function ReferenceProductDetail({item,quoteReady:_quoteReady,onAllServices,onRequest,onBack}:{item:BrandEnquiry;quoteReady:boolean;onAllServices:()=>void;onRequest:()=>void;onBack?:(()=>void)|undefined}){
  const facts=referenceManufacturerFacts(item);
  const product={id:'enquiry:'+item.key,name:item.name,brand:item.brand,category:item.group==='ppf'?'ppf' as const:'ceramic' as const};
- return <Screen onBack={onBack} top={<ServicePageHeader context={item.surface==='colour-ppf'?'Modifications & Wraps · Colour PPF':item.group==='ppf'?'Paint Protection · PPF':'Paint Protection · Ceramic'} title={item.name} crumbs={[{title:'All services',onPress:onAllServices}]}/> }>
+ return <Screen onBack={onBack} top={<ServicePageHeader context={item.surface==='colour-ppf'?'Modifications · Colour PPF':item.group==='ppf'?'Paint Protection · PPF':'Paint Protection · Ceramic'} title={item.name} crumbs={[{title:'All services',onPress:onAllServices}]}/> }>
   <ServiceIdentityMedia service={{...product,brand:product.brand??null,customerMenu:{home:item.surface==='colour-ppf'?'modifications':'paint',family:item.surface==='colour-ppf'?'Colour PPF':item.group==='ppf'?'PPF':'Ceramic'}}}/>
   {facts?<Pane pad="inset"><View style={{gap:14}}><T role="label" tone="tertiary">PRODUCT DETAILS</T><ProductFactRows facts={facts}/></View></Pane>:item.source?<Row title="Product details" detail="Manufacturer's website" onPress={()=>void Linking.openURL(item.source!)} last/>:null}
   <Button label="Discuss your requirements" kind="quiet" onPress={onRequest}/>
