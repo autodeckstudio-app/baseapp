@@ -8,7 +8,7 @@ export function StudioContactDetails({address,hours,openNow,onDirections}:{addre
  const parts=address.split(",").map(s=>s.trim());
  return <Pane pad="inset"><View style={{gap:10}}>
   <T role="heading">AutoDeck Studio</T>
-  <View style={{borderRadius:12,overflow:"hidden"}}><Image source={source} accessibilityLabel={`AutoDeck studio frontage, ${period}, promotional reconstruction`} resizeMode="contain" style={{width:"100%",aspectRatio:1155/438}}/>{openNow!==null?<View style={{position:"absolute",right:6,bottom:6,backgroundColor:"rgba(20,25,30,.86)",paddingHorizontal:6,paddingVertical:3,borderRadius:6}}><T role="label" style={{color:"#ffffff",fontSize:10}}>{openNow?"OPEN NOW":"CLOSED NOW"}</T></View>:null}</View>
+  <View style={{borderRadius:12,overflow:"hidden",width:"100%",aspectRatio:1155/438}}><Image source={source} accessibilityLabel={`AutoDeck studio frontage, ${period}, promotional reconstruction`} resizeMode="contain" style={{position:"absolute",top:0,left:0,width:"100%",height:"100%"}}/>{openNow!==null?<View style={{position:"absolute",right:6,bottom:6,backgroundColor:"rgba(20,25,30,.86)",paddingHorizontal:6,paddingVertical:3,borderRadius:6}}><T role="label" style={{color:"#ffffff",fontSize:10}}>{openNow?"OPEN NOW":"CLOSED NOW"}</T></View>:null}</View>
   <T role="caption" tone="secondary" style={{fontSize:10}}>Studio promotional image</T>
   <View accessible accessibilityLabel={address} style={{gap:3}}><T role="caption" tone="secondary">{parts.slice(0,2).join(", ")}</T><T role="caption" tone="secondary">{parts.slice(2).join(", ")}</T></View>
   <View style={{flexDirection:"row",alignItems:"center",gap:10}}>
