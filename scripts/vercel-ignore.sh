@@ -1,4 +1,36 @@
 #!/usr/bin/env bash
+# Exact approved Customer card-layout release; do not redeploy staff or Site.
+case "${VERCEL_GIT_COMMIT_REF:-}" in
+ main|feat/approved-catalogue-layout-20261124)
+  layout_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  if [ "$layout_parent" = "ddeacf6e59d7b8c0b683c29cf337673a2a1b91c5" ]; then
+   layout_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+   [ -n "$layout_root" ] || exit 0
+   cd "$layout_root" || exit 0
+   layout_actual="$(git diff --name-only ddeacf6e59d7b8c0b683c29cf337673a2a1b91c5 HEAD 2>/dev/null)" || exit 0
+   layout_expected=$(cat <<'EXACT_LAYOUT_FILES'
+apps/customer/assets/product-choice/3m-crystalline-tint.webp
+apps/customer/assets/product-choice/llumar-window-tint.webp
+apps/customer/assets/product-choice/tint-sources.txt
+apps/customer/src/lib/approved-tint-imagery.test.ts
+apps/customer/src/lib/choice-media.ts
+apps/customer/src/ui/services-experience/ColourProductMedia.tsx
+apps/customer/src/ui/services-experience/ExperienceView.tsx
+apps/customer/src/ui/services-experience/ServiceChoiceCard.tsx
+apps/customer/src/ui/services-experience/colour-product-media.render.test.tsx
+apps/customer/src/ui/services-experience/service-choice-card.render.test.tsx
+scripts/vercel-ignore.sh
+EXACT_LAYOUT_FILES
+)
+   [ "$layout_actual" = "$layout_expected" ] || exit 0
+   if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$1" = customer ]; then
+    echo 'Approved Customer layout BUILD from main.'; exit 1
+   fi
+   echo 'Approved Customer layout SKIP staff Site and preview.'; exit 0
+  fi ;;
+esac
+
+#!/usr/bin/env bash
 # Exact live staff and Site source reconciliation. Customer stays held.
 case "${VERCEL_GIT_COMMIT_REF:-}" in
  main|chore/live-staff-site-source-20261124)
