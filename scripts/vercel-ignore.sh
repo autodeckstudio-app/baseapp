@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# One-shot service category swipe fix. Customer only, exact base and paths.
+# One-shot Native category scrolling release. Customer only, exact base and paths.
 case "${VERCEL_GIT_COMMIT_REF:-}" in
- main|fix/service-category-swipe-20261124)
+ main|fix/service-category-native-scroll-20261124)
   image_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
-  if [ "$image_parent" = "764e9a096aff8606efc9fda0edc3b290954b5be6" ]; then
+  if [ "$image_parent" = "094875ac6c512246b84e62eb33fa3ca77f44cebf" ]; then
    image_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
    [ -n "$image_root" ] || exit 0
    cd "$image_root" || exit 0
-   image_actual="$(git diff --name-only 764e9a096aff8606efc9fda0edc3b290954b5be6 HEAD 2>/dev/null)" || exit 0
+   image_actual="$(git diff --name-only 094875ac6c512246b84e62eb33fa3ca77f44cebf HEAD 2>/dev/null)" || exit 0
    image_expected=$(cat <<'APPROVED_COLOUR_PATHS'
 apps/customer/src/ui/services-experience/ServicesLanding.tsx
+apps/customer/src/ui/services-experience/category-native-scroll.test.ts
 apps/customer/src/ui/services-experience/category-swipe.test.ts
 apps/customer/src/ui/services-experience/category-swipe.ts
 scripts/vercel-ignore.sh
@@ -17,9 +18,9 @@ APPROVED_COLOUR_PATHS
 )
    [ "$image_actual" = "$image_expected" ] || exit 0
    if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$1" = customer ]; then
-    echo 'Category swipe: Customer BUILD from main.'; exit 1
+    echo 'Native category scrolling: Customer BUILD from main.'; exit 1
    fi
-   echo 'Category swipe: SKIP held app or preview.'; exit 0
+   echo 'Native category scrolling: SKIP held app or preview.'; exit 0
   fi ;;
 esac
 #!/usr/bin/env bash
