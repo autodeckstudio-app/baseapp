@@ -1,42 +1,25 @@
 #!/usr/bin/env bash
-# One-shot approved product-image release. Reset automatically after this exact base.
-# Customer only; divergent Studio/Admin/Site production releases remain held.
+# One-shot Colour PPF product-image connection. Customer only, exact base and paths.
 case "${VERCEL_GIT_COMMIT_REF:-}" in
- main|images/approved-product-photos-20261124)
+ main|images/colour-product-display-20261124)
   image_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
-  if [ "$image_parent" = "29dc751e1fc339ea6e3e96a77e4c6d5100dddaec" ]; then
+  if [ "$image_parent" = "cbba2a12db50a20e5092c71a01ec490cf581cbbb" ]; then
    image_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
    [ -n "$image_root" ] || exit 0
    cd "$image_root" || exit 0
-   image_actual="$(git diff --name-only 29dc751e1fc339ea6e3e96a77e4c6d5100dddaec HEAD 2>/dev/null)" || exit 0
-   image_expected=$(cat <<'APPROVED_IMAGE_PATHS'
-apps/customer/assets/product-choice/mods-gswf-colour-ppf.webp
-apps/customer/assets/product-choice/mods-nar-colour-ppf.webp
-apps/customer/assets/product-choice/ppf-avvyx-prime.webp
-apps/customer/assets/product-choice/ppf-avvyx-shield.webp
-apps/customer/assets/product-choice/ppf-cosmo-gold.webp
-apps/customer/assets/product-choice/ppf-cosmo-platinum.webp
-apps/customer/assets/product-choice/ppf-garware-plus.webp
-apps/customer/assets/product-choice/ppf-garware-premium.webp
-apps/customer/assets/product-choice/ppf-garware-titanium.webp
-apps/customer/assets/product-choice/ppf-gswf-platinum.webp
-apps/customer/assets/product-choice/ppf-gswf-ultra-lite.webp
-apps/customer/assets/product-choice/ppf-gswf-ultra.webp
-apps/customer/assets/product-choice/ppf-llumar-platinum-extra.webp
-apps/customer/assets/product-choice/ppf-llumar-platinum-gloss.webp
-apps/customer/assets/product-choice/ppf-llumar-valor.webp
-apps/customer/assets/product-choice/ppf-nar-e190.webp
-apps/customer/assets/product-choice/ppf-nar-m1.webp
-apps/customer/assets/product-choice/ppf-nar-m190.webp
-apps/customer/src/lib/choice-media.ts
+   image_actual="$(git diff --name-only cbba2a12db50a20e5092c71a01ec490cf581cbbb HEAD 2>/dev/null)" || exit 0
+   image_expected=$(cat <<'APPROVED_COLOUR_PATHS'
+apps/customer/src/ui/services-experience/ColourProductMedia.tsx
+apps/customer/src/ui/services-experience/ExperienceView.tsx
+apps/customer/src/ui/services-experience/colour-product-media.render.test.tsx
 scripts/vercel-ignore.sh
-APPROVED_IMAGE_PATHS
+APPROVED_COLOUR_PATHS
 )
    [ "$image_actual" = "$image_expected" ] || exit 0
    if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$1" = customer ]; then
-    echo 'Approved image release: Customer BUILD from main.'; exit 1
+    echo 'Colour product images: Customer BUILD from main.'; exit 1
    fi
-   echo 'Approved image release: SKIP held app or preview.'; exit 0
+   echo 'Colour product images: SKIP held app or preview.'; exit 0
   fi ;;
 esac
 #!/usr/bin/env bash
