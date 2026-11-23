@@ -9,7 +9,7 @@ vi.mock('../../lib/catalogue-service',()=>({getServiceCatalogue:async()=>[]}));
 vi.mock('../../lib/vehicle-service',()=>({listenToMyVehicles:(_:any,_t:any,fn:any)=>{fn([]);return()=>{}}}));
 vi.mock('../../lib/service-quote',()=>({SERVICE_QUOTE_JOURNEY_READY:true,getServiceQuotes:(cursor:any)=>{h.calls.push(cursor);return new Promise((resolve,reject)=>h.pending.push({resolve,reject}))}}));
 vi.mock('../../ui/CustomerQuotePanel',()=>({CustomerQuotePanel:'QuotePanel'}));
-vi.mock('../../ui/kit',()=>({Pane:'Pane',T:'T',Button:'Button',Loading:'Loading',Notice:({title,body,action}:any)=>React.createElement('Notice',{title,body},action),Screen:'Screen'}));
+vi.mock('../../ui/kit',()=>({PageHeader:'PageHeader',Pane:'Pane',T:'T',Button:'Button',Loading:'Loading',Notice:({title,body,action}:any)=>React.createElement('Notice',{title,body},action),Screen:({header,children}:any)=>React.createElement('Screen',null,header,children)}));
 import Page from './quotes';
 const result=(id:string,version=1,more=false)=>({quotes:[{id,version,scope:{}}],limited:more,nextCursor:more?{id:'cursor',createdAt:'sample'}:null});
 beforeEach(()=>{h.auth={status:'ready',user:{uid:'u1'},customerDocId:'first',customerDocResolution:'resolved',claims:{tenantId:'t',role:'customer'}};vi.useFakeTimers();h.state='active';h.stateListener=null;h.pending=[];h.calls=[];h.focus=true;h.push.mockReset()});

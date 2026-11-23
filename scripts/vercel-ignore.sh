@@ -1,4 +1,20 @@
 #!/usr/bin/env bash
+# One-shot source reconciliation. Keep each app on its separately qualified deployment.
+# Do not reuse this exception for subsequent main changes or unknown ancestry.
+release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+case "${VERCEL_GIT_COMMIT_REF:-}" in
+ main|reconcile/shipped-customer-main-20261123)
+  release_subject="Reconcile shipped Customer source into main without held releases"
+  release_parent_tip="$(git rev-parse --verify HEAD^2 2>/dev/null || true)"
+  release_matches=false
+  [ "$(git log -1 --format=%s)" = "$release_subject" ] && release_matches=true
+  if [ -n "$release_parent_tip" ] && [ "$(git log -1 --format=%s "$release_parent_tip")" = "$release_subject" ] && [ "$(git rev-parse "$release_parent_tip^")" = "cd40bdf75d78425401e6a22fe03d798cd4643e0f" ] && git diff --quiet HEAD "$release_parent_tip"; then release_matches=true; fi
+  if [ "$release_parent" = "cd40bdf75d78425401e6a22fe03d798cd4643e0f" ] && [ "$release_matches" = true ]; then
+   echo "Skip: scoped Customer source reconciliation, existing production releases retained."
+   exit 0
+  fi ;;
+esac
+#!/usr/bin/env bash
 # Vercel "Ignored Build Step". Exit 0 = SKIP the build, exit 1 = BUILD.
 # Usage (from vercel.json ignoreCommand): bash ../../scripts/vercel-ignore.sh <app>
 # An app builds only when its own files or a package it imports change.

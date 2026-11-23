@@ -21,6 +21,11 @@ it("icon actions retain event, disabled and busy semantics", async () => {
 });
 it("edit uses a line icon without an outer badge; row titles remain readable", () => {
  const h=renderToStaticMarkup(<IconAction kind="edit" label="Edit name" onPress={()=>{}}/>);expect(h).toContain('aria-label="Edit name"');expect(h).toContain('<svg');expect(h).toContain('background-color:rgba(0,0,0,0.00)');expect(h).not.toContain('✎');
- const row=renderToStaticMarkup(<Row title="Help & contact" onPress={()=>{}}/>);expect(row).toContain('Help &amp; contact');expect(row).toContain('<svg');
+ const row=renderToStaticMarkup(<Row title="Help & contact" onPress={()=>{}}/>);expect(row).toContain('Help &amp; contact');expect(row).not.toContain('<svg');
  const list=renderToStaticMarkup(<ListRow icon="chat" title="Your quotes" detail="Review work and prices" action="Open" onPress={()=>{}}/>);expect(list).toContain('aria-label="Your quotes"');expect(list).not.toContain('>Open<');expect(list).toContain('Review work and prices');
+});
+
+it("plain customer rows retain callbacks and expanded state without decorative forward arrows", async () => {
+ const click=vi.fn();let r:any;await act(async()=>{r=create(<Row title="Work record" detail="View performed work and QC" expanded={false} onPress={click}/>)});
+ const p=r.root.findByType(Pressable);expect(p.props.accessibilityState.expanded).toBe(false);await act(async()=>p.props.onPress());expect(click).toHaveBeenCalledOnce();await act(async()=>r.unmount());
 });

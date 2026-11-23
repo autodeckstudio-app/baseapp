@@ -1,5 +1,4 @@
-import{Pressable}from'react-native';
+import{Pressable,Text}from'react-native';
 import{useExperienceTheme}from'@autodeck/ui/native';
-import{NavIcon}from'./NavIcon';
-/** Visible arrow only, with a named booking/quote action and full tap target. */
-export function ServiceNextAction({label,disabled,onPress}:{label:string;disabled:boolean;onPress:()=>void}){const{name,colors}=useExperienceTheme();return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{disabled}} disabled={disabled} onPress={onPress} style={({pressed})=>({width:48,height:48,alignItems:'center',justifyContent:'center',opacity:disabled?.64:pressed?.6:1})}><NavIcon name="proceed" color={colors.textPrimary} size={24} cut={name==='light'?'#FFFFFF':'#252C35'}/></Pressable>}
+/** Named action text and a full tap target, without decorative arrows. */
+export function ServiceNextAction({label,disabled,onPress}:{label:string;disabled:boolean;onPress:()=>void}){const{colors}=useExperienceTheme();return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{disabled}} disabled={disabled} onPress={onPress} style={({pressed})=>({minWidth:48,minHeight:48,maxWidth:120,paddingHorizontal:8,alignItems:'center',justifyContent:'center',opacity:disabled?.64:pressed?.6:1})}><Text style={{color:colors.textPrimary,fontSize:12,lineHeight:17,fontWeight:'600',textAlign:'center'}}>{label}</Text></Pressable>}

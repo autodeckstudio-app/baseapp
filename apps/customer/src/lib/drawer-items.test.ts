@@ -4,13 +4,16 @@ import { describe, expect, it } from "vitest";
 
 const read = (p: string) => readFileSync(join(__dirname, "..", p), "utf8");
 
-// One left menu everywhere: both places that open it must build it from the same list.
-describe("unified left menu", () => {
-  it("Home and the common header share one builder", () => {
-    expect(read("ui/AppBar.tsx")).toContain("buildDrawerItems(");
-    expect(read("app/(tabs)/index.tsx")).toContain("buildDrawerItems(");
-    expect(read("ui/AppBar.tsx")).not.toMatch(/key: "membership"/);
-    expect(read("app/(tabs)/index.tsx")).not.toMatch(/key: "buycar"/);
+// Help lives beside Notifications; neither header exposes a menu.
+describe("header navigation and legacy route data", () => {
+  it("shared and Home headers expose Help without a drawer or profile menu", () => {
+    for (const file of ["ui/AppBar.tsx", "ui/HomeOriginalTop.tsx"]) {
+      const source = read(file);
+      expect(source).toContain('accessibilityLabel="Help & contact"');
+      expect(source).toContain('Notifications');
+      expect(source).not.toContain('buildDrawerItems(');
+      expect(source).not.toContain('SideDrawer');
+    }
   });
   it("Buy and Sell is one entry, ahead of Membership, and opens the one Cars screen", () => {
     const s = read("lib/drawer-items.ts");

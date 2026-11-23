@@ -5,9 +5,9 @@ export const GIFT_STUDIO_NAME = "AutoDeck Studio";
 
 type Nav = { share?: (d: { text: string }) => Promise<void>; clipboard?: { writeText: (t: string) => Promise<void> } };
 
-export function giftMessage(args: { code: string; expiresAt: string; buyerName: string | null }): string {
+export function giftMessage(args: { code: string; expiresAt: string; buyerName: string | null;serviceName?:string|undefined }): string {
   const first = args.buyerName?.trim().split(/\s+/)[0] || null;
-  return giftShareMessage({ buyerFirstName: first, code: args.code, expiresAt: args.expiresAt, studioName: GIFT_STUDIO_NAME });
+  return giftShareMessage({ buyerFirstName: first, code: args.code, expiresAt: args.expiresAt, studioName: GIFT_STUDIO_NAME,serviceName:args.serviceName });
 }
 
 /** Share sheet if the browser has one, else copy the message. The message has a first name, the studio, the code and the date only. */

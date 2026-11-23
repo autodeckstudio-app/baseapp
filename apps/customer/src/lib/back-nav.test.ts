@@ -75,7 +75,7 @@ describe("tab roots are navigated, never pushed", () => {
     const { execSync } = require("node:child_process");
     const out = execSync(
       `grep -rEn 'router\\.push\\(["'"'"']/\\(tabs\\)/[a-z-]+["'"'"']\\)' src/app --include='*.tsx' --exclude='*test*' || true`,
-      { cwd: join(__dirname, "..") }
+      { cwd: join(__dirname, "../..") }
     ).toString();
     // A push stacks the tab over whatever its nested navigator preserved, so Back
     // lands on a stale page (Home > Buy a car > Back wrongly opened Sell a car).

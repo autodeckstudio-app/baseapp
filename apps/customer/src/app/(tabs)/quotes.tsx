@@ -1,3 +1,4 @@
+import { StatePanel } from "../../ui/StatePanel";
 import { AppState } from 'react-native';
 import { QuoteInboxIntro } from '../../ui/QuoteInboxIntro';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -6,7 +7,7 @@ import { getServiceCatalogue } from '../../lib/catalogue-service';
 import { listenToMyVehicles } from '../../lib/vehicle-service';
 import type { Service, Vehicle } from '@autodeck/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Loading, Notice, Screen } from '../../ui/kit';
+import { Button, Loading, Notice, PageHeader, Screen } from '../../ui/kit';
 import { CustomerQuotePanel } from '../../ui/CustomerQuotePanel';
 import { SERVICE_QUOTE_JOURNEY_READY, getServiceQuotes, type CustomerQuote, type QuoteCursor } from '../../lib/service-quote';
 
@@ -72,14 +73,14 @@ export default function Quotes() {
   const renderSession = session.current;
   const canApply = () => active.current && foreground.current && current.current === key && session.current === renderSession;
 
-  return <Screen appBar="Your quotes"><QuoteInboxIntro/>
+  return <Screen appBar="Your quotes" header={<PageHeader title="Your quotes" sub="Requests, studio offers and your decisions." />}><QuoteInboxIntro/>
     {!SERVICE_QUOTE_JOURNEY_READY ? <Notice title="Not active in this candidate" body="Server, booking and native acceptance checks must pass before this journey is released."/>
       : auth.status === 'ready' && !auth.customerDocId ? <Notice title={auth.claims.role !== 'customer' ? 'Quotes use a customer account' : 'Customer profile could not be verified'} body={auth.claims.role !== 'customer' ? 'You are signed in with a staff or admin account. You can browse services here, but quote requests need a customer account. Your staff access has not changed.' : 'We could not verify the customer profile linked to this sign-in. Your quotes have not been changed. Return to your account and try signing in again, or contact the studio.'} action={<Button label="Go to your account" onPress={() => router.navigate('/(tabs)/profile')}/>}/>
       : !owner ? <Notice title="Sign in to see your quotes" body="Your requests stay with your profile."/>
       : <>
         {error ? <Notice title="Quotes could not load" body="Your requests have not changed. Reconnect and try again." action={<Button kind="quiet" label="Retry" disabled={busy} onPress={()=>void load()}/>}/> : null}
         {visible === null && !error ? <Loading/> : null}
-        {visible?.length === 0 ? <Notice title="No custom quotes yet" body="Studio quotes appear here."/> : null}
+        {visible?.length === 0 ? <StatePanel icon="chat" title="No custom quotes yet" body="Studio quotes appear here."/> : null}
         {visible?.map(q => <CustomerQuotePanel compact serviceName={services.find(s => s.id === q.scope.serviceId)?.name}
           vehicleLabel={(() => { const car = cars.find(c => c.id === q.scope.vehicleId); return car ? [car.make, car.model, car.registrationNumber].filter(Boolean).join(' · ') : undefined; })()}
           key={`${key}:${q.id}:${q.offer?.revision ?? 0}:${q.scope.serviceId ?? 'reference'}`} quote={q}

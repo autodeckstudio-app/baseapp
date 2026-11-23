@@ -1,3 +1,4 @@
+vi.mock('../../../ui/ServiceIdentityMedia',()=>({ServiceIdentityMedia:()=>null}));
 vi.mock('../../../hooks/useCataloguePublication',()=>({useCataloguePublication:()=>0}));
 // Legacy contract: explicitly select the unchanged non-combined client path.
 vi.mock('../../../lib/combined-checkout',async orig=>({...await orig<any>(),COMBINED_CHECKOUT_ENABLED:false}));

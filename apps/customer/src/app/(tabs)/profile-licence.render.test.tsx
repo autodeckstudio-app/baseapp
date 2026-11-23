@@ -1,12 +1,13 @@
+vi.mock('../../lib/glass-pane',()=>({glassPane:()=>({})}));
 import React from 'react';import{act,create,type ReactTestRenderer}from'react-test-renderer';import{describe,it,expect,vi}from'vitest';
 const h=vi.hoisted(()=>({auth:{status:'ready',user:{uid:'auth-one',displayName:'Meet',email:'x@example.test'},customerDocId:'canonical-one',claims:{role:'customer',tenantId:'t'}} as any,upload:vi.fn(),licState:{url:'private://saved',state:'ready',retry:()=>undefined} as any}));
 vi.mock('../../ui/SavedLicensePhoto',()=>({SavedLicensePhoto:(p:any)=>React.createElement('SavedLicence',p),SavedLicensePhotoView:(p:any)=>React.createElement('SavedLicence',p),useSavedLicensePhoto:()=>h.licState}));
-vi.mock('react-native',()=>({Platform:{OS:'android'},View:(p:any)=>React.createElement('View',p),Pressable:(p:any)=>React.createElement('Pressable',p),Text:(p:any)=>React.createElement('Text',p)}));
+vi.mock('react-native',()=>({Platform:{OS:'android'},Image:(p:any)=>React.createElement('Image',p),View:(p:any)=>React.createElement('View',p),Pressable:(p:any)=>React.createElement('Pressable',p),Text:(p:any)=>React.createElement('Text',p)}));
 vi.mock('../../hooks/useAuth',()=>({useAuth:()=>h.auth}));vi.mock('../../lib/firebase',()=>({db:{}}));
 vi.mock('firebase/firestore',()=>({doc:(_db:any,c:string,id:string)=>({c,id}),updateDoc:vi.fn()}));vi.mock('firebase/auth',()=>({updateProfile:vi.fn()}));vi.mock('@autodeck/database',()=>({COLLECTIONS:{customers:()=> 'customers'}}));
 vi.mock('../../lib/vehicle-service',()=>({uploadLicensePhoto:(...a:any[])=>h.upload(...a)}));vi.mock('../../lib/auth-service',()=>({signOut:vi.fn()}));vi.mock('../../lib/i18n',()=>({useLang:()=>({lang:'en',t:(x:string)=>x})}));vi.mock('../../lib/pickup-service',()=>({cancelAccountDeletion:vi.fn(),requestAccountDeletion:vi.fn()}));
 vi.mock('@autodeck/ui/theme',()=>({space:{breath:8},getThemePref:()=> 'light',setThemePref:vi.fn()}));vi.mock('@autodeck/ui/native',()=>({useExperienceTheme:()=>({name:'light',colors:{}})}));
-vi.mock('../../ui/LegalLinks',()=>({LegalLinks:()=>null}));vi.mock('../../ui/NavIcon',()=>({NavIcon:()=>null}));vi.mock('../../ui/ProfileHero',()=>({ProfileHero:(p:any)=>React.createElement('Hero',p)}));vi.mock('../../ui/inputs',()=>({FileUploader:(p:any)=>React.createElement('Uploader',p)}));vi.mock('../../ui/kit',()=>Object.fromEntries(['Pane','Button','Field','Kicker','Loading','Notice','Screen','T'].map(n=>[n,(p:any)=>React.createElement(n,p)])));
+vi.mock('../../ui/LegalLinks',()=>({LegalLinks:()=>null}));vi.mock('../../ui/NavIcon',()=>({NavIcon:()=>null}));vi.mock('../../ui/ProfileHero',()=>({ProfileHero:(p:any)=>React.createElement('Hero',p)}));vi.mock('../../ui/inputs',()=>({FileUploader:(p:any)=>React.createElement('Uploader',p)}));vi.mock('../../ui/kit',()=>Object.fromEntries(['Pane','Button','Field','Kicker','Loading','Notice','PageHeader','Screen','T'].map(n=>[n,(p:any)=>React.createElement(n,p)])));
 import Profile from './profile';
 const texts=(r:ReactTestRenderer)=>r.root.findAllByType('Text' as any).map(t=>t.props.children).flat();
 const has=(r:ReactTestRenderer,s:string)=>texts(r).includes(s);

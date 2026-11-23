@@ -1,3 +1,5 @@
+import {presentationScope} from '../lib/service-presentation';
+import {serviceExplanation} from '../lib/service-explanations';
 import{useEffect,useState}from'react';
 import {productHighlight} from './ServiceProductSelection';
 import {serviceManufacturerFacts} from '../lib/service-manufacturer-facts';
@@ -10,11 +12,13 @@ import {Button,Kicker,Notice,Pane,Row,T} from './kit';
 import {serviceScopeItems} from '../lib/service-scope-items';
 import {manufacturerInfo} from '../lib/manufacturer-info';
 /** Only catalogue-authored scope; confirmation questions never become promises. One visual scope section on the service page: Includes, one care tip and a single Ask-the-studio row - booking FAQ questions are no longer listed on the page. */
-export function ServiceScope({service,onAsk,careTip,placement="combined",showContactAndTip=true}:{placement?:"combined"|"description"|"details";showContactAndTip?:boolean;service:Pick<Service,'name'|'description'|'category'> & Partial<Pick<Service,'brand'|'customerMenu'>>;onAsk:()=>void;careTip?:string|null}) {
+export function ServiceScope({service,onAsk,careTip,placement="combined",showContactAndTip=true}:{placement?:"combined"|"description"|"details";showContactAndTip?:boolean;service:Pick<Service,'name'|'description'|'category'> & Partial<Pick<Service,'id'|'brand'|'customerMenu'>>;onAsk:()=>void;careTip?:string|null}) {
  const {colors}=useExperienceTheme();const[productOpen,setProductOpen]=useState(false);
  useEffect(()=>setProductOpen(false),[service.name,service.brand,service.description]);
  const productFacts=serviceManufacturerFacts({...service,brand:service.brand??null});
- if(service.customerMenu)return placement==='details'?null:<View style={{gap:0}}>{service.description.split("\n").filter(Boolean).map((text,i)=>{const fact=productHighlight(text);return <View key={i} style={{flexDirection:"row",gap:11,alignItems:"flex-start",paddingVertical:12,borderBottomWidth:1,borderBottomColor:colors.borderSubtle}}><View style={{paddingTop:2}}><Icon mono name={i?'check':'inspect'} size={15} color={colors.textSecondary}/></View><View style={{flex:1}}><T role="caption">{fact.text}</T></View></View>})}</View>;
+ const scoped=presentationScope(service);
+if(service.customerMenu){const points=placement==='details'?scoped.limits:placement==='combined'?[...scoped.included,...scoped.limits]:scoped.included;return <View style={{gap:0}}>{points.map((text,i)=><View key={i} style={{paddingVertical:10,borderBottomWidth:1,borderBottomColor:colors.borderSubtle}}><T role="caption">{text}</T></View>)}</View>;}
+
  if(service.brand&&['ceramic','coating','ppf'].includes(service.category))return placement==='details'?null:productFacts?<ProductFactRows facts={productFacts}/>:null;
  const maker=manufacturerInfo({...service,brand:service.brand??null});
  const scope=serviceScopeItems(service);
@@ -35,6 +39,7 @@ export function ServiceScope({service,onAsk,careTip,placement="combined",showCon
     <Row key={text} title={<View style={{flexDirection:'row',gap:space.line}}><Icon name="check" color={colors.accent} size={18}/><View style={{flex:1}}><T>{text}</T></View></View>} last={i===scope.length-1}/>
    );
   })}{placement==="description"||!showContactAndTip?null:<>{careTip?<><View style={{height:1,backgroundColor:'rgba(128,128,128,0.14)'}}/><View style={{gap:space.breath}}><Kicker>Care tip</Kicker><T>{careTip}</T></View></>:null}<View style={{height:1,backgroundColor:'rgba(128,128,128,0.14)'}}/><Row title="Ask the studio" detail="Questions about this service" onPress={onAsk} last/></>}</Pane></View> : placement==="details"?null:<Notice title="Confirm the service scope" body="Ask the studio what is included for your car." action={showContactAndTip?<Button kind="quiet" label="Ask the studio" onPress={onAsk}/>:undefined}/>}
+  {placement!=="description"&&scoped.limits.length?<Pane pad="gap"><Kicker>Details & limits</Kicker>{scoped.limits.map(text=><T key={text} role="caption" tone="secondary">{text}</T>)}</Pane>:null}
   {placement==="details"&&showContactAndTip?<Pane pad="gap">{careTip?<View style={{gap:space.breath}}><Kicker>Care tip</Kicker><T>{careTip}</T></View>:null}<Row title="Ask the studio" detail="Questions about this service" onPress={onAsk} last/></Pane>:null}
   {placement!=="description"&&maker?<View style={{gap:space.breath}}><Pane pad="gap"><Row title="Product and care" detail={productOpen?"Hide manufacturer details":"Manufacturer details and care guide"} onPress={()=>setProductOpen(!productOpen)} last={!productOpen}/>{productOpen?<View style={{gap:12}}><T>{maker.summary}</T>{maker.notes.map(note=><T key={note} tone="secondary">{note}</T>)}{maker.sources.map(source=><Row key={source.url} title={source.label} detail="Manufacturer's website" onPress={()=>void Linking.openURL(source.url)} last/>)}</View>:null}</Pane><T role="caption" tone="tertiary">Ask for your product care guide and written warranty at handover.</T></View>:null}
  </>;

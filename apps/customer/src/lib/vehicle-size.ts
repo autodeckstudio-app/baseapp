@@ -43,7 +43,7 @@ export function useVehiclePrices(services: Service[], category: VehicleCategory 
  */
 export function servicePriceText(sv: Service, category: VehicleCategory | null, prices: Record<string, number>): string | null {
   const reviewed=reviewedStartingPrice(sv);if(reviewed)return reviewed.label;
-  if (sv.priceOnRequest) return "Studio inspection";
+  if (sv.priceOnRequest) return "Quote on request";
   if(sv.customerMenu?.priceMode==="fixed")return priceLabel(sv);
   const from = sv.priceFrom === true ? "From " : "";
   if (!category) return from + priceLabel(sv);

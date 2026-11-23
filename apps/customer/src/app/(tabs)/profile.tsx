@@ -1,3 +1,5 @@
+import { FloatingObject } from "../../ui/FloatingObject";
+import { buildDrawerItems } from "../../lib/drawer-items";
 import { ProfileVisitLinks } from "../../ui/ProfileVisitLinks";
 import { LicenceSection } from "../../ui/LicenceSection";
 import { ListRow } from "../../ui/ListRow";
@@ -22,7 +24,9 @@ import { ProfileHero } from "../../ui/ProfileHero";
 import { NavIcon } from "../../ui/NavIcon";
 import { glassPane } from "../../lib/glass-pane";
 import { metrics } from "../../lib/metrics";
-import { Button, Field, Kicker, Loading, Notice, Screen, T } from "../../ui/kit";
+import { Button, Field, Kicker, Loading, Notice, PageHeader, Pane, Screen, T } from "../../ui/kit";
+
+const THEME_FONT = "Inter, system-ui, sans-serif";
 
 export default function YouScreen() {
   const { colors, name: themeName } = useExperienceTheme();
@@ -72,8 +76,9 @@ export default function YouScreen() {
 
   const light = themeName === "light";
   return (
-    <Screen appBar="You">
+    <Screen appBar="You" header={<PageHeader title="Your account" sub="Your AutoDeck profile and preferences." />}>
       <ProfileHero
+        photoScope={scopeKey}
         name={name}
         photoUrl={auth.user.photoURL ?? auth.user.providerData?.find(p=>p.providerId==='google.com')?.photoURL ?? null}
         email={auth.user.email}
@@ -90,9 +95,15 @@ export default function YouScreen() {
         </View>
       ) : null}
       {actionMessage ? <Notice title="Account update" body={actionMessage} /> : null}
+      <Pane pad="inset"><View style={{ gap: 6 }}><Kicker>Your AutoDeck</Kicker>
+        {buildDrawerItems((path) => router.push(path as never), null).filter(it => it.key !== "help").map((it) => <Pressable key={it.key} accessibilityRole="button" accessibilityLabel={it.label} onPress={it.onPress} style={({ pressed }) => ({ flexDirection: "row", gap: 14, alignItems: "center", minHeight: 76, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle, opacity: pressed ? 0.7 : 1 })}>
+          <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}><FloatingObject name={it.key === "cars" ? "garage" : it.key === "membership" ? "club" : it.key === "friends-gifts" ? "gift" : "bell"} size={38} /></View>
+          <View style={{ flex: 1, minWidth: 0, gap: 4 }}><T role="bodyStrong">{it.label}</T>{it.sub ? <T role="caption" tone="secondary">{it.sub}</T> : null}</View>
+        </Pressable>)}
+        <ListRow last icon="chat" title="Your quotes" detail="Review work and prices" onPress={() => router.navigate("/(tabs)/quotes")} />
+      </View></Pane>
       <View style={{ ...glassPane(light), paddingHorizontal: 16 }}>
         <LicenceSection customerId={auth.status==="ready"?auth.customerDocId:null} scope={scopeKey} upload={uploadLicensePhoto} lock={saveLock} epoch={generation} />
-        <ListRow last icon="chat" title="Help & contact" detail="Call or WhatsApp the studio" onPress={() => router.navigate("/(tabs)/help")} />
       </View>
 
       <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.breath }}>
@@ -101,8 +112,8 @@ export default function YouScreen() {
           {(["auto", "light", "night"] as const).map((m) => {
             const on = pref === m;
             return (
-              <Pressable key={m} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => { setThemePref(m); setPref(m); }} style={{ flex: 1, flexBasis: 0, height: 40, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: on ? (light ? "#16181C" : "#665A4B") : "transparent" }}>
-                <Text style={{ color: on ? (light ? "#F4F1EC" : "#F5EDE2") : colors.textSecondary, fontSize: 14, fontWeight: "700" }}>{m === "auto" ? "Auto" : m === "light" ? "Day" : "Night"}</Text>
+              <Pressable key={m} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => { setThemePref(m); setPref(m); }} style={{ flex: 1, flexBasis: 0, height: 40, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: on ? (light ? "#16181C" : "#4a596b") : "transparent" }}>
+                <Text style={{ fontFamily: THEME_FONT, color: on ? (light ? "#F4F1EC" : "#F5EDE2") : colors.textSecondary, fontSize: 14, fontWeight: "700" }}>{m === "auto" ? "Auto" : m === "light" ? "Day" : "Night"}</Text>
               </Pressable>
             );
           })}
@@ -132,8 +143,8 @@ export default function YouScreen() {
           </View>
         ) : (
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 6 }}>
-            <Pressable accessibilityRole="button" onPress={() => setConfirm(true)} style={{ minHeight: 44, justifyContent: "center" }}><Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{t("Sign out")}</Text></Pressable>
-            <Pressable accessibilityRole="button" onPress={() => setDelStep("ask")} style={{ minHeight: 44, justifyContent: "center" }}><Text style={{ color: colors.textSecondary, fontSize: 13 }}>Delete my account</Text></Pressable>
+            <Pressable accessibilityRole="button" onPress={() => setConfirm(true)} style={{ minHeight: 44, justifyContent: "center" }}><Text style={{ fontFamily: THEME_FONT, color: colors.textPrimary, fontSize: 15, lineHeight: 22, fontWeight: "500" }}>{t("Sign out")}</Text></Pressable>
+            <Pressable accessibilityRole="button" onPress={() => setDelStep("ask")} style={{ minHeight: 44, justifyContent: "center" }}><Text style={{ fontFamily: THEME_FONT, color: colors.textSecondary, fontSize: 12, lineHeight: 16 }}>Delete my account</Text></Pressable>
           </View>
         )}
       </View>

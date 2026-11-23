@@ -8,11 +8,11 @@ vi.mock('../../lib/vehicle-service',()=>({listenToMyVehicles:(...args:any[])=>{h
 vi.mock('../../lib/service-quote',()=>({get SERVICE_QUOTE_JOURNEY_READY(){return h.ready},requestServiceQuote:(...args:any[])=>h.request(...args),requestReferenceQuote:(...args:any[])=>h.request(...args),quoteOperationId:()=> 'operation-test'}));
 vi.mock('expo-router',()=>({useRouter:()=>({push:h.push,replace:h.replace,navigate:h.navigate}),useLocalSearchParams:()=>({serviceId:'service-a'}),useSegments:()=>[],useFocusEffect:()=>{}}));
 import QuoteRequest from './quote-request';
-import {Button,Loading,Notice} from '../../ui/kit';
+import {Pressable} from 'react-native';
 let r:ReactTestRenderer;
 const ready=(role='customer',customerDocId:string|null='customer-a')=>({status:'ready',user:{uid:'uid-a'},claims:{role,tenantId:'tenant-a'},customerDocId});
 const mount=async()=>{await act(async()=>{r=create(<QuoteRequest/>)});};
 const text=()=>JSON.stringify(r.toJSON());
 beforeEach(()=>{vi.clearAllMocks();h.auth=ready();h.rows=null;h.ready=true;h.request.mockResolvedValue({});});
 afterEach(async()=>{if(r)await act(async()=>r.unmount());});
-it.each(['customer','admin','staff','unauthenticated','loading'])('retired entry never reads cars or sends requests for %s',async status=>{h.auth=status==='loading'||status==='unauthenticated'?{status}:ready(status);await mount();expect(text()).toContain('Bring your car for inspection');expect(text()).toContain('Existing bookings and work approvals');expect(h.listen).not.toHaveBeenCalled();expect(h.request).not.toHaveBeenCalled();const buttons=r.root.findAllByType(Button);expect(buttons.map(b=>b.props.label)).toEqual(['Studio details','Browse services']);buttons[0]!.props.onPress();expect(h.navigate).toHaveBeenCalledWith('/(tabs)/help');});
+it.each(['customer','admin','staff','unauthenticated','loading'])('retired entry never reads cars or sends requests for %s',async status=>{h.auth=status==='loading'||status==='unauthenticated'?{status}:ready(status);await mount();expect(text()).toContain('Bring your car for inspection');expect(text()).toContain('BOOKINGS AND WORK APPROVALS');expect(text()).toContain('Kept in Bookings. Nothing has been deleted.');expect(h.listen).not.toHaveBeenCalled();expect(h.request).not.toHaveBeenCalled();const buttons=r.root.findAllByType(Pressable);expect(buttons.map(b=>b.props.accessibilityLabel)).toEqual(['Studio details','Browse services']);buttons[0]!.props.onPress();expect(h.navigate).toHaveBeenCalledWith('/(tabs)/help');});

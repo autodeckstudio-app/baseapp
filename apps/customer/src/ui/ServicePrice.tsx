@@ -1,5 +1,4 @@
 import {useEffect,useState} from "react";
-import{FactHighlights}from "./FactHighlights";
 import { View } from "react-native";
 import { space } from "@autodeck/ui/theme";
 import type { PriceBreakdown } from "@autodeck/core";
@@ -8,6 +7,7 @@ import { Button, Notice, Pane, Row, T, rupees } from "./kit";
 
 export type ServicePriceProps = {
   inlineBreakdown?: boolean;
+  priceLabel?: string;
   compactQuote?: boolean;
   category: string;
   priceOnRequest: boolean;
@@ -32,7 +32,7 @@ export function ServicePrice(p: ServicePriceProps) {
   return (
     <>
           {p.priceOnRequest ? (p.compactQuote?null:
-            <Pane pad="gap">{p.category === "garage" || p.category === "modifications"?<FactHighlights facts={[{value:"Free",label:"Walk-in inspection"},{value:"You approve",label:"Work and price before service"}]}/>:null}<Row title="Studio inspection" detail={p.category === "garage" || p.category === "modifications" ? undefined : <T role="caption" tone="secondary">Bring your car to the studio. Agree the work and final price before service starts.</T>} last /></Pane>
+            <Pane pad="gap"><Row title="Discuss your requirements" detail={<T role="caption" tone="secondary">Tell us what you have in mind. Confirm the scope and quote before deciding on any work.</T>} last /></Pane>
           ) : p.needsCarType ? (
             <Pane pad="gap">
               <Row title={p.hasCar ? "Car type needed" : "Add your car"} detail={<T role="caption" tone="secondary">{p.hasCar ? "This price depends on your car's type. Add the type once in Garage, edit car." : "This price depends on your car's type. Add your car in Garage to see it."}</T>} />
@@ -47,7 +47,7 @@ export function ServicePrice(p: ServicePriceProps) {
             </View>
           ) : priceBreakdown !== null ? (
             <View style={{gap:12}}>
-              <View style={{flexDirection:"row",alignItems:"baseline",justifyContent:"space-between",gap:16,paddingVertical:8}}><T role="body" tone="secondary">For your car</T><T role="title">{rupees(priceBreakdown.total)}</T></View>
+              <View testID="car-price-row" style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:12,paddingVertical:4}}>{p.priceLabel?<T role="caption" tone="secondary" style={{flex:1}}>{p.priceLabel}</T>:null}<T role="title" style={{flexShrink:0,textAlign:"right"}}>{rupees(priceBreakdown.total)}</T></View>
               {p.inlineBreakdown||!hasBreakdown?null:<Row title={detailsOpen?"Hide price breakdown":"View price breakdown"} onPress={()=>setDetailsOpen(!detailsOpen)} last/>}
               {hasBreakdown&&(p.inlineBreakdown||detailsOpen)?<View><Row title="Base" trailing={<T role="data">{rupees(priceBreakdown.basePrice)}</T>} />
               {priceBreakdown.scopeAdjustment > 0 ? (

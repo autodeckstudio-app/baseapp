@@ -1,7 +1,7 @@
 import type { Service } from '@autodeck/core';
 import { showcaseFor } from './showcase';
 /** Presentation only. Every item retains the catalogue's verb, qualifiers and scope. */
-export function serviceScopeItems(service: Pick<Service,'name'|'description'|'category'>): string[] {
+export function serviceScopeItems(service: Pick<Service,'name'|'description'|'category'> & Partial<Pick<Service,'id'>>): string[] {
  const source=showcaseFor(service).included;
  // Product disclosures already use structured manufacturer/catalogue rows.
  if(['ceramic','ppf','coating'].includes(service.category))return source;

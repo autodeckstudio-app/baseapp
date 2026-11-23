@@ -1,14 +1,18 @@
+vi.mock("react-native",async importOriginal=>{const m=await importOriginal<any>();return {...m,Image:(props:any)=>React.createElement("img",props)}});
 vi.mock('../lib/catalogue-assets',()=>({catalogueAsset:()=>undefined,hasCataloguePhoto:()=>false,spotlightProductPhoto:()=>undefined}));
 import React, { useState } from "react";
-import { it, expect, vi } from "vitest";
+import { it, expect, vi, afterEach } from "vitest";
+import {setCatalogueReferences} from "../lib/catalogue-references";
+import {BRAND_ENQUIRIES as reviewedReferenceFixture} from "@autodeck/core";
+afterEach(()=>setCatalogueReferences(undefined));
 import { act, create } from "react-test-renderer";
 import { Pressable } from "react-native";
 vi.mock("../lib/service-type-images", () => ({
-  serviceTypeImage: () => undefined,
+  serviceTypeImage: () => "existing-ppf-photo",
 }));
 vi.mock("./ServicePhoto", () => ({ ServicePhoto: () => null }));
 vi.mock("../lib/service-home-images", () => ({ serviceHomeImages: {} }));
-vi.mock("../lib/brand-logos", () => ({ BRAND_LOGOS: {} }));
+vi.mock("../lib/brand-logos", () => ({ BRAND_LOGOS: {CarPro:{src:"official-carpro",background:"#15171B"}} }));
 vi.mock("./kit", () => ({
   useScreenScrollToTop:()=>()=>{},
   Button: ({ label, onPress }: any) => (
@@ -33,7 +37,7 @@ vi.mock("./SceneIntro", () => ({
     </>
   ),
 }));
-import { ServicesExplorer } from "./ServicesExplorer";
+import { ServiceChoiceCard, ServicesExplorer } from "./ServicesExplorer";
 import { type ServicesPath } from "../lib/services-navigation";
 const rows = [
   {
@@ -70,7 +74,9 @@ const press = async (r: any, label: string) => {
   expect(p, label).toBeTruthy();
   await act(async () => p.props.onPress());
 };
-it("connected home -> ceramic -> nested product selection -> exact service, PPF/PPS honest empty states", async () => {
+it("connected home -> ceramic -> nested product selection -> exact service, explicit reviewed PPF/PPS references", async () => {
+  // This fixture represents an explicit fresh reviewed registry, never a bundled fallback.
+  setCatalogueReferences(reviewedReferenceFixture as any);
   const opened = vi.fn(),
     help = vi.fn();
   let r: any;
@@ -95,16 +101,15 @@ it("connected home -> ceramic -> nested product selection -> exact service, PPF/
   await press(r, "Paint Protection");
   await press(r, "Ceramic");
   await press(r, "Kovalent");
-  await press(r, "Select Kovalent Graphene Matrix");
   expect(opened).not.toHaveBeenCalled();
   const cards = r.root
     .findAllByType(Pressable)
     .filter(
       (p: any) =>
-        p.props.accessibilityLabel === "View Kovalent Graphene Matrix",
+        p.props.accessibilityLabel === "Full details for Kovalent Graphene Matrix",
     );
   expect(cards).toHaveLength(1);
-  await press(r, "View Kovalent Graphene Matrix");
+  await press(r, "Full details for Kovalent Graphene Matrix");
   expect(opened).toHaveBeenCalledWith(rows[0]);
   expect(JSON.stringify(r.toJSON())).not.toContain("GSWF");
   await act(async () => r.unmount());
@@ -225,7 +230,7 @@ it("connected home -> ceramic -> nested product selection -> exact service, PPF/
   const ppsText = JSON.stringify(r.toJSON());
   expect(ppsText).toContain("PPS - spray-on paint protection");
   expect(ppsText).toContain("Ask the studio about product and coverage");
-  expect(ppsText).toContain("Inspection first");
+  expect(ppsText).toContain("Discuss your requirements");
   expect(ppsText).not.toContain("No confirmed current product");
   expect(ppsText).not.toContain("\u20b9");
   await press(r, "View PPS - spray-on paint protection");
@@ -252,13 +257,14 @@ it("Washing presents interior once, exact record on action, and search uses the 
         />,
       );
     });
-    await press(r, "View Interior deep clean");
+    const action=props.query?"View Interior deep clean":"Review booking for Interior deep clean";
+    await press(r, action);
     expect(opened.mock.calls.at(-1)![0]).toBe(rows[1]);
     expect(
       r.root
         .findAllByType(Pressable)
         .filter(
-          (p: any) => p.props.accessibilityLabel === "View Interior deep clean",
+          (p: any) => p.props.accessibilityLabel === action,
         ),
     ).toHaveLength(1);
     await act(async () => r.unmount());
@@ -314,7 +320,7 @@ it("detailing service owns product choices with small details controls, no quote
   const text = JSON.stringify(r.toJSON());
   // The service is the page: the fixed-price AutoDeck application is primary.
   expect(text).toContain("Leather coating");
-  expect(text).toContain("Leather products");
+  expect(text).toContain("Choose an option");
   expect(text).toContain("₹6,000");
   expect(text).not.toContain("Choose a brand");
   // The brand product is part of the same service page as a Get quote option.
@@ -327,10 +333,10 @@ it("detailing service owns product choices with small details controls, no quote
   await press(r, "Select CarPro CQUARTZ Leather 2.0");
   expect(quoted).not.toHaveBeenCalled();
   expect(opened).not.toHaveBeenCalled();
-  await press(r, "View CarPro CQUARTZ Leather 2.0");
+  await press(r, "Full details for CarPro CQUARTZ Leather 2.0");
   expect(opened).toHaveBeenCalledWith(leatherRows[0]);
   await press(r, "Select Leather coating");
-  await press(r, "View Leather coating");
+  await press(r, "Review booking for Leather coating");
   expect(opened).toHaveBeenCalledWith(leatherRows[1]);
   await act(async () => r.unmount());
 });
@@ -338,5 +344,36 @@ it("detailing service owns product choices with small details controls, no quote
 it('preserves Ceramic brand cards and nests only the tapped brand products',async()=>{
  const source=[{id:'brand-k1',name:'Kovalent Prolong',brand:'Kovalent',category:'ceramic',customerMenu:{home:'paint',family:'Ceramic'},active:true,basePrice:1200000},{id:'brand-k2',name:'Kovalent Matrix',brand:'Kovalent',category:'ceramic',customerMenu:{home:'paint',family:'Ceramic'},active:true,basePrice:2000000},{id:'brand-c1',name:'CarPro SiC',brand:'CarPro',category:'ceramic',customerMenu:{home:'paint',family:'Ceramic'},active:true,basePrice:1700000}] as any;
  const opened=vi.fn();let r:any;function App(){const[path,set]=useState<ServicesPath>({home:'paint',family:'Ceramic'});return <ServicesExplorer services={source} path={path} query="" onPath={set} onOpen={opened} onReference={vi.fn()} onHelp={vi.fn()} priceLabel={s=>s.brand==='Kovalent'?'₹12,000':'₹17,000'}/>}
- await act(async()=>{r=create(<App/>)});expect(JSON.stringify(r.toJSON())).toContain('Choose a brand');expect(JSON.stringify(r.toJSON())).not.toContain('Kovalent Prolong');await press(r,'Kovalent');expect(JSON.stringify(r.toJSON())).toContain('Kovalent products');expect(JSON.stringify(r.toJSON())).not.toContain('CarPro SiC');await press(r,'Select Kovalent Prolong');expect(opened).not.toHaveBeenCalled();await press(r,'View Kovalent Prolong');expect(opened).toHaveBeenCalledWith(source[0]);await press(r,'Ceramic');await press(r,'CarPro');expect(JSON.stringify(r.toJSON())).not.toContain('Kovalent Prolong');await press(r,'Select CarPro SiC');await press(r,'View CarPro SiC');expect(opened).toHaveBeenLastCalledWith(source[2]);await act(async()=>r.unmount());
+ await act(async()=>{r=create(<App/>)});expect(JSON.stringify(r.toJSON())).toContain('Choose a brand');expect(JSON.stringify(r.toJSON())).not.toContain('Kovalent Prolong');await press(r,'Kovalent');expect(JSON.stringify(r.toJSON())).toContain('Kovalent products');expect(JSON.stringify(r.toJSON())).not.toContain('CarPro SiC');await press(r,'Select Kovalent Prolong');expect(opened).not.toHaveBeenCalled();await press(r,'Review booking for Kovalent Prolong');expect(opened).toHaveBeenCalledWith(source[0]);await press(r,'Ceramic');await press(r,'CarPro');expect(JSON.stringify(r.toJSON())).not.toContain('Kovalent Prolong');await press(r,'Review booking for CarPro SiC');expect(opened).toHaveBeenLastCalledWith(source[2]);await act(async()=>r.unmount());
+});
+
+it("missing registry renders the loaded PPS service without the legacy enquiry",async()=>{
+ setCatalogueReferences(undefined);let r:any;
+ await act(async()=>{r=create(<ServicesExplorer services={[{...rows[0],id:"priced-pps",name:"Standard PPS",brand:"Standard",category:"pps",basePrice:4000000,priceOnRequest:false,customerMenu:{home:"paint",family:"PPS",priceMode:"fixed"}}] as any} path={{home:"paint",family:"PPS"}} query="" onPath={vi.fn()} onOpen={vi.fn()} onHelp={vi.fn()} onReference={vi.fn()} priceLabel={()=>"₹40,000"}/>)});
+ const text=JSON.stringify(r.toJSON());expect(text).toContain("Standard");expect(text).not.toContain("PPS - spray-on paint protection");expect(text).not.toContain("Inspection first");await act(async()=>r.unmount());
+});
+
+it("PPF family explains the service then exposes full-body brands directly, keeping removal separate",async()=>{
+ setCatalogueReferences([]);let r:any;const go=vi.fn();
+ const ppf={...rows[0],id:"priced-ppf",name:"Film option",brand:"Test film",category:"ppf",coverageLevel:"full_body",ppfWork:"full_body",priceOnRequest:false,basePrice:9500000,customerMenu:{home:"paint",family:"PPF",work:"full_body",priceMode:"fixed"}};
+ await act(async()=>{r=create(<ServicesExplorer services={[ppf] as any} path={{home:"paint",family:"PPF"}} query="" onPath={go} onOpen={vi.fn()} onHelp={vi.fn()} onReference={vi.fn()} priceLabel={()=>"₹95,000"}/>)});
+ const text=JSON.stringify(r.toJSON());expect(text.indexOf("family-intro-PPF")).toBeLessThan(text.indexOf('"Test film"'));expect(text).toContain("Other film work");await press(r,"Test film");expect(go).toHaveBeenLastCalledWith({home:"paint",family:"PPF",brand:"Test film"});await press(r,"Remove existing film");expect(go).toHaveBeenLastCalledWith({home:"paint",family:"PPF",work:"removal"});await act(async()=>r.unmount());
+});
+it('maintenance links open only exact current services; PPS and unavailable targets use help, never a substitute',async()=>{
+ const fixture=[{brand:'Test',id:'cer',name:'Ceramic',category:'ceramic',active:true,basePrice:100,customerMenu:{home:'paint',family:'Ceramic'}},{brand:'Test',id:'film',name:'Film',category:'ppf',active:true,basePrice:100,customerMenu:{home:'paint',family:'PPF'}},{brand:'Standard',id:'spray',name:'PPS',category:'pps',active:true,basePrice:100,customerMenu:{home:'paint',family:'PPS'}},{id:'svc-coating-maintenance',name:'Maintenance Coat',category:'coating',active:true,basePrice:350000,customerMenu:{home:'detailing',family:'Maintenance'}},{id:'svc-brand-kovalent-overlay',name:'Kovalent Overlay',category:'coating',active:true,basePrice:600000,customerMenu:{home:'detailing',family:'Film aftercare'}}] as any;
+ for(const [family,label,id] of [['Ceramic','Maintenance Coat','svc-coating-maintenance'],['PPF','Kovalent Overlay','svc-brand-kovalent-overlay'],['PPS','Ask about PPS care',null]] as const){const open=vi.fn(),help=vi.fn();let r:any;await act(async()=>{r=create(<ServicesExplorer services={fixture} path={{home:'paint',family}} query="" onPath={()=>{}} onOpen={open} onReference={()=>{}} onHelp={help} priceLabel={()=>null}/>)});const action=r.root.findAll((x:any)=>!!x.props.onPress&&x.props.accessibilityRole==='link').find((x:any)=>x.props.accessibilityLabel===label);expect(action, family+JSON.stringify(r.toJSON()).slice(-1200)).toBeTruthy();await act(async()=>action!.props.onPress());if(id){expect(open).toHaveBeenCalledWith(fixture.find((x:any)=>x.id===id));expect(help).not.toHaveBeenCalled()}else{expect(open).not.toHaveBeenCalled();expect(help).toHaveBeenCalledWith('PPS aftercare and maintenance')}await act(async()=>r.unmount())}
+ const open=vi.fn(),help=vi.fn();let r:any;await act(async()=>{r=create(<ServicesExplorer services={fixture.filter((x:any)=>x.id!=='svc-coating-maintenance')} path={{home:'paint',family:'Ceramic'}} query="" onPath={()=>{}} onOpen={open} onReference={()=>{}} onHelp={help} priceLabel={()=>null}/>)});expect(r.root.findAll((x:any)=>!!x.props.onPress&&x.props.accessibilityRole==='link').some((x:any)=>x.props.accessibilityLabel==='Maintenance Coat')).toBe(false);const a=r.root.findAll((x:any)=>!!x.props.onPress&&x.props.accessibilityRole==='link').find((x:any)=>x.props.accessibilityLabel==='Ask about maintenance');await act(async()=>a!.props.onPress());expect(open).not.toHaveBeenCalled();expect(help).toHaveBeenCalledWith('Ceramic aftercare and maintenance');await act(async()=>r.unmount());
+});
+
+it('missing brand images have a neutral static fallback, and failed official image also falls back',async()=>{let r:any;await act(async()=>{r=create(<ServiceChoiceCard title="Cosmo" detail="Full-body paint protection" brand onPress={()=>{}}/>)});const image=r.root.findByType('img');expect(image.props.accessibilityLabel).toBe('Cosmo: brand image unavailable');expect(image.props.source).toBeTruthy();await act(async()=>r.unmount());});
+
+it('official marks stay intact and failed loads use the same static fallback',async()=>{let r:any;await act(async()=>{r=create(<ServiceChoiceCard title="CarPro" detail="Coatings" brand onPress={()=>{}}/>)});expect(r.root.findByType('img').props.source).toBe('official-carpro');await act(async()=>r.root.findByType('img').props.onError());expect(r.root.findByType('img').props.accessibilityLabel).toBe('CarPro: brand image unavailable');expect(r.root.findByType('img').props.source).toBeTruthy();await act(async()=>r.unmount());});
+
+it('brand and other-work images share the same choice-image dimensions',async()=>{let a:any,b:any;await act(async()=>{a=create(<ServiceChoiceCard title="Cosmo" detail="Brand" brand onPress={()=>{}}/>);b=create(<ServiceChoiceCard title="Remove film" detail="Other work" photo={{uri:"existing-ppf-photo"}} onPress={()=>{}}/>)});const logoBox=a.root.findAll((n:any)=>typeof n.props.style?.width==='number'&&n.props.style?.padding===10)[0];const photo=b.root.findAll((n:any)=>n.props.size!==undefined).find((n:any)=>n.props.label==='Remove film');expect(photo?.props.size).toBe(logoBox?.props.style.width);expect(logoBox?.props.style.height).toBe(photo?.props.size);await act(async()=>{a.unmount();b.unmount()});});
+it('restored Paint brand products feed the shared cart without bypassing PPS explanation',async()=>{
+ setCatalogueReferences([]);const add=vi.fn(),open=vi.fn();const pps:any={id:'enquiry_pps-spray',name:'Standard PPS',brand:'Standard',category:'pps',description:'Spray-on protective film.',active:true,basePrice:4000000,estimatedDurationMinutes:480,customerMenu:{home:'paint',family:'PPS',priceMode:'fixed'}};let r:any;
+ await act(async()=>{r=create(<ServicesExplorer services={[pps]} path={{home:'paint',family:'PPS'}} query="" onPath={()=>{}} onOpen={open} onHelp={()=>{}} onReference={()=>{}} priceLabel={()=>'₹40,000'} onSelectForVisit={add} selectedForVisit={[]}/>)});
+ expect(JSON.stringify(r.toJSON())).toContain('Spray-applied paint protection.');expect(r.root.findAllByType(Pressable).some((p:any)=>p.props.accessibilityLabel==='Standard')).toBe(true);expect(add).not.toHaveBeenCalled();await act(async()=>r.unmount());
+ await act(async()=>{r=create(<ServicesExplorer services={[pps]} path={{home:'paint',family:'PPS',brand:'Standard'}} query="" onPath={()=>{}} onOpen={open} onHelp={()=>{}} onReference={()=>{}} priceLabel={()=>'₹40,000'} onSelectForVisit={add} selectedForVisit={[]}/>)});
+ await press(r,'Add Standard PPS');expect(add).toHaveBeenCalledWith(pps);expect(open).not.toHaveBeenCalled();await act(async()=>r.unmount());
 });

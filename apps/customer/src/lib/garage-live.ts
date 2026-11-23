@@ -1,3 +1,4 @@
+import { membershipDay } from "@autodeck/core";
 // Garage helpers: the live job on one car and the care-plan ring. Pure, no hidden numbers.
 import { jobStage } from "../ui/job-stage";
 
@@ -25,9 +26,9 @@ export function readyBy(job: { estimatedEndAt?: string | null }, now = Date.now(
 
 /** Ring for an active plan: share of washes still left, plus its words. Null when there is no active plan with washes. */
 export function careRing(m: { status: string; washesTotal: number; washesUsed: number; endDate?: string | null; tier?: string } | null | undefined, now = Date.now()): { fraction: number; left: number; total: number; line: string; sub: string } | null {
-  if (!m || m.status !== "active" || m.washesTotal <= 0) return null;
+  if (!m || m.status !== "active" || m.washesTotal <= 0 || (m.endDate && m.endDate.slice(0, 10) < membershipDay(now))) return null;
   const left = Math.max(0, m.washesTotal - m.washesUsed);
-  const days = m.endDate ? Math.max(0, Math.ceil((new Date(m.endDate).getTime() - now) / 86_400_000)) : null;
+  const days = m.endDate ? Math.max(0, Math.round((Date.parse(`${m.endDate.slice(0, 10)}T00:00:00Z`) - Date.parse(`${membershipDay(now)}T00:00:00Z`)) / 86_400_000)) : null;
   const tier = m.tier ? m.tier.charAt(0).toUpperCase() + m.tier.slice(1) : "Club";
   return { fraction: left / m.washesTotal, left, total: m.washesTotal, line: days === null ? `${tier} plan` : `${tier}, ${days} ${days === 1 ? "day" : "days"} left`, sub: left === 0 ? "No washes left on this plan" : `${left} of ${m.washesTotal} washes left` };
 }

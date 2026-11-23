@@ -8,7 +8,7 @@
 //      photos live in Firebase Storage.
 // Screens never hard-code image paths; they ask for a semantic key.
 // Provenance and licenses for the current placeholder set: assets/imagery/ATTRIBUTION.md.
-import type { ImageSourcePropType } from "react-native";
+import { Platform, type ImageSourcePropType } from "react-native";
 import type { ServiceCategory, VehicleCategory } from "@autodeck/core";
 
 import heroHome from "../../assets/imagery/stock/x-polish-red.jpg";
@@ -22,12 +22,24 @@ import servicePpf from "../../assets/imagery/category/paint-protection.jpg";
 import serviceTinting from "../../assets/imagery/generated/mods-tint.jpg";
 import serviceInspection from "../../assets/imagery/generated/ai-underbody.jpg";
 import serviceOther from "../../assets/imagery/category/detailing.jpg";
-import catPpf from "../../assets/imagery/category/paint-protection.jpg";
-import catCeramic from "../../assets/imagery/category/ceramic-coating.jpg";
-import catDetailing from "../../assets/imagery/category/detailing.jpg";
-import catWash from "../../assets/imagery/category/wash-and-care.jpg";
-import catGarage from "../../assets/imagery/category/garage.jpg";
-import catMods from "../../assets/imagery/category/modifications.jpg";
+import catPpfOriginal from "../../assets/imagery/category/paint-protection.jpg";
+import catPpfWeb from "../../assets/imagery/category/paint-protection.webp";
+const catPpf = Platform.OS === "web" ? catPpfWeb : catPpfOriginal;
+import catCeramicOriginal from "../../assets/imagery/category/ceramic-coating.jpg";
+import catCeramicWeb from "../../assets/imagery/category/ceramic-coating.webp";
+const catCeramic = Platform.OS === "web" ? catCeramicWeb : catCeramicOriginal;
+import catDetailingOriginal from "../../assets/imagery/category/detailing.jpg";
+import catDetailingWeb from "../../assets/imagery/category/detailing.webp";
+const catDetailing = Platform.OS === "web" ? catDetailingWeb : catDetailingOriginal;
+import catWashOriginal from "../../assets/imagery/category/wash-and-care.jpg";
+import catWashWeb from "../../assets/imagery/category/wash-and-care.webp";
+const catWash = Platform.OS === "web" ? catWashWeb : catWashOriginal;
+import catGarageOriginal from "../../assets/imagery/category/garage.jpg";
+import catGarageWeb from "../../assets/imagery/category/garage.webp";
+const catGarage = Platform.OS === "web" ? catGarageWeb : catGarageOriginal;
+import catModsOriginal from "../../assets/imagery/category/modifications.jpg";
+import catModsWeb from "../../assets/imagery/category/modifications.webp";
+const catMods = Platform.OS === "web" ? catModsWeb : catModsOriginal;
 import genPickup from "../../assets/imagery/generated/pickup.jpg";
 import genCoating from "../../assets/imagery/generated/ai-coat-apply.jpg";
 import vehicleHatchback from "../../assets/imagery/stock/x-glossy-black.jpg";

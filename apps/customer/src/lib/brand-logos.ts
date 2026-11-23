@@ -1,3 +1,5 @@
+import keramikLogo from '../../assets/imagery/brands/keramik-logo.png';
+import cosmoLogo from '../../assets/imagery/brands/cosmo-logo.png';
 import type {ImageSourcePropType} from "react-native";
 import logo0 from "../../assets/imagery/brands/carpro-logo.png";
 import logo1 from "../../assets/imagery/brands/koch-chemie-logo.png";
@@ -16,6 +18,9 @@ import logo13 from '../../assets/imagery/brands/kovalent-logo.png';
 import logo14 from '../../assets/imagery/brands/gtechniq-logo.png';
 /** Official brand marks, contained without recolouring, distortion or crop. */
 export const BRAND_LOGOS: Record<string, {src: ImageSourcePropType; background: string}> = {
+  Keramic:{src:keramikLogo,background:'#edeaf3'},
+  Keramik:{src:keramikLogo,background:'#edeaf3'},
+  Cosmo:{src:cosmoLogo,background:'#edeaf3'},
   Gtechniq: {src:logo14,background:'#15171B'},
   CarPro: {src:logo0,background:"#15171B"},
   "Koch-Chemie": {src:logo1,background:"#FFFFFF"},

@@ -22,9 +22,9 @@ describe("soleServiceRedirect: single-service category opens its service directl
   it("canonical catalogue never lets a background single-service result hijack a visible page",()=>{
     expect(src).not.toContain("soleServiceRedirect(");expect(src).not.toContain("soleId");
     expect(src).toContain("setServices(rows)");
-    // The canonical leaf route stays the default open; the preview fixture
-    // detour is dev-only and only inside a /preview route.
-    expect(src).toContain("router.push({pathname:`/(tabs)/catalogue/${s.id}` as never");
-    expect(src).toContain('__DEV__ && selfPath.startsWith("/preview")');
+    // User-requested details stay inside the comparison popup, without a route push.
+    expect(src).not.toContain("router.push({pathname:`/(tabs)/catalogue/${s.id}` as never");
+    expect(src).toContain("onOpen={s=>setDetailId(s.id)}");
+    expect(src).toContain("<ServiceDetailScreen key={detailId} serviceId={detailId} embedded/>");
   });
 });

@@ -8,15 +8,18 @@ import type { MembershipPlan, Service } from "@autodeck/core";
  * All values are paise.
  */
 export function memberSaving(input: {
-  service: Pick<Service, "membershipWashEligible" | "priceOnRequest"> | null | undefined;
+  service: (Pick<Service, "membershipWashEligible" | "priceOnRequest"> & { id?: string }) | null | undefined;
   total: number | null | undefined;
-  plans: Array<Pick<MembershipPlan, "priceInPaise" | "includedWashes" | "active">> | null | undefined;
+  plans: Array<Pick<MembershipPlan, "priceInPaise" | "includedWashes" | "active" | "washServiceIds">> | null | undefined;
 }): number | null {
   const { service, total, plans } = input;
-  if (!service || service.membershipWashEligible !== true || service.priceOnRequest === true) return null;
+  if (!service || service.priceOnRequest === true) return null;
   if (typeof total !== "number" || !Number.isFinite(total) || total <= 0) return null;
   const rates = (plans ?? [])
     .filter((p) => p.active !== false && p.includedWashes > 0 && Number.isFinite(p.priceInPaise) && p.priceInPaise > 0)
+    // A bound plan only covers its snapshotted services; an unbound plan keeps the legacy global-flag rule.
+    // Never quote a saving the server would refuse at booking.
+    .filter((p) => (p.washServiceIds !== undefined ? service.id !== undefined && p.washServiceIds.includes(service.id) : service.membershipWashEligible === true))
     .map((p) => Math.round(p.priceInPaise / p.includedWashes));
   if (rates.length === 0) return null;
   const saving = total - Math.min(...rates);

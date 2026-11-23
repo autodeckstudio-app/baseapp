@@ -53,7 +53,7 @@ describe("car detail cover guards", () => {
     expect(d).toContain("onBook={undefined}");
     expect(o).not.toMatch(/Book a service|onBook|>Book</);
   });
-  it("cover photo height comes from metrics and the name sits on the photo", () => { expect(h).toContain("metrics.heroCover"); expect(h).toContain("fontSize: 30"); });
+  it("car identity precedes recorded photo and labeled facts", () => { expect(h).toContain("compact ? 200 : 250"); expect(h.indexOf("{title}")).toBeLessThan(h.indexOf("{photo}")); expect(h).toContain("fontSize: 30"); });
   it("empty states are one quiet line, not a block with a button", () => { expect(d).not.toContain('<Notice title="No care plan yet"'); expect(o).not.toContain("No service history yet"); });
 });
 describe("garage services have one price for every car", () => {
@@ -96,4 +96,10 @@ describe("pay in the app at booking", () => {
     expect(c).toContain("initiatePayment(h.paymentJobId"); expect(c).toContain("payOnline"); expect(c).toContain("!washOn");
     expect(c).not.toContain("Opens when online payments go live");
   });
+});
+
+it("care ring includes the last IST day then disappears at midnight", () => {
+  const m = { status:"active", washesTotal:4, washesUsed:1, endDate:"2026-11-20" };
+  expect(careRing(m, Date.parse("2026-11-20T18:29:59.999Z"))?.line).toContain("0 days left");
+  expect(careRing(m, Date.parse("2026-11-20T18:30:00Z"))).toBeNull();
 });

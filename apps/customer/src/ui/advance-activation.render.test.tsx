@@ -42,7 +42,7 @@ function Payment({advanceDue,payNow,payAtStudio}:{advanceDue:boolean,payNow:bool
 </>);}
 it("renders the actual effective payment selection subtree for visual inspection",()=>{
 const src=readFileSync("src/app/(tabs)/book/confirm.tsx","utf8");
-expect(src).toContain('Disclose the policy for the effective payment route only.');
+expect(src).toContain('paymentTerms={ADVANCE_SPLIT_ENABLED && !combinedMode'); expect(src).toContain('!washOn && !giftCode && (advanceDue || payNow)');
 for(const [name,advanceDue] of [["studio",true],["online",false]] as const){
 const body=renderToStaticMarkup(<Payment advanceDue={advanceDue} payNow={!advanceDue} payAtStudio={advanceDue}/>);
 if (ADVANCE_SPLIT_ENABLED) expect(body).toContain(advanceDue ? "Nothing more is charged" : "nothing is refunded automatically");

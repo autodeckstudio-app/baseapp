@@ -6,8 +6,9 @@ describe("Home studio, club and follow groups", () => {
   it("keeps studio hours and contacts in a quiet unframed close", () => {
     expect(v).toContain('The studio, ${p.studio.hours}');
     expect(v).toContain('Open the studio page');
-    expect(v).toContain('p.quick?.map');
-    expect(v).toContain('p.social?.map');
+    // 19 Nov: contact actions and social links render as one combined themed row.
+    expect(v).toContain('(p.quick??[]).map');
+    expect(v).toContain('(p.social??[]).map');
     expect(v).not.toContain('sceneImagery.studio');
     expect(v).not.toContain('Follow us');
   });
@@ -24,4 +25,4 @@ describe("Home studio, club and follow groups", () => {
   it("legacy phone name maps to call, not the chat bubble", () => expect(read("ui/NavIcon.tsx")).toContain('name === "phone") return "call"'));
 });
 
-it("home studio card omits address only, canonical help/directions source remains",()=>{const home=read("ui/HomeScene.tsx");expect(home).not.toContain("{p.studio.address}");expect(home).toContain("p.studio.hours");expect(home).toContain("onPress={q.onPress}");});
+it("home studio card omits address only, canonical help/directions source remains",()=>{const home=read("ui/HomeScene.tsx");expect(home).not.toContain("{p.studio.address}");expect(home).toContain("p.studio.hours");expect(home).toContain("onPress={b.onPress}");});

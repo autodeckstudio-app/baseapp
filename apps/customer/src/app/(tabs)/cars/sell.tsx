@@ -1,3 +1,5 @@
+import { useCarsEntry } from "../../../hooks/useCarsEntry";
+import { JourneySteps } from "../../../ui/JourneySteps";
 import { readPendingListing, writePendingListing, clearPendingListing } from "../../../lib/cars-pending";
 import { randomUUID } from "expo-crypto";
 import { FileUploader, SelectField } from "../../../ui/inputs";
@@ -12,7 +14,7 @@ import { listOwnerKey } from "../../../lib/owner-key";
 import { sellCarLabel, sellPrefillFromVehicle } from "../../../lib/sell-prefill";
 import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
-import { Button, Field, Kicker, Notice, Pane, Screen, T } from "../../../ui/kit";
+import { Button, Field, Kicker, Notice, PageHeader, Pane, Screen, T } from "../../../ui/kit";
 import { getCarListings, getMyListingSubmission, submitMyListing, uploadListingPhoto, type SellInput } from "../../../lib/carsale-service";
 
 import { validateSellStep, sellNumber, type SellForm as F, type SellErrors } from "../../../lib/sell-validation";
@@ -20,6 +22,7 @@ import { validateSellStep, sellNumber, type SellForm as F, type SellErrors } fro
 const FUELS = ["petrol", "diesel", "cng", "electric", "hybrid"];
 
 export default function SellScreen() {
+  const originBack = useCarsEntry("sell");
   const router = useRouter();
   const auth = useAuth();
   const { name: themeName, colors: ink } = useExperienceTheme();
@@ -41,6 +44,7 @@ export default function SellScreen() {
     return () => urls.forEach(u=>URL.revokeObjectURL(u));
   },[photos]);
   const [busy, setBusy] = useState(false);
+  const [busyAction,setBusyAction]=useState<"submit"|"check"|"retry"|null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<SellErrors>({});
   const [restoring, setRestoring] = useState(true);
@@ -60,7 +64,7 @@ export default function SellScreen() {
   const n = sellNumber;
 
   const owner=JSON.stringify([uid,tenantId,auth.status==='ready'?auth.user.uid:null]);const ownerRef=useRef(owner);ownerRef.current=owner;const generation=useRef(0),submitLock=useRef(false);
-  useEffect(()=>{generation.current++;submitLock.current=false;setBusy(false);setDone(false);setError(null);setPicked(null);setPhotos([]);setPhase(null);setUncertain(null);setStep(0);setF({make:'',model:'',variant:'',year:'',km:'',fuel:'petrol',gearbox:'manual',body:'',owners:'1',colour:'',area:'',price:'',description:'',name:'',phone:'',reg:''});return()=>{generation.current++}},[owner]);
+  useEffect(()=>{generation.current++;submitLock.current=false;setBusy(false);setBusyAction(null);setDone(false);setError(null);setPicked(null);setPhotos([]);setPhase(null);setUncertain(null);setStep(0);setF({make:'',model:'',variant:'',year:'',km:'',fuel:'petrol',gearbox:'manual',body:'',owners:'1',colour:'',area:'',price:'',description:'',name:'',phone:'',reg:''});return()=>{generation.current++}},[owner]);
   useEffect(()=>{
     let active=true;setRestoring(true);
     if(!uid||!tenantId){setRestoring(false);return;}
@@ -79,7 +83,7 @@ export default function SellScreen() {
     const errors = validateSellStep(f, 2, photos.length);
     setFieldErrors(errors);
     if (Object.keys(errors).length) return;
-    const scope=owner,gen=generation.current;const current=()=>ownerRef.current===scope&&generation.current===gen;submitLock.current=true;setBusy(true); setError(null);
+    const scope=owner,gen=generation.current;const current=()=>ownerRef.current===scope&&generation.current===gen;submitLock.current=true;setBusyAction("submit");setBusy(true); setError(null);
     let uploadComplete=false,submissionStarted=false;
     try {
       setPhase(`Uploading photos: 0/${photos.length}`);
@@ -107,13 +111,13 @@ export default function SellScreen() {
       if(current()){await clearPendingListing(scope);if(current()){setUncertain(null);setDone(true);}}
     } catch (e) {
       if(current())setError(submissionStarted ? "Submission not confirmed. Check your saved submission before sending again." : uploadComplete ? "Your draft could not be saved on this device. Nothing was sent. Try again." : "Photos could not finish uploading. Try again.");
-    } finally { if(current()){submitLock.current=false;setBusy(false);setPhase(null);} }
+    } finally { if(current()){submitLock.current=false;setBusy(false);setBusyAction(null);setPhase(null);} }
   }
 
   async function checkSaved() {
     if (!uncertain || submitLock.current) return;
     const scope=owner,gen=generation.current;const current=()=>ownerRef.current===scope&&generation.current===gen;
-    submitLock.current=true;setBusy(true);setError(null);
+    submitLock.current=true;setBusyAction("check");setBusy(true);setError(null);
     try {
       if(uncertain.operationId){
         const outcome=await getMyListingSubmission(uncertain.operationId);
@@ -129,28 +133,27 @@ export default function SellScreen() {
         if(current())router.replace("/(tabs)/cars?tab=sell");
       }
     } catch {if(current())setError("Saved listings could not be checked. Do not send again yet.");}
-    finally {if(current()){submitLock.current=false;setBusy(false);}}
+    finally {if(current()){submitLock.current=false;setBusy(false);setBusyAction(null);}}
   }
   async function retrySaved(){
     if(!uncertain?.operationId||submitLock.current||busy)return;
     const payload=uncertain,scope=owner,gen=generation.current;
     const current=()=>ownerRef.current===scope&&generation.current===gen;
-    submitLock.current=true;setBusy(true);setError(null);setPhase('Retrying the same saved submission');
+    submitLock.current=true;setBusyAction("retry");setBusy(true);setError(null);setPhase('Retrying the same saved submission');
     try{await submitMyListing(payload);if(!current())return;await clearPendingListing(scope);if(current()){setUncertain(null);setDone(true);}}
     catch{if(current())setError('Still not confirmed. Your saved submission is kept. Check again or retry the same submission.');}
-    finally{if(current()){submitLock.current=false;setBusy(false);setPhase(null);}}
+    finally{if(current()){submitLock.current=false;setBusy(false);setBusyAction(null);setPhase(null);}}
   }
   if (done) {
     return (
-      <Screen>
+      <Screen onBack={originBack}>
         <Notice title="Listing saved" body="Track status under Your cars for sale on the Cars page." action={<Button label="Done" onPress={() => router.replace("/(tabs)/cars?tab=sell")} />} />
       </Screen>
     );
   }
   return (
-    <Screen appBar="Sell your car">
-      <T tone="secondary">Add your car for studio review.</T>
-      <View style={{flexDirection:"row",gap:8}}>{steps.map((label,i)=><View key={label} style={{flex:1,gap:8}}><View style={{height:3,backgroundColor:i<=step?"#EC8638":"rgba(128,128,136,0.35)",borderRadius:9999}}/><T role="caption" tone={i===step?"accent":"tertiary"}>{i+1}. {label}</T></View>)}</View>
+    <Screen onBack={originBack} appBar="Sell your car" header={<PageHeader title="List your car" sub="Add your car for studio review." />}>
+      <JourneySteps labels={steps} current={step} />
       {step===0 && garage.length > 0 && <View style={{ gap: space.hair }}>
         <Kicker tone="accent">Pick your car</Kicker>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
@@ -164,7 +167,7 @@ export default function SellScreen() {
           })}
         </ScrollView>
       </View>}
-      {step===0 && <View style={{ gap: space.line }}>
+      {step===0 && <Pane pad="inset"><View style={{ gap: 18 }}>
         <Kicker>Your vehicle</Kicker>
         <Field editable={!busy && !uncertain && !restoring} label="Make" value={f.make} error={fieldErrors.make} onBlur={() => setFieldErrors((p) => ({ ...p, make: validateSellStep(f, step, photos.length).make }))} onChangeText={(v) => up("make", v)} placeholder="Tata" autoCapitalize="words" maxLength={50} />
         <Field editable={!busy && !uncertain && !restoring} label="Model" value={f.model} error={fieldErrors.model} onBlur={() => setFieldErrors((p) => ({ ...p, model: validateSellStep(f, step, photos.length).model }))} onChangeText={(v) => up("model", v)} placeholder="Nexon" autoCapitalize="words" maxLength={80} />
@@ -186,11 +189,11 @@ export default function SellScreen() {
         <Field editable={!busy && !uncertain && !restoring} label="Owners so far" value={f.owners} error={fieldErrors.owners} onBlur={() => setFieldErrors((p) => ({ ...p, owners: validateSellStep(f, step, photos.length).owners }))} onChangeText={(v) => up("owners", v)} keyboardType="numeric" maxLength={2} />
         <Field editable={!busy && !uncertain && !restoring} label="Colour" value={f.colour} error={fieldErrors.colour} onBlur={() => setFieldErrors((p) => ({ ...p, colour: validateSellStep(f, step, photos.length).colour }))} onChangeText={(v) => up("colour", v)} autoCapitalize="words" maxLength={40} />
         <Field editable={!busy && !uncertain && !restoring} label="Area or city" value={f.area} error={fieldErrors.area} onBlur={() => setFieldErrors((p) => ({ ...p, area: validateSellStep(f, step, photos.length).area }))} onChangeText={(v) => up("area", v)} placeholder="Satellite, Ahmedabad" autoCapitalize="words" maxLength={60} />
-      </View>}
-      {step===1 && <View style={{gap:space.line}}><Kicker>Price and story</Kicker>
+      </View></Pane>}
+      {step===1 && <Pane pad="inset"><View style={{gap:18}}><Kicker>Price and story</Kicker>
         <Field editable={!busy && !uncertain && !restoring} label="Asking price (rupees)" value={f.price} error={fieldErrors.price} onBlur={() => setFieldErrors((p) => ({ ...p, price: validateSellStep(f, step, photos.length).price }))} onChangeText={(v) => up("price", v)} keyboardType="numeric" maxLength={9} />
         <Field editable={!busy && !uncertain && !restoring} label="About the car (optional)" placeholder="Service history, owners, accidents, reason for selling - no phone numbers or links" value={f.description} error={fieldErrors.description} onBlur={() => setFieldErrors((p) => ({ ...p, description: validateSellStep(f, step, photos.length).description }))} onChangeText={(v) => up("description", v)} multiline maxLength={1000} />
-      </View>}
+      </View></Pane>}
 
       {step===1 ? (
         <View style={{ gap: space.hair }}>
@@ -211,8 +214,8 @@ export default function SellScreen() {
       {error ? <Notice title={uncertain ? "Submission not confirmed" : "Check these details"} body={error} /> : null}
       {phase ? <T role="caption" tone="secondary">{phase}</T> : null}
       {uncertain ? <T role="caption" tone="secondary">{uncertain.photoPaths.length} photos uploaded. Submission not confirmed.</T> : null}
-      {uncertain?.operationId ? <Button label="Retry same submission" busy={busy} onPress={()=>void retrySaved()}/> : null}
-      {uncertain ? <Button label={uncertain.operationId?'Check submission':'Check saved listings'} busy={busy} onPress={() => void checkSaved()}/> : step===2 ? <Button label="Send for studio review" busy={busy} disabled={restoring} onPress={() => void submit()}/> : <Button label={step===0 ? "Continue to photos & price" : "Continue to review"} onPress={next}/>}
+      {uncertain?.operationId ? <Button label="Retry same submission" busy={busy&&busyAction==="retry"} disabled={busy} onPress={()=>void retrySaved()}/> : null}
+      {uncertain ? <Button label={uncertain.operationId?'Check submission':'Check saved listings'} busy={busy&&busyAction==="check"} disabled={busy} onPress={() => void checkSaved()}/> : step===2 ? <Button label="Send for studio review" busy={busy} disabled={restoring} onPress={() => void submit()}/> : <Button label={step===0 ? "Continue to photos & price" : "Continue to review"} onPress={next}/>}
       {step>0 && <Button kind="quiet" label="Previous step" disabled={busy || !!uncertain} onPress={() => {setError(null);setFieldErrors({});setStep(step-1);}}/>}
       <T role="caption" tone="tertiary">The studio reviews your listing. Your number is not shown to buyers.</T>
     </Screen>

@@ -24,4 +24,17 @@ describe("members save line", () => {
     expect(memberSaving({ service: wash, total: 112500, plans: [{ priceInPaise: 0, includedWashes: 2, active: true }] })).toBeNull();
     expect(memberSaving({ service: wash, total: 112500, plans: [{ priceInPaise: 1000, includedWashes: 1, active: false }] })).toBeNull();
   });
+  it("a bound plan quotes a saving only for its snapshotted services", () => {
+    const bound = [{ priceInPaise: 180000, includedWashes: 2, active: true, washServiceIds: ["svc-regular-wash"] }];
+    expect(memberSaving({ service: { id: "svc-regular-wash", membershipWashEligible: false }, total: 112500, plans: bound })).toBe(22500);
+    expect(memberSaving({ service: { id: "svc-wash-and-wax", membershipWashEligible: true }, total: 112500, plans: bound })).toBeNull();
+  });
+  it("unbound plans keep the legacy global-flag rule alongside bound ones", () => {
+    const mixed = [
+      { priceInPaise: 180000, includedWashes: 2, active: true, washServiceIds: ["svc-regular-wash"] },
+      { priceInPaise: 900000, includedWashes: 10, active: true },
+    ];
+    expect(memberSaving({ service: { id: "svc-wash-and-wax", membershipWashEligible: true }, total: 112500, plans: mixed })).toBe(22500);
+    expect(memberSaving({ service: { id: "svc-other", membershipWashEligible: false }, total: 112500, plans: mixed })).toBeNull();
+  });
 });

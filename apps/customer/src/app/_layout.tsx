@@ -7,7 +7,7 @@ import { setSurfaceMode, glassSurface } from "../lib/glass";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { AutoExperienceThemeProvider, useExperienceTheme, installWebFonts } from "@autodeck/ui/native";
-import { useAuth } from "../hooks/useAuth";
+import { CustomerAuthProvider, useAuth } from "../hooks/useAuth";
 import { NavigationGuard } from "../ui/NavigationGuard";
 import { onForegroundPush, syncPushRegistration } from "../lib/push";
 import { installWebVitals } from "../lib/web-vitals";
@@ -109,7 +109,7 @@ function ThemedRoot() {
 export default function RootLayout() {
   return (
     <AutoExperienceThemeProvider>
-      <ThemedRoot />
+      <CustomerAuthProvider><ThemedRoot /></CustomerAuthProvider>
     </AutoExperienceThemeProvider>
   );
 }

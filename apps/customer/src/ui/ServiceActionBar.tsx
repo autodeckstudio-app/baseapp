@@ -1,3 +1,5 @@
+import {useExperienceTheme} from '@autodeck/ui/native';
+import {serviceActionSurface} from '../lib/service-action-surface';
 import { View, useWindowDimensions } from "react-native";
 import { Button, T } from "./kit";
 export function ServiceActionBar({
@@ -16,6 +18,7 @@ export function ServiceActionBar({
   onPress: () => void;
 }) {
   const { width } = useWindowDimensions();
+  const {name}=useExperienceTheme();
   const stacked = width < 380;
   return (
     <View
@@ -35,10 +38,12 @@ export function ServiceActionBar({
         </T>}
       </View>
       <Button
+        kind="quiet"
         label={label}
         disabled={disabled}
         onPress={onPress}
         style={{
+          ...serviceActionSurface(name),
           marginTop: 0,
           maxWidth: stacked ? "100%" : "68%",
           paddingHorizontal: 10,

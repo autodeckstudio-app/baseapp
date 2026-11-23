@@ -24,7 +24,7 @@ export type HomeViewProps = {
   /** 0 to 100 when a visit is under way, else null. */
   progress: number | null;
   membership: { title: string; detail: string } | null;
-  studio: { address: string; hours: string; openText?: string | null; open?: boolean };
+  studio: { address: string; hours: string; openText?: string | null; open?: boolean | undefined };
   /** What the car is due for, from its delivered visits. Null hides the card. */
   /** Social rows under Studio and club. Empty values hide the row. */
   social?: Array<{ key: string; title: string; sub: string; icon: NavIconName; onPress: () => void }>;

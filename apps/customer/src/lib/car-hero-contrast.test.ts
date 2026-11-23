@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 describe("car hero Book button contrast", () => {
   const src = readFileSync(`${__dirname}/../ui/CarHero.tsx`, "utf8");
   it("label colour follows the theme, dark on the light Night pill", () => {
-    expect(src).toContain('themeName === "night" ? "#14141A" : "#FFFFFF"');
+    expect(src).toContain('name === "light" ? "#FFFFFF" : "#132030"');
     expect(src).not.toContain('<Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 14 }}>Book a service</Text>');
   });
 });
