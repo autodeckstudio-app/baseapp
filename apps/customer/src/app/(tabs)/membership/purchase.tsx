@@ -1,3 +1,4 @@
+import {MembershipPlanShowcase} from "../../../ui/MembershipPlanShowcase";
 import { JourneySteps } from "../../../ui/JourneySteps";
 import {MembershipActivationTerms,MembershipUpgradeTerms} from "../../../ui/MembershipTerms";
 import { useReduceMotion } from "../../../lib/reduce-motion";
@@ -215,18 +216,9 @@ export default function PurchaseMembershipScreen() {
       }
     >
       <JourneySteps labels={["Plan details", "Payment"]} current={0}/>
-      <Pane pad="inset"><View style={{gap:10}}><T role="label" tone="tertiary">YOUR PLAN</T><T role="display">{rupees(plan.priceInPaise)}<T role="caption" tone="secondary"> / month</T></T>
-        <Row title="Included washes" detail={`${plan.includedWashes} / month`} />
-        {pickupsLine(plan.freePickups) ? <Row title="Free pickups" detail={`${plan.freePickups} / month`} /> : null}
-        {plan.prioritySlot ? <Row title="Priority slot" detail="Included" /> : null}
-        {plan.discountPercent > 0 ? <Row title="Discount" detail={`${plan.discountPercent}%`} /> : null}
-      </View></Pane>
+      <MembershipPlanShowcase price={plan.priceInPaise} washes={plan.includedWashes} pickups={pickupsLine(plan.freePickups)?plan.freePickups:undefined} priority={plan.prioritySlot} discount={plan.discountPercent}/>
 
-      <T role="caption" tone="tertiary">
-        {[carryOverLine(), plan.discountPercent > 0 ? "Non-wash services receive the discount automatically at booking." : ""].filter(Boolean).join(" ")}
-      </T>
-
-      <MembershipActivationTerms/>
+      <MembershipActivationTerms rollover={carryOverLine()} discounted={plan.discountPercent>0}/>
 
       {error ? <Notice title="Purchase failed" body={error} /> : null}
 

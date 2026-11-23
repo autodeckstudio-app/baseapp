@@ -1,5 +1,7 @@
 import {View} from 'react-native';
-import {T} from './kit';
+import {Pane,T} from './kit';
+import {useExperienceTheme} from '@autodeck/ui/native';
+import {NavIcon,type NavIconName} from './NavIcon';
 
 /** Reviewable membership facts. These only present the existing plan rules. */
 function Term({label,children}:{label:string;children:React.ReactNode}){
@@ -13,10 +15,17 @@ export function MembershipUpgradeTerms({tier,paysFullPrice}:{tier:string;paysFul
   <Term label="New plan">Starts after payment is confirmed. Last-valid date is start date plus 30 calendar days. Valid through that date; expires at midnight IST as the next day begins.</Term>
  </View>;
 }
-export function MembershipActivationTerms(){
- return <View accessibilityLabel="When benefits start" style={{gap:2}}>
-  <T role="caption" tone="secondary">Benefits unlock only after your payment is confirmed.</T>
-  <Term label="Online">Activates automatically once payment is verified.</Term>
-  <Term label="Pay at studio">The front desk confirms your request.</Term>
- </View>;
+function MembershipPoint({icon,children}:{icon:NavIconName;children:React.ReactNode}){
+ const {colors}=useExperienceTheme();
+ return <View style={{flexDirection:"row",alignItems:"flex-start",gap:10}}><View style={{paddingTop:1}}><NavIcon name={icon} size={18} color={colors.textSecondary} cut={colors.surface}/></View><T role="caption" tone="secondary" style={{flex:1,minWidth:0}}>{children}</T></View>;
+}
+export function MembershipActivationTerms({rollover,discounted=false}:{rollover?:string|null;discounted?:boolean}={}){
+ return <Pane pad="inset"><View accessibilityLabel="When benefits start" style={{gap:14}}>
+  <T role="heading">Before you pay</T>
+  {rollover?<MembershipPoint icon="history">{rollover}</MembershipPoint>:null}
+  {discounted?<MembershipPoint icon="club">Your discount applies to non-wash services at booking.</MembershipPoint>:null}
+  <MembershipPoint icon="check">Benefits start after payment is confirmed.</MembershipPoint>
+  <MembershipPoint icon="ceramic">Online: payment is verified automatically.</MembershipPoint>
+  <MembershipPoint icon="pin">At studio: pay the front desk for confirmation.</MembershipPoint>
+ </View></Pane>;
 }
