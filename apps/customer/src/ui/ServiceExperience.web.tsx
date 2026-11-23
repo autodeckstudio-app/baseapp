@@ -1,4 +1,5 @@
 import React,{useMemo} from 'react';
+import{presentationTitle,presentationScope}from'../lib/service-presentation';
 import {View} from 'react-native';
 import {useExperienceTheme} from '@autodeck/ui/native';
 import {type Service} from '@autodeck/core';
@@ -11,7 +12,8 @@ import type {MenuService} from './services-experience/model';
 export type {ServiceExperienceProps} from './services-experience/runtime';
 export function presentationService(service:Service):MenuService|null{
  const placement=servicePlacement(service);if(!placement||service.category==='pickup'||!service.active)return null;
- return {...service,brand:service.brand??undefined,description:service.description??'',vehicleCategoryPricing:service.vehicleCategoryPricing??[],customerMenu:{...service.customerMenu,home:placement.home,family:placement.family,priceMode:service.customerMenu?.priceMode??(service.priceOnRequest?'inspection':'fixed')},comparisonScope:placement.home==='paint'&&placement.family==='PPF'?(service.ppfWork??(service.coverageLevel==='full_body'?'full_body':'other')):undefined} as MenuService;
+ const display=service.id==='svc_51ac65707000d30261ac87ec17b2c853'?{name:presentationTitle(service),description:presentationScope(service).included.concat(presentationScope(service).limits).join('\n')}:{};
+ return {...service,...display,brand:service.brand??undefined,description:display.description??service.description??'',vehicleCategoryPricing:service.vehicleCategoryPricing??[],customerMenu:{...service.customerMenu,home:placement.home,family:placement.family,priceMode:service.customerMenu?.priceMode??(service.priceOnRequest?'inspection':'fixed')},comparisonScope:placement.home==='paint'&&placement.family==='PPF'?(service.ppfWork??(service.coverageLevel==='full_body'?'full_body':'other')):undefined} as MenuService;
 }
 export default function ServiceExperience(props:ServiceExperienceProps){
  const {name,colors}=useExperienceTheme();

@@ -1,26 +1,33 @@
 #!/usr/bin/env bash
-# One-shot Native category scrolling release. Customer only, exact base and paths.
+# One-shot Keramik fact and approved image release. Customer only, exact base and paths.
 case "${VERCEL_GIT_COMMIT_REF:-}" in
- main|fix/service-category-native-scroll-20261124)
+ main|feat/keramik-comparison-20261124)
   image_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
-  if [ "$image_parent" = "094875ac6c512246b84e62eb33fa3ca77f44cebf" ]; then
+  if [ "$image_parent" = "99739b2e37267cc52e418e6b9b2e3806a425e8b2" ]; then
    image_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
    [ -n "$image_root" ] || exit 0
    cd "$image_root" || exit 0
-   image_actual="$(git diff --name-only 094875ac6c512246b84e62eb33fa3ca77f44cebf HEAD 2>/dev/null)" || exit 0
+   image_actual="$(git diff --name-only 99739b2e37267cc52e418e6b9b2e3806a425e8b2 HEAD 2>/dev/null)" || exit 0
    image_expected=$(cat <<'APPROVED_COLOUR_PATHS'
-apps/customer/src/ui/services-experience/ServicesLanding.tsx
-apps/customer/src/ui/services-experience/category-native-scroll.test.ts
-apps/customer/src/ui/services-experience/category-swipe.test.ts
-apps/customer/src/ui/services-experience/category-swipe.ts
+apps/customer/assets/product-choice/fireball-wizard.webp
+apps/customer/assets/product-choice/keramik-10h.webp
+apps/customer/src/lib/choice-media.ts
+apps/customer/src/lib/service-presentation.json
+apps/customer/src/lib/wizard-official.test.ts
+apps/customer/src/ui/ServiceExperience.web.tsx
+apps/customer/src/ui/services-experience/ExperienceView.tsx
+apps/customer/src/ui/services-experience/KeramikFacts.tsx
+apps/customer/src/ui/services-experience/keramik-facts.render.test.tsx
+apps/customer/src/ui/services-experience/keramik-specs.test.ts
+apps/customer/src/ui/services-experience/keramik-specs.ts
 scripts/vercel-ignore.sh
 APPROVED_COLOUR_PATHS
 )
    [ "$image_actual" = "$image_expected" ] || exit 0
    if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$1" = customer ]; then
-    echo 'Native category scrolling: Customer BUILD from main.'; exit 1
+    echo 'Keramik comparison: Customer BUILD from main.'; exit 1
    fi
-   echo 'Native category scrolling: SKIP held app or preview.'; exit 0
+   echo 'Keramik comparison: SKIP held app or preview.'; exit 0
   fi ;;
 esac
 #!/usr/bin/env bash
