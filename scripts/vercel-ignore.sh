@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
-# One-shot Colour PPF product-image connection. Customer only, exact base and paths.
+# One-shot service category swipe fix. Customer only, exact base and paths.
 case "${VERCEL_GIT_COMMIT_REF:-}" in
- main|images/colour-product-display-20261124)
+ main|fix/service-category-swipe-20261124)
   image_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
-  if [ "$image_parent" = "cbba2a12db50a20e5092c71a01ec490cf581cbbb" ]; then
+  if [ "$image_parent" = "764e9a096aff8606efc9fda0edc3b290954b5be6" ]; then
    image_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
    [ -n "$image_root" ] || exit 0
    cd "$image_root" || exit 0
-   image_actual="$(git diff --name-only cbba2a12db50a20e5092c71a01ec490cf581cbbb HEAD 2>/dev/null)" || exit 0
+   image_actual="$(git diff --name-only 764e9a096aff8606efc9fda0edc3b290954b5be6 HEAD 2>/dev/null)" || exit 0
    image_expected=$(cat <<'APPROVED_COLOUR_PATHS'
-apps/customer/src/ui/services-experience/ColourProductMedia.tsx
-apps/customer/src/ui/services-experience/ExperienceView.tsx
-apps/customer/src/ui/services-experience/colour-product-media.render.test.tsx
+apps/customer/src/ui/services-experience/ServicesLanding.tsx
+apps/customer/src/ui/services-experience/category-swipe.test.ts
+apps/customer/src/ui/services-experience/category-swipe.ts
 scripts/vercel-ignore.sh
 APPROVED_COLOUR_PATHS
 )
    [ "$image_actual" = "$image_expected" ] || exit 0
    if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$1" = customer ]; then
-    echo 'Colour product images: Customer BUILD from main.'; exit 1
+    echo 'Category swipe: Customer BUILD from main.'; exit 1
    fi
-   echo 'Colour product images: SKIP held app or preview.'; exit 0
+   echo 'Category swipe: SKIP held app or preview.'; exit 0
   fi ;;
 esac
 #!/usr/bin/env bash
