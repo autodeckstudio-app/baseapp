@@ -1,0 +1,4 @@
+import{test,expect}from'vitest';import{readFileSync}from'node:fs';import{fileURLToPath}from'node:url';
+const source=readFileSync(fileURLToPath(new URL('./ServicesLanding.tsx',import.meta.url)),'utf8');
+test('category rail leaves both axes to Safari native scrolling without custom gesture cancellation',()=>{expect(source).toContain('overflow-x:auto;overflow-y:hidden;touch-action:auto;');expect(source).toContain('-webkit-overflow-scrolling:touch');expect(source).toContain('flex-wrap:nowrap');expect(source).not.toContain('installCategorySwipe');expect(source).not.toContain('preventDefault');expect(source).not.toContain('touch-action:pan-y')});
+test('native rail preserves selected-tab reveal and ordinary accessible buttons',()=>{expect(source).toContain("scrollIntoView({inline:'nearest',block:'nearest',behavior:'instant'})");expect(source).toContain('aria-label="Service areas"');expect(source).toContain('onClick={()=>onBrowse(home)}')});
