@@ -1,0 +1,7 @@
+LLumar window tint crop: official LLumar All Side Windows package visual. Upper-window crop excludes the maker badge without retouching.
+https://llumar.com/content/dam/eastman/performance-films/llumar/imagery/LLumar-Tint-SUV-AllSideWIndows-Package_highlight.jpg
+
+3M Crystalline: official 3M India automotive window tint page image, saved by browser because direct hotlink requests are denied.
+https://www.3mindia.in/wps/wcm/connect/22630364-f828-44cc-907c-d551ae3cf2fc/Cystalline+Blk.jpg
+
+Only exact service IDs in choice-media.ts use these images. No generic 3M, Standard, or Garware substitute. Existing logos retained.
