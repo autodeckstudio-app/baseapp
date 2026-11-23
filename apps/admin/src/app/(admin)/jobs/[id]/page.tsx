@@ -1,4 +1,5 @@
 "use client";
+import {JobDelayControl} from '../../../../components/JobDelayControl';
 import{VisitOriginalMoneyControl}from"../../../../components/VisitOriginalMoneyControl";
 import{VisitCancelControl}from'../../../../components/VisitCancelControl';
 import{VisitReceiptControl}from'../../../../components/VisitReceiptControl';
@@ -195,6 +196,7 @@ export default function JobDetailPage() {
       {job.visitId&&!sharedVisit.progress?<div role="status">{sharedVisit.error?"Visit unavailable":"Checking visit…"}</div>:<StageTrack current={sharedVisit.progress?.status??job.status} {...(job.visitId?{scope:"visit" as const}:{})} compact />}
       <VisitCharges view={sharedVisit.data} funding={visitFunding}/>{job.visitId?<VisitOriginalMoneyControl key={JSON.stringify([user?.uid,claims?.tenantId,job.visitId,job.id])} visitId={job.visitId} jobId={job.id} onChanged={()=>{sharedVisit.refresh();setAttempt(n=>n+1)}}/>:null}{job.visitId?<VisitReceiptControl key={JSON.stringify([user?.uid,claims?.tenantId,job.visitId])} visitId={job.visitId} view={sharedVisit.data} bill={visitFunding.bill} onRecorded={sharedVisit.refresh}/>:null}{job.visitId?<VisitCancelControl key={JSON.stringify([user?.uid,claims?.tenantId,job.visitId])+"cancel"} visitId={job.visitId} view={sharedVisit.data} bill={visitFunding.bill} onCancelled={()=>setAttempt(n=>n+1)}/>:null}
       <JobControls job={job} routeId={id} />
+      <JobDelayControl key={JSON.stringify([user?.uid,claims?.tenantId,job.id,job.updatedAt])} job={job}/>
       <MembershipSettlement job={job} booking={booking ?? null} />
 
       <div className="ax-detail">

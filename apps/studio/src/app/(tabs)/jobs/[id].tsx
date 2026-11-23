@@ -1,3 +1,5 @@
+import{usePublishedServices}from'../../../hooks/usePublishedServices';
+import{JobDelayControl}from'../../../components/JobDelayControl';
 import{VisitReceiptControl}from'../../../components/VisitReceiptControl';
 import{useVisitBill}from'../../../lib/use-visit-bill';
 import{visitFundingLabel}from'@autodeck/core';
@@ -18,6 +20,8 @@ import { canRecordPayment, payErrorNote, recordInput, type RecordMethod } from "
 import { claimUpiPayment } from "../../../lib/payment-service";
 import { RecordPaymentFields } from "../../../components/RecordPaymentFields";
 import { membershipCoveredLabel } from "../../../lib/membership-covered-label";
+import { refreshVisitState } from "../../../lib/membership-refresh";
+import { RefreshBenefitPanel } from "../../../components/RefreshBenefitPanel";
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
 import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
@@ -36,7 +40,7 @@ import {
 } from "../../../lib/payment-service";
 import { getCustomerMembership } from "../../../lib/membership-service";
 import { approvalSendButton, pendingApprovalNote } from "../../../lib/approval-send";
-import { createApproval, cancelApproval, listenToApprovalsForJob, getActiveServices } from "../../../lib/approval-service";
+import { createApproval, cancelApproval, listenToApprovalsForJob } from "../../../lib/approval-service";
 import { listenToInspection, startInspection } from "../../../lib/inspection-service";
 import type { Vehicle, Customer, ServiceJob, StudioConfig, Payment, Invoice, Booking, Membership, ApprovalRequest, Service, Inspection } from "@autodeck/core";
 import { JOB_STATUS_TRANSITIONS, formatDuration } from "@autodeck/core";
@@ -144,18 +148,46 @@ export default function JobDetailScreen() {
   const paymentEpoch = useRef(0);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [paymentActionLoading, setPaymentActionLoading] = useState(false);
-  const [bookingMembership, setBookingMembership] = useState<{
+  const [advanceAuth, setAdvanceAuth] = useState<StaffAuth | null | undefined>(undefined);
+  useEffect(() => onStaffAuthChanged(setAdvanceAuth), []);
+  const refreshScope = [id, job?.id, job?.tenantId, job?.customerId, job?.bookingId, job?.status, staffAuthFingerprint(advanceAuth)].join("|");
+  const refreshGeneration = useRef({ scope: refreshScope, epoch: 0 });
+  if (refreshGeneration.current.scope !== refreshScope) refreshGeneration.current = { scope: refreshScope, epoch: refreshGeneration.current.epoch + 1 };
+  const refreshEpoch = refreshGeneration.current.epoch;
+  useEffect(() => () => { refreshGeneration.current = { scope: "unmounted", epoch: refreshGeneration.current.epoch + 1 }; }, []);
+  const refreshBusy = useRef<number | null>(null);
+  const [bookingMembershipRaw, setBookingMembership] = useState<{
+    epoch: number;
     membership: Membership;
     washUsed: boolean;
     discountApplied: boolean;
+    // Platinum interior refresh benefit: balance plus this visit's live record.
+    // usageUnverified: the visit-record read failed - no Record until verified.
+    refresh: { used: number; total: number; recordedRowId: string | null; usageUnverified?: boolean } | null;
   } | null>(null);
+  const bookingMembership = bookingMembershipRaw?.epoch === refreshEpoch ? bookingMembershipRaw : null;
+  const [recordingRefreshEpoch, setRecordingRefreshEpoch] = useState<number | null>(null);
+  const recordingRefresh = recordingRefreshEpoch === refreshEpoch;
+  // Fail-closed counters review: the backend rejected recording for this job
+  // with "counters need staff review" - retrying cannot succeed until staff
+  // fix the counters, so the visit surface stops offering the action. Keyed
+  // by job so it never leaks into another job's view; a fresh keyed read
+  // (after review, or on job change) clears it.
+  const [refreshBlockedJobId, setRefreshBlockedJobId] = useState<string | null>(null);
+  // Re-read tick: the retry affordance for a failed refresh-usage read.
+  const [membershipRetryTick, setMembershipRetryTick] = useState(0);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [cancellingApprovalId, setCancellingApprovalId] = useState<string | null>(null);
   const [showApprovalForm, setShowApprovalForm] = useState(false);
-  const [services, setServices] = useState<Service[]>([]);
+
+  const catalogue=usePublishedServices(advanceAuth?staffAuthFingerprint(advanceAuth):null,advanceAuth?.tenantId??null,showApprovalForm);
+  const services=catalogue.services;
+  useEffect(()=>{setSelectedServiceId(null)},[catalogue.revision]);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [approvalReason, setApprovalReason] = useState("");
+  const approvalScope=JSON.stringify([id,job?.id,job?.tenantId,staffAuthFingerprint(advanceAuth),catalogue.revision]);const approvalLive=useRef(approvalScope);approvalLive.current=approvalScope;
   const [creatingApproval, setCreatingApproval] = useState(false);
+  useEffect(()=>{setCreatingApproval(false)},[approvalScope]);
   const [approvalSent, setApprovalSent] = useState(false);
   const [approvalsBefore, setApprovalsBefore] = useState(0);
 
@@ -235,27 +267,52 @@ export default function JobDetailScreen() {
   }, [bookingKey]);
 
   // Read-only membership status for this job's booking (if any) — studio can
-  // see it but has no authority to alter it (doc08 §8.2).
+  // see it but has no authority to alter it (doc08 §8.2). Keyed on the whole
+  // job/customer/booking identity: a late read from an earlier job must never
+  // write the previous customer's membership into this view, and a job whose
+  // booking has no membership must not inherit the previous job's badge.
   useEffect(() => {
-    if (!job?.bookingId) {
-      setBookingMembership(null);
-      return;
-    }
+    setBookingMembership(null);
+    setRefreshBlockedJobId(null);
+    if (!job?.bookingId || !job.customerId) return;
+    let alive = true;
+    const valid = () => alive && refreshGeneration.current.epoch === refreshEpoch;
     void (async () => {
       const freshBookingSnap = await getDoc(doc(db, COLLECTIONS.bookings(), job.bookingId as string));
-      if (!freshBookingSnap.exists()) return;
+      if (!valid() || !freshBookingSnap.exists()) return;
       const membershipBooking = freshBookingSnap.data() as Booking;
       if (!membershipBooking.membershipId) return;
       const membership = await getCustomerMembership(job.customerId, membershipBooking.membershipId);
-      if (membership) {
-        setBookingMembership({
-          membership,
-          washUsed: membershipBooking.membershipWashUsed,
-          discountApplied: membershipBooking.membershipDiscountApplied,
-        });
+      if (!valid() || !membership) return;
+      // Interior refresh readout: the balance rides on the membership doc;
+      // this visit's record comes from the separate refresh usage list.
+      let refresh: { used: number; total: number; recordedRowId: string | null; usageUnverified?: boolean } | null = null;
+      const refreshTotal = membership.refreshesTotal ?? 0;
+      if (refreshTotal > 0) {
+        refresh = { used: membership.refreshesUsed ?? 0, total: refreshTotal, recordedRowId: null, usageUnverified: false };
+        try {
+          const usageResult = await httpsCallable<{ membershipId: string }, { refreshUsage?: { id: string; jobId: string; restoredAt: string | null }[] }>(functions, "getMembershipUsage")({ membershipId: membership.id });
+          const live = (usageResult.data.refreshUsage ?? []).find((r) => r.jobId === job.id && !r.restoredAt);
+          if (live) refresh.recordedRowId = live.id;
+        } catch {
+          // The visit record could not be verified: showing recordable here
+          // could double-record a visit. Show a retryable error, never Record.
+          refresh.usageUnverified = true;
+        }
       }
-    })();
-  }, [job?.id]);
+      if (!valid()) return;
+      setBookingMembership({
+        epoch: refreshEpoch,
+        membership,
+        washUsed: membershipBooking.membershipWashUsed,
+        discountApplied: membershipBooking.membershipDiscountApplied,
+        refresh,
+      });
+    })().catch(() => {
+      if (valid()) setBookingMembership(null);
+    });
+    return () => { alive = false; };
+  }, [refreshScope, membershipRetryTick]);
 
   // Live update: studio sees the customer's approve/reject decision the
   // moment it happens, via the same real-time listener pattern as
@@ -276,6 +333,44 @@ export default function JobDetailScreen() {
     return listenToInspection(job.id, setInspection, () => undefined);
   }, [job?.id]);
 
+  // Staff action for the Platinum interior refresh benefit: one record per
+  // visit job, idempotent on the backend (replay returns the same row).
+  async function handleRecordRefresh() {
+    if (refreshGeneration.current.epoch !== refreshEpoch || refreshBusy.current === refreshEpoch || !job || !bookingMembership?.refresh) return;
+    if (!advanceAuth || !["studio", "admin", "superadmin"].includes(advanceAuth.role ?? "") || advanceAuth.tenantId !== job.tenantId) return;
+    if (refreshVisitState(bookingMembership.membership, job, bookingMembership.refresh.recordedRowId) !== "recordable" || refreshBlockedJobId === job.id) return;
+    if (bookingMembership.refresh.usageUnverified) return; // verify the visit record first
+    refreshBusy.current = refreshEpoch;
+    const membershipId = bookingMembership.membership.id;
+    setActionError(null);
+    setRecordingRefreshEpoch(refreshEpoch);
+    try {
+      const res = await httpsCallable<
+        { membershipId: string; jobId: string },
+        { refreshUsageId: string; refreshesUsed: number }
+      >(functions, "recordMembershipRefresh")({ membershipId, jobId: job.id });
+      // The job context may have changed under the in-flight action; never
+      // write the response into another context's view.
+      if (refreshGeneration.current.epoch !== refreshEpoch) return;
+      setBookingMembership((prev) =>
+        prev && prev.epoch === refreshEpoch && prev.membership.id === membershipId && prev.refresh
+          ? { ...prev, refresh: { ...prev.refresh, used: res.data.refreshesUsed, recordedRowId: res.data.refreshUsageId } }
+          : prev,
+      );
+    } catch (e) {
+      if (refreshGeneration.current.epoch !== refreshEpoch) return;
+      const message = e instanceof Error ? e.message : "Could not record the interior refresh.";
+      // The fail-closed counters rejection is permanent until staff review:
+      // pause the action instead of offering a retry that can only fail again.
+      // Transient failures keep the retryable button.
+      if (/staff review/i.test(message)) setRefreshBlockedJobId(job.id);
+      setActionError(message);
+    } finally {
+      if (refreshBusy.current === refreshEpoch) refreshBusy.current = null;
+      setRecordingRefreshEpoch((prev) => prev === refreshEpoch ? null : prev);
+    }
+  }
+
   async function handleStartInspection() {
     if (!job || startingInspection) return;
     setActionError(null);setStartingInspection(true);
@@ -290,18 +385,20 @@ export default function JobDetailScreen() {
   }
 
   async function handleCreateApproval() {
-    if (!job || quotePaymentHold || creatingApproval || !selectedServiceId || !approvalReason.trim()) return;
-    setActionError(null);setApprovalsBefore(approvals.length);setApprovalSent(false);setCreatingApproval(true);
+    if(approvalLive.current!==approvalScope)return;
+    if (!job || quotePaymentHold || creatingApproval || !catalogue.isCurrent() || catalogue.loading || catalogue.error || !selectedServiceId || !services.some(s=>s.id===selectedServiceId) || !approvalReason.trim()) return;
+    const scope=approvalScope;setActionError(null);setApprovalsBefore(approvals.length);setApprovalSent(false);setCreatingApproval(true);
     try {
       await createApproval({ jobId: job.id, serviceId: selectedServiceId, reason: approvalReason.trim() });
+      if(approvalLive.current!==scope)return;
       setApprovalSent(true);
       setShowApprovalForm(false);
       setSelectedServiceId(null);
       setApprovalReason("");
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to request approval.");
+      if(approvalLive.current===scope)setActionError(err instanceof Error ? err.message : "Failed to request approval.");
     } finally {
-      setCreatingApproval(false);
+      if(approvalLive.current===scope)setCreatingApproval(false);
     }
   }
 
@@ -319,11 +416,7 @@ export default function JobDetailScreen() {
 
   function openApprovalForm() {
     setShowApprovalForm(true);
-    if (services.length === 0) {
-      void getActiveServices()
-        .then(setServices)
-        .catch((err: unknown) => setActionError(err instanceof Error ? err.message : "Failed to load services."));
-    }
+
   }
 
   const payBusyRef = useRef(false);
@@ -333,8 +426,7 @@ export default function JobDetailScreen() {
   // method flip can never retarget an armed panel - the binding is compared
   // synchronously against the current render context AND re-checked against
   // the latest-state ref inside the handler before any mutation.
-  const [advanceAuth, setAdvanceAuth] = useState<StaffAuth | null | undefined>(undefined);
-  useEffect(() => onStaffAuthChanged(setAdvanceAuth), []);
+
   type CashBinding = { mode: "record" | "confirm"; armId: number; jobId: string; tenantId: string; paymentId: string | null; epoch: number; gen: number };
   // Monotonic arm identity: every click arms a NEW id, even for the same
   // record. A retained callback from an older arm can never match the
@@ -637,6 +729,19 @@ export default function JobDetailScreen() {
         </View>
       )}
 
+      {bookingMembership?.refresh ? (
+        <RefreshBenefitPanel
+          used={bookingMembership.refresh.used}
+          total={bookingMembership.refresh.total}
+          state={refreshVisitState(bookingMembership.membership, job, bookingMembership.refresh.recordedRowId)}
+          recording={recordingRefresh}
+          blocked={refreshBlockedJobId === job.id}
+          usageUnverified={bookingMembership.refresh.usageUnverified === true}
+          onRetry={() => setMembershipRetryTick((t) => t + 1)}
+          onRecord={() => void handleRecordRefresh()}
+        />
+      ) : null}
+
       {job.statusHistory.length?<><Text style={sectionTitle}>Job stage history</Text>
       <Section>
         {job.statusHistory.map((entry, i) => (
@@ -797,7 +902,7 @@ export default function JobDetailScreen() {
                 Additional service
               </Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.sm }}>
-                {services.map((s) => {
+                {catalogue.loading?<Text>Checking the accepted service list…</Text>:null}{catalogue.error?<Text>{catalogue.error}</Text>:null}{catalogue.error?<Button label="Refresh services" variant="secondary" onPress={catalogue.refresh}/>:null}{services.map((s) => {
                   const selected = selectedServiceId === s.id;
                   return (
                     <TouchableOpacity
@@ -827,10 +932,10 @@ export default function JobDetailScreen() {
                 multiline
               />
               <Button
-                label={approvalSendButton(creatingApproval ? "sending" : "idle", !!selectedServiceId && !!approvalReason.trim()).label}
+                label={approvalSendButton(creatingApproval ? "sending" : "idle", !catalogue.loading && !catalogue.error && !!selectedServiceId && services.some(s=>s.id===selectedServiceId) && !!approvalReason.trim()).label}
                 onPress={() => void handleCreateApproval()}
                 loading={creatingApproval}
-                disabled={approvalSendButton(creatingApproval ? "sending" : "idle", !!selectedServiceId && !!approvalReason.trim()).disabled}
+                disabled={approvalSendButton(creatingApproval ? "sending" : "idle", !catalogue.loading && !catalogue.error && !!selectedServiceId && services.some(s=>s.id===selectedServiceId) && !!approvalReason.trim()).disabled}
               />
               <View style={{ height: spacing.sm }} />
               <Button
@@ -857,6 +962,7 @@ export default function JobDetailScreen() {
       {job.visitId&&!["DELIVERED","CANCELLED"].includes(job.status)?<Section><VisitBayControl job={job}/><VisitScheduleControl job={job}/></Section>:null}
       {job.status === "PENDING_VEHICLE" && job.bookingId ? <Button label="Arrived - standby" variant="secondary" disabled={Date.parse(job.scheduledAt) > Date.now()} onPress={() => setStaffAction("enqueue")} style={{marginBottom: spacing.lg}} /> : null}
       {!job.visitBayPause&&job.status === "QUALITY_CHECK" ? <Button label="Send back for rework" variant="ghost" onPress={() => setStaffAction("rework")} style={{marginBottom: spacing.lg}} /> : null}
+      <JobDelayControl key={JSON.stringify([job.id,job.updatedAt])} job={job}/>
       {['IN_PROGRESS','QUALITY_CHECK','READY_FOR_DELIVERY','DELIVERED'].includes(job.status) ? <Section><JobWorkSession key={job.id} job={job}/></Section> : null}
       {ADMIN_APPROVAL_ENABLED && job ? <AdminRequestPanel targetType="job" targetId={job.id} tenantId={job.tenantId} studioId={job.studioId} /> : null}
       {advanceConfirm && job ? <Section>{job.status === "READY_FOR_DELIVERY" ? <DeliveryConfirmPane key={`${job.id}:${job.vehicleId}`} job={job} onDelivered={()=>setAdvanceConfirm(null)} onCancel={()=>setAdvanceConfirm(null)}/> : <><Text style={{color:colors.textPrimary}}>{advanceLabel}? This updates the studio floor and customer tracker.</Text><Button label={`Confirm ${advanceLabel.toLowerCase()}`} onPress={()=>void handleAdvance()} loading={advancing}/><Button label="Cancel" variant="secondary" disabled={advancing} onPress={()=>setAdvanceConfirm(null)}/></>}</Section> : null}

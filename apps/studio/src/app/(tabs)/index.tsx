@@ -132,6 +132,7 @@ export default function TodaysJobsScreen() {
         </View>
         <View style={{ width: wide ? 260 : "100%" }}>
           <Button label="New walk-in" onPress={() => router.push("/(tabs)/walkin")} fullWidth />
+          <Button label="Visit requests" variant="ghost" onPress={() => router.push("/(tabs)/visit-requests")} fullWidth />
         </View>
       </View>
       <View accessibilityLabel="My day" style={{ ...glass, borderRadius: 20, padding: spacing.lg, gap: spacing.sm }}>
