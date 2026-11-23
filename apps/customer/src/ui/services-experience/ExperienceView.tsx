@@ -75,7 +75,7 @@ const choiceCSS=`
 .services-experience .choice-details{grid-column:3;grid-row:1;width:44px;min-width:44px;height:44px;min-height:44px;display:grid;place-items:center;border:0;background:transparent;color:var(--muted);padding:0;margin:-5px 0 0}
 .services-experience .choice-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;margin-left:58px;flex-wrap:wrap}
 .services-experience .choice-actions{display:flex;justify-content:flex-start;gap:7px;min-width:0;flex-wrap:wrap}
-.services-experience .choice-actions button{min-height:44px;font-size:11px;padding:0 10px;white-space:normal}
+.services-experience .choice-actions button{width:auto;min-width:max-content;max-width:none;min-height:44px;font-size:11px;padding:6px 10px;white-space:nowrap;line-height:18px;flex-shrink:0}
 .services-experience .choice-price{font-size:13px;line-height:18px;color:var(--accent);text-align:right;flex-shrink:0;max-width:100%;margin-left:auto}
 .services-experience .choice-media{grid-column:1;grid-row:1;width:48px;flex:0 0 48px;display:flex;flex-direction:column;align-items:center;gap:4px}
 .services-experience .choice-product{width:46px;height:52px;object-fit:contain}
