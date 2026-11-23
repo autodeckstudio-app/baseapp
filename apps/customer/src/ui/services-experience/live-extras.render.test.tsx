@@ -1,0 +1,25 @@
+vi.mock('react-native',async importOriginal=>{const m=await importOriginal<any>();return {...m,Image:(props:any)=>React.createElement('img',props)}});
+import React from 'react';import {act,create} from 'react-test-renderer';import {afterEach,beforeEach,expect,it,vi} from 'vitest';
+import {Pressable} from 'react-native';
+vi.mock('../../lib/catalogue-assets',()=>({catalogueAsset:()=>undefined,hasCataloguePhoto:()=>false,spotlightProductPhoto:()=>undefined}));
+vi.mock('../../lib/service-type-images',()=>({serviceTypeImage:()=>1}));
+vi.mock('../ServicePhoto',()=>({ServicePhoto:()=>null}));
+vi.mock('../../lib/service-home-images',()=>({serviceHomeImages:{}}));
+vi.mock('../../lib/brand-logos',()=>({BRAND_LOGOS:{}}));
+vi.mock('../kit',()=>({useScreenScrollToTop:()=>()=>{},Button:({label,onPress}:any)=><Pressable accessibilityLabel={label} onPress={onPress}>{label}</Pressable>,T:'Text',Pane:'Pane',Row:({title,detail}:any)=><>{title}{detail}</>}));
+import {ExperienceContext} from './runtime';import {LiveExtras} from './LiveExtras';import {setCatalogueReferences} from '../../lib/catalogue-references';
+const callbacks={onPath:vi.fn(),onOpen:vi.fn(),onHelp:vi.fn(),priceLabel:()=> '₹100',cart:{ids:[],toggle:vi.fn()}};
+const body={id:'body',name:'Exact full-body film',active:true,category:'ppf',coverageLevel:'full_body',brand:null,basePrice:10000,description:'Full-body service',customerMenu:{home:'paint',family:'PPF'}};
+const removed={...body,id:'remove',name:'Exact removal service',ppfWork:'removal',coverageLevel:null,description:'Remove existing film'};
+const replace={...removed,id:'replace',name:'Exact replacement service',ppfWork:'replacement'};
+const text=(r:any)=>JSON.stringify(r.toJSON());
+const runtime=(work?:string,rows:any[]=[body,removed,replace])=>({...callbacks,path:{home:'paint',family:'PPF',work},original:rows,services:rows});
+async function mount(value:any,home:any='paint',family:any='PPF'){let r:any;await act(async()=>{r=create(<ExperienceContext.Provider value={value}><LiveExtras home={home} family={family}/></ExperienceContext.Provider>)});return r;}
+const press=async(r:any,label:string)=>{const button=r.root.findAllByType(Pressable).find((p:any)=>p.props.accessibilityLabel===label);expect(button,label).toBeTruthy();await act(async()=>button.props.onPress())};
+beforeEach(()=>{setCatalogueReferences([]);callbacks.onPath.mockClear();callbacks.onHelp.mockClear();callbacks.onOpen.mockClear()});afterEach(()=>setCatalogueReferences([]));
+it('production supplementary renderer retains both removal and replacement route choices',async()=>{const r=await mount(runtime());for(const [label,work]of [['Remove existing film','removal'],['Replace damaged film','replacement']]){const b=r.root.findAllByType('button').find((p:any)=>p.props.children===label);expect(b).toBeTruthy();await act(async()=>b.props.onClick());expect(callbacks.onPath).toHaveBeenLastCalledWith({home:'paint',family:'PPF',work})}await act(async()=>r.unmount())});
+it('real PPF explorer binds removal service separately from full-body and replacement',async()=>{const r=await mount(runtime('removal'));const view=text(r);expect(view).toContain('Exact removal service');expect(view).not.toContain('Exact full-body film');expect(view).not.toContain('Exact replacement service');await press(r,'View Exact removal service');expect(callbacks.onOpen).toHaveBeenCalledWith('remove');await act(async()=>r.unmount())});
+it('real empty replacement explorer offers studio confirmation rather than a fake product',async()=>{const r=await mount(runtime('replacement',[body]));expect(text(r)).toContain('film replacement');expect(text(r)).not.toContain('Exact full-body film');expect(callbacks.onOpen).not.toHaveBeenCalled();await act(async()=>r.unmount())});
+it('cold publication never revives bundled product references',async()=>{const r=await mount(runtime());expect(text(r)).not.toContain('Ask about products');await act(async()=>r.unmount())});
+it('fresh published reference retains its exact enquiry target without a price or direct booking',async()=>{setCatalogueReferences([{key:'fresh',name:'Fresh studio reference',brand:'Fresh',group:'ppf',note:'Reference scope'}]);const r=await mount(runtime());expect(text(r)).toContain('Fresh studio reference');expect(text(r)).toContain('Reference information only');await press(r,'View Fresh studio reference');expect(callbacks.onHelp).toHaveBeenCalledWith('Fresh studio reference');expect(callbacks.onOpen).not.toHaveBeenCalled();await act(async()=>r.unmount())});
+it('unknown newly published family stays accessible instead of disappearing behind fixed area tabs',async()=>{const row={...body,id:'new-family',category:'coatings',name:'New surface service',customerMenu:{home:'detailing',family:'New surface'}};const r=await mount({...runtime(undefined,[row]),path:{home:'detailing'}},'detailing');expect(text(r)).toContain('New surface service');const button=r.root.findAllByType('button').find((p:any)=>p.props.children==='View details');await act(async()=>button.props.onClick());expect(callbacks.onOpen).toHaveBeenCalledWith('new-family');await act(async()=>r.unmount())});

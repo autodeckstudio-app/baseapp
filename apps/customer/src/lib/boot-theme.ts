@@ -8,3 +8,5 @@ applyCustomerRaisedTheme();
 
 import {applyCustomerSoftNight} from './customer-night';
 applyCustomerSoftNight();
+import {applyCustomerGlacier} from './customer-glacier';
+applyCustomerGlacier();

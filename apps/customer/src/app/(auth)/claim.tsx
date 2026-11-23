@@ -1,12 +1,12 @@
 import { LegalLinks } from "../../ui/LegalLinks";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { TextInput } from "@autodeck/ui";
+import {useExperienceTheme} from "@autodeck/ui/native";
 import { space } from "@autodeck/ui/theme";
-import { Ambient } from "@autodeck/ui/native";
+import { Ambient } from "../../ui/kit";
 import { claimCustomerRecord, setupCustomerProfile, refreshAuthToken, isClaimRequired, signOut, rememberMyCustomerDocId } from "../../lib/auth-service";
-import { Button, Kicker, T } from "../../ui/kit";
+import { Button, Kicker, Pane, T } from "../../ui/kit";
 
 /**
  * The studio created a record for this email at the counter (walk-in).
@@ -20,6 +20,7 @@ export default function ClaimScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const {colors,name:appearance}=useExperienceTheme();
 
   async function handleClaim() {
     const cleaned = code.trim();
@@ -59,9 +60,9 @@ export default function ClaimScreen() {
         style={{ flex: 1, justifyContent: "center", width: "100%", maxWidth: 480, alignSelf: "center", padding: space.inset, gap: space.inset }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={{ gap: space.line }}>
+        <ScrollView style={{width:"100%"}} contentContainerStyle={{flexGrow:1,justifyContent:"center",gap:24,paddingVertical:24}} keyboardShouldPersistTaps="handled"><Pane pad="inset"><View style={{gap:24}}><View style={{ gap: space.line }}>
           <Kicker tone="accent">Welcome back</Kicker>
-          <T role="display">Enter your studio code</T>
+          <T role="title" style={{fontSize:30,lineHeight:36}}>Enter your studio code</T>
           <T tone="secondary">
             {renewal === "1"
               ? "Ask the AutoDeck studio team for a code, then enter it here."
@@ -69,6 +70,9 @@ export default function ClaimScreen() {
           </T>
         </View>
         <TextInput
+          accessibilityLabel="Studio code"
+          placeholderTextColor={colors.textTertiary}
+          style={{minHeight:52,paddingHorizontal:16,paddingVertical:14,borderRadius:18,borderWidth:1,borderColor:colors.borderSubtle,color:colors.textPrimary,fontSize:16,backgroundColor:appearance==="light"?"#F5F8FC":"#233246"}}
           placeholder="XXXX-XXXX"
           autoCapitalize="characters"
           autoCorrect={false}
@@ -93,7 +97,7 @@ export default function ClaimScreen() {
           testID="claim-no-code"
         />
         <T role="caption" tone="secondary">No code? Ask the AutoDeck studio team - they can give you one in person.</T>
-        <LegalLinks />
+        </View></Pane><LegalLinks /></ScrollView>
       </KeyboardAvoidingView>
     </Ambient>
   );

@@ -55,7 +55,7 @@ export default function InspectionScreen() {
         <Notice
           title="No inspection report yet"
           body="The studio hasn't finalized an inspection report for this job yet."
-          action={<Button label="Go back" onPress={() => router.back()} />}
+          action={<Button label="Go back" onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/bookings")} />}
         />
       </Screen>
     );
@@ -78,8 +78,8 @@ export default function InspectionScreen() {
         if (items.length === 0) return null;
         return (
           <View key={area} style={{ gap: space.line }}>
-            <Kicker>{AREA_LABELS[area]}</Kicker>
-            <Pane pad="gap">
+            <View style={{flexDirection:"row",alignItems:"center",gap:12}}><T role="heading">{AREA_LABELS[area]}</T><Chip label={String(items.length)} /></View>
+            <Pane pad="inset"><View style={{gap:6}}>
               {items.map((item, idx) => (
                 <Row
                   key={item.key}
@@ -89,7 +89,7 @@ export default function InspectionScreen() {
                   last={idx === items.length - 1}
                 />
               ))}
-            </Pane>
+            </View></Pane>
           </View>
         );
       })}
@@ -103,7 +103,7 @@ export default function InspectionScreen() {
         </View>
       ) : null}
 
-      <Button label="Go back" kind="quiet" onPress={() => router.back()} />
+      <Button label="Go back" kind="quiet" onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/bookings")} />
     </Screen>
   );
 }

@@ -17,6 +17,8 @@ export interface Gift {
   tenantId: string;
   buyerId: string;
   serviceId: string;
+  /** Purchase-time service label. Absent on legacy fixed-wash gifts. */
+  serviceName?: string | undefined;
   /** Paise, from the server catalogue at purchase. */
   amountPaise: number;
   /** Hash of the code. The code itself is shown once to the buyer and never stored. */
@@ -78,7 +80,8 @@ export function giftValidityLine(expiresAtIso: string, now: number): string {
 }
 
 /** Reminder copy: 7 days before it ends, and on its last day. Plain, no offer. */
-export function giftReminderText(daysLeft: 7 | 0): { title: string; body: string } {
+export function giftReminderText(daysLeft: 7 | 0, serviceName?:string): { title: string; body: string } {
+  if(serviceName){const noun=`Your gift for ${serviceName}`;return daysLeft===0?{title:"Your gift ends today",body:`${noun} expires today. Book it before it ends.`}:{title:"Your gift ends in 7 days",body:`${noun} expires in 7 days. Open the app and book it before it ends.`};}
   if (daysLeft === 0) return { title: "Your gift wash ends today", body: "Your gift wash expires today. Book it now or it will be lost." };
   return { title: "Your gift wash ends in 7 days", body: "Your gift wash expires in 7 days. Open the app and book it before it ends." };
 }
@@ -106,8 +109,8 @@ export function giftLockedUntil(failedAtIso: string[], now: number): number | nu
 export const giftRefundable = (_g: Pick<Gift, "status" | "expiresAt">, _now: number): boolean => false;
 
 /** The message the buyer shares. First name only, studio name, code and expiry. No phone numbers or private details. */
-export function giftShareMessage(args: { buyerFirstName: string | null; code: string; expiresAt: string; studioName: string }): string {
+export function giftShareMessage(args: { buyerFirstName: string | null; code: string; expiresAt: string; studioName: string; serviceName?: string | undefined }): string {
   const who = args.buyerFirstName ? `${args.buyerFirstName} has gifted you` : "You have been gifted";
   const until = new Date(args.expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
-  return `${who} a car wash at ${args.studioName}. Your code: ${formatGiftCode(args.code)}. Valid until ${until} (${GIFT_VALID_DAYS} days from purchase, then it expires). Redeem it in the app: https://app.autodeck.in`;
+  return `${who} ${args.serviceName ?? "a car wash"} at ${args.studioName}. Your code: ${formatGiftCode(args.code)}. Valid until ${until} (${GIFT_VALID_DAYS} days from purchase, then it expires). Redeem it in the app: https://app.autodeck.in`;
 }

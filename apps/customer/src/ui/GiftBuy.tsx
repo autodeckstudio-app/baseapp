@@ -1,19 +1,34 @@
+import { FloatingObject } from "./FloatingObject";
 // The buy panel: what the gift is, the price (from the server), and the terms, all above the pay button.
-import { GIFT_TERMS, GIFT_VALID_DAYS } from "@autodeck/core";
-import { Button, Pane, Row, T, rupees } from "./kit";
+import {View} from "react-native";
+import { GIFT_VALID_DAYS } from "@autodeck/core";
+import { useExperienceTheme } from "@autodeck/ui/native";
+import { NavIcon } from "./NavIcon";
+import { GiftRestrictions } from "./GiftRestrictions";
+import { Button, InfoLine, Pane, Row, T, rupees } from "./kit";
 
-export function GiftBuy({ amountPaise, canPay, busy, onPay }: { amountPaise: number; canPay: boolean; busy: boolean; onPay: () => void }) {
+export function GiftBuy({ amountPaise, canPay, busy, disabled, onPay,serviceName="Foam wash" }: { amountPaise: number; canPay: boolean; busy: boolean; disabled?:boolean; onPay: () => void;serviceName?:string|undefined }) {
+  const { colors, name } = useExperienceTheme();
+  const tileBg = name === "light" ? "#E8EDF4" : "#253447";
   return (
-    <Pane pad="gap">
-      <T role="heading">Buy a gift</T>
-      <Row title="Foam wash" detail="Any car, one use" />
-      <Row title="Price" detail={rupees(amountPaise)} />
-      <Row title="Valid for" detail={`${GIFT_VALID_DAYS} days from purchase`} last />
-      <T role="caption" tone="secondary">{GIFT_TERMS.validity}</T>
-      <T role="caption" tone="secondary">{GIFT_TERMS.nonRefundable}</T>
+    <Pane pad="inset"><View style={{gap:16}}>
+      <View style={{flexDirection:"row",alignItems:"center",gap:12}}>
+        <FloatingObject name="gift" size={34}/>
+        <View style={{gap:4}}>
+          <T role="label" tone="tertiary">GIFT A SERVICE</T>
+          <T role="heading">Buy a gift</T>
+        </View>
+      </View>
+      <View>
+        <Row title={serviceName} detail="Any car, one use" trailing={<View style={{alignItems:"flex-end",gap:2}}><T role="caption" tone="tertiary">Gift value</T><T role="title">{rupees(amountPaise)}</T></View>} last />
+      </View>
+      <View style={{gap:10}}>
+        <InfoLine icon="history">{`Valid ${GIFT_VALID_DAYS} days from purchase · No extensions`}</InfoLine>
+        <GiftRestrictions />
+      </View>
       {canPay
-        ? <Button label={`Pay ${rupees(amountPaise)} and get the gift code`} busy={busy} onPress={onPay} />
+        ? <Button label={`Pay ${rupees(amountPaise)}`} busy={busy} disabled={disabled??false} onPress={onPay} style={{alignSelf:"flex-end"}} />
         : <T role="caption" tone="tertiary">Buying a gift works in the browser at app.autodeck.in.</T>}
-    </Pane>
+    </View></Pane>
   );
 }

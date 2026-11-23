@@ -1,3 +1,5 @@
+import {raised} from "../lib/raised";
+import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import {metrics} from "../lib/metrics";
 import { NavIcon, type NavIconName } from "./NavIcon";
 import { SceneMotion } from "./SceneMotion";
@@ -99,8 +101,8 @@ function useBar(appBar?: string, onBackOverride?: () => void) {
   return { title, back: onBackOverride ?? goBack };
 }
 
-function Ambient({ children }: { children?: ReactNode }) {
-  return <BaseAmbient>{children}</BaseAmbient>;
+export function Ambient({ children }: { children?: ReactNode }) {
+  const {name}=useExperienceTheme();const r=raised(name);return <View style={{flex:1,backgroundColor:r.ground,...(Platform.OS==="web"?{backgroundImage:r.groundImage} as object:{})}}>{children}</View>;
 }
 
 /** Studio photo behind the top of a screen (web), as on the canvas layout. */
@@ -139,6 +141,8 @@ export function SectionTitle({ children }: { children: ReactNode }) {
 }
 
 const ScreenScrollContext=createContext<()=>void>(()=>{});
+const ScreenScrollCheckpointContext=createContext<()=>void>(()=>{});
+export const useScreenScrollCheckpoint=()=>useContext(ScreenScrollCheckpointContext);
 export const useScreenScrollToTop=()=>useContext(ScreenScrollContext);
 
 export function Screen({
@@ -150,16 +154,24 @@ export function Screen({
   appBar,
   onBack,
   scrollIdentity = "screen",
+  scrollCheckpointRef,
   bottomClearance = 96,
+  compactContent = false,
+  viewportBottomInset = 0,
+  textBack=false,
 }: {
   /** Shared tab header: avatar, screen name, bell. Pass the screen name. */
   appBar?: string;
+  textBack?:boolean;
   /** A level inside one screen (Services category) steps back here instead of using a second back link. */
   onBack?: (() => void) | undefined;
   /** In-screen route identity, e.g. a catalogue category, each retains its own offset. */
   scrollIdentity?: string;
+  scrollCheckpointRef?:{current:(()=>void)|null};
   /** Clearance above the floating navigation, including its raised Home button. */
   bottomClearance?: number;
+  compactContent?: boolean;
+  viewportBottomInset?: number;
   /** Show the photo backdrop behind the header (use with CanvasTitle). */
   canvas?: boolean;
   children: ReactNode;
@@ -168,6 +180,10 @@ export function Screen({
   /** Pinned above the scroll area (sticky chips, search). */
   top?: ReactNode;
 }) {
+  // Expo Router supplies native insets. Web must use the viewport CSS inset,
+  // not add the provider inset again. Keep it outside both header/scroll paths.
+  const safeInsets = useContext(SafeAreaInsetsContext);
+  const safeTop = (Platform.OS === "web" ? "env(safe-area-inset-top, 0px)" : safeInsets?.top ?? 0) as unknown as number;
   const scrollRef = useRef<ScrollView>(null);
   const bar = useBar(appBar, onBack);
   // Screen deliberately removes unfocused content. Keep offsets outside that ScrollView lifecycle.
@@ -175,6 +191,8 @@ export function Screen({
   const activeScrollIdentity=useRef(scrollIdentity);activeScrollIdentity.current=scrollIdentity;
   const restoreOffset=useCallback(()=>{if(restorePending.current)scrollRef.current?.scrollTo({y:offsets.current.get(scrollIdentity)??0,animated:false})},[scrollIdentity]);
   const cancelRestore=()=>{restorePending.current=false};
+  const checkpoint=()=>{const node=scrollRef.current?.getScrollableNode?.() as {scrollTop?:number}|undefined;if(Platform.OS==='web'&&typeof node?.scrollTop==='number')offsets.current.set(scrollIdentity,node.scrollTop);scrollActive.current=false;restorePending.current=true};
+  if(scrollCheckpointRef)scrollCheckpointRef.current=checkpoint;
   const {width}=useWindowDimensions();
   const gutter=width<360?layout.screenInsetCompact:layout.screenInset;
   const [focused, setFocused] = useState(true);
@@ -194,8 +212,8 @@ export function Screen({
   const myTab = segs[0] === "(tabs)" ? (segs[1] ?? "index") : "";
   useEffect(() => onTabPressed((t) => { if (t === myTab) {restorePending.current=false;offsets.current.set(activeScrollIdentity.current,0);scrollRef.current?.scrollTo({ y: 0, animated: true });} }), [myTab]);
   const body = (
-    <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: top ? space.gap : space.inset, paddingBottom: (Platform.OS === "web" ? `calc(${bottomClearance}px + env(safe-area-inset-bottom))` : bottomClearance) as unknown as number, gap: 20 }}>
-      {bar && !top ? <AppBar title={bar.title} onBack={bar.back} /> : null}
+    <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: compactContent ? 4 : top ? space.gap : space.inset, paddingBottom: (Platform.OS === "web" ? `calc(${bottomClearance}px + env(safe-area-inset-bottom))` : bottomClearance) as unknown as number, gap: 20 }}>
+      {bar && !top ? <AppBar title={bar.title} onBack={bar.back} textBack={textBack} /> : null}
       {header}
       {children}
     </View>
@@ -206,15 +224,17 @@ export function Screen({
   return (
     <Ambient>
       {canvas ? <CanvasBackdrop /> : null}
-      {top ? <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: space.inset, gap: space.line, zIndex: 2 }}>{bar ? <AppBar title={bar.title} onBack={bar.back} /> : null}{top}</View> : null}
-      {scroll ? <ScrollView testID="screen-scroll" ref={scrollRef} scrollEventThrottle={16} onLayout={restoreOffset} onContentSizeChange={restoreOffset} onScrollBeginDrag={cancelRestore} onTouchStart={cancelRestore} {...(Platform.OS==='web'?{onWheel:cancelRestore}:{})} onScroll={(e) => {if(!scrollActive.current)return;const y=e.nativeEvent.contentOffset.y;const target=offsets.current.get(scrollIdentity)??0;if(restorePending.current){if(Math.abs(y-target)>1)return;restorePending.current=false;}offsets.current.set(scrollIdentity,y);reportScroll(y)}} contentContainerStyle={{ flexGrow: 1 }}><ScreenScrollContext.Provider value={()=>{restorePending.current=false;offsets.current.set(scrollIdentity,0);scrollRef.current?.scrollTo({y:0,animated:true})}}>{content}</ScreenScrollContext.Provider></ScrollView> : content}
+      <View testID="screen-safe-area" style={{flex:1,paddingTop:safeTop}}>
+      {top ? <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: space.inset, gap: space.line, zIndex: 2 }}>{bar ? <AppBar title={bar.title} onBack={bar.back} textBack={textBack} /> : null}{top}</View> : null}
+      {scroll ? <ScrollView style={viewportBottomInset?{marginBottom:viewportBottomInset}:undefined} showsVerticalScrollIndicator={false} testID="screen-scroll" ref={scrollRef} scrollEventThrottle={16} onLayout={restoreOffset} onContentSizeChange={restoreOffset} onScrollBeginDrag={cancelRestore} onTouchStart={cancelRestore} {...(Platform.OS==='web'?{onWheel:cancelRestore}:{})} onScroll={(e) => {if(!scrollActive.current)return;const y=e.nativeEvent.contentOffset.y;const target=offsets.current.get(scrollIdentity)??0;if(restorePending.current){if(Math.abs(y-target)>1)return;restorePending.current=false;}offsets.current.set(scrollIdentity,y);reportScroll(y)}} contentContainerStyle={{ flexGrow: 1 }}><ScreenScrollCheckpointContext.Provider value={checkpoint}><ScreenScrollContext.Provider value={()=>{restorePending.current=false;offsets.current.set(scrollIdentity,0);scrollRef.current?.scrollTo({y:0,animated:true})}}>{content}</ScreenScrollContext.Provider></ScreenScrollCheckpointContext.Provider></ScrollView> : content}
+      </View>
     </Ambient>
   );
 }
 
 /** Shared one-layer glass pane, with native blur and accessible fallback. */
 export function Pane({ children, pad = "gap", tone, fill, style, testID }: GlassProps) {
- return <BaseGlass pad={pad} {...(tone?{tone}:{})} {...(fill?{fill}:{})} {...(style?{style}:{})} {...(testID?{testID}:{})}>{children}</BaseGlass>;
+ const {name}=useExperienceTheme();const r=raised(name);return <BaseGlass pad={pad} {...(tone?{tone}:{})} {...(fill?{fill}:{})} style={[r.card,style]} {...(testID?{testID}:{})}>{children}</BaseGlass>;
 }
 
 export function Kicker({ children, tone = "tertiary" }: { children: ReactNode; tone?: "tertiary" | "accent" | "premium" }) {
@@ -242,6 +262,13 @@ export function Plate({ value }: { value: string }) {
   );
 }
 
+const ButtonRowContext = createContext(false);
+
+/** Intrinsic slim actions share a line when they fit, otherwise wrap in order. */
+export function ButtonRow({ children }: { children: ReactNode }) {
+  return <ButtonRowContext.Provider value={true}><View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>{children}</View></ButtonRowContext.Provider>;
+}
+
 export function Button({
   label,
   icon,
@@ -264,6 +291,7 @@ export function Button({
 }) {
   const { colors, name } = useExperienceTheme();
   const reduce=useReduceTransparency();
+  const inButtonRow = useContext(ButtonRowContext);
   const primary = kind === "primary";
   const off = disabled || busy;
   return (
@@ -276,20 +304,19 @@ export function Button({
       onPress={onPress}
       style={({ pressed }) => [
         {
-          minHeight: 48,
+          minHeight: 44,
           alignSelf: "flex-start",
-          marginTop: primary ? 8 : 0,
-          marginBottom: icon ? 0 : 8,
-          borderRadius: radius.pill,
-          paddingHorizontal: 18,
+          marginTop: inButtonRow ? 0 : primary ? 8 : 0,
+          marginBottom: inButtonRow || icon ? 0 : 8,
+          borderRadius: 12,
+          paddingHorizontal: 14,
           alignItems: "center",
           justifyContent: "center",
           flexDirection: "row",
           gap: space.breath,
-          ...inkButton(name,reduce,pressed),
-          ...(primary ? {borderColor:"rgba(194,84,10,.45)"} : {}),
-
-          ...(kind === "danger" ? { borderColor: colors.danger } : null),
+          // Compact hairline controls (19 Nov user pick of concept A): small ink primary, hairline outline quiet, no heavy shadows.
+          ...(primary?{backgroundColor:name==="light"?"#16181C":"#ecf1f7",borderWidth:1,borderColor:"transparent"}:{backgroundColor:"transparent",borderWidth:1,borderColor:colors.borderSubtle}),
+          ...(kind === "danger" ? { backgroundColor:"transparent", borderWidth:1, borderColor: colors.danger } : null),
           opacity: off ? 0.64 : 1,
           transform: pressed && !off ? [{ scale: 0.97 }] : [],
           ...(Platform.OS === "web" ? ({ transition: "transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease", cursor: "pointer" } as object) : {}),
@@ -298,8 +325,8 @@ export function Button({
         style,
       ]}
     >
-      {busy ? <ActivityIndicator color={colors.textPrimary} /> : null}
-      {icon ? (!busy ? <NavIcon name={icon} size={24} color={kind === "danger" ? colors.danger : colors.textPrimary} cut={name === "light" ? "#FFFFFF" : "#252C35"}/> : null) : <T numberOfLines={1} role="bodyStrong" tone={kind === "danger" ? "danger" : "primary"} style={[{textAlign:"center",flexShrink:1},primary?{fontWeight:"700"}:null]}>
+      {busy ? <ActivityIndicator color={primary?(name==="light"?"#ffffff":"#202831"):colors.textPrimary} /> : null}
+      {icon ? (!busy ? <NavIcon name={icon} size={24} color={kind === "danger" ? colors.danger : colors.textPrimary} cut={name === "light" ? "#FFFFFF" : "#252C35"}/> : null) : <T numberOfLines={1} role="bodyStrong" tone={kind === "danger" ? "danger" : "primary"} style={[{textAlign:"center",flexShrink:1},{fontWeight:"600",fontSize:13,color:kind === "danger" ? undefined : primary ? (name==="light"?"#ffffff":"#202831") : colors.textPrimary}]}>
         {label}
       </T>}
     </Pressable>
@@ -349,9 +376,9 @@ export function Row({
           {typeof title === "string" ? <T role="bodyStrong">{title}</T> : title}
           {detail ? typeof detail === "string" ? <T role="caption" tone={detailTone}>{detail}</T> : detail : null}
         </View>
-        {onPress && !trailing ? <NavIcon name={expanded?"close":"proceed"} size={22} color={colors.textSecondary} cut={name === "light" ? "#FFFFFF" : "#252C35"}/> : null}
+        {onPress && !trailing && expanded ? <NavIcon name="close" size={22} color={colors.textSecondary} cut={name === "light" ? "#FFFFFF" : "#252C35"}/> : null}
       </Pressable>
-      {trailing}
+      {typeof trailing === "string" || typeof trailing === "number" ? <T role="data">{trailing}</T> : trailing}
     </View>
   );
 }
@@ -424,6 +451,15 @@ export function LinkAction({ label, onPress, testID }: { label: string; onPress:
   );
 }
 
+/** One compact fact with a small leading icon: validity, terms, restrictions. Text stays full; the icon only aids scanning. */
+export function InfoLine({ icon, children }: { icon: NavIconName; children: ReactNode }) {
+  const { colors, name } = useExperienceTheme();
+  return <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+    <NavIcon name={icon} size={16} color={colors.textTertiary} cut={name === "light" ? "#FFFFFF" : "#252C35"} />
+    <View style={{ flex: 1 }}><T tone="secondary">{children}</T></View>
+  </View>;
+}
+
 export function Chip({ label, tone = "neutral", onDark, small }: { label: string; tone?: "neutral" | "accent" | "premium" | "danger"; onDark?: boolean; small?: boolean }) {
   const { colors, name } = useExperienceTheme();
   const c = onDark && tone !== "danger" ? "#FFFFFF" : tone === "accent" ? colors.textPrimary : tone === "premium" ? colors.premium : tone === "danger" ? colors.danger : colors.textSecondary;
@@ -437,28 +473,30 @@ export function Chip({ label, tone = "neutral", onDark, small }: { label: string
 }
 
 export function Loading({ label = "Loading" }: { label?: string }) {
-  const { colors } = useExperienceTheme();
-  return (
-    <Ambient>
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: space.line }}>
-        <ActivityIndicator color={colors.accent} />
-        <T role="label" tone="tertiary">{label}</T>
-      </View>
-    </Ambient>
-  );
+  const { colors, name } = useExperienceTheme();
+  return <Ambient><View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}><View style={{ width: "100%", maxWidth: 340, padding: 28, borderRadius: 28, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: name === "light" ? "#F7F9FC" : "#233143", gap: 24 }}>
+    <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}><ActivityIndicator color={colors.textPrimary} /><T role="bodyStrong">{label}</T></View>
+    <View style={{ gap: 10 }}><View style={{ height: 8, borderRadius: 4, width: "82%", backgroundColor: colors.borderSubtle }} /><View style={{ height: 8, borderRadius: 4, width: "56%", backgroundColor: colors.borderSubtle }} /></View>
+  </View></View></Ambient>;
 }
 
-/** Empty / failed / offline states share one quiet pane. */
-export function Notice({ title, body, action }: { title: string; body?: string; action?: ReactNode }) {
-  return (
-    <Pane pad="inset">
-      <View style={{ gap: space.breath }}>
-        <T role="heading">{title}</T>
-        {body ? <T tone="secondary">{body}</T> : null}
-        {action ? <View style={{ marginTop: space.breath }}>{action}</View> : null}
-      </View>
-    </Pane>
-  );
+/** Explicit facts only. The caller owns wording and grouping; never split unknown text. */
+export function InformationFacts({ items }: { items: { label?: string; text: string }[] }) {
+  return <View style={{ gap: 12 }}>{items.map((item, i) => (
+    <View key={i} style={{ minWidth: 0, gap: 3 }}>
+      {item.label ? <T role="caption" tone="tertiary" style={{ fontSize: 10, fontWeight: "600", letterSpacing: .6 }}>{item.label.toUpperCase()}</T> : null}
+      <T tone="secondary" style={{ fontSize: 13, lineHeight: 20 }}>{item.text}</T>
+    </View>
+  ))}</View>;
+}
+
+/** Compact status or retry panel. The route owns every action and its meaning. */
+export function Notice({ title, body, facts, action }: { title: string; body?: string | undefined; facts?: { label?: string; text: string }[] | undefined; action?: ReactNode }) {
+  const { colors, name } = useExperienceTheme();
+  return <Pane pad="inset"><View style={{ gap: 18 }}><View style={{ flexDirection: "row", alignItems: "flex-start", gap: 14 }}>
+    <View style={{ width: 4, minHeight: 42, alignSelf: "stretch", borderRadius: 4, backgroundColor: name === "light" ? "#A9B9CD" : "#758CA9" }} />
+    <View style={{ flex: 1, minWidth: 0, gap: 8 }}><T role="heading">{title}</T>{facts?.length ? <InformationFacts items={facts} /> : body ? <T tone="secondary" style={{ lineHeight: 22 }}>{body}</T> : null}</View>
+  </View>{action ? <View style={{ paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.borderSubtle }}>{action}</View> : null}</View></Pane>;
 }
 
 /** Themed text input on the glass kit: label above, data-safe styling. */
@@ -514,10 +552,10 @@ export function Field({
             ...(Platform.OS === "web" ? material(name,"field",{reduce}).web as object : {}),
             borderWidth: 1,
             borderColor: error ? colors.danger : colors.borderSubtle,
-            borderRadius: radius.chip,
-            paddingHorizontal: space.line,
+            borderRadius: 16,
+            paddingHorizontal: 16,
             paddingVertical: 12,
-            minHeight: multiline ? 96 : 44,
+            minHeight: multiline ? 112 : 52,
             textAlignVertical: multiline ? "top" : "auto",
           },
         ]}

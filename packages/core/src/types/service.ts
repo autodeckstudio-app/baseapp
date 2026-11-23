@@ -42,6 +42,8 @@ export interface VehicleCategoryPricing {
 export type WarrantyDurationUnit = "days" | "months" | "years" | "lifetime";
 
 export interface CustomerMenuPresentation {
+  /** Absent preserves legacy online eligibility. Explicit non-online entries cannot create a slot. */
+  bookingMode?: 'walk_in'|'coordination';
   home: 'paint'|'detailing'|'washing'|'garage'|'modifications';
   family: string;
   priceMode: 'fixed'|'from'|'quote'|'inspection';

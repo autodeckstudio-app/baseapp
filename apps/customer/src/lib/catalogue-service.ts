@@ -43,7 +43,11 @@ const store = (): { getItem(k: string): string | null; setItem(k: string, v: str
 export function peekCatalogue(): Service[] | null {
   try {
     const raw = store()?.getItem(KEY);
-    if(!raw)return null;const cached=JSON.parse(raw)as Service[]|{services:Service[];references?:BrandEnquiry[]};setCatalogueReferences(Array.isArray(cached)?undefined:cached.references);return(Array.isArray(cached)?cached:cached.services).filter(previewEligible).map(customerRatingPrivacy);
+    if(!raw)return null;
+    const cached=JSON.parse(raw)as Service[]|{services:Service[];references?:BrandEnquiry[]};
+    // Device references can belong to an older publication. Only a fresh response
+    // may populate the current reference registry; cached services may paint while loading.
+    return(Array.isArray(cached)?cached:cached.services).filter(previewEligible).map(customerRatingPrivacy);
   } catch { return null; }
 }
 
@@ -138,13 +142,14 @@ export { applyBrandWarranty } from "./warranty-labels";
 export async function calculateServicePrice(
   serviceId: string,
   vehicleCategory: VehicleCategory,
-): Promise<{ breakdown: PriceBreakdown; snapshot: PriceSnapshot }> {
+  extraServiceIds:string[]=[],
+): Promise<{ breakdown: PriceBreakdown; snapshot: PriceSnapshot;durationMinutes?:number }> {
   const fn = httpsCallable<
-    { serviceId: string; vehicleCategory: VehicleCategory },
-    { breakdown: PriceBreakdown; snapshot: PriceSnapshot }
+    { serviceId: string; vehicleCategory: VehicleCategory;extraServiceIds?:string[] },
+    { breakdown: PriceBreakdown; snapshot: PriceSnapshot;durationMinutes?:number }
   >(functions, "calculateServicePrice");
-  const result = await fn({ serviceId, vehicleCategory });
-  priceCache.set(auth.currentUser?.uid ?? null, serviceId, vehicleCategory, result.data.breakdown.total);
+  const result = await fn({ serviceId, vehicleCategory,...(extraServiceIds.length?{extraServiceIds}:{}) });
+  if(!extraServiceIds.length)priceCache.set(auth.currentUser?.uid ?? null, serviceId, vehicleCategory, result.data.breakdown.total);
   return result.data;
 }
 

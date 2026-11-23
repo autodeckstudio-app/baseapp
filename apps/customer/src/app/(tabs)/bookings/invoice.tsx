@@ -1,3 +1,4 @@
+import {useExperienceTheme} from "@autodeck/ui/native";
 import { useState, useEffect } from "react";
 import { Linking, Platform, View, useWindowDimensions } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -12,17 +13,12 @@ import { buildInvoiceHtml, gstSplit, printInvoiceHtml, serviceLabel } from "../.
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { db } from "../../../lib/firebase";
 import { STUDIO_INFO } from "../../../lib/studio-info";
-import { Button, Chip, Pane, Loading, Notice, Screen, T, rupees } from "../../../ui/kit";
+import { Button, Chip, Pane, Loading, Notice, PageHeader,Screen, T, rupees } from "../../../ui/kit";
 import { amountInWords } from "../../../lib/amount-words";
 import { InvoiceExportAction } from "../../../ui/InvoiceExportAction";
 import { HorizonInvoice } from "../../../ui/HorizonInvoice";
 
 // Ivory invoice palette: off-white paper, one orange accent, thin separators.
-const IVORY = "#121413";
-const INK = "#f3f1eb";
-const INK_SOFT = "#aaada5";
-const ACCENT = "#EC8638";
-const HAIRLINE = "#333731";
 
 
 function formatDate(iso: string): string {
@@ -41,6 +37,8 @@ export default function InvoiceScreen() {
     customerId: string;
   }>();
   const router = useRouter();
+  const {colors,name}=useExperienceTheme();
+  const IVORY=name==="light"?"#F5F8FC":"#202F42",INK=colors.textPrimary,INK_SOFT=colors.textSecondary,ACCENT=colors.textPrimary,HAIRLINE=colors.borderSubtle;
   const originBack = returnTo === "home" ? () => router.navigate("/(tabs)") : undefined;
   const auth = useAuth();
   const compact=useWindowDimensions().width<600;
@@ -114,7 +112,7 @@ export default function InvoiceScreen() {
 
   const docInput = { invoice, catalogue, studio: { name: STUDIO_INFO.name, address: STUDIO_INFO.address, phone: STUDIO_INFO.phone }, customer, vehicle };
   if (Platform.OS === "web") return (
-    <Screen onBack={originBack}>
+    <Screen onBack={originBack} header={<PageHeader title="Invoice"/>}>
       <Pane pad="inset">
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
           <View style={{ gap: 2 }}>
@@ -139,8 +137,9 @@ export default function InvoiceScreen() {
   );
 
   return (
-    <Screen onBack={originBack}>
-      <View style={{ backgroundColor: IVORY, borderRadius: 16, padding: compact?16:28, gap: 20, width: "100%", maxWidth: 720, alignSelf: "center" }}>
+    <Screen onBack={originBack} header={<PageHeader title="Invoice"/>}>
+      <Pane pad="inset"><View style={{gap:10}}><T role="caption" tone="secondary">{invoice.invoiceNumber}</T><T role="title">{rupees(invoice.total)}</T><View style={{alignSelf:"flex-start"}}><Chip label={statusLabel} tone={invoice.status === "paid" ? "premium" : "neutral"}/></View></View></Pane>
+      <View style={{ backgroundColor: IVORY, borderRadius: 24, padding: compact?20:28, gap: 20, width: "100%", maxWidth: 720, alignSelf: "center" }}>
         {/* Header: brand left, invoice identity right */}
         <View style={{ flexDirection: "column", alignItems: "flex-start", gap: 16 }}>
           <View style={{ gap: 4 }}>

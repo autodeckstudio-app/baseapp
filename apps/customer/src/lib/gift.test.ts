@@ -7,7 +7,7 @@ describe("gift client", () => {
   it("is live (owner said go live, 19 Oct 10:00 PM; server deployed 6:35 PM)", () => expect(GIFT_LIVE).toBe(true));
   it("never sends a gift code while dark, and never computes a price", () => {
     const c = read("app/(tabs)/book/confirm.tsx");
-    expect(c).toContain("GIFT_LIVE ? takePendingGiftCode()");
+    expect(c).toContain("GIFT_LIVE ? takePendingGiftCode(params.serviceId)");
     expect(read("lib/gift-service.ts")).not.toMatch(/amount\s*:\s*\d/);
   });
   it("one combined friends and gifts entry opens the shared page", () => expect(read("lib/drawer-items.ts")).toContain("friends-gifts"));
@@ -20,17 +20,25 @@ describe("gift client", () => {
     const g = read("ui/GiftBuy.tsx");
     const pay = g.indexOf("Pay ${rupees(amountPaise)}");
     expect(pay).toBeGreaterThan(-1);
-    expect(g.indexOf("GIFT_TERMS.validity")).toBeGreaterThan(-1);
-    expect(g.indexOf("GIFT_TERMS.nonRefundable")).toBeGreaterThan(-1);
-    expect(g.indexOf("GIFT_TERMS.validity")).toBeLessThan(pay);
-    expect(g.indexOf("GIFT_TERMS.nonRefundable")).toBeLessThan(pay);
+    expect(g.indexOf("days from purchase · No extensions")).toBeGreaterThan(-1);
+    expect(g.indexOf("<GiftRestrictions")).toBeGreaterThan(-1);
+    expect(g.indexOf("days from purchase")).toBeLessThan(pay);
+    expect(g.indexOf("<GiftRestrictions")).toBeLessThan(pay);
+    const r = read("ui/GiftRestrictions.tsx");
+    expect(r).not.toContain("After payment");
+    expect(r).not.toContain("Chip");
+    expect(r).toContain("Non-refundable");
+    expect(r).toContain("No cash exchange");
+    expect(r).toContain("Non-transferable");
     const screen = read("app/(tabs)/gifts.tsx");
     expect(screen).toContain("amountPaise={offer.amountPaise}");
     expect(screen).not.toMatch(/cancelMyGift|Tap an unused gift to cancel/);
   });
   it("the card and redeem screen show the validity line", () => {
-    expect(read("ui/GiftCard.tsx")).toContain("giftValidityLine(expiresAt, now)");
-    expect(read("ui/GiftCard.tsx")).toContain("GIFT_TERMS.nonRefundable");
+    expect(read("ui/GiftCard.tsx")).toContain("Use by ${");
+    expect(read("ui/GiftCard.tsx")).toContain('"days"} left');
+    expect(read("ui/GiftCard.tsx")).toContain("Expired");
+    expect(read("ui/GiftCard.tsx")).toContain("<GiftRestrictions");
     expect(read("app/(tabs)/gifts.tsx")).toContain("giftValidityLine(claimed.expiresAt, now)");
   });
   it("the share message carries the 60-day validity", () => {
@@ -43,3 +51,5 @@ describe("gift client", () => {
     expect(m).toMatch(/Asha/); expect(m).toMatch(/AutoDeck/);
   });
 });
+
+it("a claimed code applies only to its purchased service",()=>{setPendingGiftCode("GWABCD2345","glass");expect(takePendingGiftCode("wash")).toBeNull();expect(takePendingGiftCode("glass")).toBe("GWABCD2345");setPendingGiftCode(null);});

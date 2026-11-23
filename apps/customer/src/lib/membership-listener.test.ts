@@ -52,3 +52,15 @@ it("historical identity preflight failure surfaces review error instead of empty
   expect(rows).not.toHaveBeenCalled();
   expect(h.cb).toBeNull();
 });
+
+it("preserves live refresh counters through the actual listener projection and subsequent record/restore snapshots", async () => {
+  const result = vi.fn();
+  const stop = listenToMyMemberships("t", "canonical", result, vi.fn());
+  await Promise.resolve();
+  const row = { id: "platinum", status: "active", endDate: "2099-01-01", refreshesTotal: 1, refreshesUsed: 0 };
+  for (const used of [0, 1, 0]) {
+    h.cb({ docs: [{ data: () => ({ ...row, refreshesUsed: used }) }] });
+    expect(result.mock.lastCall![0][0]).toMatchObject({ refreshesTotal: 1, refreshesUsed: used });
+  }
+  stop();
+});

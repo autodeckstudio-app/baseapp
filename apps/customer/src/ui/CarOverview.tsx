@@ -6,16 +6,14 @@ import { raised } from "../lib/raised";
 
 export function TabPills<K extends string>({ tabs, value, onChange }: { tabs: Array<{ key: K; label: string }>; value: K; onChange: (k: K) => void }) {
   const { colors } = useExperienceTheme();
-  // One line always: text tabs with a thin underline, spread across the width.
+  const { name } = useExperienceTheme();
   return (
-    <View style={{ flexDirection: "row", flexWrap: "nowrap", justifyContent: "space-between", alignItems: "flex-end", borderBottomWidth: 1, borderBottomColor: colors.borderSubtle }}>
+    <View style={{ flexDirection: "row", flexWrap: "nowrap", padding: 5, gap: 4, borderRadius: 19, backgroundColor: name === "light" ? "#E3E9F1" : "#202D3D", borderWidth: 1, borderColor: colors.borderSubtle }}>
       {tabs.map((t) => {
         const on = t.key === value;
-        return (
-          <Pressable key={t.key} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(t.key)} style={({ pressed }) => ({ paddingTop: 8, paddingBottom: 8, flexShrink: 1, opacity: pressed ? 0.8 : 1, borderBottomWidth: 2, borderBottomColor: on ? "#EC8638" : "transparent", marginBottom: -1 })}>
-            <Text numberOfLines={1} style={{ color: on ? colors.textPrimary : colors.textSecondary, fontSize: 13, fontWeight: on ? "800" : "600" }}>{t.label}</Text>
-          </Pressable>
-        );
+        return <Pressable key={t.key} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(t.key)} style={({ pressed }) => ({ flex: 1, minWidth: 0, minHeight: 44, justifyContent: "center", alignItems: "center", borderRadius: 14, paddingHorizontal: 4, opacity: pressed ? 0.8 : 1, backgroundColor: on ? (name === "light" ? "#FFFFFF" : "#3B4B60") : "transparent", ...(on ? { shadowColor: "#172436", shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } } : {}) })}>
+          <Text numberOfLines={1} style={{ color: on ? colors.textPrimary : colors.textSecondary, fontSize: tabs.length>3?11:13, fontWeight: on ? "800" : "600" }}>{t.label}</Text>
+        </Pressable>;
       })}
     </View>
   );

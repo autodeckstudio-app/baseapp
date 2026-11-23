@@ -31,17 +31,9 @@ export function LiveJobCard({ status, visit, progress, slotStarted = false, read
           <Kicker tone="accent">Studio status</Kicker>
           <T role="heading">{progress?.headline??stage.headline}</T>
           <T role="body" tone="secondary">{progress?.line??stage.line}</T>
-          {status!=="READY_FOR_DELIVERY"||progress?<><View accessibilityRole="progressbar" accessibilityLabel={`Step ${Math.max(stage.index + 1, 0)} of ${STAGES.length}`} style={{ flexDirection: "row", gap: 6 }}>
-            {STAGES.map((s, i) => (
-              <View key={s} style={{ flex: 1, height: 6, borderRadius: 4, backgroundColor: i <= stage.index ? colors.textPrimary : "rgba(255,255,255,0.14)" }} />
-            ))}
-          </View>
-          <View style={{ flexDirection: "row", gap: 6 }}>
-            {STAGES.map((s, i) => (
-              <View key={s} style={{flex:1,minWidth:0}}><T role="caption" style={{textAlign:"center"}} tone={i === stage.index ? "primary" : "tertiary"}>{s}</T></View>
-            ))}
-          </View>
-          </>:null}
+          {status!=="READY_FOR_DELIVERY"||progress?<View accessibilityRole="progressbar" accessibilityLabel={`Step ${Math.max(stage.index + 1, 0)} of ${STAGES.length}`} style={{gap:0}}>
+            {STAGES.map((s,i)=><View key={s} style={{flexDirection:"row",gap:16,minHeight:60}}><View style={{width:24,alignItems:"center"}}><View style={{width:22,height:22,borderRadius:12,borderWidth:i<=stage.index?0:1,borderColor:colors.borderSubtle,backgroundColor:i<=stage.index?colors.textPrimary:"transparent",alignItems:"center",justifyContent:"center"}}>{i<=stage.index?<View style={{width:6,height:6,borderRadius:4,backgroundColor:colors.surface}}/>:null}</View>{i<STAGES.length-1?<View style={{width:2,flex:1,backgroundColor:i<stage.index?colors.textPrimary:colors.borderSubtle}}/>:null}</View><View style={{flex:1,minWidth:0,paddingBottom:20}}><T role="bodyStrong" tone={i===stage.index?"primary":"secondary"}>{s}</T>{i===stage.index?<T role="caption" tone="tertiary">Current stage</T>:null}</View></View>)}
+          </View>:null}
           {progress?.services.map(s=><View key={s.id} style={{gap:3}}><T role="body">{s.name}</T><T role="caption" tone="secondary">{s.status}</T></View>)}
           {readyText && stage.index < 3 ? <T role="bodyStrong">Expected ready {readyText}</T> : null}
         </View>

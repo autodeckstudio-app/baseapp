@@ -1,14 +1,16 @@
+import {MembershipPlanShowcase} from "../../../ui/MembershipPlanShowcase";
+import { JourneySteps } from "../../../ui/JourneySteps";
 import {MembershipActivationTerms,MembershipUpgradeTerms} from "../../../ui/MembershipTerms";
 import { useReduceMotion } from "../../../lib/reduce-motion";
 import { useState, useEffect, useRef } from "react";
-import { View, Modal } from "react-native";
+import { View, Modal, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { COLLECTIONS } from "@autodeck/database";
 import { pickupsLostOnUpgrade, upgradePaysFullPrice, upgradePricePaise, washesLostOnUpgrade, type Membership, type MembershipPlan } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
-import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { Button, InformationFacts, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees , ButtonRow } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { purchaseMembership, upgradeMembership, generateIdempotencyKey } from "../../../lib/membership-service";
 import { listenToMyMemberships } from "../../../lib/home-service";
@@ -32,12 +34,13 @@ export default function PurchaseMembershipScreen() {
   const [askUpgrade, setAskUpgrade] = useState(false);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
+  const [paymentAction,setPaymentAction]=useState<"razorpay_payment_link"|"cash"|null>(null);
   const [error, setError] = useState<string | null>(null);
   const [payOutcome, setPayOutcome] = useState<OnlinePayOutcome | null>(null);
   const [done, setDone] = useState<"online" | "studio" | null>(null);
   const idempotencyKey=useRef(generateIdempotencyKey());const purchaseBusy=useRef(false),generation=useRef(0);
   const scopeKey=JSON.stringify([planId,auth.status,auth.status==='ready'?auth.customerDocId:null,auth.status==='ready'?auth.user.uid:null,auth.status==='ready'?auth.claims.tenantId:null]);const scopeRef=useRef(scopeKey);scopeRef.current=scopeKey;
-  useEffect(()=>{generation.current++;purchaseBusy.current=false;idempotencyKey.current=generateIdempotencyKey();setPurchasing(false);setDone(null);setPayOutcome(null);setError(null);setAskUpgrade(false);return()=>{generation.current++}},[scopeKey]);
+  useEffect(()=>{generation.current++;purchaseBusy.current=false;idempotencyKey.current=generateIdempotencyKey();setPurchasing(false);setPaymentAction(null);setDone(null);setPayOutcome(null);setError(null);setAskUpgrade(false);return()=>{generation.current++}},[scopeKey]);
 
   const uid = auth.status === "ready" ? auth.customerDocId : null;
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
@@ -86,8 +89,7 @@ export default function PurchaseMembershipScreen() {
     if (!plan || purchasing) return;
     if(purchaseBusy.current)return;
     const scope=scopeKey,gen=generation.current;const current=()=>scopeRef.current===scope&&generation.current===gen;purchaseBusy.current=true;
-    setAskUpgrade(false);
-    setPurchasing(true);
+    setPaymentAction(method);setPurchasing(true);
     setError(null);
     try {
       const result = await upgradeMembership(plan.id, method, idempotencyKey.current);
@@ -101,7 +103,7 @@ export default function PurchaseMembershipScreen() {
     } catch (err) {
       if(current())setError(err instanceof Error ? err.message : "Please try again.");
     } finally {
-      if(current()){purchaseBusy.current=false;setPurchasing(false);}
+      if(current()){purchaseBusy.current=false;setPurchasing(false);setPaymentAction(null);}
     }
   }
 
@@ -109,7 +111,7 @@ export default function PurchaseMembershipScreen() {
     if (!plan || purchasing) return;
     if(purchaseBusy.current)return;
     const scope=scopeKey,gen=generation.current;const current=()=>scopeRef.current===scope&&generation.current===gen;purchaseBusy.current=true;
-    setPurchasing(true);
+    setPaymentAction(method);setPurchasing(true);
     setError(null);
     try {
       // A pending upgrade is paid again through the same call (the server replays it, never makes a second one).
@@ -124,7 +126,7 @@ export default function PurchaseMembershipScreen() {
     } catch (err) {
       if(current())setError(err instanceof Error ? err.message : "Please try again.");
     } finally {
-      if(current()){purchaseBusy.current=false;setPurchasing(false);}
+      if(current()){purchaseBusy.current=false;setPurchasing(false);setPaymentAction(null);}
     }
   }
 
@@ -144,15 +146,22 @@ export default function PurchaseMembershipScreen() {
         </Pane>
         <MembershipUpgradeTerms tier={active.tier} paysFullPrice={upgradePaysFullPrice(active)}/>
         {error ? <Notice title="Upgrade failed" body={error} /> : null}
-        <Button label="Upgrade" busy={purchasing} onPress={() => setAskUpgrade(true)} />
-        <Modal visible={askUpgrade} transparent animationType={reduce ? "none" : "fade"} onRequestClose={() => setAskUpgrade(false)}>
+        <Button label="Upgrade" disabled={purchasing} onPress={() => setAskUpgrade(true)} />
+        <Modal visible={askUpgrade} transparent animationType={reduce ? "none" : "fade"} onRequestClose={() => {if(!purchasing)setAskUpgrade(false)}}>
           <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 24 }}>
-            <View style={{ width: "100%", maxWidth: 420, borderRadius: 24, padding: 20, gap: 14, backgroundColor: colors.surface }}>
+            <View style={{ width: "100%", maxWidth: 420, maxHeight: "90%", borderRadius: 28, overflow: "hidden", borderWidth:1,borderColor:colors.borderSubtle,backgroundColor: colors.surface }}>
+              <ScrollView contentContainerStyle={{padding:24,gap:20}}>
               <T role="heading">{copy.title}</T>
-              <T tone="secondary">{copy.body}</T>
-              <Button label={copy.confirm} onPress={() => void confirmUpgrade("razorpay_payment_link")} />
-              <Button kind="quiet" label="Pay at studio instead" onPress={() => void confirmUpgrade("cash")} />
-              <Button kind="quiet" label={copy.cancel} onPress={() => setAskUpgrade(false)} />
+              {error?<T role="caption" tone="danger">{error}</T>:null}
+              <InformationFacts items={copy.facts} />
+              <View style={{gap:8}}>
+                <View style={{flexDirection:"row",gap:8}}>
+                  <View style={{flex:1,minWidth:0}}><Button style={{alignSelf:"stretch",paddingHorizontal:2,gap:2,marginTop:0,marginBottom:0}} label="Pay online" disabled={purchasing} busy={purchasing&&paymentAction==="razorpay_payment_link"} onPress={() => void confirmUpgrade("razorpay_payment_link")} /></View>
+                  <View style={{flex:1,minWidth:0}}><Button style={{alignSelf:"stretch",paddingHorizontal:2,gap:2,marginTop:0,marginBottom:0}} kind="quiet" label="At studio" disabled={purchasing} busy={purchasing&&paymentAction==="cash"} onPress={() => void confirmUpgrade("cash")} /></View>
+                </View>
+                <Button style={{alignSelf:"flex-end",marginTop:0,marginBottom:0}} kind="quiet" label={copy.cancel} disabled={purchasing} onPress={() => setAskUpgrade(false)} />
+              </View>
+              </ScrollView>
             </View>
           </View>
         </Modal>
@@ -179,15 +188,16 @@ export default function PurchaseMembershipScreen() {
       <Screen>
         <Notice
           title={isStudio ? "Pay at the studio to activate" : payCopy.title}
-          body={
-            isStudio
-              ? "Request saved. Pay at the studio front desk - benefits unlock once payment is confirmed. Unpaid requests are cancelled automatically."
-              : payCopy.body
-          }
+          body={isStudio ? undefined : payCopy.body}
+          facts={isStudio ? [
+            { label: "Request", text: "Request saved." },
+            { label: "Activation", text: "Pay at the studio front desk - benefits unlock once payment is confirmed." },
+            { label: "Unpaid requests", text: "Unpaid requests are cancelled automatically." },
+          ] : payCopy.facts}
           action={
             <View style={{ gap: space.hair }}>
-              {!isStudio ? <Button label="Pay online" busy={purchasing} onPress={() => void handlePurchase("razorpay_payment_link")} /> : null}
-              <Button label="View status" kind="quiet" onPress={() => router.replace("/(tabs)/membership")} />
+              <ButtonRow>{!isStudio ? <Button label="Pay online" busy={purchasing&&paymentAction==="razorpay_payment_link"} disabled={purchasing} onPress={() => void handlePurchase("razorpay_payment_link")} /> : null}
+              <Button label="View status" kind="quiet" onPress={() => router.replace("/(tabs)/membership")} /></ButtonRow>
               {error ? <T role="caption" tone="tertiary">{error}</T> : null}
             </View>
           }
@@ -205,25 +215,16 @@ export default function PurchaseMembershipScreen() {
         </View>
       }
     >
-      <Pane pad="gap">
-        <Row title="Included washes" detail={`${plan.includedWashes} / month`} />
-        {pickupsLine(plan.freePickups) ? <Row title="Free pickups" detail={`${plan.freePickups} / month`} /> : null}
-        {plan.prioritySlot ? <Row title="Priority slot" detail="Included" /> : null}
-        {plan.discountPercent > 0 ? <Row title="Discount" detail={`${plan.discountPercent}%`} /> : null}
-        <Row title="Price" detail={`${rupees(plan.priceInPaise)} / month`} last />
-      </Pane>
+      <JourneySteps labels={["Plan details", "Payment"]} current={0}/>
+      <MembershipPlanShowcase price={plan.priceInPaise} washes={plan.includedWashes} pickups={pickupsLine(plan.freePickups)?plan.freePickups:undefined} priority={plan.prioritySlot} discount={plan.discountPercent}/>
 
-      <T role="caption" tone="tertiary">
-        {[carryOverLine(), plan.discountPercent > 0 ? "Non-wash services receive the discount automatically at booking." : ""].filter(Boolean).join(" ")}
-      </T>
-
-      <MembershipActivationTerms/>
+      <MembershipActivationTerms rollover={carryOverLine()} discounted={plan.discountPercent>0}/>
 
       {error ? <Notice title="Purchase failed" body={error} /> : null}
 
-      <View style={{ gap: space.breath }}>
-        <Button label="Pay online" busy={purchasing} onPress={() => void handlePurchase("razorpay_payment_link")} />
-        <Button label="Pay at studio" kind="quiet" busy={purchasing} onPress={() => void handlePurchase("cash")} />
+      <View style={{ flexDirection:"row",gap:8,alignItems:"stretch" }}>
+        <View style={{flex:1,minWidth:0}}><Button style={{alignSelf:"stretch",paddingHorizontal:4,gap:4}} label="Pay online" busy={purchasing&&paymentAction==="razorpay_payment_link"} disabled={purchasing} onPress={() => void handlePurchase("razorpay_payment_link")} /></View>
+        <View style={{flex:1,minWidth:0}}><Button style={{alignSelf:"stretch",paddingHorizontal:4,gap:4}} label="Pay at studio" busy={purchasing&&paymentAction==="cash"} disabled={purchasing} onPress={() => void handlePurchase("cash")} /></View>
       </View>
     </Screen>
   );

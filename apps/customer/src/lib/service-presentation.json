@@ -1,0 +1,1651 @@
+[
+  {
+    "number": 1,
+    "id": "svc-wash-headlight-buffing",
+    "home": "detailing",
+    "family": "Headlight restoration",
+    "current_title": "Headlight Restoration",
+    "proposed_title": "Headlight Surface Restoration",
+    "short_description": "Headlight surface buffing to improve the surface finish.",
+    "price": "\u20b91,000",
+    "source_description": "Headlight surface buffing\nImproves surface finish\nNo cracked-lens or internal moisture repair",
+    "missing_scope": "Product, exact coverage and treatment life not listed.",
+    "context": "",
+    "estimated_minutes": 120,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Surface buffing to improve the finish. Not cracked-lens or moisture repair.",
+    "offer_points": [
+      "Headlight surface buffing",
+      "Improves surface finish"
+    ],
+    "scope_notes": [
+      "Cracked lenses and internal moisture require separate repair."
+    ]
+  },
+  {
+    "number": 2,
+    "id": "menu-coat-glass",
+    "home": "detailing",
+    "family": "Glass",
+    "current_title": "Glass Coating",
+    "proposed_title": "AD Standard Glass Coating",
+    "short_description": "Protective treatment for glass surfaces.",
+    "price": "\u20b93,000",
+    "source_description": "Glass coating\nProtective glass finish",
+    "missing_scope": "Product, exact coverage and treatment life not listed.",
+    "context": "",
+    "estimated_minutes": 120,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Protective treatment for glass surfaces.",
+    "offer_points": [
+      "Glass coating",
+      "Protective glass finish"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 3,
+    "id": "svc-brand-kovalent-glass",
+    "home": "detailing",
+    "family": "Glass",
+    "current_title": "Kovalent Glass",
+    "proposed_title": "Kovalent Glass Coating",
+    "short_description": "Water-repellent glass protection for easier cleaning.",
+    "price": "\u20b94,500",
+    "source_description": "Water-repellent glass coating\nEasier glass cleaning\nDoes not replace wiper use",
+    "missing_scope": "Exact coverage and treatment life not listed.",
+    "context": "",
+    "estimated_minutes": 120,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Water-repellent glass protection for easier cleaning. Wipers are still needed.",
+    "offer_points": [
+      "Water-repellent glass coating",
+      "Easier glass cleaning"
+    ],
+    "scope_notes": [
+      "Continue using the wipers as conditions require."
+    ]
+  },
+  {
+    "number": 4,
+    "id": "svc_ef4a584172be60f4e2a3a69fbc8b21ab",
+    "home": "detailing",
+    "family": "Glass",
+    "current_title": "Koch Chemie Glass Coating",
+    "proposed_title": "Koch Chemie Glass Sealant",
+    "short_description": "Exterior glass preparation and a water-repellent sealant.",
+    "price": "\u20b95,500",
+    "source_description": "Glass preparation + water-repellent sealant\nExterior glass only\nKeep dry until fully hardened",
+    "missing_scope": "Exact coverage and treatment life not listed.",
+    "context": "",
+    "estimated_minutes": 120,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Exterior glass preparation and a water-repellent sealant.",
+    "offer_points": [
+      "Glass preparation + water-repellent sealant",
+      "Exterior glass only",
+      "Keep dry until fully hardened"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 5,
+    "id": "menu-coat-wheels",
+    "home": "detailing",
+    "family": "Wheels & trim",
+    "current_title": "Wheels",
+    "proposed_title": "Ceramic-style Wheel Coating",
+    "short_description": "Ceramic-style liquid/polish coating for wheels.",
+    "price": "\u20b92,000",
+    "source_description": "Protective wheel coating\nNot wheel repair or refinishing",
+    "missing_scope": "Exact product, preparation, covered surfaces and durability not supplied.",
+    "context": "TOLD: Meet identified this as ceramic-style liquid/polish coating.",
+    "estimated_minutes": 120,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Liquid/polish coating for wheels. Not repair or refinishing.",
+    "offer_points": [
+      "Ceramic-style liquid/polish coating for wheels"
+    ],
+    "scope_notes": [
+      "Wheel repairs and refinishing are separate services."
+    ]
+  },
+  {
+    "number": 6,
+    "id": "svc_c2f74071fe48615845d9b26f6be63d22",
+    "home": "detailing",
+    "family": "Wheels & trim",
+    "current_title": "Wheels Spray",
+    "proposed_title": "Spray-applied Wheel Protection",
+    "short_description": "PPS-like spray-applied protection for wheels.",
+    "price": "\u20b94,000",
+    "source_description": "Spray-applied wheel protection\nNot wheel repair or refinishing",
+    "missing_scope": "Exact product, preparation, covered surfaces and durability not supplied.",
+    "context": "TOLD: Meet identified this as spray-applied, PPS-like protection.",
+    "estimated_minutes": 120,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "PPS-like spray protection for wheels. Not repair or refinishing.",
+    "offer_points": [
+      "PPS-like spray-applied wheel protection"
+    ],
+    "scope_notes": [
+      "Wheel repairs and refinishing are separate services."
+    ]
+  },
+  {
+    "number": 7,
+    "id": "svc_0d5b81d74fcde91b5cac5f2d44638ba9",
+    "home": "detailing",
+    "family": "Tyres & rubber",
+    "current_title": "Tyres & Rubber",
+    "proposed_title": "Tyre Sidewall Dressing",
+    "short_description": "Refreshes the appearance of tyre sidewalls.",
+    "price": "\u20b91,000",
+    "source_description": "Tyre-sidewall dressing\nRefreshes tyre appearance",
+    "missing_scope": "Product, exact coverage and treatment life not listed.",
+    "context": "",
+    "estimated_minutes": 120,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Refreshes the appearance of tyre sidewalls.",
+    "offer_points": [
+      "Tyre-sidewall dressing",
+      "Refreshes tyre appearance"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 8,
+    "id": "menu-coat-fabric",
+    "home": "detailing",
+    "family": "Fabric",
+    "current_title": "Fabric",
+    "proposed_title": "AD Standard",
+    "short_description": "Protective treatment for fabric surfaces.",
+    "price": "\u20b92,500",
+    "source_description": "Fabric protection treatment\nNot interior deep cleaning",
+    "missing_scope": "Product, exact coverage and treatment life not listed.",
+    "context": "Fabric selected: keep AD Standard exactly as requested; use AD Standard Fabric Protection in search/cart.",
+    "estimated_minutes": 120,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Fabric protection treatment. Not interior deep cleaning.",
+    "offer_points": [
+      "Fabric protection treatment"
+    ],
+    "scope_notes": [
+      "Interior deep cleaning is a separate service."
+    ]
+  },
+  {
+    "number": 9,
+    "id": "svc-brand-kovalent-fabric",
+    "home": "detailing",
+    "family": "Fabric",
+    "current_title": "Kovalent Fabric",
+    "proposed_title": "Kovalent Fabric Protection",
+    "short_description": "Breathable fabric protection that helps resist spill absorption.",
+    "price": "\u20b94,000",
+    "source_description": "Water-repellent fabric protection\nHelps resist spill absorption\nBreathable finish; not waterproof",
+    "missing_scope": "Exact coverage and treatment life not listed.",
+    "context": "",
+    "estimated_minutes": 120,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Helps resist spill absorption with a breathable finish. Not waterproof.",
+    "offer_points": [
+      "Water-repellent fabric protection",
+      "Helps resist spill absorption",
+      "Breathable finish"
+    ],
+    "scope_notes": [
+      "Spill resistance has limits; clean spills promptly. This finish is not waterproof."
+    ]
+  },
+  {
+    "number": 10,
+    "id": "menu-coat-leather",
+    "home": "detailing",
+    "family": "Leather",
+    "current_title": "Leather",
+    "proposed_title": "AD Standard Leather Protection",
+    "short_description": "Protective coating for leather surfaces.",
+    "price": "\u20b94,000",
+    "source_description": "Protective leather coating\nNot recolouring or crack repair",
+    "missing_scope": "Product, exact coverage and treatment life not listed.",
+    "context": "",
+    "estimated_minutes": 120,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Protective leather coating. Not recolouring or crack repair.",
+    "offer_points": [
+      "Protective leather coating"
+    ],
+    "scope_notes": [
+      "Recolouring and crack repairs are separate services."
+    ]
+  },
+  {
+    "number": 11,
+    "id": "svc_1bb3798064cbe66eb1cbc3ca0c0f5ab3",
+    "home": "detailing",
+    "family": "Leather",
+    "current_title": "Kovalent Restore - leather",
+    "proposed_title": "Kovalent Restore Leather Protection",
+    "short_description": "Water-repellent protection for leather and vinyl, with a natural matte finish.",
+    "price": "\u20b95,000",
+    "source_description": "Leather/vinyl protection\nNatural matte finish\nWater-repellent surface",
+    "missing_scope": "Exact coverage and treatment life not listed.",
+    "context": "",
+    "estimated_minutes": 120,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Water-repellent protection for leather and vinyl, with a natural matte finish.",
+    "offer_points": [
+      "Leather/vinyl protection",
+      "Natural matte finish",
+      "Water-repellent surface"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 12,
+    "id": "svc-coating-teflon",
+    "home": "detailing",
+    "family": "Paint sealant",
+    "current_title": "Paint Sealant",
+    "proposed_title": "Paint Sealant Treatment",
+    "short_description": "Paint-finish protection with a wax/sealant treatment.",
+    "price": "\u20b94,000",
+    "source_description": "Paint-finish protection\nWax/sealant treatment\nNot machine paint correction",
+    "missing_scope": "Product, exact coverage and treatment life not listed.",
+    "context": "",
+    "estimated_minutes": 120,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Paint-finish protection with wax or sealant. Not machine paint correction.",
+    "offer_points": [
+      "Paint-finish protection",
+      "Wax/sealant treatment"
+    ],
+    "scope_notes": [
+      "Machine paint correction is a separate service."
+    ]
+  },
+  {
+    "number": 13,
+    "id": "svc-coating-maintenance",
+    "home": "detailing",
+    "family": "Maintenance",
+    "current_title": "Maintenance Coat",
+    "proposed_title": "Existing Coating Maintenance",
+    "short_description": "Maintenance for a compatible existing protective coating.",
+    "price": "\u20b93,500",
+    "source_description": "Protective-finish maintenance\nFor a compatible existing coating\nNot a new full coating",
+    "missing_scope": "Product, exact coverage and treatment life not listed.",
+    "context": "",
+    "estimated_minutes": 120,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Maintains a compatible existing protective finish. Not a new full coating.",
+    "offer_points": [
+      "Protective-finish maintenance",
+      "For a compatible existing coating"
+    ],
+    "scope_notes": [
+      "This service maintains an existing coating. A new full coating is a separate service."
+    ]
+  },
+  {
+    "number": 14,
+    "id": "svc-brand-kovalent-overlay",
+    "home": "detailing",
+    "family": "Film aftercare",
+    "current_title": "Kovalent Overlay",
+    "proposed_title": "Kovalent Overlay PPF Coating",
+    "short_description": "Water-repellent coating over compatible PPF.",
+    "price": "\u20b96,000",
+    "source_description": "Protective coating over compatible PPF\nWater-repellent finish\nNot PPF repair or replacement",
+    "missing_scope": "Exact coverage and treatment life not listed.",
+    "context": "",
+    "estimated_minutes": 120,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Water-repellent protection over compatible PPF. Not film repair or replacement.",
+    "offer_points": [
+      "Protective coating over compatible PPF",
+      "Water-repellent finish"
+    ],
+    "scope_notes": [
+      "PPF repair and replacement are separate services."
+    ]
+  },
+  {
+    "number": 15,
+    "id": "menu-coat-trim",
+    "home": "detailing",
+    "family": "Trim restoration",
+    "current_title": "Trim Restoration",
+    "proposed_title": "AD Standard Trim Restoration",
+    "short_description": "Exterior trim refresh and protection.",
+    "price": "\u20b93,500",
+    "source_description": "Exterior trim refresh + protection\nNot crack repair or replacement",
+    "missing_scope": "Product, exact coverage and treatment life not listed.",
+    "context": "",
+    "estimated_minutes": 120,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Exterior trim refresh and protection. Not crack repair or replacement.",
+    "offer_points": [
+      "Exterior trim refresh + protection"
+    ],
+    "scope_notes": [
+      "Crack repairs and replacement are separate services."
+    ]
+  },
+  {
+    "number": 16,
+    "id": "svc_31024f8c6f3177c1cdeda5cb70f07e0a",
+    "home": "detailing",
+    "family": "Trim restoration",
+    "current_title": "Kovalent Restore - trim restoration",
+    "proposed_title": "Kovalent Restore Trim Protection",
+    "short_description": "Water-repellent protection for plastic and vinyl trim, with a matte finish.",
+    "price": "\u20b95,000",
+    "source_description": "Plastic/vinyl trim protection\nNatural matte finish\nWater-repellent surface",
+    "missing_scope": "Exact coverage and treatment life not listed.",
+    "context": "",
+    "estimated_minutes": 120,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Water-repellent protection for plastic and vinyl trim, with a matte finish.",
+    "offer_points": [
+      "Plastic/vinyl trim protection",
+      "Natural matte finish",
+      "Water-repellent surface"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 17,
+    "id": "svc_9841b6452125634c130a41b2b6271eba",
+    "home": "detailing",
+    "family": "Underbody",
+    "current_title": "Underbody Coat",
+    "proposed_title": "Protective Underbody Coating",
+    "short_description": "Protective coating for the vehicle underbody.",
+    "price": "\u20b94,000",
+    "source_description": "Protective underbody coating\nNot structural rust repair",
+    "missing_scope": "Product, exact coverage and treatment life not listed.",
+    "context": "",
+    "estimated_minutes": 120,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Protective coating underneath the car. Not structural rust repair.",
+    "offer_points": [
+      "Protective underbody coating"
+    ],
+    "scope_notes": [
+      "Structural rust needs separate assessment and repair."
+    ]
+  },
+  {
+    "number": 18,
+    "id": "svc-wash-regular",
+    "home": "washing",
+    "family": "Exterior wash",
+    "current_title": "Regular Wash",
+    "proposed_title": "Foam Wash & Interior Vacuum",
+    "short_description": "Exterior foam wash and interior vacuum.",
+    "price": "\u20b9500",
+    "source_description": "Exterior foam wash\nInterior vacuum\nNo wax or sealant",
+    "missing_scope": "Car-size basis and exact exclusions should remain accessible.",
+    "context": "",
+    "estimated_minutes": 60,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Exterior foam wash and interior vacuum. No wax or sealant.",
+    "offer_points": [
+      "Exterior foam wash",
+      "Interior vacuum"
+    ],
+    "scope_notes": [
+      "Wax and sealant treatments are separate services."
+    ]
+  },
+  {
+    "number": 19,
+    "id": "svc-wash-premium",
+    "home": "washing",
+    "family": "Exterior wash",
+    "current_title": "Wash & Wax",
+    "proposed_title": "Wash, Wax & Interior Vacuum",
+    "short_description": "Koch-Chemie shampoo wash, separate wax and interior vacuum.",
+    "price": "\u20b91,200",
+    "source_description": "Koch-Chemie shampoo wash\nSeparate wax application\nInterior vacuum\nNo machine polishing",
+    "missing_scope": "Car-size basis and exact exclusions should remain accessible.",
+    "context": "",
+    "estimated_minutes": 180,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Koch-Chemie shampoo wash, separate wax and vacuum. No machine polishing.",
+    "offer_points": [
+      "Koch-Chemie shampoo wash",
+      "Separate wax application",
+      "Interior vacuum"
+    ],
+    "scope_notes": [
+      "Machine polishing is a separate service."
+    ]
+  },
+  {
+    "number": 20,
+    "id": "menu-wash-exterior",
+    "home": "washing",
+    "family": "Exterior wash",
+    "current_title": "Wash & Seal",
+    "proposed_title": "Wash & Spray Sealant",
+    "short_description": "Foam wash, vacuum and Koch S0.02 spray sealant.",
+    "price": "\u20b92,100",
+    "source_description": "Foam wash + interior vacuum\nKoch S0.02 spray sealant\nGloss + water beading\nNot a full ceramic coating",
+    "missing_scope": "Car-size basis and exact exclusions should remain accessible.",
+    "context": "",
+    "estimated_minutes": 240,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Foam wash, vacuum and Koch S0.02 spray sealant. Not a full ceramic coating.",
+    "offer_points": [
+      "Foam wash + interior vacuum",
+      "Koch S0.02 spray sealant",
+      "Gloss + water beading"
+    ],
+    "scope_notes": [
+      "This package uses spray sealant. A full ceramic coating is a separate service."
+    ]
+  },
+  {
+    "number": 21,
+    "id": "svc_a68025c3e10bfbe17ef6560ded766f18",
+    "home": "washing",
+    "family": "Interior cleaning",
+    "current_title": "Vacuum & Polish",
+    "proposed_title": "Interior Vacuum & Dashboard Polish",
+    "short_description": "Dry vacuum including the boot, plus dashboard and door polish.",
+    "price": "\u20b9250",
+    "source_description": "Dry interior vacuum\nDashboard + door polish\nBoot included",
+    "missing_scope": "Car-size basis and exact exclusions should remain accessible.",
+    "context": "",
+    "estimated_minutes": 30,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Dry vacuum including the boot, plus dashboard and door polish.",
+    "offer_points": [
+      "Dry interior vacuum",
+      "Dashboard + door polish",
+      "Boot included"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 22,
+    "id": "menu-wash-interior",
+    "home": "washing",
+    "family": "Interior cleaning",
+    "current_title": "Interior Deep Clean",
+    "proposed_title": "Interior Deep Clean",
+    "short_description": "Seat-out cleaning of seats, dashboard, belts and vents, plus an exterior wash.",
+    "price": "\u20b94,500",
+    "source_description": "Interior vacuum + cleaning\nSeat removal\nDashboard, seats, belts + AC vents\nExterior wash",
+    "missing_scope": "Car-size basis and exact exclusions should remain accessible.",
+    "context": "",
+    "estimated_minutes": 240,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Seat-out cleaning of seats, dashboard, belts and vents, plus an exterior wash.",
+    "offer_points": [
+      "Interior vacuum + cleaning",
+      "Seat removal",
+      "Dashboard, seats, belts + AC vents",
+      "Exterior wash"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 23,
+    "id": "svc-wash-detail-spa",
+    "home": "washing",
+    "family": "Complete wash",
+    "current_title": "Inside & Out Detail",
+    "proposed_title": "Inside & Out Detail",
+    "short_description": "Deep clean, wash, one-step gloss enhancement and spray sealant.",
+    "price": "\u20b96,000",
+    "source_description": "Interior deep clean + exterior wash\nOne-step machine gloss enhancement\nS0.02 spray sealant\nNot full scratch correction",
+    "missing_scope": "Car-size basis and exact exclusions should remain accessible.",
+    "context": "",
+    "estimated_minutes": 1440,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Deep clean, wash, one-step gloss enhancement and sealant. Not full scratch correction.",
+    "offer_points": [
+      "Interior deep clean + exterior wash",
+      "One-step machine gloss enhancement",
+      "S0.02 spray sealant"
+    ],
+    "scope_notes": [
+      "Full scratch correction is a separate service."
+    ]
+  },
+  {
+    "number": 24,
+    "id": "svc_81d1a5eef928b0408b41cce3d4d4b2ad",
+    "home": "paint",
+    "family": "Ceramic",
+    "current_title": "Koch Chemie Ceramic Body Cb0.01",
+    "proposed_title": "Koch Chemie Body Cb0.01",
+    "short_description": "Ceramic paint protection with water beading.",
+    "price": "\u20b920,000",
+    "source_description": "Ceramic protection for painted bodywork\nWater beading + easier hand washing\nHelps resist environmental contamination",
+    "missing_scope": "Preparation/correction scope and service warranty not listed.",
+    "context": "",
+    "estimated_minutes": 300,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Ceramic protection for painted bodywork. Water beading + easier hand washing.",
+    "offer_points": [
+      "Ceramic protection for painted bodywork",
+      "Water beading + easier hand washing",
+      "Helps resist environmental contamination"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 25,
+    "id": "svc_f8fea2cba9e0397a45cb644656bd67e8",
+    "home": "paint",
+    "family": "Ceramic",
+    "current_title": "Koch Chemie Ceramic Neo C0.03",
+    "proposed_title": "Koch Chemie Neo C0.03",
+    "short_description": "Water-repellent ceramic paint protection.",
+    "price": "\u20b924,000",
+    "source_description": "Water-repellent ceramic paint protection\nDeep gloss + richer colour\nEasier hand washing",
+    "missing_scope": "Preparation/correction scope and service warranty not listed.",
+    "context": "",
+    "estimated_minutes": 300,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Water-repellent ceramic paint protection. Deep gloss + richer colour.",
+    "offer_points": [
+      "Water-repellent ceramic paint protection",
+      "Deep gloss + richer colour",
+      "Easier hand washing"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 26,
+    "id": "svc_592abf1a979f4f8d6a8e998dbfce13a5",
+    "home": "paint",
+    "family": "Ceramic",
+    "current_title": "Fireball Nano Coat V3",
+    "proposed_title": "Fireball Nano Coat V3 Ceramic Coating",
+    "short_description": "Ceramic protection for exterior surfaces. Smooth, slick finish.",
+    "price": "\u20b910,000",
+    "source_description": "Ceramic protection for exterior surfaces\nSmooth, slick finish\nDeep gloss",
+    "missing_scope": "Preparation/correction scope and service warranty not listed.",
+    "context": "",
+    "estimated_minutes": 300,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Ceramic protection for exterior surfaces. Smooth, slick finish.",
+    "offer_points": [
+      "Ceramic protection for exterior surfaces",
+      "Smooth, slick finish",
+      "Deep gloss"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 27,
+    "id": "svc_51ac65707000d30261ac87ec17b2c853",
+    "home": "paint",
+    "family": "Ceramic",
+    "current_title": "Fireball Wizard Graphene",
+    "proposed_title": "Fireball Wizard Graphene",
+    "short_description": "Graphene coating for paint + PPF. Water-repellent finish.",
+    "price": "\u20b915,000",
+    "source_description": "Graphene coating for paint + PPF\nWater-repellent finish\nGloss + slickness",
+    "missing_scope": "Preparation/correction scope and service warranty not listed.",
+    "context": "",
+    "estimated_minutes": 300,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Graphene coating for paint + PPF. Water-repellent finish.",
+    "offer_points": [
+      "Graphene coating for paint + PPF",
+      "Water-repellent finish",
+      "Gloss + slickness"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 28,
+    "id": "svc-brand-fireball-devil-s-blood",
+    "home": "paint",
+    "family": "Ceramic",
+    "current_title": "Fireball Devils Blood",
+    "proposed_title": "Fireball Devils Blood Ceramic Coating",
+    "short_description": "Water-repellent ceramic protection. High-gloss finish.",
+    "price": "\u20b920,000",
+    "source_description": "Water-repellent ceramic protection\nHigh-gloss finish\nEnvironmental resistance",
+    "missing_scope": "Preparation/correction scope and service warranty not listed.",
+    "context": "",
+    "estimated_minutes": 300,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Water-repellent ceramic protection. High-gloss finish.",
+    "offer_points": [
+      "Water-repellent ceramic protection",
+      "High-gloss finish",
+      "Environmental resistance"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 29,
+    "id": "svc-brand-fireball-butterfly-graphene",
+    "home": "paint",
+    "family": "Ceramic",
+    "current_title": "Fireball Butterfly Graphene",
+    "proposed_title": "Fireball Butterfly Graphene",
+    "short_description": "Graphene-infused ceramic coating. Protective surface layer.",
+    "price": "\u20b924,000",
+    "source_description": "Graphene-infused ceramic coating\nProtective surface layer",
+    "missing_scope": "Preparation/correction scope and service warranty not listed.",
+    "context": "",
+    "estimated_minutes": 300,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Graphene-infused ceramic coating. Protective surface layer.",
+    "offer_points": [
+      "Graphene-infused ceramic coating",
+      "Protective surface layer"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 30,
+    "id": "svc-brand-fireball-dok-do",
+    "home": "paint",
+    "family": "Ceramic",
+    "current_title": "Fireball DOK DO",
+    "proposed_title": "Fireball DOK DO Ceramic Coating",
+    "short_description": "Dual-layer ceramic coating system.",
+    "price": "\u20b930,000",
+    "source_description": "Dual-layer ceramic coating system\nProtective base + chemical-resistant top coat\nGlossy finish",
+    "missing_scope": "Preparation/correction scope and service warranty not listed.",
+    "context": "",
+    "estimated_minutes": 300,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Dual-layer ceramic coating system. Protective base + chemical-resistant top coat.",
+    "offer_points": [
+      "Dual-layer ceramic coating system",
+      "Protective base + chemical-resistant top coat",
+      "Glossy finish"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 31,
+    "id": "menu-coat-kovalent-prolong",
+    "home": "paint",
+    "family": "Ceramic",
+    "current_title": "Kovalent Prolong",
+    "proposed_title": "Kovalent Prolong Ceramic Coating",
+    "short_description": "Ceramic paint protection. Gloss + water beading.",
+    "price": "\u20b912,000",
+    "source_description": "Ceramic paint protection\nGloss + water beading\nUV and chemical resistance",
+    "missing_scope": "Preparation/correction scope and service warranty not listed.",
+    "context": "",
+    "estimated_minutes": 300,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Ceramic paint protection. Gloss + water beading.",
+    "offer_points": [
+      "Ceramic paint protection",
+      "Gloss + water beading",
+      "UV and chemical resistance"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 32,
+    "id": "svc-brand-kovalent-revive",
+    "home": "paint",
+    "family": "Ceramic",
+    "current_title": "Kovalent Revive",
+    "proposed_title": "Kovalent Revive Ceramic Coating",
+    "short_description": "Marine-grade ceramic protection. High-gloss, water-repellent finish.",
+    "price": "\u20b916,000",
+    "source_description": "Marine-grade ceramic protection\nHigh-gloss, water-repellent finish\nUV and saltwater resistance",
+    "missing_scope": "Preparation/correction scope and service warranty not listed.",
+    "context": "",
+    "estimated_minutes": 300,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Marine-grade ceramic protection. High-gloss, water-repellent finish.",
+    "offer_points": [
+      "Marine-grade ceramic protection",
+      "High-gloss, water-repellent finish",
+      "UV and saltwater resistance"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 33,
+    "id": "svc-brand-kovalent-graphene-matrix",
+    "home": "paint",
+    "family": "Ceramic",
+    "current_title": "Kovalent Graphene Matrix",
+    "proposed_title": "Kovalent Graphene Matrix",
+    "short_description": "Graphene ceramic paint protection. Deep gloss + water beading.",
+    "price": "\u20b920,000",
+    "source_description": "Graphene ceramic paint protection\nDeep gloss + water beading\nUV and chemical resistance",
+    "missing_scope": "Preparation/correction scope and service warranty not listed.",
+    "context": "",
+    "estimated_minutes": 300,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Graphene ceramic paint protection. Deep gloss + water beading.",
+    "offer_points": [
+      "Graphene ceramic paint protection",
+      "Deep gloss + water beading",
+      "UV and chemical resistance"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 34,
+    "id": "menu-coat-kovalent-borophene",
+    "home": "paint",
+    "family": "Ceramic",
+    "current_title": "Kovalent Borophene",
+    "proposed_title": "Kovalent Borophene",
+    "short_description": "Boron-nitride-based protective coating. Deep gloss + water repellency.",
+    "price": "\u20b924,000",
+    "source_description": "Boron-nitride-based protective coating\nDeep gloss + water repellency\nUV and chemical resistance",
+    "missing_scope": "Preparation/correction scope and service warranty not listed.",
+    "context": "",
+    "estimated_minutes": 300,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Boron-nitride-based protective coating. Deep gloss + water repellency.",
+    "offer_points": [
+      "Boron-nitride-based protective coating",
+      "Deep gloss + water repellency",
+      "UV and chemical resistance"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 35,
+    "id": "svc-brand-kovalent-matte",
+    "home": "paint",
+    "family": "Ceramic",
+    "current_title": "Kovalent Matte",
+    "proposed_title": "Kovalent Matte Ceramic Coating",
+    "short_description": "Ceramic protection for matte finishes. Preserves the non-glossy appearance.",
+    "price": "\u20b918,000",
+    "source_description": "Ceramic protection for matte finishes\nPreserves the non-glossy appearance\nWater-repellent finish",
+    "missing_scope": "Preparation/correction scope and service warranty not listed.",
+    "context": "",
+    "estimated_minutes": 300,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Ceramic protection for matte finishes. Preserves the non-glossy appearance.",
+    "offer_points": [
+      "Ceramic protection for matte finishes",
+      "Preserves the non-glossy appearance",
+      "Water-repellent finish"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 36,
+    "id": "svc_12599d616b1d7ca131ab7249cf46141f",
+    "home": "paint",
+    "family": "Ceramic",
+    "current_title": "Keramic PPC",
+    "proposed_title": "Keramic PPC",
+    "short_description": "Clear, two-part paint coating. Base A + Active B system.",
+    "price": "\u20b940,000",
+    "source_description": "Clear, two-part paint coating\nBase A + Active B system\nGloss + colour depth",
+    "missing_scope": "Preparation/correction scope and service warranty not listed.",
+    "context": "",
+    "estimated_minutes": 300,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Clear, two-part paint coating. Base A + Active B system.",
+    "offer_points": [
+      "Clear, two-part paint coating",
+      "Base A + Active B system",
+      "Gloss + colour depth"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 37,
+    "id": "svc_852ed684301e188f572797265d7b106e",
+    "home": "paint",
+    "family": "Ceramic",
+    "current_title": "Keramic 10H",
+    "proposed_title": "Keramic 10H Ceramic Coating",
+    "short_description": "Ceramic paint protection. Glossy, water-repellent finish.",
+    "price": "\u20b914,000",
+    "source_description": "Ceramic paint protection\nGlossy, water-repellent finish\nEasier washing",
+    "missing_scope": "Preparation/correction scope and service warranty not listed.",
+    "context": "",
+    "estimated_minutes": 300,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Ceramic paint protection. Glossy, water-repellent finish.",
+    "offer_points": [
+      "Ceramic paint protection",
+      "Glossy, water-repellent finish",
+      "Easier washing"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 38,
+    "id": "svc_a57eab7c55c8b31aaa52cc6463fc94b4",
+    "home": "paint",
+    "family": "Ceramic",
+    "current_title": "Keramic 9H Nano",
+    "proposed_title": "Keramic 9H Nano Ceramic Coating",
+    "short_description": "Ceramic protection for car paint. Glossy, water-repellent finish.",
+    "price": "\u20b910,000",
+    "source_description": "Ceramic protection for car paint\nGlossy, water-repellent finish\nEasier washing",
+    "missing_scope": "Preparation/correction scope and service warranty not listed.",
+    "context": "",
+    "estimated_minutes": 300,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Ceramic protection for car paint. Glossy, water-repellent finish.",
+    "offer_points": [
+      "Ceramic protection for car paint",
+      "Glossy, water-repellent finish",
+      "Easier washing"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 39,
+    "id": "svc_bb4445b597ce369d1b175058d57999b8",
+    "home": "paint",
+    "family": "Ceramic",
+    "current_title": "Car Pro CQ.UK 3.0",
+    "proposed_title": "Car Pro CQ.UK 3.0 Ceramic Coating",
+    "short_description": "Ceramic paint protection. Chemical and road-salt resistance.",
+    "price": "\u20b919,000",
+    "source_description": "Ceramic paint protection\nChemical and road-salt resistance\nNot scratch-proof",
+    "missing_scope": "Preparation/correction scope and service warranty not listed.",
+    "context": "",
+    "estimated_minutes": 300,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Ceramic paint protection. Chemical and road-salt resistance.",
+    "offer_points": [
+      "Ceramic paint protection",
+      "Chemical and road-salt resistance"
+    ],
+    "scope_notes": [
+      "Scratch resistance has limits; scratches can still occur."
+    ]
+  },
+  {
+    "number": 40,
+    "id": "svc_b25d851d8e5d7dd89e73f357459bd05d",
+    "home": "paint",
+    "family": "Ceramic",
+    "current_title": "Car Pro CQ SiC",
+    "proposed_title": "Car Pro CQ SiC Ceramic Coating",
+    "short_description": "Silicon-carbide ceramic protection. Slick finish + deep gloss.",
+    "price": "\u20b924,000",
+    "source_description": "Silicon-carbide ceramic protection\nSlick finish + deep gloss\nHelps resist water spots and chemicals",
+    "missing_scope": "Preparation/correction scope and service warranty not listed.",
+    "context": "",
+    "estimated_minutes": 300,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Silicon-carbide ceramic protection. Slick finish + deep gloss.",
+    "offer_points": [
+      "Silicon-carbide ceramic protection",
+      "Slick finish + deep gloss",
+      "Helps resist water spots and chemicals"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 41,
+    "id": "svc_3f918e528b4ec951e8dc52111a8b7a47",
+    "home": "paint",
+    "family": "PPF",
+    "current_title": "NAR M1",
+    "proposed_title": "NAR M1 PPF",
+    "short_description": "Paint protection film. 170-micron film.",
+    "price": "\u20b990,000",
+    "source_description": "Paint protection film\n170-micron film",
+    "missing_scope": "Covered panels, exclusions and studio warranty need confirmation.",
+    "context": "",
+    "estimated_minutes": 480,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Paint protection film. 170-micron film.",
+    "offer_points": [
+      "Paint protection film",
+      "170-micron film"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 42,
+    "id": "svc_7af0d5382d18a18390c32f52c76e3203",
+    "home": "paint",
+    "family": "PPF",
+    "current_title": "NAR E190",
+    "proposed_title": "NAR E190 PPF",
+    "short_description": "Gloss paint protection film. Helps resist stains.",
+    "price": "\u20b91,10,000",
+    "source_description": "Gloss paint protection film\nHelps resist stains\nHeat-assisted healing of minor surface marks",
+    "missing_scope": "Covered panels, exclusions and studio warranty need confirmation.",
+    "context": "",
+    "estimated_minutes": 480,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Gloss paint protection film. Helps resist stains.",
+    "offer_points": [
+      "Gloss paint protection film",
+      "Helps resist stains",
+      "Heat-assisted healing of minor surface marks"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 43,
+    "id": "svc_bdd71da81a8d9f5284def5eea932218b",
+    "home": "paint",
+    "family": "PPF",
+    "current_title": "NAR M190",
+    "proposed_title": "NAR M190 PPF",
+    "short_description": "Matte paint protection film. Self-healing for minor surface marks.",
+    "price": "\u20b91,10,000",
+    "source_description": "Matte paint protection film\nSelf-healing for minor surface marks",
+    "missing_scope": "Covered panels, exclusions and studio warranty need confirmation.",
+    "context": "",
+    "estimated_minutes": 480,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Matte paint protection film. Self-healing for minor surface marks.",
+    "offer_points": [
+      "Matte paint protection film",
+      "Self-healing for minor surface marks"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 44,
+    "id": "svc_45b1ff748dfd2b604af02d6b051d35e2",
+    "home": "paint",
+    "family": "PPF",
+    "current_title": "AVVYX Prime",
+    "proposed_title": "AVVYX Prime PPF",
+    "short_description": "Clear paint protection film. Everyday paint protection.",
+    "price": "\u20b975,000",
+    "source_description": "Clear paint protection film\nEveryday paint protection",
+    "missing_scope": "Covered panels, exclusions and studio warranty need confirmation.",
+    "context": "",
+    "estimated_minutes": 480,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Clear paint protection film. Everyday paint protection.",
+    "offer_points": [
+      "Clear paint protection film",
+      "Everyday paint protection"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 45,
+    "id": "svc_97ff13e674678728853e5651e04ba9b7",
+    "home": "paint",
+    "family": "PPF",
+    "current_title": "AVVYX Shield",
+    "proposed_title": "AVVYX Shield PPF",
+    "short_description": "Clear TPU paint protection film. Glossy, water-repellent finish.",
+    "price": "\u20b995,000",
+    "source_description": "Clear TPU paint protection film\nGlossy, water-repellent finish\nSelf-healing for minor surface marks",
+    "missing_scope": "Covered panels, exclusions and studio warranty need confirmation.",
+    "context": "",
+    "estimated_minutes": 480,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Clear TPU paint protection film. Glossy, water-repellent finish.",
+    "offer_points": [
+      "Clear TPU paint protection film",
+      "Glossy, water-repellent finish",
+      "Self-healing for minor surface marks"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 46,
+    "id": "svc_f662ab1a4a630f9b2ccdd790813e3f8d",
+    "home": "paint",
+    "family": "PPF",
+    "current_title": "GSWF Ultra lite",
+    "proposed_title": "GSWF Ultra lite PPF",
+    "short_description": "High-gloss paint protection film. Self-healing for minor surface marks.",
+    "price": "\u20b91,45,000",
+    "source_description": "High-gloss paint protection film\nSelf-healing for minor surface marks",
+    "missing_scope": "Covered panels, exclusions and studio warranty need confirmation.",
+    "context": "",
+    "estimated_minutes": 480,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "High-gloss paint protection film. Self-healing for minor surface marks.",
+    "offer_points": [
+      "High-gloss paint protection film",
+      "Self-healing for minor surface marks"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 47,
+    "id": "svc_d99a4d2a7f8fb8942d7afc387970dd30",
+    "home": "paint",
+    "family": "PPF",
+    "current_title": "GSWF Ultra",
+    "proposed_title": "GSWF Ultra PPF",
+    "short_description": "Clear, high-gloss paint protection film.",
+    "price": "\u20b91,75,000",
+    "source_description": "Clear, high-gloss paint protection film\nHeat-assisted healing of minor surface marks",
+    "missing_scope": "Covered panels, exclusions and studio warranty need confirmation.",
+    "context": "",
+    "estimated_minutes": 480,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Clear, high-gloss paint protection film. Heat-assisted healing of minor surface marks.",
+    "offer_points": [
+      "Clear, high-gloss paint protection film",
+      "Heat-assisted healing of minor surface marks"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 48,
+    "id": "svc_1df385cdf3103b951327820229be6a0d",
+    "home": "paint",
+    "family": "PPF",
+    "current_title": "GSWF Platinum",
+    "proposed_title": "GSWF Platinum PPF",
+    "short_description": "High-gloss paint protection film. Water-repellent topcoat.",
+    "price": "\u20b92,10,000",
+    "source_description": "High-gloss paint protection film\nWater-repellent topcoat\nHeat-assisted healing of minor surface marks",
+    "missing_scope": "Covered panels, exclusions and studio warranty need confirmation.",
+    "context": "",
+    "estimated_minutes": 480,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "High-gloss paint protection film. Water-repellent topcoat.",
+    "offer_points": [
+      "High-gloss paint protection film",
+      "Water-repellent topcoat",
+      "Heat-assisted healing of minor surface marks"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 49,
+    "id": "svc_963267aa9a4c81f8b9fc92a0e4ea1ea5",
+    "home": "paint",
+    "family": "PPF",
+    "current_title": "Cosmo Gold",
+    "proposed_title": "Cosmo Gold PPF",
+    "short_description": "Gloss TPU paint protection film. Helps resist stains.",
+    "price": "\u20b985,000",
+    "source_description": "Gloss TPU paint protection film\nHelps resist stains\nSelf-healing for minor surface marks",
+    "missing_scope": "Covered panels, exclusions and studio warranty need confirmation.",
+    "context": "",
+    "estimated_minutes": 480,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Gloss TPU paint protection film. Helps resist stains.",
+    "offer_points": [
+      "Gloss TPU paint protection film",
+      "Helps resist stains",
+      "Self-healing for minor surface marks"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 50,
+    "id": "svc_75c8c36565f41b60d58ba8bc3a8b663f",
+    "home": "paint",
+    "family": "PPF",
+    "current_title": "Cosmo Platinum",
+    "proposed_title": "Cosmo Platinum PPF",
+    "short_description": "Ultra-gloss TPU paint protection film. Water-repellent surface.",
+    "price": "\u20b91,20,000",
+    "source_description": "Ultra-gloss TPU paint protection film\nWater-repellent surface\nSelf-healing for minor surface marks",
+    "missing_scope": "Covered panels, exclusions and studio warranty need confirmation.",
+    "context": "",
+    "estimated_minutes": 480,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Ultra-gloss TPU paint protection film. Water-repellent surface.",
+    "offer_points": [
+      "Ultra-gloss TPU paint protection film",
+      "Water-repellent surface",
+      "Self-healing for minor surface marks"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 51,
+    "id": "svc-brand-llumar-platinum-gloss",
+    "home": "paint",
+    "family": "PPF",
+    "current_title": "LLumar Platinum Gloss",
+    "proposed_title": "LLumar Platinum Gloss PPF",
+    "short_description": "Clear, gloss paint protection film. Water- and stain-resistant topcoat.",
+    "price": "\u20b91,60,000",
+    "source_description": "Clear, gloss paint protection film\nWater- and stain-resistant topcoat\nHeat-assisted healing of minor surface marks",
+    "missing_scope": "Covered panels, exclusions and studio warranty need confirmation.",
+    "context": "",
+    "estimated_minutes": 480,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Clear, gloss paint protection film. Water- and stain-resistant topcoat.",
+    "offer_points": [
+      "Clear, gloss paint protection film",
+      "Water- and stain-resistant topcoat",
+      "Heat-assisted healing of minor surface marks"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 52,
+    "id": "svc-brand-llumar-platinum-extra",
+    "home": "paint",
+    "family": "PPF",
+    "current_title": "LLumar Platinum Extra",
+    "proposed_title": "LLumar Platinum Extra PPF",
+    "short_description": "Gloss PPF for chip and impact resistance.",
+    "price": "\u20b92,10,000",
+    "source_description": "Gloss PPF for chip and impact resistance\nWater- and stain-resistant topcoat\nHeat-assisted healing of minor surface marks",
+    "missing_scope": "Covered panels, exclusions and studio warranty need confirmation.",
+    "context": "",
+    "estimated_minutes": 480,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Gloss PPF for chip and impact resistance. Water- and stain-resistant topcoat.",
+    "offer_points": [
+      "Gloss PPF for chip and impact resistance",
+      "Water- and stain-resistant topcoat",
+      "Heat-assisted healing of minor surface marks"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 53,
+    "id": "svc-ppf-llumar-valor",
+    "home": "paint",
+    "family": "PPF",
+    "current_title": "LLumar Valor",
+    "proposed_title": "LLumar Valor PPF",
+    "short_description": "Clear, ultra-gloss paint protection film.",
+    "price": "\u20b92,45,000",
+    "source_description": "Clear, ultra-gloss paint protection film\nWater-repellent, easy-clean surface\nHeat-assisted healing of minor surface marks",
+    "missing_scope": "Covered panels, exclusions and studio warranty need confirmation.",
+    "context": "",
+    "estimated_minutes": 480,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Clear, ultra-gloss paint protection film. Water-repellent, easy-clean surface.",
+    "offer_points": [
+      "Clear, ultra-gloss paint protection film",
+      "Water-repellent, easy-clean surface",
+      "Heat-assisted healing of minor surface marks"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 54,
+    "id": "svc-ppf-garware-plus",
+    "home": "paint",
+    "family": "PPF",
+    "current_title": "Garware Plus",
+    "proposed_title": "Garware Plus PPF",
+    "short_description": "Clear paint protection film. Water- and stain-resistant surface.",
+    "price": "\u20b995,000",
+    "source_description": "Clear paint protection film\nWater- and stain-resistant surface\nSelf-healing for minor surface marks",
+    "missing_scope": "Covered panels, exclusions and studio warranty need confirmation.",
+    "context": "",
+    "estimated_minutes": 480,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Clear paint protection film. Water- and stain-resistant surface.",
+    "offer_points": [
+      "Clear paint protection film",
+      "Water- and stain-resistant surface",
+      "Self-healing for minor surface marks"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 55,
+    "id": "svc-ppf-garware-premium",
+    "home": "paint",
+    "family": "PPF",
+    "current_title": "Garware Premium",
+    "proposed_title": "Garware Premium PPF",
+    "short_description": "High-gloss paint protection film. Water- and stain-resistant surface.",
+    "price": "\u20b91,15,000",
+    "source_description": "High-gloss paint protection film\nWater- and stain-resistant surface\nSelf-healing for minor surface marks",
+    "missing_scope": "Covered panels, exclusions and studio warranty need confirmation.",
+    "context": "",
+    "estimated_minutes": 480,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "High-gloss paint protection film. Water- and stain-resistant surface.",
+    "offer_points": [
+      "High-gloss paint protection film",
+      "Water- and stain-resistant surface",
+      "Self-healing for minor surface marks"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 56,
+    "id": "svc-brand-garware-titanium",
+    "home": "paint",
+    "family": "PPF",
+    "current_title": "Garware Titanium",
+    "proposed_title": "Garware Titanium PPF",
+    "short_description": "High-gloss, clear paint protection film.",
+    "price": "\u20b91,30,000",
+    "source_description": "High-gloss, clear paint protection film\nWater-repellent, easy-clean surface\nSelf-healing for minor surface marks",
+    "missing_scope": "Covered panels, exclusions and studio warranty need confirmation.",
+    "context": "",
+    "estimated_minutes": 480,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "High-gloss, clear paint protection film. Water-repellent, easy-clean surface.",
+    "offer_points": [
+      "High-gloss, clear paint protection film",
+      "Water-repellent, easy-clean surface",
+      "Self-healing for minor surface marks"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 57,
+    "id": "enquiry_pps-spray",
+    "home": "paint",
+    "family": "PPS",
+    "current_title": "Standard PPS",
+    "proposed_title": "AD Standard Spray-on Protective Film",
+    "short_description": "Spray-on protective film.",
+    "price": "\u20b940,000",
+    "source_description": "Spray-on protective film.",
+    "missing_scope": "Car-size basis and exact exclusions should remain accessible.",
+    "context": "",
+    "estimated_minutes": 480,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Spray-on protective film. Confirm the product and covered panels with the studio.",
+    "offer_points": [
+      "Spray-on protective film."
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 58,
+    "id": "svc_fa321972f8859a1af6f78d90af458f87",
+    "home": "garage",
+    "family": "Routine service",
+    "current_title": "Oil & Filter Service",
+    "proposed_title": "Engine Oil & Filter Service",
+    "short_description": "Oil and oil-filter replacement, checks, wash and vacuum.",
+    "price": "\u20b93,500",
+    "source_description": "Engine oil + oil-filter replacement\nFluid/leak checks, wash + vacuum\nOil grade/quantity agreed for your car\nAir/AC filters, brake work + scan separate",
+    "missing_scope": "Parts, consumables and final car-specific quote need agreement.",
+    "context": "",
+    "estimated_minutes": 240,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Oil and oil-filter replacement with checks, wash and vacuum. Grade and quantity agreed first.",
+    "offer_points": [
+      "Engine oil + oil-filter replacement",
+      "Fluid/leak checks, wash + vacuum",
+      "Oil grade/quantity agreed for your car",
+      "Air/AC filters, brake work + scan separate"
+    ],
+    "scope_notes": [
+      "Oil grade and quantity agreed before work."
+    ]
+  },
+  {
+    "number": 59,
+    "id": "svc_31ab70fc8b6417bb99b99a914cdc8dde",
+    "home": "garage",
+    "family": "AC care",
+    "current_title": "AC Service",
+    "proposed_title": "AC Cleaning & Checks",
+    "short_description": "Vent, condenser and filter cleaning.",
+    "price": "\u20b92,500",
+    "source_description": "Vent, condenser + AC-filter cleaning\nAC checks; gas type/quantity agreed separately\nNo coil/dashboard removal or leak repairs\nReplacement parts + extra work separate",
+    "missing_scope": "Parts, consumables and final car-specific quote need agreement.",
+    "context": "",
+    "estimated_minutes": 240,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Vent, condenser and filter cleaning. Gas, parts and repairs agreed separately.",
+    "offer_points": [
+      "Vent, condenser + AC-filter cleaning",
+      "AC checks; gas type/quantity agreed separately",
+      "Replacement parts + extra work separate"
+    ],
+    "scope_notes": [
+      "Coil or dashboard removal and leak repairs are separate work."
+    ]
+  },
+  {
+    "number": 60,
+    "id": "svc_33f375309ed7d422aee84c4b1566f50a",
+    "home": "garage",
+    "family": "Brakes",
+    "current_title": "Brake Pads, Shoes, Discs & Drums",
+    "proposed_title": "Brake Inspection & Parts Work",
+    "short_description": "Inspection first.",
+    "price": "Quote on request",
+    "source_description": "Brake inspection before work\nPads/shoes, discs + machining priced separately\nAxle, parts, fitting + total agreed first\nBrake fluid change separate",
+    "missing_scope": "Parts, consumables and final car-specific quote need agreement.",
+    "context": "",
+    "estimated_minutes": 0,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Inspection first. Parts, machining, fitting and axle-specific total agreed before work.",
+    "offer_points": [
+      "Brake inspection before work",
+      "Pads/shoes, discs + machining priced separately",
+      "Axle, parts, fitting + total agreed first",
+      "Brake fluid change separate"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 61,
+    "id": "svc_055adcb927e7fa732283c0c6e1905497",
+    "home": "garage",
+    "family": "Brakes",
+    "current_title": "Brake Fluid Change",
+    "proposed_title": "Brake Fluid Change & Bleeding",
+    "short_description": "Fluid renewal and system bleeding.",
+    "price": "\u20b91,200",
+    "source_description": "Brake-fluid renewal + system bleeding\nFluid grade, quantity + labour agreed first\nParts + leak repairs separate",
+    "missing_scope": "Parts, consumables and final car-specific quote need agreement.",
+    "context": "",
+    "estimated_minutes": 60,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Fluid renewal and system bleeding. Fluid and labour agreed first; repairs separate.",
+    "offer_points": [
+      "Brake-fluid renewal + system bleeding",
+      "Fluid grade, quantity + labour agreed first",
+      "Parts + leak repairs separate"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 62,
+    "id": "svc_e6ffc0a029d4e059dc86d5fa8eb628fa",
+    "home": "garage",
+    "family": "Battery & electrical",
+    "current_title": "Battery Replacement & Fitting",
+    "proposed_title": "Battery Supply & Fitting",
+    "short_description": "Compatible battery and fitting.",
+    "price": "Quote on request",
+    "source_description": "Compatible battery supply + fitting\nBattery specification + warranty agreed first\nOld-battery credit shown separately\nPrice based on selected battery",
+    "missing_scope": "Parts, consumables and final car-specific quote need agreement.",
+    "context": "",
+    "estimated_minutes": 0,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Compatible battery and fitting. Specification, warranty and old-battery credit agreed first.",
+    "offer_points": [
+      "Compatible battery supply + fitting",
+      "Battery specification + warranty agreed first",
+      "Old-battery credit shown separately",
+      "Price based on selected battery"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 63,
+    "id": "svc_ec73d579d23bc4a1a7aaf3ac4d41ea46",
+    "home": "garage",
+    "family": "Wheels & tyres",
+    "current_title": "Wheel Balance, Alignment & Rotation",
+    "proposed_title": "Wheel Balance, Alignment & Rotation",
+    "short_description": "External specialist service. Wheel count, weights and recheck agreed first.",
+    "price": "\u20b91,800",
+    "source_description": "Wheel balancing, alignment + tyre rotation\nProvided through an external specialist\nWheel count, weights + recheck agreed first\nNo duplicate individual-service charges",
+    "missing_scope": "Parts, consumables and final car-specific quote need agreement.",
+    "context": "",
+    "estimated_minutes": 0,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "External specialist service. Wheel count, weights and recheck agreed first.",
+    "offer_points": [
+      "Wheel balancing, alignment + tyre rotation",
+      "Provided through an external specialist",
+      "Wheel count, weights + recheck agreed first"
+    ],
+    "scope_notes": [
+      "Combined service billing accounts for the included individual services."
+    ]
+  },
+  {
+    "number": 64,
+    "id": "svc_f532de33d2a87a67b1f3d88fc584ffd7",
+    "home": "garage",
+    "family": "Assessment",
+    "current_title": "First-look Assessment",
+    "proposed_title": "Free First-look Assessment",
+    "short_description": "Initial walk-in check only. Further diagnosis and repairs agreed separately.",
+    "price": "\u20b90",
+    "source_description": "Free initial walk-in check\nNot a full inspection, scan or repair\nFurther diagnosis + repairs agreed separately",
+    "missing_scope": "Parts, consumables and final car-specific quote need agreement.",
+    "context": "",
+    "estimated_minutes": 0,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Initial walk-in check only. Further diagnosis and repairs agreed separately.",
+    "offer_points": [
+      "Free initial walk-in check",
+      "Further diagnosis + repairs agreed separately"
+    ],
+    "scope_notes": [
+      "Full inspection, diagnostic scans and repairs are agreed separately."
+    ]
+  },
+  {
+    "number": 65,
+    "id": "svc_03991467dcabc6602c97d86e321de1a6",
+    "home": "garage",
+    "family": "Assessment",
+    "current_title": "Fault-code Scan",
+    "proposed_title": "Fault-code Scan & Report",
+    "short_description": "Fault-code scan and report for agreed, supported systems.",
+    "price": "\u20b9800",
+    "source_description": "Fault-code scan + report\nFor agreed, supported systems\nScan is not a repair\nNo duplicate charge if already included",
+    "missing_scope": "Parts, consumables and final car-specific quote need agreement.",
+    "context": "",
+    "estimated_minutes": 180,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Scan and report for agreed supported systems. Not a repair.",
+    "offer_points": [
+      "Fault-code scan + report",
+      "For agreed, supported systems"
+    ],
+    "scope_notes": [
+      "Repairs are agreed separately after diagnosis.",
+      "Where the scan is already included, its charge is counted once."
+    ]
+  },
+  {
+    "number": 66,
+    "id": "svc_7fd24fb5f5e98dd45f0734e152de4e53",
+    "home": "garage",
+    "family": "Cooling system",
+    "current_title": "Coolant Flush & Refill",
+    "proposed_title": "Coolant Flush & Refill",
+    "short_description": "Drain, flush, refill and leak check.",
+    "price": "\u20b91,400",
+    "source_description": "Coolant drain, flush + refill\nLeak check included\nCoolant type, quantity + disposal agreed first\nParts + leak repairs separate",
+    "missing_scope": "Parts, consumables and final car-specific quote need agreement.",
+    "context": "",
+    "estimated_minutes": 60,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Drain, flush, refill and leak check. Coolant and disposal agreed first; repairs separate.",
+    "offer_points": [
+      "Coolant drain, flush + refill",
+      "Leak check included",
+      "Coolant type, quantity + disposal agreed first",
+      "Parts + leak repairs separate"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 67,
+    "id": "svc_552372faf2dc835012f3321d1982a712",
+    "home": "modifications",
+    "family": "Colour PPF",
+    "current_title": "NAR Colour PPF",
+    "proposed_title": "NAR Colour PPF",
+    "short_description": "Colour protection film. Finish and panels agreed after inspection.",
+    "price": "Quote on request",
+    "source_description": "Colour TPU paint protection film\nHelps resist chips, stains + light scuffs\nHeat-assisted healing of minor surface marks\nFilm, finish + coverage agreed after inspection",
+    "missing_scope": "Specific film, coverage, finish and legal fitment need confirmation.",
+    "context": "",
+    "estimated_minutes": 0,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Colour protection film. Finish and panels agreed after inspection.",
+    "offer_points": [
+      "Colour TPU paint protection film",
+      "Helps resist chips, stains + light scuffs",
+      "Heat-assisted healing of minor surface marks",
+      "Film, finish + coverage agreed after inspection"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 68,
+    "id": "svc_dff9bd93656be1706fc7828bff78ac66",
+    "home": "modifications",
+    "family": "Colour PPF",
+    "current_title": "GSWF Colour PPF",
+    "proposed_title": "GSWF Colour PPF",
+    "short_description": "Colour protection film. Finish and panels agreed after inspection.",
+    "price": "Quote on request",
+    "source_description": "Infused-colour paint protection film\nSolid, metallic, satin + pearlescent ranges\nHeat-assisted healing of minor surface marks\nFilm, finish + coverage agreed after inspection",
+    "missing_scope": "Specific film, coverage, finish and legal fitment need confirmation.",
+    "context": "",
+    "estimated_minutes": 0,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Colour protection film. Finish and panels agreed after inspection.",
+    "offer_points": [
+      "Infused-colour paint protection film",
+      "Solid, metallic, satin + pearlescent ranges",
+      "Heat-assisted healing of minor surface marks",
+      "Film, finish + coverage agreed after inspection"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 69,
+    "id": "svc_a8312652a42f450289009cac7742e7df",
+    "home": "modifications",
+    "family": "Colour PPF",
+    "current_title": "Avery Dennison Colour PPF",
+    "proposed_title": "Avery Dennison Colour PPF",
+    "short_description": "Colour protection film. Finish and panels agreed after inspection.",
+    "price": "Quote on request",
+    "source_description": "Colour TPU paint protection film\nHigh-gloss, paint-like finish\nHelps resist road grime + minor surface marks\nFilm, finish + coverage agreed after inspection",
+    "missing_scope": "Specific film, coverage, finish and legal fitment need confirmation.",
+    "context": "",
+    "estimated_minutes": 0,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Colour protection film. Finish and panels agreed after inspection.",
+    "offer_points": [
+      "Colour TPU paint protection film",
+      "High-gloss, paint-like finish",
+      "Helps resist road grime + minor surface marks",
+      "Film, finish + coverage agreed after inspection"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 70,
+    "id": "menu-mods-wrap",
+    "home": "modifications",
+    "family": "Wraps",
+    "current_title": "Vinyl Wraps",
+    "proposed_title": "Vinyl Wraps",
+    "short_description": "Vinyl colour or finish wrap. Film and coverage agreed after inspection.",
+    "price": "Quote on request",
+    "source_description": "Vinyl colour/finish wrap\nFilm, finish + coverage agreed after inspection",
+    "missing_scope": "Specific film, coverage, finish and legal fitment need confirmation.",
+    "context": "",
+    "estimated_minutes": 0,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Vinyl colour or finish wrap. Film and coverage agreed after inspection.",
+    "offer_points": [
+      "Vinyl colour/finish wrap",
+      "Film, finish + coverage agreed after inspection"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 71,
+    "id": "svc_27492a910747236a1fbfeeffa84f4017",
+    "home": "modifications",
+    "family": "Window tint",
+    "current_title": "3M film",
+    "proposed_title": "3M Automotive Window Film",
+    "short_description": "Window coverage agreed after inspection. Fitment subject to local law.",
+    "price": "Quote on request",
+    "source_description": "Automotive window film\nWindow coverage agreed after inspection\nFitment subject to local legal compliance",
+    "missing_scope": "Specific film, coverage, finish and legal fitment need confirmation.",
+    "context": "",
+    "estimated_minutes": 0,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Window coverage agreed after inspection. Fitment subject to local law.",
+    "offer_points": [
+      "Automotive window film",
+      "Window coverage agreed after inspection",
+      "Fitment subject to local legal compliance"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 72,
+    "id": "svc_2f341c450be046784da9d4e9e0174a4f",
+    "home": "modifications",
+    "family": "Window tint",
+    "current_title": "3M Crystalline",
+    "proposed_title": "3M Crystalline Window Film",
+    "short_description": "Crystalline automotive window film.",
+    "price": "Quote on request",
+    "source_description": "Crystalline automotive window film\nWindow coverage agreed after inspection\nFitment subject to local legal compliance",
+    "missing_scope": "Specific film, coverage, finish and legal fitment need confirmation.",
+    "context": "",
+    "estimated_minutes": 0,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Crystalline automotive window film. Coverage and legal fitment confirmed first.",
+    "offer_points": [
+      "Crystalline automotive window film",
+      "Window coverage agreed after inspection",
+      "Fitment subject to local legal compliance"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 73,
+    "id": "svc_b020022e661acabd1a65ca79886fae98",
+    "home": "modifications",
+    "family": "Window tint",
+    "current_title": "LLumar film",
+    "proposed_title": "LLumar Automotive Window Film",
+    "short_description": "Window coverage agreed after inspection. Fitment subject to local law.",
+    "price": "Quote on request",
+    "source_description": "Automotive window film\nWindow coverage agreed after inspection\nFitment subject to local legal compliance",
+    "missing_scope": "Specific film, coverage, finish and legal fitment need confirmation.",
+    "context": "",
+    "estimated_minutes": 0,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Window coverage agreed after inspection. Fitment subject to local law.",
+    "offer_points": [
+      "Automotive window film",
+      "Window coverage agreed after inspection",
+      "Fitment subject to local legal compliance"
+    ],
+    "scope_notes": []
+  },
+  {
+    "number": 74,
+    "id": "svc_c92af73f10c3107a395e31fb65b1ce5c",
+    "home": "modifications",
+    "family": "Window tint",
+    "current_title": "Standard film",
+    "proposed_title": "AD Standard Window Film",
+    "short_description": "Window coverage agreed after inspection. Fitment subject to local law.",
+    "price": "Quote on request",
+    "source_description": "Automotive window film\nWindow coverage agreed after inspection\nFitment subject to local legal compliance",
+    "missing_scope": "Specific film, coverage, finish and legal fitment need confirmation.",
+    "context": "",
+    "estimated_minutes": 0,
+    "source_url": "https://app.autodeck.in/catalogue",
+    "previous_short_description": "Window coverage agreed after inspection. Fitment subject to local law.",
+    "offer_points": [
+      "Automotive window film",
+      "Window coverage agreed after inspection",
+      "Fitment subject to local legal compliance"
+    ],
+    "scope_notes": []
+  }
+]

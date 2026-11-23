@@ -8,7 +8,7 @@ import wordmark from '../../assets/brand/wordmark-dark.png';
 export function HomeClub({membership,onPress}:{membership:HomeViewProps['membership'];onPress:()=>void}) {
  const {colors}=useExperienceTheme();const {width}=useWindowDimensions();
  return <View testID="home-club" style={{paddingVertical:26,gap:16}}>
- <View style={{gap:8}}><Text style={{...textStyle('label'),color:colors.accentStrong}}>Autodeck Club</Text><Text accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={.75} style={{...textStyle('title'),fontSize:width<340?22:26,lineHeight:34,color:colors.textPrimary}}>Make care a habit</Text></View>
+ <View style={{gap:8}}><Text style={{...textStyle('label'),color:colors.accentStrong}}>Autodeck Club</Text><Text accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={.75} style={{...textStyle('title'),fontSize:width<340?22:26,lineHeight:34,color:colors.textPrimary}}>Membership</Text></View>
  <Pressable accessibilityRole="button" accessibilityLabel={membership?'View membership':'Explore the Club'} onPress={onPress} style={({pressed})=>({minHeight:226,borderRadius:24,overflow:'hidden',backgroundColor:'#161D22',opacity:pressed?.88:1})}>
  <Image source={sceneImagery.membership} resizeMode="cover" style={{position:'absolute',right:0,top:0,bottom:0,width:'57%',opacity:.8}}/>
  <View pointerEvents="none" style={{position:'absolute',inset:0,...(Platform.OS==='web'?{backgroundImage:'linear-gradient(90deg,#161D22 8%,#161D22e6 43%,#161D2240 100%)'} as ViewStyle:{backgroundColor:'#161D2266'})}}/>

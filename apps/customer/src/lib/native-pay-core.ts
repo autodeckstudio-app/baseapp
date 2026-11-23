@@ -29,21 +29,21 @@ export function terminalPayOutcome(status: string | null | undefined): OnlinePay
  * never-activated and deactivated-by-refund); the partially_refunded branch is
  * defensive only - partial membership refunds are not offered under this policy.
  */
-export function membershipOnlinePayCopy(outcome: OnlinePayOutcome | null, activeTier: string | null): { title: string; body: string } {
+export function membershipOnlinePayCopy(outcome: OnlinePayOutcome | null, activeTier: string | null): { title: string; body: string; facts: {label: string; text: string}[] } {
   if (outcome === "refunded") {
     const stays = activeTier
       ? `Your current ${activeTier} membership stays active.`
       : "Any membership linked to this payment is not active.";
-    return { title: "Payment refunded", body: `This payment was refunded in full. ${stays} Call the studio if you did not expect this.` };
+    return { title: "Payment refunded", body: `This payment was refunded in full. ${stays} Call the studio if you did not expect this.`, facts: [{label:"Payment",text:"This payment was refunded in full."},{label:"Membership",text:stays},{label:"Help",text:"Call the studio if you did not expect this."}] };
   }
   if (outcome === "partially_refunded") {
     const stays = activeTier ? `Your current ${activeTier} membership stays active.` : "No membership was activated by it.";
-    return { title: "Payment partially refunded", body: `Part of this payment was refunded. ${stays} Call the studio about this payment.` };
+    return { title: "Payment partially refunded", body: `Part of this payment was refunded. ${stays} Call the studio about this payment.`, facts: [{label:"Payment",text:"Part of this payment was refunded."},{label:"Membership",text:stays},{label:"Help",text:"Call the studio about this payment."}] };
   }
   if (outcome === "failed") {
-    return { title: "Payment failed", body: `The payment did not go through. ${activeTier ? `Your current ${activeTier} membership stays active.` : "No membership was activated by it."} Tap Pay online to try again.` };
+    return { title: "Payment failed", body: `The payment did not go through. ${activeTier ? `Your current ${activeTier} membership stays active.` : "No membership was activated by it."} Tap Pay online to try again.`, facts: [{label:"Payment",text:"The payment did not go through."},{label:"Membership",text:activeTier ? `Your current ${activeTier} membership stays active.` : "No membership was activated by it."},{label:"Next step",text:"Tap Pay online to try again."}] };
   }
-  return { title: "Almost done", body: "Complete payment to activate. Closed the payment window? Tap Pay online to reopen it. Membership activates on its own once verified - benefits stay locked until then." };
+  return { title: "Almost done", body: "Complete payment to activate. Closed the payment window? Tap Pay online to reopen it. Membership activates on its own once verified - benefits stay locked until then.", facts: [{label:"Next step",text:"Complete payment to activate."},{label:"Payment window closed?",text:"Tap Pay online to reopen it."},{label:"Activation",text:"Membership activates on its own once verified - benefits stay locked until then."}] };
 }
 
 /** Only a settled capture is success. Every other outcome stays explicit. */

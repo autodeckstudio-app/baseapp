@@ -5,9 +5,7 @@ import{VisitCharges}from'../../../ui/VisitCharges';
 import {useSharedVisit} from '../../../hooks/useSharedVisit';
 import {recordedReadyAt,visitProgress} from '@autodeck/core';
 import {VisitFeedback} from '../../../ui/VisitFeedback';
-import {VisitRecords} from '../../../ui/VisitRecords';
 import { cancellationErrorMessage } from "../../../lib/cancellation-error";
-import { JobWorkAndCoverage } from "../../../ui/JobWorkAndCoverage";
 import{verifyMyCustomerDocId}from'../../../lib/auth-service';
 import { bookingPayOutcomeMessage } from "../../../lib/native-pay-core";
 import { listOwnerKey } from "../../../lib/owner-key";
@@ -110,8 +108,6 @@ export default function BookingDetailScreen() {
   // but a persisted Firebase session can exist in this browser - so every write and
   // every navigation into a write flow is blocked explicitly, never relying on the
   // fake ids being rejected by the backend.
-  const [workOpen, setWorkOpen] = useState(false);
-  useEffect(()=>setWorkOpen(false),[id]);
   const isMock = __DEV__ && !!devSample && (mock === "1" || mock === "2");
   const router = useRouter();
   useLang();
@@ -130,7 +126,7 @@ export default function BookingDetailScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [awaitingLinkId,setAwaitingLinkId]=useState<string|null>(null);
   const routeScope=JSON.stringify([id,authB.status,authB.status==='ready'?listOwnerKey(authB)?.key??null:null,authB.status==='ready'?authB.claims.tenantId:null,retryTick]);const routeRef=useRef(routeScope);routeRef.current=routeScope;const actionEpoch=useRef(0),actionLock=useRef(false);
-  useEffect(()=>{actionEpoch.current++;actionLock.current=false;setCancelling(false);setPayingNow(false);setConfirmingCancel(false);setActionError(null);setAwaitingLinkId(null);setStars(0);setNote('');setRated(false);setRateBusy(false);setRateError(null);setDecidingId(null);setDecideError(null);setQuoteBusy(false);return()=>{actionEpoch.current++}},[routeScope]);
+  useEffect(()=>{actionEpoch.current++;actionLock.current=false;setCancelling(false);setPayingNow(false);setConfirmingCancel(false);setActionError(null);setAwaitingLinkId(null);setStars(0);setNote('');setRated(false);setRateBusy(false);setRateError(null);setDecidingId(null);setDecideError(null);setQuoteBusy(false);setQuoteAction(null);return()=>{actionEpoch.current++}},[routeScope]);
   const mockWriteBlocked = (): boolean => {
     if (!isMock) return false;
     setActionError("Sample preview - changes are not saved.");
@@ -277,6 +273,7 @@ export default function BookingDetailScreen() {
   const quoteWorkOpen = !!job && ["PENDING_VEHICLE", "VEHICLE_RECEIVED", "STANDBY"].includes(job.status);
   const quoteExpired = !booking?.quoteExpiresAt || !Number.isFinite(Date.parse(booking.quoteExpiresAt)) || Date.now() >= Date.parse(booking.quoteExpiresAt);
   const [quoteBusy, setQuoteBusy] = useState(false);
+  const [quoteAction,setQuoteAction]=useState<"approve"|"decline"|null>(null);
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [decideError, setDecideError] = useState<string | null>(null);
   async function handleDecide(approvalId: string, decision: "approved" | "rejected") {
@@ -293,14 +290,14 @@ export default function BookingDetailScreen() {
     if (mockWriteBlocked()) return;
     if (!id||!booking||!ownerVerified||!quoteWorkOpen||quoteExpired||quoteBusy||livePaymentRef.current?.status==='completed'||liveBookingRef.current?.status==='CANCELLED'||liveBookingRef.current?.status==='EXPIRED'||liveBookingRef.current?.status==='COMPLETED'||routeRef.current!==routeScope||actionLock.current) return;
     const scope=routeScope,gen=actionEpoch.current;const current=()=>routeRef.current===scope&&actionEpoch.current===gen;actionLock.current=true;
-    setQuoteBusy(true);
+    setQuoteAction(decline?"decline":"approve");setQuoteBusy(true);
     try {
       await (decline ? declineBookingQuote : approveBookingQuote)(booking.id,booking.totalAmount,booking.updatedAt);
       // The live booking listener, not a stale request closure, projects approval.
     } catch (err) {
       if(current())setActionError(err instanceof Error ? err.message : "Could not approve the quote.");
     } finally {
-      if(current()){actionLock.current=false;setQuoteBusy(false);}
+      if(current()){actionLock.current=false;setQuoteBusy(false);setQuoteAction(null);}
     }
   }
 
@@ -370,6 +367,8 @@ export default function BookingDetailScreen() {
   const giftCovered = Boolean(booking.giftId) && booking.priceBreakdown.total === 0;
   const waitingCancel = booking.cancelIntent?.state === "waiting" || booking.cancelIntent?.state === "needs_review";
   const noPaymentDue=booking.totalAmount===0&&booking.priceBreakdown.total===0;
+  const displayNoPaymentDue=noPaymentDue&&(!job||job.totalAmount===0&&(!job.combinedSettlement||job.combinedSettlement.balanceDuePaise===0));
+  const membershipPaymentCopy=membershipCoveredLabel(booking)&&displayNoPaymentDue?"Covered by your membership - nothing to pay":null;
   const canPay = !job?.visitId&&!job?.cashReconciliationId&&!noPaymentDue&&!membershipCoveredLabel(booking) && !waitingCancel && (booking.paymentStatus === "unpaid" || Boolean(job?.combinedSettlement&&job.combinedSettlement.balanceDuePaise>0&&!job.offlineSettlement&&booking.paymentStatus==="partial")) && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
   // Just booked (placed=1 landing view): offering to reschedule seconds after
   // booking is noise, so the section stays hidden. Opened later from the
@@ -404,15 +403,13 @@ export default function BookingDetailScreen() {
     <Screen
       onBack={originBack}
       header={
-        <View testID="booking-identity-header" style={{ minHeight:metrics.heroCompact+60,borderRadius: 24, overflow: "hidden", backgroundColor: "#0B0B0D", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)",justifyContent:"flex-end" }}>
-          <View style={{position:"absolute",inset:0}}><CarThumb car={car ?? (booking.vehicleSnapshot ? { ...booking.vehicleSnapshot, photoUrl: null, category: booking.vehicleCategory } : undefined)} height={metrics.heroCompact + 60} radius={0} /></View>
-          <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0.25) 0%, rgba(8,8,10,0) 35%, rgba(8,8,10,0.92) 100%)" } as object) }} />
-          <View testID="booking-identity-stack" style={{padding:metrics.cardPad,gap:metrics.identityGap}}>
-            <View style={{ alignSelf: "flex-start", flexDirection: "row", flexWrap:"wrap",gap: 8 }}><Chip label={missed ? "Missed" : booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt)) ? "Pending payment" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} onDark /></View>
-            <T role="heading" style={{ color: "#FFFFFF" }}>{svc?.name ?? "Your visit"}</T>
-            <T role="caption" style={{ color: "#E4E2DF" }}>{displayDate} · {displayTime}</T>
-            <T role="caption" style={{ color: "#E4E2DF" }}>Booking ID {bookingCode(booking.id)}</T>
-          </View>
+        <View testID="booking-identity-header" style={{gap:20}}>
+          <View style={{gap:8}}><Kicker>Your visit</Kicker><T role="title">{svc?.name ?? "Your visit"}</T></View>
+          <Pane pad="inset"><View testID="booking-identity-stack" style={{gap:metrics.identityGap}}>
+            <View style={{alignSelf:"flex-start",flexDirection:"row",flexWrap:"wrap",gap: 8}}><Chip label={missed ? "Missed" : booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt)) ? "Pending payment" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} /></View>
+            <T role="heading">{displayDate}</T><T role="bodyStrong">{displayTime}</T>
+            <View style={{paddingTop:12,borderTopWidth:1,borderTopColor:"rgba(128,128,128,.2)",gap:6}}><T tone="secondary">{car ? `${car.make} ${car.model}` : booking.vehicleSnapshot ? `${booking.vehicleSnapshot.make} ${booking.vehicleSnapshot.model}` : "Your car"}</T><T role="caption" tone="tertiary">Booking ID {bookingCode(booking.id)}</T></View>
+          </View></Pane>
         </View>
       }
     >
@@ -420,7 +417,7 @@ export default function BookingDetailScreen() {
       {placed === "1" && booking.status === "PENDING" && booking.payMode !== "online" && !booking.holdExpiresAt ? (
         <Notice
           title="Request sent"
-          body="The studio has your request and will confirm your slot. Status updates here. Nothing is charged now."
+          facts={[{"label": "Slot", "text": "The studio has your request and will confirm your slot."}, {"label": "Status", "text": "Updates here."}, {"label": "Payment", "text": "Nothing is charged now."}]}
         />
       ) : null}
 
@@ -495,12 +492,10 @@ export default function BookingDetailScreen() {
         </Pane>
       ) : null}
 
-      {job?.status==='READY_FOR_DELIVERY'&&!job.visitId&&!bookingClosed?<Button label="Confirm collection with studio" kind="quiet" onPress={()=>router.push('/(tabs)/studio')}/>:null}
+      {job?.status==='READY_FOR_DELIVERY'&&!job.visitId&&!bookingClosed?<Button label="Confirm collection with studio" kind="quiet" onPress={()=>router.navigate('/(tabs)/studio')}/>:null}
       {job && !["CANCELLED","EXPIRED"].includes(booking.status) && jobStage(job.status) && job.status !== "PENDING_VEHICLE" ? job.visitId&&!sharedProgress?null:<JobTimeline status={sharedProgress?.status??job.status} history={sharedProgress?.history??job.statusHistory??[]} finalLabel={sharedProgress?.finalLabel} /> : null}
 
 
-      {!isMock && ownerVerified && job && booking.status==='COMPLETED' ? <VisitRecords key={routeScope+job.id} jobId={job.id} vehicle={car?`${car.make} ${car.model}`:'This visit'} hasInspection={inspection?.status==='finalized'} onInspection={()=>router.push({pathname:'/(tabs)/bookings/inspection',params:{jobId:job.id}})}/> : <>
-      {!isMock && ownerVerified && job ? <View style={{gap:12}}>{job.status!=="READY_FOR_DELIVERY"?<Pane pad="gap"><Row title="Work record" expanded={workOpen} detail={workOpen?"Hide performed work":"View performed work and QC"} onPress={()=>setWorkOpen(v=>!v)} last/></Pane>:null}{workOpen||job.status==="READY_FOR_DELIVERY"?<JobWorkAndCoverage key={job.id} jobId={job.id} vehicle={car?`${car.make} ${car.model}`:"This visit"}/>:null}</View>:null}
 
       {inspection?.status === "finalized" && job ? (
         <Pane pad="inset">
@@ -513,7 +508,6 @@ export default function BookingDetailScreen() {
         </Pane>
       ) : null}
 
-      </>}
 
       {approvals
         .filter((a) => a.status === "pending" && !(job && jobStage(job.status)))
@@ -548,7 +542,7 @@ export default function BookingDetailScreen() {
             <T role="caption" tone="secondary">{booking.quoteExpiresAt && Number.isFinite(Date.parse(booking.quoteExpiresAt)) ? `Valid until ${new Date(booking.quoteExpiresAt).toLocaleString("en-IN")}.` : "Ask the office to reissue this quote with a validity date."}</T>
             {!quoteWorkOpen ? <T role="body" tone="secondary">This job needs an office review before the quote can be answered.</T> : null}
             {quoteExpired ? <T role="body" tone="secondary">This quote expired or needs a validity date. Ask the office for a new quote. No work is approved.</T> : null}
-            <View style={{ marginTop: space.line }}><Button label="Approve quote" disabled={!ownerVerified||!quoteWorkOpen||quoteExpired||quoteBusy||["CANCELLED","COMPLETED","EXPIRED"].includes(booking.status)||payment?.status==='completed'} busy={quoteBusy} onPress={() => void handleApproveQuote()} /><Button label="Decline quote" kind="quiet" disabled={!ownerVerified || !quoteWorkOpen || quoteBusy || quoteExpired} onPress={() => void handleApproveQuote(true)} /></View>
+            <View style={{ marginTop: space.line }}><Button label="Approve quote" disabled={!ownerVerified||!quoteWorkOpen||quoteExpired||quoteBusy||["CANCELLED","COMPLETED","EXPIRED"].includes(booking.status)||payment?.status==='completed'} busy={quoteBusy&&quoteAction==="approve"} onPress={() => void handleApproveQuote()} /><Button label="Decline quote" kind="quiet" busy={quoteBusy&&quoteAction==="decline"} disabled={!ownerVerified || !quoteWorkOpen || quoteBusy || quoteExpired} onPress={() => void handleApproveQuote(true)} /></View>
           </Pane>
         ) : null}
         {booking.quoteStatus === "declined" ? <Pane><T role="body">Quote declined. Work has not been approved. Contact the office for a new quote.</T></Pane> : null}
@@ -569,7 +563,7 @@ export default function BookingDetailScreen() {
           {booking.priceBreakdown.roundOffPaise ? <Row title="Round off" trailing={<T role="data">{rupees(booking.priceBreakdown.roundOffPaise)}</T>} /> : null}
           {booking.priceBreakdown.tax > 0 ? <Row title={booking.priceBreakdown.taxDescription} trailing={<T role="data">{rupees(booking.priceBreakdown.tax)}</T>} /> : null}
           <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(booking.priceBreakdown.total)}</T>} />
-          <Row detailTone="secondary" title="Payment" detail={groupedPaymentLabel??(job?.cashReconciliationId&&job.paymentStatus!=="paid"?"Cash receipt under review - do not pay again":membershipCoveredLabel(booking) ?? (noPaymentDue?giftCovered?"Included with your gift - no payment needed":"No payment needed":job?.offlineSettlement && job.paymentStatus==="partial" ? "Part payment recorded - balance due" : payment?.status==='completed'&&job?.paymentStatus!=='paid'&&!(payment as Payment & {invoiceReviewNeeded?:boolean}).invoiceReviewNeeded?'Payment records syncing - do not pay again':customerPaymentLabel(payment,paymentIsCurrent||isMock?'ready':paymentOwnerCurrent&&paymentScope===currentPaymentScope?paymentRead:'loading')))} last />
+          <Row detailTone="secondary" title="Payment" detail={groupedPaymentLabel??(job?.cashReconciliationId&&job.paymentStatus!=="paid"?"Cash receipt under review - do not pay again":membershipPaymentCopy ?? (noPaymentDue&&!displayNoPaymentDue?"Additional charges may be due - check with the studio":displayNoPaymentDue?giftCovered?"Included with your gift - no payment needed":"No payment needed":job?.offlineSettlement && job.paymentStatus==="partial" ? "Part payment recorded - balance due" : payment?.status==='completed'&&job?.paymentStatus!=='paid'&&!(payment as Payment & {invoiceReviewNeeded?:boolean}).invoiceReviewNeeded?'Payment records syncing - do not pay again':customerPaymentLabel(payment,paymentIsCurrent||isMock?'ready':paymentOwnerCurrent&&paymentScope===currentPaymentScope?paymentRead:'loading')))} last />
           {canPay&&!job?.cashReconciliationId&&booking.combinedPayment?.choice==="advance20"&&booking.paymentStatus==="partial"&&paymentIsCurrent&&(!payment||payment.status==="failed"||payment.status==="cancelled")?<View style={{marginTop:space.line}}><Button label={`Pay balance ${rupees(job?.combinedSettlement?.balanceDuePaise??0)}`} busy={payingNow} disabled={payingNow} onPress={()=>void handlePayNow()}/></View>:null}
           {resumeAllowed?<View style={{gap:space.line,marginTop:space.line}}><Button label="Continue online payment" busy={payingNow} disabled={payingNow} onPress={()=>void resumePayment()}/></View>:null}
           {job?.combinedSettlement?<View><Row title="Verified advance" detail={rupees(job.combinedSettlement.advanceCapturedPaise)}/><Row title={job.offlineSettlement?"Balance after advance":"Balance due"} detail={rupees(booking.status==="CANCELLED"?0:job.combinedSettlement.balanceDuePaise)}/></View>:null}
@@ -599,9 +593,9 @@ export default function BookingDetailScreen() {
       ) : null}
       {booking.status === "EXPIRED" ? <Pane><Kicker>Slot released</Kicker><Row title="Booking" detail="Expired. This slot is no longer held."/><Row title="Next step" detail={paymentRead!=="ready"||payment?.status==="pending"||awaitingLinkId?"Payment is not confirmed yet. Check payment status with the studio before booking or paying again.":"You can book again."} last/></Pane> : null}
       {combinedReturn?<Pane pad="gap"><Kicker>Original-method returns</Kicker><Row title="Return amount" detail={rupees(combinedReturn.refundPaise)}/>{combinedReturn.feePaise>0?<Row title="Fee retained" detail={rupees(combinedReturn.feePaise)}/>:null}<Row title="Status" detail={combinedReturn.status==="awaiting_admin"?"Awaiting Admin approval":combinedReturn.status==="returned"?"Returns recorded":"Returns still pending"}/>{combinedReturn.entries.some(e=>e.method==="cash"&&e.returnedPaise<e.returnPaise)?<Row title="Cash return" detail="Still owed. Not an automatic refund."/>:null}</Pane>:null}
-      {!combinedReturn&&!(booking as Booking&{visitServiceReturnId?:string}).visitServiceReturnId&&(booking.refundStatus === "reserved" || booking.refundStatus === "requested") ? <Notice title="Refund requested" body="Your refund request is recorded. This page shows its status as it changes." /> : null}
-      {!combinedReturn&&!(booking as Booking&{visitServiceReturnId?:string}).visitServiceReturnId&&booking.refundStatus === "initiated" ? <Notice title="Refund recorded" body="The studio has recorded your refund. Paid online? When it reaches you depends on your bank or payment provider." /> : null}
-      {!combinedReturn&&!(booking as Booking&{visitServiceReturnId?:string}).visitServiceReturnId&&booking.refundStatus === "processed" ? <Notice title="Refund processed by Razorpay" body="Razorpay reports your refund as processed. When it reaches you depends on your bank or payment provider." /> : null}
+      {!combinedReturn&&!(booking as Booking&{visitServiceReturnId?:string}).visitServiceReturnId&&(booking.refundStatus === "reserved" || booking.refundStatus === "requested") ? <Notice title="Refund requested" facts={[{"label": "Request", "text": "Your refund request is recorded."}, {"label": "Status", "text": "This page shows its status as it changes."}]} /> : null}
+      {!combinedReturn&&!(booking as Booking&{visitServiceReturnId?:string}).visitServiceReturnId&&booking.refundStatus === "initiated" ? <Notice title="Refund recorded" facts={[{"label": "Record", "text": "The studio has recorded your refund."}, {"label": "Paid online?", "text": "When it reaches you depends on your bank or payment provider."}]} /> : null}
+      {!combinedReturn&&!(booking as Booking&{visitServiceReturnId?:string}).visitServiceReturnId&&booking.refundStatus === "processed" ? <Notice title="Refund processed by Razorpay" facts={[{"label": "Provider status", "text": "Razorpay reports your refund as processed."}, {"label": "Arrival", "text": "When it reaches you depends on your bank or payment provider."}]} /> : null}
       {actionError === EXISTING_PAYMENT_PENDING && booking.status!=="EXPIRED" && (!paymentIsCurrent||!payment||payment.status==='pending'||payment.status==='processing') ? <Pane>
         <Kicker>Payment check</Kicker>
         <Row title="Status" detail="Payment is not confirmed yet." />
@@ -611,7 +605,7 @@ export default function BookingDetailScreen() {
         <Row title="Could not open" detail="The existing payment link." />
         <Row title="Do not pay again" detail="Contact the studio for help." />
       </Pane> : actionError && actionError !== EXISTING_PAYMENT_PENDING ? <Notice title="We could not finish that" body={actionError} /> : null}
-      {pickup === "failed" ? <Notice title="Pickup request not sent" body="Your booking stands. The pickup or drop-off request could not be sent - please call the studio to arrange it." /> : null}
+      {pickup === "failed" ? <Notice title="Pickup request not sent" facts={[{"label": "Booking", "text": "Your booking stands."}, {"label": "Transport", "text": "The pickup or drop-off request could not be sent - please call the studio to arrange it."}]} /> : null}
 
       {showRescheduleSection ? (
         (() => {
@@ -640,7 +634,7 @@ export default function BookingDetailScreen() {
           if (entry.mode === "none") {
             return <T role="caption" tone="secondary">{entry.reason}</T>;
           }
-          if(job?.visitId||booking.visitId)return <Button label="Reschedule visit with studio" kind="quiet" onPress={()=>router.push("/(tabs)/studio")}/>;
+          if(job?.visitId||booking.visitId)return <Button label="Reschedule visit with studio" kind="quiet" onPress={()=>router.navigate("/(tabs)/studio")}/>;
           return rescheduleEligibility.eligible ? (
           <View style={{ gap: space.breath }}>
             {hasPendingApproval ? (
@@ -663,9 +657,9 @@ export default function BookingDetailScreen() {
 
       {!isMock && !walkIn && (RETAINED_TRANSPORT_PREVIEW||booking.status !== "CANCELLED" && booking.status !== "EXPIRED") ? <PickupCard transportScope={authB.status==="ready"?JSON.stringify([authB.user.uid,authB.claims.role,authB.claims.tenantId,authB.claims.studioId]):null} bookingId={booking.id} combinedPayment={Boolean(booking.combinedPayment)} /> : null}
 
-      {isBookingLateToday(booking) ? <Notice title="Your booking is still valid today" body="Your slot has passed, but you can still come today during studio hours. If not checked in by close (7 pm Sunday, 9 pm other days), the booking auto-cancels." /> : null}
+      {isBookingLateToday(booking) ? <Notice title="Your booking is still valid today" facts={[{"label": "Today", "text": "Your slot has passed, but you can still come today during studio hours."}, {"label": "Check-in deadline", "text": "If not checked in by close (7 pm Sunday, 9 pm other days), the booking auto-cancels."}]} /> : null}
       {autoCancelled ? (
-        <Notice title="Booking auto-cancelled" body="Not checked in by studio close (7 pm Sunday, 9 pm other days), so this booking is closed. Book again any time." />
+        <Notice title="Booking auto-cancelled" facts={[{"label": "Reason", "text": "Not checked in by studio close (7 pm Sunday, 9 pm other days), so this booking is closed."}, {"label": "Next step", "text": "Book again any time."}]} />
       ) : null}
 
       {canCancel ? (

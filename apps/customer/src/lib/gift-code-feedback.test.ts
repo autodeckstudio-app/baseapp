@@ -1,0 +1,2 @@
+import{it,expect}from'vitest';import{giftCodeProblem}from'./gift-code-feedback';
+it('normalizes using core and distinguishes prefix length and forbidden characters',()=>{expect(giftCodeProblem(' gw-abcd-2345 ')).toBeNull();expect(giftCodeProblem('XXABCD2345')).toContain('start with GW');expect(giftCodeProblem('GWABCD234')).toContain('8 characters');for(const c of ['0','1','I','O'])expect(giftCodeProblem('GWABCD234'+c)).toContain('0, 1, I or O');expect(giftCodeProblem('GWABCD23$5')).toContain('letters and numbers')});

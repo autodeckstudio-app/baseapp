@@ -11,6 +11,7 @@ export default defineConfig({
   define: { __DEV__: "false" },
   resolve: {
     alias: [
+      { find: /^react-native-safe-area-context$/, replacement: path.resolve(__dirname, "test/stubs/safe-area.ts") },
       { find: /^react-native$/, replacement: "react-native-web" },
       { find: /^expo-router$/, replacement: path.resolve(__dirname, "test/stubs/expo-router.ts") },
       { find: /^expo-crypto$/, replacement: path.resolve(__dirname, "test/stubs/expo-crypto.ts") },
@@ -19,5 +20,5 @@ export default defineConfig({
       { find: /^\.\.\/\.\.\/\.\.\/ui\/AppBar$/, replacement: path.resolve(__dirname, "test/stubs/app-bar.tsx") },
     ],
   },
-  test: { include: ["src/**/*.render.test.tsx"], exclude: ["src/app/(tabs)/bookings/booking-payment.render.test.tsx"] },
+  test: { setupFiles: ["./test/render-setup.ts"], include: ["src/**/*.render.test.tsx"], exclude: ["src/app/(tabs)/bookings/booking-payment.render.test.tsx"] },
 });

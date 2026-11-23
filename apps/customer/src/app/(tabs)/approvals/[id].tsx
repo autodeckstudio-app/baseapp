@@ -5,7 +5,7 @@ import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import type { ApprovalRequest, Vehicle, Booking, ServiceJob } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { space } from "@autodeck/ui/theme";
-import { Button, Chip, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { Button, Chip, Loading, Notice, Pane, Row, Screen, T, rupees , ButtonRow } from "../../../ui/kit";
 import { listenToApproval, respondToApproval } from "../../../lib/approval-service";
 import { db } from "../../../lib/firebase";
 
@@ -99,7 +99,7 @@ export default function ApprovalDetailScreen() {
   if (!approval) {
     return (
       <Screen onBack={originBack}>
-        <Notice title="Approval not found" body="It may have been withdrawn." action={<Button label="Go back" onPress={() => router.back()} />} />
+        <Notice title="Approval not found" body="It may have been withdrawn." action={<Button label="Go back" onPress={originBack ?? (() => router.canGoBack() ? router.back() : router.replace("/(tabs)/bookings"))} />} />
       </Screen>
     );
   }
@@ -116,18 +116,19 @@ export default function ApprovalDetailScreen() {
         </View>
       }
     >
-      <Pane pad="gap">
+      <Pane pad="inset"><View style={{gap:16}}>
+        <T role="label" tone="tertiary">WORK TO REVIEW</T>
+        <T role="heading" style={{fontSize:24,lineHeight:30}}>{approval.serviceName}</T>
+        <T tone="secondary">{approval.reason}</T>
         <Row title="Car" detail={vehicle ? `${vehicle.make} ${vehicle.model}` : "-"} />
-        <Row title="Additional service" detail={approval.serviceName} />
-        <Row title="Reason" detail={approval.reason} />
         <Row title="Requested" detail={formatWhen(approval.createdAt)} last />
-      </Pane>
+      </View></Pane>
 
-      <Pane pad="gap">
+      <Pane pad="inset"><View style={{gap:12}}><T role="label" tone="tertiary">PRICE CHANGE</T>
         <Row title="Current total" trailing={<T role="data">{rupees(approval.originalAmount)}</T>} />
         <Row title="Additional cost" trailing={<T role="data" tone="accent">+{rupees(approval.priceImpact)}</T>} />
         <Row title={<T role="heading">New total</T>} trailing={<T role="heading">{rupees(approval.newTotal)}</T>} last />
-      </Pane>
+      </View></Pane>
 
       {actionError ? <Notice title="Could not complete that" body={actionError} /> : null}
 
@@ -135,13 +136,15 @@ export default function ApprovalDetailScreen() {
         confirming ? (
           <Notice
             title={confirming === "approved" ? "Approve additional work?" : "Decline additional work?"}
-            body={
-              confirming === "approved"
-                ? `This authorizes ${approval.serviceName} for ${rupees(approval.priceImpact)}. Your new total will be ${rupees(approval.newTotal)}.`
-                : `The studio will not proceed with ${approval.serviceName}. Your original service continues as planned.`
-            }
+            facts={confirming === "approved" ? [
+              { label: "You authorize", text: `${approval.serviceName} for ${rupees(approval.priceImpact)}.` },
+              { label: "New total", text: rupees(approval.newTotal) },
+            ] : [
+              { label: "Additional work", text: `The studio will not proceed with ${approval.serviceName}.` },
+              { label: "Original service", text: "Continues as planned." },
+            ]}
             action={
-              <View style={{ gap: space.breath }}>
+              <ButtonRow>
                 <Button
                   label={confirming === "approved" ? "Approve" : "Decline"}
                   kind={confirming === "approved" ? "primary" : "danger"}
@@ -149,17 +152,17 @@ export default function ApprovalDetailScreen() {
                   onPress={() => void handleDecision(confirming)}
                 />
                 <Button label="Back" kind="quiet" onPress={() => setConfirming(null)} />
-              </View>
+              </ButtonRow>
             }
           />
         ) : (
-          <View style={{ gap: space.breath }}>
-            {quoteScopeRead!=="ready" ? <Notice title={quoteScopeRead==="loading"?"Checking the original quote":"Original quote could not load"} body="Your request stays here. Open the booking to check its original quote before approving additional work." action={<Button label="Open booking" onPress={()=>router.push(`/(tabs)/bookings/${approval.bookingId??approval.jobId}`)} />} /> : initialQuotePending ? <Notice title="Original quote approval needed" body="Your additional-work request stays here. Review the original quote on your booking first, then return to this request." action={<Button label="Open booking quote" onPress={()=>router.push(`/(tabs)/bookings/${linkedBooking?.id}`)} />} /> : <Button label="Approve" onPress={() => setConfirming("approved")} />}
+          <ButtonRow>
+            {quoteScopeRead!=="ready" ? <View style={{width:"100%"}}><Notice title={quoteScopeRead==="loading"?"Checking the original quote":"Original quote could not load"} facts={[{"label": "Request", "text": "Your request stays here."}, {"label": "Before approval", "text": "Open the booking to check its original quote before approving additional work."}]} action={<Button label="Open booking" onPress={()=>router.push(`/(tabs)/bookings/${approval.bookingId??approval.jobId}`)} />} /></View> : initialQuotePending ? <View style={{width:"100%"}}><Notice title="Original quote approval needed" facts={[{"label": "Additional work", "text": "Your additional-work request stays here."}, {"label": "Before approval", "text": "Review the original quote on your booking first, then return to this request."}]} action={<Button label="Open booking quote" onPress={()=>router.push(`/(tabs)/bookings/${linkedBooking?.id}`)} />} /></View> : <Button label="Approve" onPress={() => setConfirming("approved")} />}
             <Button label="Decline" kind="danger" onPress={() => setConfirming("rejected")} />
-          </View>
+          </ButtonRow>
         )
       ) : (
-        <Button label="Back to booking" kind="quiet" onPress={() => router.back()} />
+        <Button label="Back to booking" kind="quiet" onPress={originBack ?? (() => router.canGoBack() ? router.back() : router.replace("/(tabs)/bookings"))} />
       )}
     </Screen>
   );

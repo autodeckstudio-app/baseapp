@@ -10,7 +10,7 @@ export const customerNight = {
   borderStrong: "rgba(239,232,221,0.28)",
   textPrimary: "#EEEAE4",
   textSecondary: "#CCC6BD",
-  textTertiary: "#B7B0A6",
+  textTertiary: "#CAC3B9",
   textOnAccent: "#231E18",
   accent: "#EC8638",
   accentStrong: "#F59A4E",

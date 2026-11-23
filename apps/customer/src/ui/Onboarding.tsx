@@ -2,7 +2,9 @@
 // Paged, skippable, shown once. Images are bundled, so it opens instantly.
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { useRef, useState } from "react";
-import type { ScrollView } from "react-native";
+import { ScrollView } from "react-native";
+import {useExperienceTheme} from "@autodeck/ui/native";
+import {Ambient,Button,T} from "./kit";
 import { Animated, Image, Platform, Pressable, Text, View, useWindowDimensions, type ImageSourcePropType, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { sceneImagery, serviceImagery } from "../lib/imagery";
@@ -20,80 +22,19 @@ const SLIDES: Slide[] = [
 ];
 
 export function Onboarding({ onDone }: { onDone: () => void }) {
+  const { colors, name } = useExperienceTheme();
   const { width, height } = useWindowDimensions();
-  const x = useRef(new Animated.Value(0)).current;
   const ref = useRef<ScrollView>(null);
   const [page, setPage] = useState(0);
   const last = page === SLIDES.length - 1;
   const finish = () => { void AsyncStorage.setItem(ONBOARDED_KEY, "1").catch(() => undefined); onDone(); };
-  const go = (i: number) => ref.current?.scrollTo({ x: i * width, animated: true });
+  const go = (i: number) => {setPage(i);ref.current?.scrollTo({ x: i * width, animated: true });};
   const onEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => setPage(Math.round(e.nativeEvent.contentOffset.x / width));
-  return (
-    <View style={{ flex: 1, backgroundColor: "#050506", overflow: "hidden" }}>
-      <Animated.ScrollView
-        ref={ref as never}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        scrollEventThrottle={16}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { x } } }], { useNativeDriver: false })}
-        onMomentumScrollEnd={onEnd}
-        style={{ flex: 1 }}
-      >
-        {SLIDES.map((s, i) => {
-          const r = [(i - 1) * width, i * width, (i + 1) * width];
-          const shift = x.interpolate({ inputRange: r, outputRange: [width * 0.35, 0, -width * 0.35], extrapolate: "clamp" });
-          const textShift = x.interpolate({ inputRange: r, outputRange: [width * 0.6, 0, -width * 0.6], extrapolate: "clamp" });
-          const fade = x.interpolate({ inputRange: r, outputRange: [0, 1, 0], extrapolate: "clamp" });
-          const zoom = x.interpolate({ inputRange: r, outputRange: [1.25, 1.05, 1.25], extrapolate: "clamp" });
-          return (
-            <View key={s.kicker + i} style={{ width, height, overflow: "hidden" }}>
-              <Animated.View style={{ ...Fill, transform: [{ translateX: shift }, { scale: zoom }] }}>
-                <Image source={s.image} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
-              </Animated.View>
-              <View pointerEvents="none" style={{ ...Fill, ...VEIL(0.35, 0.94) }} />
-              <Animated.View style={{ position: "absolute", left: 28, right: 110, bottom: 56, gap: 12, opacity: fade, transform: [{ translateX: textShift }] }}>
-                <Text style={{ color: "#EC8638", fontSize: 12, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" }}>{s.kicker}</Text>
-                <Text style={{ color: "#FFFFFF", fontFamily: "Montserrat, Inter, sans-serif", fontSize: 32, lineHeight: 38, fontWeight: "700" }}>{s.title}</Text>
-                <Text style={{ color: "#DAD8D5", fontSize: 16, lineHeight: 24 }}>{s.line}</Text>
-                {s.chips ? (
-                  <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
-                    {s.chips.map((c) => (
-                      <View key={c} style={{ borderRadius: 9999, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "rgba(18,18,20,0.5)", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)", ...(Platform.OS === "web" ? ({ backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" } as object) : {}) }}>
-                        <Text style={{ color: "#FFFFFF", fontWeight: "600", fontSize: 14 }}>{c}</Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
-              </Animated.View>
-            </View>
-          );
-        })}
-      </Animated.ScrollView>
-
-      <Orb size={300} color="rgba(245,154,69,0.35)" x="60%" y="-10%" />
-      <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, top: 0, paddingTop: 22, paddingHorizontal: 22, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
-          {SLIDES.map((_, i) => {
-            const r = [(i - 1) * width, i * width, (i + 1) * width];
-            return <Animated.View key={i} style={{ height: 4, borderRadius: 2, backgroundColor: "#EC8638", width: x.interpolate({ inputRange: r, outputRange: [6, 22, 6], extrapolate: "clamp" }), opacity: x.interpolate({ inputRange: r, outputRange: [0.4, 1, 0.4], extrapolate: "clamp" }) }} />;
-          })}
-        </View>
-        {!last ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Skip" onPress={finish} hitSlop={10} style={{ borderRadius: 9999, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "rgba(0,0,0,0.4)", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}>
-            <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>Skip</Text>
-          </Pressable>
-        ) : null}
-      </View>
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={last ? "Get started" : "Next"}
-        onPress={() => (last ? finish() : go(page + 1))}
-        style={({ pressed }) => ({ position: "absolute", right: 26, bottom: 48, width: 62, height: 62, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.16)", borderWidth: 1, borderColor: "rgba(255,255,255,0.32)", opacity: pressed ? 0.88 : 1 })}
-      >
-        <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 26, marginTop: -2 }}>{last ? "\u2713" : "\u2197"}</Text>
-      </Pressable>
-    </View>
-  );
+  return <Ambient><View style={{flex:1,paddingTop:24,paddingBottom:24,gap:20}}>
+    <View style={{paddingHorizontal:24,flexDirection:"row",alignItems:"center",justifyContent:"space-between"}}><T role="label" tone="tertiary">AUTODECK</T>{!last?<Pressable accessibilityRole="button" accessibilityLabel="Skip" onPress={finish} style={{minHeight:44,justifyContent:"center",paddingHorizontal:12}}><T role="label">Skip</T></Pressable>:null}</View>
+    <Animated.ScrollView ref={ref as never} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={onEnd} style={{flex:1}}>
+      {SLIDES.map((s,i)=><ScrollView key={s.kicker+i} style={{width}} contentContainerStyle={{paddingHorizontal:24,paddingBottom:20,gap:24}}><View style={{height:Math.min(height*.36,300),borderRadius:28,overflow:"hidden"}}><Image source={s.image} resizeMode="cover" style={{width:"100%",height:"100%"}}/></View><View style={{gap:12}}><T role="label" tone="tertiary">{s.kicker}</T><T role="title" style={{fontSize:30,lineHeight:36}}>{s.title}</T><T tone="secondary" style={{lineHeight:24}}>{s.line}</T>{s.chips?<View style={{flexDirection:"row",flexWrap:"wrap",gap:8}}>{s.chips.map(c=><View key={c} style={{paddingHorizontal:14,paddingVertical:9,borderRadius:12,borderWidth:1,borderColor:colors.borderSubtle}}><T role="caption">{c}</T></View>)}</View>:null}</View></ScrollView>)}
+    </Animated.ScrollView>
+    <View style={{paddingHorizontal:24,gap:20}}><View style={{flexDirection:"row",gap:7}}>{SLIDES.map((_,i)=><Pressable key={i} accessibilityRole="button" accessibilityLabel={`Go to introduction ${i+1}`} onPress={()=>go(i)} style={{minHeight:32,flex:1,justifyContent:"center"}}><View style={{height:4,borderRadius:4,backgroundColor:i===page?colors.textPrimary:colors.borderSubtle}}/></Pressable>)}</View><Button label={last?"Get started":"Next"} onPress={()=>last?finish():go(page+1)}/></View>
+  </View></Ambient>;
 }

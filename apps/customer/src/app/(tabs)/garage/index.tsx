@@ -1,7 +1,7 @@
+import { StatePanel } from "../../../ui/StatePanel";
 import {GarageDisclosure} from '../../../ui/GarageDisclosure';
 import {GarageActions} from '../../../ui/GarageActions';
 import { JourneySheet } from "../../../ui/JourneySheet";
-import { SceneIntro } from "../../../ui/SceneIntro";
 // Garage: one lead car with its state, the rest compact (spec §6.4).
 // Choosing a car makes it the active one on Home and opens its room.
 import { useEffect, useRef, useState } from "react";
@@ -23,7 +23,7 @@ import { listenToMyJobs } from "../../../lib/job-service";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import type { ServiceJob } from "@autodeck/core";
 import { metrics } from "../../../lib/metrics";
-import { Button, Loading, Notice, Plate, Screen, T } from "../../../ui/kit";
+import { Button, Loading, Notice, Plate, PageHeader, Screen, T } from "../../../ui/kit";
 import { FloorCar } from "../../../ui/GarageShowroom";
 import { useSegmentSwipe } from "../../../lib/segment-swipe";
 import { garageBrands, garageCarsForBrand } from "../../../lib/garage-brands";
@@ -175,8 +175,7 @@ export default function GarageScreen() {
   };
 
   return (
-    <Screen appBar="Garage">
-      <SceneIntro eyebrow="Your garage" compact title="Your cars"/>
+    <Screen appBar="Garage" header={<PageHeader title="Your cars" sub="Your cars, service history and papers."/>}>
       <View testID="garage-swipe-area" {...brandSwipe.handlers} style={[{ gap: 20, minHeight: Math.max(winH - 240, 400) }, brandSwipe.style]}>
       {ownerUnknown ? <Notice title="Couldn't confirm your profile" body="Try again in a moment." action={<Button icon="refresh" label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {ownerLinking ? <Notice title="Your profile is waiting to be claimed" body="Claim it to see your cars, bookings and bills here." action={<Button label="Claim your profile" onPress={() => router.push("/(auth)/claim")} />} /> : null}
@@ -186,11 +185,7 @@ export default function GarageScreen() {
         <FilterPills fixedFirst items={[{ key: null as string | null, label: "All" }, ...brands.map((b) => ({ key: b.key as string | null, label: b.label }))]} value={sel} onChange={setPick} flat trailing={<Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={() => router.push("/(tabs)/garage/add")} style={{ paddingHorizontal: 2, paddingVertical: 9, flexDirection: "row", alignItems: "center", gap: 4 }}><Text style={{ color: ink.premium, fontSize: 16, fontWeight: "800" }}>+</Text><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "700" }}>Add car</Text></Pressable>} />
       ) : null}
       {list.length === 0 && !error && !ownerUnknown && !ownerLinking && !ownerNoProfile ? (
-        <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.breath }}>
-          <T role="heading">No cars yet</T>
-          <T tone="secondary">Add your car once. Bookings, bills and papers attach to it from then on.</T>
-          <Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} testID="garage-add" />
-        </View>
+        <StatePanel icon="garage" title="No cars yet" body="Add your car once. Bookings, bills and papers attach to it from then on." action={<Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} testID="garage-add" />} />
       ) : filtered.length > 0 ? (
         <View style={{ gap: metrics.sectionGap }}>
           <View testID="garage-car-stack" style={{gap:20}}>
@@ -216,10 +211,9 @@ export default function GarageScreen() {
       ) : null}
       <JourneySheet kind="garage"/>
       {archived.length > 0 ? (
-        <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.line }}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Archived cars" onPress={() => setShowArchived((v) => !v)} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <T role="heading">Archived cars ({archived.length})</T>
-            <T tone="secondary">{showArchived ? "Hide" : "Show"}</T>
+        <View style={{ gap: space.line }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Archived cars" onPress={() => setShowArchived((v) => !v)} style={{ minHeight:48, alignSelf:"flex-start", justifyContent:"center" }}>
+            <T role="caption" tone="secondary" style={{textDecorationLine:"underline"}}>Archived ({archived.length}){showArchived ? " - Hide" : ""}</T>
           </Pressable>
           {showArchived ? archived.map((v) => (
             <View key={v.id} style={{ gap: 6, paddingVertical: 6, borderTopWidth: 1, borderTopColor: "rgba(128,128,128,0.18)" }}>
@@ -234,14 +228,14 @@ export default function GarageScreen() {
                 <View style={{ gap: 8 }}>
                   <GarageDisclosure kind="delete"/>
                   <View style={{ flexDirection: "row", flexWrap:"wrap", gap: 10 }}>
-                    <Button label="Yes, delete forever" kind="danger" busy={archiveActionBusy === v.id} onPress={() => void confirmDeletePermanently()} />
-                    <Button label="Keep it" kind="quiet" onPress={() => setDeleting(null)} />
+                    <Button label="Yes, delete forever" kind="danger" busy={archiveActionBusy === v.id} disabled={!!archiveActionBusy} onPress={() => void confirmDeletePermanently()} />
+                    <Button label="Keep it" kind="quiet" disabled={!!archiveActionBusy} onPress={() => setDeleting(null)} />
                   </View>
                 </View>
               ) : (
                 <View style={{ flexDirection: "row", flexWrap:"wrap", gap: 10 }}>
-                  <Button label="Restore" kind="quiet" busy={archiveActionBusy === v.id} onPress={() => void restore(v)} />
-                  <Button label="Delete permanently" kind="danger" onPress={() => setDeleting(v)} />
+                  <Button label="Restore" kind="quiet" busy={archiveActionBusy === v.id} disabled={!!archiveActionBusy} onPress={() => void restore(v)} />
+                  <Button label="Delete permanently" kind="danger" disabled={!!archiveActionBusy} onPress={() => setDeleting(v)} />
                 </View>
               )}
             </View>

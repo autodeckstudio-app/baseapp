@@ -64,11 +64,11 @@ describe("expected ready never precedes the start", () => {
   });
 });
 
-describe("booking hero chips stay readable on the dark hero in Day mode", () => {
-  it("remaining status chip uses onDark without a misleading Live badge", () => {
+describe("booking status stays on the themed visit surface", () => {
+  it("current status remains without a misleading Live badge", () => {
     const src = readFileSync(`${__dirname}/../app/(tabs)/bookings/[id].tsx`, "utf8");
     expect(src).not.toContain('<Chip label="Live"');
-    expect(src).toMatch(/BOOKING_CHIP_TONE\[booking\.status\] \?\? "neutral"\} onDark \/>/);
+    expect(src).toMatch(/BOOKING_CHIP_TONE\[booking\.status\] \?\? "neutral"\} \/>/);
   });
 });
 

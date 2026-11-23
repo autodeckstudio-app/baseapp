@@ -1,3 +1,5 @@
+import {useExperienceTheme} from "@autodeck/ui/native";
+import {raised} from "../lib/raised";
 import { SceneCard } from "./SceneCard";
 // Garage floor: swipe sideways between cars. The focused car sits full size on a dark
 // floor with its reflection; neighbours recede (smaller, dimmed) so the floor reads as
@@ -40,6 +42,7 @@ export function CarPhotoCard({ car: v, height, badge, onOpen, chip }: { car: Veh
 
 /** One car card: hero photo with identity overlaid, or a compact card when the car has no photo yet. Used by the stacked garage list. */
 export function FloorCar({ car: v, width, height, focused, onOpen, chip }: { car: Vehicle; width: number | "100%"; height: number; focused: boolean; onOpen: (v: Vehicle) => void; chip?: React.ReactNode }) {
+  const {name:mode,colors}=useExperienceTheme();
   const name = `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber;
   // A car with no photo yet gets a compact card: a short thumb band keeps the
   // truthful empty state, and identity lives in a solid dark bar BELOW it - no
@@ -51,14 +54,14 @@ export function FloorCar({ car: v, width, height, focused, onOpen, chip }: { car
     return (
       <SceneCard label={`Open ${name}`} onPress={() => onOpen(v)}>
         <View style={{ width, opacity: focused ? 1 : 0.72, transform: [{ scale: focused ? 1 : 0.94 }] }}>
-          <View style={{ borderRadius: 24, borderWidth:1, borderColor:"rgba(180,180,190,0.20)", backgroundColor: "rgba(20,20,26,0.92)", paddingHorizontal: 14, paddingVertical: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View style={{ ...raised(mode).card, paddingHorizontal: 14, paddingVertical: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
             <CarThumb car={v} height={56} width={56} radius={16} />
             <View style={{ flex: 1, minWidth: 0, gap: metrics.identityGap }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Text numberOfLines={2} style={{ flex: 1, minWidth: 0, color: "#FFFFFF", fontSize: 16, letterSpacing:-0.2, fontWeight: "700" }}>{name}</Text>
+                <Text numberOfLines={2} style={{ flex: 1, minWidth: 0, color: colors.textPrimary, fontSize: 16, letterSpacing:-0.2, fontWeight: "700" }}>{name}</Text>
                 {chip ? <View style={{ flexShrink: 0 }}>{chip}</View> : null}
               </View>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}><Plate value={v.registrationNumber} />{segmentLabel(v.category) ? <Text style={{ color: "#E4E2DF", fontSize: 12 }}>{segmentLabel(v.category)}</Text> : null}</View>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}><Plate value={v.registrationNumber} />{segmentLabel(v.category) ? <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{segmentLabel(v.category)}</Text> : null}</View>
             </View>
           </View>
         </View>

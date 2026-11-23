@@ -1,7 +1,7 @@
 import type { TopSvc } from './top-services';
 import {parentPath,type ServicesPath} from './services-navigation';
-export type HomeEntry='wash'|'coat'|'garage'|'inspect';
-export const homeEntryPath=(entry:unknown):ServicesPath|null=>entry==='wash'?{home:'washing',family:'Exterior wash'}:entry==='coat'?{home:'paint',family:'Ceramic'}:entry==='garage'?{home:'garage'}:entry==='inspect'?{home:'garage',family:'Inspection'}:null;
+export type HomeEntry='wash'|'coat'|'garage'|'inspect'|'mods'|'area-washing'|'area-paint'|'area-detailing'|'area-garage';
+export const homeEntryPath=(entry:unknown):ServicesPath|null=>entry==='area-washing'?{home:'washing'}:entry==='area-paint'?{home:'paint'}:entry==='area-detailing'?{home:'detailing'}:entry==='area-garage'?{home:'garage'}:entry==='wash'?{home:'washing',family:'Exterior wash'}:entry==='coat'?{home:'paint',family:'Ceramic'}:entry==='garage'?{home:'garage'}:entry==='inspect'?{home:'garage',family:'Inspection'}:entry==='mods'?{home:'modifications'}:null;
 /** A generic Home label opens choices, never the cheapest product used to show a starting price. */
 export function homeServiceTarget(service:TopSvc,cardKey?:string){
  const entry=homeEntryPath(cardKey)?cardKey:service.category==='washing'?'wash':service.category==='ceramic'||(service.category==='coating'&&/ceramic/i.test(service.name))?'coat':null;
@@ -19,3 +19,6 @@ export function detailHomeBack(params:Record<string,string|undefined>){
  const home=params.catalogueHome;
  return home?{pathname:'/(tabs)/catalogue',params:{returnTo:'home',homeEntry:params.homeEntry??'',home,family:params.catalogueFamily??'',brand:params.catalogueBrand??'',work:params.catalogueWork??''}}:{pathname:'/(tabs)',params:{}};
 }
+
+/** Home category shortcut opens existing choices without fabricating a catalogue row. */
+export function homeCategoryTarget(category:string|null){const home=category&&['washing','paint','detailing','garage','modifications'].includes(category)?category:null;return home?{pathname:'/(tabs)/catalogue',params:{home,returnTo:'home',homeEntry:home==='modifications'?'mods':'area-'+home}}:{pathname:'/(tabs)/catalogue',params:{}}}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { createContext, createElement, useContext, useEffect, useState, type ReactNode } from "react";
 import type { User } from "firebase/auth";
 import type { AutoDeckClaims } from "@autodeck/auth";
 import { onIdTokenChanged, resolveExistingCustomerDocId, resolveMyCustomerDocResolution, type CustomerDocResolution } from "../lib/auth-service";
@@ -30,10 +30,27 @@ type AuthState =
  * After Google sign-in, the app calls setupCustomerProfile + refreshAuthToken,
  * which fires onIdTokenChanged again with updated claims.
  */
+const SharedAuth = createContext<AuthState | null>(null);
+
+/** One live subscription per app root. No persisted ownership result or timeout bypass. */
+export function CustomerAuthProvider({ children }: { children: ReactNode }) {
+  const state = useAuthSubscription(true);
+  return createElement(SharedAuth.Provider, { value: state }, children);
+}
+
 export function useAuth(): AuthState {
+  const shared = useContext(SharedAuth);
+  // Standalone fixtures/embedders retain the original hook. Root consumers read
+  // the same live state without creating duplicate Firebase listeners/probes.
+  const standalone = useAuthSubscription(shared === null);
+  return shared ?? standalone;
+}
+
+function useAuthSubscription(enabled: boolean): AuthState {
   const [state, setState] = useState<AuthState>({ status: "loading" });
 
   useEffect(() => {
+    if (!enabled) return undefined;
     // Stale-async guard: a newer auth event (sign-out, account switch, token
     // refresh) supersedes any resolution still in flight.
     let generation = 0;
@@ -111,7 +128,7 @@ export function useAuth(): AuthState {
       generation += 1;
       unsubscribe();
     };
-  }, []);
+  }, [enabled]);
 
   return state;
 }

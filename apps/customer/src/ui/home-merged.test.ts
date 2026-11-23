@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-const body = readFileSync(new URL('./HomeScene.tsx', import.meta.url), 'utf8');
-describe('reviewed whole Home scene',()=>{
- it('has one personal stage and state dock, then visual discovery, Club, showroom and studio',()=>{const order=['testID="home-personal-stage"','testID="home-state-dock"','Services for you','testID="home-service-triad"','<HomeClub','<HomeShowroom','The studio,'];const pos=order.map(s=>body.indexOf(s));expect(pos.every(x=>x>=0)).toBe(true);expect([...pos].sort((a,b)=>a-b)).toEqual(pos);for(const key of order)expect(body.split(key)).toHaveLength(2)});
- it('does not reintroduce stacked old heroes, decorative arrows or invented progress',()=>{for(const key of ['<LiveCard','<LeadCard','<CarChips','<KenBurns','LIVE_STEPS','↗','→','↓'])expect(body).not.toContain(key)});
- it('keeps the exact one-line Club heading and catalog-backed service keys',()=>{const club=readFileSync(new URL('./HomeClub.tsx',import.meta.url),'utf8');expect(club).toContain('>Make care a habit</Text>');expect(club).toContain('numberOfLines={1} adjustsFontSizeToFit');expect(body).toContain('pickTopServices(p.services)');expect(body).toContain('p.onService(s.service, s.key)')});
- it('uses only canonical active vehicle, not local photo-only switching',()=>{expect(body).toContain('p.cars.find(c=>c.id===p.activeCarId)');expect(readFileSync(new URL('./HomeOriginalTop.tsx', import.meta.url), 'utf8')).toContain('<HomeOwnedCars p={p}/>');expect(body).not.toContain('setActive(')});
- it('empty-car primary action adds a car and does not show an empty personal photo',()=>{const chips=readFileSync(new URL('./CarChips.tsx', import.meta.url),'utf8');expect(chips).toContain('if (cars.length === 0)');expect(chips).toContain('onPress={onAdd}');expect(chips).toContain('{framed ? <View');});
+import {describe,it,expect} from 'vitest';
+import {readFileSync} from 'node:fs';
+const read=(s:string)=>readFileSync(new URL(s,import.meta.url),'utf8');
+const body=read('./HomeScene.tsx');
+describe('approved Glacier Home',()=>{
+ it('one next action follows canonical owned cars and precedes service choices, membership and studio',()=>{const order=['<HomeOriginalTop','testID="home-state-dock"','testID="home-service-shortcuts"','<HomeClub','<HomeShowroom','The studio,'];const positions=order.map(s=>body.indexOf(s));expect(positions.every(n=>n>=0)).toBe(true);expect([...positions].sort((a,b)=>a-b)).toEqual(positions)});
+ it('stories sit directly after welcome and the retained service hero precedes owned-car context',()=>{const top=read('./HomeOriginalTop.tsx');const order=['Welcome to AutoDeck','{p.stories}','accessibilityLabel="Explore services"','<HomeOwnedCars p={p}/>'].map(s=>top.indexOf(s));expect(order.every(n=>n>=0)).toBe(true);expect([...order].sort((a,b)=>a-b)).toEqual(order)});
+ it('uses existing canonical selection rather than changing only an image',()=>{expect(read('./HomeOwnedCars.tsx')).toContain('currentProps.onSelectCar?.(car.id)');expect(body).not.toContain('setActive(');expect(body).not.toContain('useState(0)')});
+ it('keeps real records and studio actions, with no illustrative account records',()=>{for(const s of ['p.onGarage','p.onStudio','(p.quick??[]).map','(p.social??[]).map','p.carsList'])expect(body).toContain(s);for(const s of ['Example vehicle','Work under way','₹','→','↗'])expect(body).not.toContain(s)});
+ it('empty cars use one add action and no false photo',()=>{const c=read('./CarChips.tsx');expect(c).toContain('if (cars.length === 0)');expect(c).toContain('onPress={onAdd}');expect(c).toContain('const framed = !!car.vehicle?.photoUrl');expect(read('./HomeClub.tsx')).toContain('>Membership</Text>')});
 });

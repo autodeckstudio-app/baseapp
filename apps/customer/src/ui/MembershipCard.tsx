@@ -4,7 +4,7 @@ import type { Membership } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { glassInner } from "../lib/glass";
 import { metrics } from "../lib/metrics";
-import { cardState, daysLabel, discountLine, pickupsLeftLine } from "../lib/membership-view";
+import { cardState, daysLabel, discountLine, pickupsLeftLine, refreshesLeftLine } from "../lib/membership-view";
 import { carryOverLine } from "../lib/membership-rules";
 import { Chip, Pane, T } from "./kit";
 
@@ -16,18 +16,18 @@ export function MembershipCard({ membership, today }: { membership: Membership; 
   const rule = carryOverLine();
   return (
     <Pane pad="none" round="hero" fill="cool" tone="premium">
-      <View style={{ padding: metrics.cardPad, gap: space.breath }}>
+      <View style={{ padding: 24, gap: 20 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <T role="label" tone="secondary">{tier} membership</T>
           {pending ? <Chip label="Payment pending" /> : label ? <Chip label={label} tone={s.endingSoon || s.ended ? "accent" : "neutral"} /> : null}
         </View>
-        <View style={{ flexDirection: "row", alignItems: "baseline", gap: space.line }}>
-          <T role="display">{pending ? s.total : s.left}</T>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 22 }}>
+          <T role="display" style={{fontSize:64,lineHeight:70}}>{pending ? s.total : s.left}</T>
           <T tone="secondary">{pending ? "washes after activation" : `of ${s.total} washes left`}</T>
         </View>
-        {!pending?<View accessibilityRole="progressbar" accessibilityLabel={`${s.left} of ${s.total} washes left`} style={{ flexDirection: "row", gap: 6 }}>
+        {!pending?<View accessibilityRole="progressbar" accessibilityLabel={`${s.left} of ${s.total} washes left`} style={{ flexDirection: "row", gap: 5 }}>
           {Array.from({ length: Math.min(s.total, 24) }, (_, i) => (
-            <View key={i} style={{ flex: 1, height: 8, borderRadius: 9999, backgroundColor: !pending && i < s.left ? "#EC8638" : glassInner.backgroundColor }} />
+            <View key={i} style={{ flex: 1, height: 5, borderRadius: 9999, backgroundColor: !pending && i < s.left ? "#8DACC8" : glassInner.backgroundColor }} />
           ))}
         </View>:null}
         <T tone="secondary">
@@ -35,7 +35,7 @@ export function MembershipCard({ membership, today }: { membership: Membership; 
             ? `${discountLine(membership.discountPercent) ? `${discountLine(membership.discountPercent)}. ` : ""}Benefits unlock once payment is confirmed.`
             : `${s.used} used this cycle${membership.endDate ? ` · valid until ${new Date(membership.endDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` : ""}${discountLine(membership.discountPercent) ? ` · ${discountLine(membership.discountPercent)}` : ""}`}
         </T>
-        {!pending && pickupsLeftLine(membership) ? <T tone="secondary">{pickupsLeftLine(membership)}{membership.prioritySlot ? " · Priority slot" : ""}</T> : null}
+        {!pending && (pickupsLeftLine(membership) || refreshesLeftLine(membership) || membership.prioritySlot) ? <T tone="secondary">{[pickupsLeftLine(membership), refreshesLeftLine(membership), membership.prioritySlot ? "Priority slot" : null].filter((x): x is string => x !== null).join(" · ")}</T> : null}
         {!pending && s.noWashes && !s.ended ? <T tone="secondary">All washes used for this cycle.</T> : null}
         {!pending && s.endingSoon && !s.ended ? <T tone="secondary">Your plan is ending. You can join the next plan once it ends.</T> : null}
         {rule ? <T role="caption" tone="tertiary">{rule}</T> : null}

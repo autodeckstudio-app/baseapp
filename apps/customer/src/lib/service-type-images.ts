@@ -3,6 +3,12 @@ import { catalogueAsset } from "./catalogue-assets";
 import { serviceHomeImages } from "./service-home-images";
 import type { ServiceHomeKey } from "@autodeck/core";
 const generated: Record<string, ImageSourcePropType> = {
+ "Routine service": require("../../assets/imagery/service-types/oil-filter.jpg"),
+ "AC care": require("../../assets/imagery/service-types/ac-care.jpg"),
+ Brakes: require("../../assets/imagery/service-types/brakes.jpg"),
+ "Battery & electrical": require("../../assets/imagery/service-types/battery.jpg"),
+ Assessment: require("../../assets/imagery/service-types/assessment.jpg"),
+ "Cooling system": require("../../assets/imagery/service-types/coolant.jpg"),
   "Tyres & rubber": require("../../assets/imagery/service-types/tyres-rubber.jpg"),
   "Lights & plastics": require("../../assets/imagery/service-types/lights-plastics.jpg"),
   "Film aftercare": require("../../assets/imagery/service-types/film-aftercare.jpg"),

@@ -1,7 +1,7 @@
 // Which routes show a Back chevron and where it falls back when there is no history.
 // Back itself always returns to the page the user came from (router.back); the fallback is only for a hard load.
 export const SUB_ROOTS: Record<string, string> = {
-  "quote-request": "/(tabs)/catalogue", quotes: "/(tabs)/catalogue", studio: "/(tabs)", membership: "/(tabs)/profile", notifications: "/(tabs)", cars: "/(tabs)", help: "/(tabs)", gifts: "/(tabs)",
+  coordinate: "/(tabs)/catalogue", "quote-request": "/(tabs)/catalogue", quotes: "/(tabs)/catalogue", studio: "/(tabs)", membership: "/(tabs)/profile", notifications: "/(tabs)", cars: "/(tabs)", help: "/(tabs)", gifts: "/(tabs)",
 };
 // Route folders with no index screen: a cold load of their child must not fall back to a route that does not exist.
 export const NO_INDEX_ROOTS: Record<string, string> = { book: "/(tabs)/catalogue", approvals: "/(tabs)/bookings", invoice: "/(tabs)/bookings" };
@@ -14,6 +14,7 @@ export function backFallback(segs: string[]): string | null {
   const root = segs[1] ?? "";
   const deep = segs.length >= 3 && segs[2] !== "index";
   if (!(deep || root in SUB_ROOTS)) return null;
+  if (deep && root === "cars") return "/(tabs)/cars";
   return SUB_ROOTS[root] ?? NO_INDEX_ROOTS[root] ?? (root ? `/(tabs)/${root}` : "/(tabs)");
 }
 

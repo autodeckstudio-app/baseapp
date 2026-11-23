@@ -20,6 +20,7 @@ export interface JobStatusHistoryEntry {
 }
 
 export interface ServiceJob {
+  delayReported?: { at: string; by: string; auditId: string };
   combinedPayment?:CombinedPaymentSnapshot;
   combinedSettlement?:{advancePaymentId:string|null;advanceCapturedPaise:number;balanceDuePaise:number;settlementPaymentId:string|null;settledAt:string|null};
   transportSnapshot?:Readonly<BookingTransportSnapshot>|null;

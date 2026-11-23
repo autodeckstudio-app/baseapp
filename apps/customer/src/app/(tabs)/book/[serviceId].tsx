@@ -1,10 +1,14 @@
+import { JourneySteps } from "../../../ui/JourneySteps";
+import{ServiceIdentityMedia}from'../../../ui/ServiceIdentityMedia';
+import{bookingExtras}from'../../../lib/booking-selection';
+import{serviceOnlineBookingIssue}from'@autodeck/core';
 import{useCataloguePublication}from'../../../hooks/useCataloguePublication';
 import {ServiceTimePicker} from '../../../ui/ServiceTimePicker';
 import { customerOfferingVisible } from '../../../lib/customer-offering-visibility';
 import { CarThumb } from "../../../ui/CarThumb";
 import {useVehiclePreference} from "../../../lib/active-vehicle";
 import { useState, useEffect, useRef } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { collapseStaleBookEntries } from "../../../lib/back-nav";
 import { doc, getDoc} from "firebase/firestore";
@@ -31,7 +35,8 @@ const VEHICLE_CATEGORIES = CAR_SEGMENTS;
 const durationText = formatDuration;
 
 export default function BookServiceScreen() {
-  const { serviceId, day, vehicleId: requestedVehicleId } = useLocalSearchParams<{ serviceId: string; day?: string; vehicleId?: string }>();
+  const { serviceId, day, vehicleId: requestedVehicleId,extras } = useLocalSearchParams<{ serviceId: string; day?: string; vehicleId?: string;extras?:string }>();
+  const extraIds=bookingExtras(extras),extrasKey=extraIds?.join(",")??"invalid";
   const [choosingVehicle,setChoosingVehicle]=useState(false);
   const [vehiclesLoaded,setVehiclesLoaded]=useState(false);
   const [dayMissed, setDayMissed] = useState(false);
@@ -56,6 +61,7 @@ export default function BookServiceScreen() {
   const [retryTick, setRetryTick] = useState(0);
   const [vehiclesError,setVehiclesError] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const[selectionMinutes,setSelectionMinutes]=useState<number|null>(null);
   const [total, setTotal] = useState<number | null>(null);
 
   // More services in the same visit: same bay type only, so one slot fits them all. The server checks again.
@@ -66,12 +72,12 @@ export default function BookServiceScreen() {
   useEffect(() => { let alive = true; void getServiceCatalogue().then((c) => { if (alive) setCatalogue(c); }).catch(() => undefined); return () => { alive = false; }; }, [publicationRevision]);
 
   useEffect(() => {
-    setTotal(null);
-    if (!serviceId || !selectedCategory || !service || service.priceOnRequest===true || !customerOfferingVisible(service)) return;
+    setTotal(null);setSelectionMinutes(null);
+    if (!extraIds || !serviceId || !selectedCategory || !service || service.priceOnRequest===true || serviceOnlineBookingIssue(service) || !customerOfferingVisible(service)) return;
     let current=true;
-    void calculateServicePrice(serviceId, selectedCategory).then(({ breakdown }) => {if(current)setTotal(breakdown.total);}).catch(() => {if(current)setTotal(null);});
+    void calculateServicePrice(serviceId, selectedCategory,extraIds).then(({ breakdown,durationMinutes }) => {if(current){setTotal(breakdown.total);setSelectionMinutes(durationMinutes??null);}}).catch(() => {if(current)setTotal(null);});
     return ()=>{current=false;};
-  }, [serviceId, selectedCategory, service]);
+  }, [serviceId, selectedCategory, service,extrasKey]);
 
   const ownerKey=listOwnerKey(auth);const owner=auth.status==='ready'&&ownerKey?`${auth.claims.tenantId}:${auth.user.uid}:${ownerKey.key}`:null;
   useEffect(()=>{let alive=true;setService(null);setSlots([]);setPickedSlot(null);setLoadError(false);setLoading(true);if(!serviceId||auth.status!=='ready'){setLoading(false);return;}
@@ -90,8 +96,8 @@ export default function BookServiceScreen() {
   useEffect(()=>{setSelectedCategory(normalizeSegment(selectedVehicle?.category));setSizeError(null);},[selectedVehicle?.id,selectedVehicle?.category]);
 
   useEffect(() => {
-    if (!serviceId || !service || service.priceOnRequest===true) return;
-    const ids: string[] = [];
+    if (!extraIds || !serviceId || !service || service.priceOnRequest===true || serviceOnlineBookingIssue(service)) return;
+    const ids=extraIds;
     const warm = peekAvailability(serviceId, FIRST_STUDIO_ID, todayIST(), 7, ids);
     if (warm) setSlots(warm.filter(s=>Date.parse(s.startAt)>Date.now()));
     setSlotsLoading(!warm);
@@ -103,7 +109,7 @@ export default function BookServiceScreen() {
       .catch(() => { if (alive) setSlotsError(true); })
       .finally(() => { if (alive) setSlotsLoading(false); });
     return () => { alive = false; };
-  }, [serviceId, service, retryTick]);
+  }, [serviceId, service, retryTick,extrasKey]);
 
   useEffect(()=>{
     const want = day ? pickDay([...new Set(slots.map(s=>s.date))], day, todayIST()) : null;
@@ -112,13 +118,14 @@ export default function BookServiceScreen() {
   },[slots,day]);
 
   async function handleSelectSlot(slot: AvailableSlot) {
-    if (!selectedVehicle || !serviceId || sizeSaving) return;
+    if (!selectedVehicle || !serviceId || sizeSaving || !extraIds || total===null) return;
     if (!selectedCategory || !selectedVehicle.category) { setSizeError("Add your car type to book. It is saved once with the car."); return; }
     const vehicleId=selectedVehicle.id;
     router.push({
       pathname: "/(tabs)/book/confirm",
       params: {
         serviceId,
+        ...(extraIds.length?{extras:extraIds.join(",")}:{}),
         vehicleId: selectedVehicle.id,
         vehicleCategory: selectedCategory,
         scheduledDate: slot.date,
@@ -132,6 +139,7 @@ export default function BookServiceScreen() {
   }
 
 
+  if(!extraIds)return <Screen><Notice title="Review your service selection" body="The service list is invalid or has changed. Choose the services again."/></Screen>;
   if (loading) return <Loading label="Finding times" />;
   if (loadError) return <Screen><Notice title="Can't open booking" body="Check your connection and try again." action={<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
   // Booking needs a verified customer record. Mirrors the quote-request
@@ -155,13 +163,16 @@ export default function BookServiceScreen() {
     return acc;
   }, {});
 
+  if(serviceOnlineBookingIssue(service))return <Screen appBar="Service information"><T role="title">{service.customerMenu?.bookingMode==='walk_in'?'Walk in for a first look':'Confirm timing with the studio'}</T><T>{service.customerMenu?.bookingMode==='walk_in'?'This initial check is free and walk-in only. Further diagnosis is separate.':'This service needs specialist coordination. No online slot is reserved here.'}</T><Button label="View service details" onPress={()=>router.replace({pathname:"/(tabs)/catalogue/[id]",params:{id:service.id}})}/></Screen>;
   if(service.priceOnRequest===true||service.customerMenu?.priceMode==="inspection")return <Screen appBar="Studio inspection"><T role="title">Bring your car for inspection</T><T>Agree the work and final price at the studio before service.</T><Button label="Studio details" onPress={()=>router.navigate("/(tabs)/help")}/></Screen>;
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{service.name}</T>{total !== null ? <T role="bodyStrong" tone="accent">{rupees(total)} · {durationText(service.estimatedDurationMinutes)}</T> : null}</View>}>
-      <View style={{ borderRadius: 24, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}><ServicePhoto service={service} aspect={3} radius={0} /><View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0) 50%, rgba(5,5,6,0.7) 100%)" } as object) }} /></View>
-      <View style={{ gap: space.line }}>
-        <Kicker>Booking for</Kicker>
-        {selectedVehicle ? <Pane pad="inset"><View style={{flexDirection:"row",alignItems:"center",gap:14}}>{selectedVehicle.photoUrl?<CarThumb car={selectedVehicle} height={60} width={84} radius={12}/>:null}<View style={{flex:1,gap:6}}><T role="heading">{selectedVehicle.make} {selectedVehicle.model}</T><Plate value={selectedVehicle.registrationNumber}/></View></View>{vehicles.length>1&&!choosingVehicle?<Button kind="quiet" label="Change car" onPress={()=>setChoosingVehicle(true)}/>:null}</Pane> : null}
+    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{extraIds.length?"Your service selection":service.name}</T>{extraIds.length?<T role="caption" tone="secondary">{[serviceId,...extraIds].map(id=>catalogue.find(s=>s.id===id)?.name??"Service unavailable").join(" + ")}</T>:null}{total !== null ? <T role="bodyStrong" tone="accent">{rupees(total)} · {durationText(selectionMinutes??service.estimatedDurationMinutes)}</T> : null}</View>}>
+      <JourneySteps labels={["Car & time", "Review"]} current={0} />
+      <ServiceIdentityMedia service={service} compact/>
+      <Pane pad="inset">
+        <View style={{ gap: 16 }}>
+        <Kicker>01 / Your car</Kicker>
+        {selectedVehicle ? <View style={{gap:12}}><View style={{flexDirection:"row",alignItems:"center",gap:14}}>{selectedVehicle.photoUrl?<CarThumb car={selectedVehicle} height={60} width={84} radius={12}/>:null}<View style={{flex:1,minWidth:0,gap:6}}><T role="heading">{selectedVehicle.make} {selectedVehicle.model}</T><Plate value={selectedVehicle.registrationNumber}/></View></View>{vehicles.length>1&&!choosingVehicle?<Pressable accessibilityRole="button" accessibilityLabel="Change car" onPress={()=>setChoosingVehicle(true)} style={{alignSelf:"flex-start",minHeight:44,justifyContent:"center",paddingHorizontal:2,marginTop:4}}><T role="caption" tone="secondary" style={{textDecorationLine:"underline"}}>Change car</T></Pressable>:null}</View> : null}
         {vehiclesError ? <Notice title="Can't load your cars" body="Try again before choosing a time." action={<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>}/> : vehicles.length === 0 ? (
           <Notice title="Add your car first" body="We price and plan the work around it." action={<Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} />} />
         ) : selectedVehicle && !choosingVehicle ? null : (
@@ -186,7 +197,7 @@ export default function BookServiceScreen() {
             })}
           </Pane>
         )}
-      </View>
+      </View></Pane>
 
       {vehiclesLoaded&&!vehiclesError&&!selectedVehicle&&vehicles.length>0?<Notice title="Choose a car before choosing a time" body={requestedVehicleId?"The car from this suggestion is no longer available. Choose one of your current saved cars to continue.":"Select the car for this booking."}/>:null}
       {selectedVehicle && !selectedVehicle.category ? <View style={{gap:space.line}}>
@@ -203,8 +214,8 @@ export default function BookServiceScreen() {
       ) : null}
 
 
-      <View style={{ gap: space.line }}>
-        <Kicker>Choose a date</Kicker>
+      <Pane pad="inset"><View style={{ gap: 18 }}>
+        <Kicker>02 / Your visit</Kicker>
         {dayMissed ? <T role="caption" tone="secondary">No free time {day === "weekend" ? "this weekend" : day} for this service. Showing the earliest day instead.</T> : null}
         {slotsError ? <Notice title="Can't load times" body="Check your connection and try again." action={<Button icon="refresh" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /> : null}
         {slotsLoading ? (
@@ -215,8 +226,8 @@ export default function BookServiceScreen() {
           <ServiceTimePicker key={selectedDate??'available'} slots={slots.filter(slot=>Date.parse(slot.startAt)>Date.now())} picked={pickedSlot} initialDate={selectedDate} onDayChange={date=>{setSelectedDate(date);setPickedSlot(null)}} onPick={slot=>{setPickedSlot(slot);setSizeError(null)}}/>
         )}
         {sizeError ? <T role="caption" tone="danger">{sizeError}</T> : null}
-        <Button style={{alignSelf:"stretch",width:"100%",marginTop:16,marginBottom:16}} label={pickedSlot ? `Continue with ${pickedSlot.startTime}` : "Pick a time to continue"} disabled={!pickedSlot || !selectedVehicle || vehiclesError || sizeSaving} busy={sizeSaving} onPress={() => { if (pickedSlot) void handleSelectSlot(pickedSlot); }} />
-      </View>
+        <Button style={{alignSelf:"stretch",width:"100%",marginTop:16,marginBottom:16}} label={pickedSlot ? `Continue with ${pickedSlot.startTime}` : "Pick a time to continue"} disabled={!pickedSlot || !selectedVehicle || vehiclesError || sizeSaving || total===null} busy={sizeSaving} onPress={() => { if (pickedSlot) void handleSelectSlot(pickedSlot); }} />
+      </View></Pane>
     </Screen>
   );
 }

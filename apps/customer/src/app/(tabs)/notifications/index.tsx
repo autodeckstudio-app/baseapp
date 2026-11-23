@@ -1,3 +1,4 @@
+import { StatePanel } from "../../../ui/StatePanel";
 import {useSegmentSwipe} from "../../../lib/segment-swipe";
 import { inChip, type NotificationChip } from "../../../lib/notification-groups";
 import { TabPills } from "../../../ui/CarOverview";
@@ -139,7 +140,7 @@ export default function NotificationsScreen() {
         />
       ) : null}
       {shown.length === 0 ? (
-        <Notice title="You are all caught up" body="Booking and service updates show here. Older read updates hide from this list." />
+        <StatePanel icon="bell" title="You are all caught up" body="Booking and service updates show here. Older read updates hide from this list." />
       ) : (
         <View style={{ gap: space.line }}>
           {shown.map((item) => {
@@ -148,10 +149,10 @@ export default function NotificationsScreen() {
               <Pressable key={item.id} accessibilityRole="button" onPress={() => void handlePress(item)} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}>
                 <Pane pad="inset">
                   <View style={{ flexDirection: "row", alignItems: "flex-start", gap: space.line }}>
-                    <View style={{ width: 40, height: 40, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: unread ? "rgba(236,134,56,0.22)" : glassInner.backgroundColor }}>
+                    <View style={{ width: 48, height: 48, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: unread ? "rgba(236,134,56,0.22)" : glassInner.backgroundColor }}>
                       <NavIcon name="bell" color={unread ? colors.accent : colors.textSecondary} size={20} cut="#18181C" />
                     </View>
-                    <View style={{ flex: 1, gap: 2 }}>
+                    <View style={{ flex: 1, minWidth: 0, gap: 9 }}>
                       <T role="bodyStrong">{repairText(item.title)}</T>
                       <T role="caption" tone="secondary">{repairText(item.body)}</T>
                       <T role="caption" tone="tertiary">{formatWhen(item.createdAt)}</T>
