@@ -17,7 +17,7 @@ const button=(r:any,label:string)=>r.root.findAllByType(Pressable).find((x:any)=
 const tap=async(r:any,label:string)=>{const b=button(r,label);expect(b,label).toBeTruthy();await act(async()=>b.props.onPress())};
 it('all five approved service areas use matching connected category choices, never a fabricated service',async()=>{
  const category=vi.fn(),service=vi.fn();let r:any;const p=base();p.onCategory=category;p.onService=service;await act(async()=>{r=create(<HomeView {...p}/>)});
- for(const title of ['Wash & care','Protection','Detailing','Garage','Mods & wraps'])await tap(r,title);
+ for(const title of ['Wash & care','Protection','Detailing','Garage','Modifications'])await tap(r,title);
  expect(category.mock.calls.map(x=>x[0])).toEqual(['washing','paint','detailing','garage','modifications']);expect(service).not.toHaveBeenCalled();await act(async()=>r.unmount());
 });
 it.each(['Needs your OK','Payment due','Live now','Next visit'])('one priority event owns the dock over reminders and rebook: %s',async(kicker)=>{
@@ -43,4 +43,4 @@ it('leaves shared Screen ambient visible around the new Club card',async()=>{let
 
 it('uses the official wordmark image without a monogram in the restored header',async()=>{let r:any;await act(async()=>{r=create(<HomeView {...base()}/>)});const img=r.root.findAllByProps({testID:'home-official-wordmark'})[0];expect(img.props.accessibilityLabel).toBe('AutoDeck');expect(img.props.resizeMode).toBe('contain');expect(img.props.style.width).toBe(164);await act(async()=>r.unmount())});
 
-it('approved category controls preserve minimum touch targets and do not depend on a price projection',async()=>{const category=vi.fn();let r:any;const p=base();p.onCategory=category;p.services=[];await act(async()=>{r=create(<HomeView {...p}/>)});await tap(r,'Mods & wraps');expect(category).toHaveBeenCalledWith('modifications');expect(button(r,'Explore services')).toBeTruthy();await act(async()=>r.unmount())});
+it('approved category controls preserve minimum touch targets and do not depend on a price projection',async()=>{const category=vi.fn();let r:any;const p=base();p.onCategory=category;p.services=[];await act(async()=>{r=create(<HomeView {...p}/>)});await tap(r,'Modifications');expect(category).toHaveBeenCalledWith('modifications');expect(button(r,'Explore services')).toBeTruthy();await act(async()=>r.unmount())});

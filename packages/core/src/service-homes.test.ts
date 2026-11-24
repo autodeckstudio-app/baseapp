@@ -1,6 +1,6 @@
 import type { Service } from "./index";
 import{it,expect}from'vitest';import{SERVICE_HOMES,serviceHome,serviceFamily,uniqueServices,PPF_CUSTOMER_OPTIONS}from'./service-homes';
-it('five exact top-level homes, service first not brand siblings',()=>expect(SERVICE_HOMES.map(h=>h.label)).toEqual(['Paint Protection','Detailing','Washing','Garage','Modifications & Wraps']));
+it('five exact top-level homes, service first not brand siblings',()=>expect(SERVICE_HOMES.map(h=>h.label)).toEqual(['Paint Protection','Detailing','Washing','Garage','Modifications']));
 it.each([['Ceramic','ceramic','paint'],['Clear film','ppf','paint'],['PPS','coating','paint'],['Fabric','coating','detailing'],['Glass','coating','detailing'],['Wheel sealant','coating','detailing'],['Colour PPF','ppf','modifications'],['Wash','washing','washing'],['Inspection','inspection','garage'],['Pickup','pickup',null]])('classifies %s', (name,category,home)=>expect(serviceHome({name,category:category as Service["category"]})).toBe(home));
 it('PPF customer flow excludes half-body online',()=>expect(PPF_CUSTOMER_OPTIONS.map(o=>o.key)).toEqual(['full_body','removal','replacement']));
 it('exact IDs dedupe only, different same-name records retained',()=>{const a={id:'a',name:'Same'}as unknown as Service,b={...a,id:'b'};expect(uniqueServices([a,a,b])).toEqual([a,b]);expect(serviceFamily({name:'Glass coating',category:'coating'})).toBe('Glass')});

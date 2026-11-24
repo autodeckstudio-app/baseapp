@@ -9,7 +9,7 @@ const scenes={detailing:uri(detailing),paint:uri(paint),garage:uri(garage),modif
 import type {Home} from "./model";
 import {labels} from './model';
 
-const categoryTabs:[Home|null,string][]=[[null,'All'],['washing','Wash & care'],['paint','Paint protection'],['detailing','Detailing'],['garage','Garage'],['modifications','Modifications & wraps']];
+const categoryTabs:[Home|null,string][]=[[null,'All'],['washing','Wash & care'],['paint','Paint protection'],['detailing','Detailing'],['garage','Garage'],['modifications','Modifications']];
 export function ServiceCategoryTabs({selected,onBrowse}:{selected:Home|null;onBrowse:(home:Home|null)=>void}){
  const nav=useRef<HTMLElement>(null);
  useEffect(()=>{nav.current?.querySelector('[aria-current="page"]')?.scrollIntoView({inline:'nearest',block:'nearest',behavior:'instant'})},[selected]);

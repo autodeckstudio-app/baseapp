@@ -1,4 +1,30 @@
 #!/usr/bin/env bash
+# Approved category label only. Customer builds from main; retain staff and Site.
+label_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+case "${VERCEL_GIT_COMMIT_REF:-}" in
+ main|feat/modifications-label-only-20261124)
+ if [ "$label_parent" = "18a4b194d44d2502a02b87181a896c7b058d238d" ]; then
+  cd "$(git rev-parse --show-toplevel)" || exit 0
+  actual="$(git diff --name-only 18a4b194d44d2502a02b87181a896c7b058d238d HEAD)"
+  expected=$(cat <<'EXACT_LABEL_PATHS'
+apps/customer/src/ui/HomeScene.tsx
+apps/customer/src/ui/ReferenceProductDetail.tsx
+apps/customer/src/ui/ServiceJourney.tsx
+apps/customer/src/ui/home-scene.render.test.tsx
+apps/customer/src/ui/services-experience/ServicesLanding.tsx
+apps/customer/src/ui/services-experience/model.ts
+packages/core/src/menu.ts
+packages/core/src/service-homes.test.ts
+packages/core/src/service-homes.ts
+scripts/vercel-ignore.sh
+EXACT_LABEL_PATHS
+)
+  [ "$actual" = "$expected" ] || exit 0
+  if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$1" = customer ]; then exit 1; fi
+  exit 0
+ fi ;;
+esac
+#!/usr/bin/env bash
 # Exact approved Customer card-layout release; do not redeploy staff or Site.
 case "${VERCEL_GIT_COMMIT_REF:-}" in
  main|feat/approved-catalogue-layout-20261124)
