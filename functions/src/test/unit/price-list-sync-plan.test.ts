@@ -1,0 +1,28 @@
+import {describe,it,expect}from'vitest';
+import{acceptInitialPrice,planPrice,bindingHash,pricePlanHash,assertFrozenPricePlan,type PriceBinding,type ObservedPrice,type PriceChange}from'../../lib/price-list-sync-plan.js';
+const binding:PriceBinding={serviceId:'svc_test',tab:'Washing',row:10,column:'F',identityHash:'exact-product-anchor',policy:'fixed'};
+const observed:ObservedPrice={serviceId:'svc_test',identityHash:binding.identityHash,sheetValue:250,sheetFormula:null,adminMinor:25000,sourceVersion:'live-v1',hasOtherDraft:false};
+const base=()=>acceptInitialPrice(binding,observed,'publication-1');
+const plan=(o:Partial<ObservedPrice>={})=>planPrice(binding,base(),{...observed,...o});
+const change=():PriceChange=>{const p=plan({sheetValue:251});if(p.kind!=='change')throw Error('Expected change');return p.change;};
+describe('unconnected Price List reconciliation planner',()=>{
+ it('accepts an exact initial match',()=>expect(base().minor).toBe(25000));
+ it('blocks initialization on the real PPC-shaped 35000/40000 mismatch',()=>expect(()=>acceptInitialPrice({...binding,tab:'Ceramic',column:'I',row:19},{...observed,sheetValue:35000,adminMinor:4000000},'p')).toThrow(/reconciliation/));
+ it('rejects empty publication baseline',()=>expect(()=>acceptInitialPrice(binding,observed,'')).toThrow());
+ it('does nothing for unchanged values',()=>expect(plan().kind).toBe('same'));
+ it('sheet change produces only a draft plan',()=>expect(change()).toMatchObject({kind:'sheet-draft',beforeMinor:25000,afterMinor:25100,range:"'Washing'!F10"}));
+ it('Admin change produces only a return plan',()=>expect(plan({adminMinor:25100})).toMatchObject({kind:'change',change:{kind:'sheet-return',afterMinor:25100}}));
+ it('blocks changes on both surfaces',()=>expect(plan({sheetValue:252,adminMinor:25100})).toMatchObject({kind:'blocked',reason:expect.stringMatching(/Concurrent/)}));
+ it('does not write when both surfaces already converge',()=>expect(plan({sheetValue:251,adminMinor:25100}).kind).toBe('same'));
+ it('blocks a formula even when displayed value matches',()=>expect(plan({sheetFormula:'=A1'}).kind).toBe('blocked'));
+ it('blocks row identity drift',()=>expect(plan({identityHash:'another-product'}).kind).toBe('blocked'));
+ it('blocks existing held drafts',()=>expect(plan({hasOtherDraft:true}).kind).toBe('blocked'));
+ it('blocks changed binding version',()=>expect(planPrice(binding,{...base(),bindingHash:'old'},observed).kind).toBe('blocked'));
+ it.each(['251',-1,NaN,Infinity,251.001,null])('rejects invalid input %s',value=>expect(plan({sheetValue:value}).kind).toBe('blocked'));
+ it('allows a genuine zero price',()=>expect(acceptInitialPrice(binding,{...observed,sheetValue:0,adminMinor:0},'p').minor).toBe(0));
+ it('does not treat inspection-only figures as prices',()=>{const b={...binding,policy:'inspection' as const};expect(planPrice(b,{...base(),bindingHash:bindingHash(b)},{...observed,sheetValue:'Based on inspection'}).kind).toBe('inspection');});
+ it('rejects the internal cost column',()=>expect(planPrice({...binding,column:'G'},base(),observed).kind).toBe('blocked'));
+ it('blocks blank source version',()=>expect(plan({sourceVersion:''}).kind).toBe('blocked'));
+ it('rejects duplicate service plans',()=>expect(()=>pricePlanHash([change(),change()])).toThrow());
+ it('binds the whole review to a draft and source version',()=>{const c=change(),review={hash:pricePlanHash([c]),drafts:[{serviceId:c.serviceId,draftId:'draft-1',version:1,sourceVersion:c.sourceVersion}]};expect(()=>assertFrozenPricePlan([c],review)).not.toThrow();expect(()=>assertFrozenPricePlan([{...c,afterMinor:25200}],review)).toThrow();expect(()=>assertFrozenPricePlan([c],{...review,drafts:[{...review.drafts[0]!,sourceVersion:'stale'}]})).toThrow();});
+});

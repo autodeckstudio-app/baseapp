@@ -1,3 +1,4 @@
+import{assertExistingPublisherTransaction}from'./catalogue-source-maintenance.js';
 import type{Firestore}from'firebase-admin/firestore';
 import{catalogueReviewHash,type CatalogueDraft}from'./catalogue-draft.js';
 import{commitCataloguePublish,recordCatalogueSheetPhase}from'./catalogue-publish-store.js';
@@ -85,7 +86,7 @@ export async function rescueCataloguePublish(db:Firestore,port:RescuePort,input:
     if(p['phase']!=='needs-recovery-readback'&&p['phase']!=='sheet-write-in-flight')throw Error('Write phase unavailable');
     if(p['phase']==='needs-recovery-readback'){
       const iso=new Date().toISOString();
-      await db.runTransaction(async tx=>{
+      await db.runTransaction(async tx=>{await assertExistingPublisherTransaction(tx,db,'automodz',input.publishId);
         const snap=await tx.get(ref),row=snap.data(),lockSnap=await tx.get(lockRef);
         if(!row||row['phase']!=='needs-recovery-readback'||lockSnap.data()?.['activePublishId']!==input.publishId)throw Error('Recovery state changed');
         tx.update(ref,{phase:'sheet-write-in-flight',updatedAt:iso,rescueResumedAt:iso});

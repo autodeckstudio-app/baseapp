@@ -1,0 +1,9 @@
+import{gzipSync}from'node:zlib';
+import{attachedCatalogueRuntimeIdentity,CATALOGUE_CONTROLLER}from'../catalogue-runtime-composition.js';import{googleCatalogueIdentityVerifier}from'../catalogue-google-identity.js';import{structuralGoogleReader,PRINCIPAL}from'./source-reader.mjs';
+interface Request{method:string;authorization?:string;body:unknown}
+/** Pure fixed-source read boundary. No ranges, workbook or identity accepted
+ * from caller. A successful read is evidence only, never runtime activation. */
+export function privateStructuralReadHandler(audience:string,verify:(token:string,audienceLocal1:string)=>Promise<unknown>,read:()=>Promise<any>){return async(req:Request)=>{if(req.method!=='POST')return{status:405,body:{error:'Method unavailable'}};try{if(!req.authorization?.startsWith('Bearer ')||req.authorization.length>16384)throw Error('Private controller required');await verify(req.authorization.slice(7),audience);if(!req.body||typeof req.body!=='object'||Array.isArray(req.body)||Object.keys(req.body).join('|')!=='operation'||(req.body as{operation:unknown}).operation!=='inspect-fixed-native-source')throw Error('Exact fixed read-only operation required');const snapshot=await read();return{status:200,body:{fileId:snapshot.fileId,sourceHash:snapshot.sourceHash,encoding:'gzip-base64',payload:gzipSync(Buffer.from(JSON.stringify(snapshot.raw))).toString('base64')}}}catch{return{status:403,body:{error:'Complete fixed-principal structural read unavailable'}}}};}
+/** No deployment export here. Attached source identity and exact controller
+ * Google ID token are both required; no DB role or alternate credential. */
+export async function composePrivateStructuralRead(audience:string){const attached=await attachedCatalogueRuntimeIdentity(PRINCIPAL),read=structuralGoogleReader(attached,fetch),verify=googleCatalogueIdentityVerifier({audience,controllerPrincipal:CATALOGUE_CONTROLLER});return privateStructuralReadHandler(audience,verify,read);}

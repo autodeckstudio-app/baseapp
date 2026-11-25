@@ -1,4 +1,5 @@
 "use client";
+import{DescriptionReviewPanel,type DescriptionReviewApi}from'./DescriptionReviewPanel';
 import{SourcePriceReview,type SourcePricePreparedReview}from"./SourcePriceReview";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -19,6 +20,10 @@ function Overlay({ children }: { children: ReactNode }) {
 }
 export function CatalogueReview({
   drafts,
+  descriptionApi,
+  onDescriptionStarted,
+  onDescriptionVerified,
+  onDescriptionUncertain,
   services = [],
   publishedCount = 0,
   primaryIds = [],
@@ -30,6 +35,10 @@ export function CatalogueReview({
   error,
   blocked = false,
 }: {
+  descriptionApi?:DescriptionReviewApi;
+  onDescriptionStarted?:(id:string)=>void;
+  onDescriptionVerified?:(id:string)=>void;
+  onDescriptionUncertain?:(id:string)=>void;
   drafts: CatalogueDraftView[];
   services?: Service[];
   publishedCount?: number;
@@ -65,8 +74,14 @@ export function CatalogueReview({
     earlier = pending.filter((d) => !primaryIds.includes(d.id)),
     chosen = (frozen ?? []).filter((d) => selected.includes(d.id));
   const problem = publishSelectionProblem(chosen, services);
+  // Private integration candidate: preserve numeric path, never cast descriptions
+  // into a selling-price receipt. Server controller independently revalidates.
+  const descriptionDrafts=chosen.filter(d=>{const source=services.find(s=>s.id===d.serviceId);if(!source||source.category==='garage'||source.customerMenu?.home==='garage'||!d.payload||d.payload.description===source.description)return false;return Object.entries(d.payload).every(([k,v])=>k==='description'||JSON.stringify(v)===JSON.stringify((source as any)[k]));});
+  const descriptionChanges=chosen.filter(d=>{const source=services.find(s=>s.id===d.serviceId);return source&&d.payload.description!==source.description});
+  const descriptionMode=Boolean(descriptionApi&&descriptionChanges.length);
+  const descriptionSelectionProblem=descriptionMode&&(chosen.length!==1||descriptionDrafts.length!==1)?'Description changes must be reviewed individually until grouped publication is available. Mixed price or name changes cannot use description review.':null;
   const sourceSelection=chosen.map(d=>d.id+':'+d.version).sort().join('|');
-  useEffect(()=>{let current=true;setSourceReview(null);setNoSheetEdits(false);setSourceError('');if(!onPrepareSourceReview||!frozen||!chosen.length){setSourceBusy(false);return;}setSourceBusy(true);void onPrepareSourceReview(chosen).then(r=>{if(current)setSourceReview(r)}).catch(()=>{if(current)setSourceError('Sheet prices could not be verified. Close this review and try again. Nothing was published.')}).finally(()=>{if(current)setSourceBusy(false)});return()=>{current=false};},[Boolean(frozen),sourceSelection,onPrepareSourceReview]);
+  useEffect(()=>{let current=true;setSourceReview(null);setNoSheetEdits(false);setSourceError('');if(descriptionMode||!onPrepareSourceReview||!frozen||!chosen.length){setSourceBusy(false);return;}setSourceBusy(true);void onPrepareSourceReview(chosen).then(r=>{if(current)setSourceReview(r)}).catch(()=>{if(current)setSourceError('Sheet prices could not be verified. Close this review and try again. Nothing was published.')}).finally(()=>{if(current)setSourceBusy(false)});return()=>{current=false};},[Boolean(frozen),sourceSelection,onPrepareSourceReview,descriptionMode]);
   const open = (rows: CatalogueDraftView[]) => {
     setFrozen(JSON.parse(JSON.stringify(rows)));
     setSelected(rows.map((d) => d.id));
@@ -100,7 +115,7 @@ export function CatalogueReview({
     }
   }
   async function publish() {
-    if (busy || flight.current || problem || !onReviewAndPublish || (onPrepareSourceReview&&(!sourceReview||sourceBusy||!noSheetEdits))) return;
+    if (descriptionMode || busy || flight.current || problem || !onReviewAndPublish || (onPrepareSourceReview&&(!sourceReview||sourceBusy||!noSheetEdits))) return;
     flight.current = true;
     try {
       if (await (sourceReview?onReviewAndPublish(chosen,sourceReview):onReviewAndPublish(chosen))) {
@@ -276,8 +291,9 @@ export function CatalogueReview({
               }}
             >
               <h2>Publish changes?</h2>
-              {onPrepareSourceReview?(sourceBusy?<p role="status">Checking actual sheet prices...</p>:sourceError?<p role="alert">{sourceError}</p>:sourceReview?<SourcePriceReview review={sourceReview} confirmed={noSheetEdits} onConfirm={setNoSheetEdits}/>:null):null}
-              <p className="ax-sub">Only these changes will go live.</p>
+              {!descriptionMode&&onPrepareSourceReview?(sourceBusy?<p role="status">Checking actual sheet prices...</p>:sourceError?<p role="alert">{sourceError}</p>:sourceReview?<SourcePriceReview review={sourceReview} confirmed={noSheetEdits} onConfirm={setNoSheetEdits}/>:null):null}
+              {descriptionSelectionProblem?<p role="alert">{descriptionSelectionProblem}</p>:descriptionMode&&descriptionApi?<DescriptionReviewPanel key={chosen[0]!.id+':'+chosen[0]!.version} draftId={chosen[0]!.id} version={chosen[0]!.version} name={services.find(s=>s.id===chosen[0]!.serviceId)!.name} api={descriptionApi} {...(onDescriptionStarted?{onOperationStarted:onDescriptionStarted}:{})} {...(onDescriptionVerified?{onVerified:onDescriptionVerified}:{})} {...(onDescriptionUncertain?{onUncertain:onDescriptionUncertain}:{})}/>:null}
+              {!descriptionMode?<><p className="ax-sub">Only these changes will go live.</p>
               <div className="ax-publish-diff">
                 {frozen.map((d) => {
                   const source = services.find((s) => s.id === d.serviceId),
@@ -349,12 +365,12 @@ export function CatalogueReview({
                 </button>
                 <button
                   className="ax-button ax-button--primary"
-                  disabled={busy || Boolean(problem) || !onReviewAndPublish || Boolean(onPrepareSourceReview&&(!sourceReview||sourceBusy||!noSheetEdits))}
+                  disabled={descriptionMode || busy || Boolean(problem) || !onReviewAndPublish || Boolean(onPrepareSourceReview&&(!sourceReview||sourceBusy||!noSheetEdits))}
                   onClick={() => void publish()}
                 >
                   {busy ? "Publishing…" : "Publish"}
                 </button>
-              </footer>
+              </footer></>:<button className="ax-button" disabled={busy} onClick={close}>Close review</button>}
             </section>
           </div>
         </Overlay>

@@ -39,7 +39,7 @@ function listTsFilesRecursive(dir: string): string[] {
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) {
       files.push(...listTsFilesRecursive(full));
-    } else if (entry.endsWith(".ts")) {
+    } else if ((entry.endsWith(".ts") || entry.endsWith(".mts"))) {
       files.push(relative(FUNCTIONS_DIR, full).split("\\").join("/"));
     }
   }
@@ -77,6 +77,9 @@ const ENFORCED = [
   "work/getJobWorkCoverage.ts", // combined read candidate; uses staged enforcement wiring
   "service/catalogueDrafts.ts",
   "service/catalogueManaged.ts",
+  "service/cataloguePanel.ts",
+  "service/catalogueDescription.candidate.ts",
+  "service/catalogueDescriptionRuntime.ts",
   "service/catalogueRescue.ts",
   "booking/serviceQuoteJourney.ts",
   "customer/getCustomerJobs.ts",
@@ -244,6 +247,7 @@ const EXCLUDED_NON_CALLABLE = [
   "employee/cleanExpiredStaffDocumentUploads.ts",
   "invoice/onInvoiceCreatedPdf.ts",
   "service/catalogueRuntime.ts",
+  "service/cataloguePriceWorker.candidate.ts",
   "service/getPublicCatalogue.ts",
   "approval/expireStaleApprovalsScheduled.ts",
   "booking/flagMissedBookingsScheduled.ts",

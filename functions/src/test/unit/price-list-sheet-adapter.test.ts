@@ -1,0 +1,22 @@
+import{describe,it,expect,vi}from'vitest';
+import{bindingHash,type PriceBinding,type PriceChange}from'../../lib/price-list-sync-plan.js';
+import{applySourcePriceReview,type PriceCellSnapshot,type PriceListPort}from'../../lib/price-list-sheet-adapter.js';
+const b:PriceBinding={serviceId:'svc_ppc',tab:'Ceramic',row:19,column:'I',identityHash:'ppc-product-anchor',policy:'fixed'};
+const c:PriceChange={serviceId:b.serviceId,kind:'sheet-return',beforeMinor:3500000,afterMinor:4000000,bindingHash:bindingHash(b),identityHash:b.identityHash,sourceVersion:'approved-live-version',publicationId:'accepted-publication',range:"'Ceramic'!I19"};
+function fixture(){let cell:PriceCellSnapshot={identityHash:b.identityHash,value:35000,formula:null};const write=vi.fn(async(cells:{range:string;value:number}[])=>{cell={...cell,value:cells[0]!.value};});const read=vi.fn(async()=>[{...cell}]);return{port:{read,writeNumericCells:write}as PriceListPort,write,read,set:(x:Partial<PriceCellSnapshot>)=>cell={...cell,...x}};}
+const review=(changes=[c])=>({operationId:'local-op',exclusiveWindowId:'fixture-no-edit-window',changes});
+describe('unconnected exact source-price return adapter',()=>{
+ it('writes only the numeric intended selling price then verifies it',async()=>{const f=fixture();expect(await applySourcePriceReview([b],review(),f.port)).toMatchObject({state:'verified'});expect(f.write).toHaveBeenCalledWith([{range:"'Ceramic'!I19",value:40000}]);expect(f.read).toHaveBeenCalledTimes(3);});
+ it('recovery sees an already-matching value without a duplicate write',async()=>{const f=fixture();f.set({value:40000});expect(await applySourcePriceReview([b],review(),f.port)).toMatchObject({state:'already-verified'});expect(f.write).not.toHaveBeenCalled();});
+ it('refuses a formula price cell',async()=>{const f=fixture();f.set({formula:'=A1'});await expect(applySourcePriceReview([b],review(),f.port)).rejects.toThrow(/recovery/);expect(f.write).not.toHaveBeenCalled();});
+ it('refuses a user changed source price',async()=>{const f=fixture();f.set({value:36000});await expect(applySourcePriceReview([b],review(),f.port)).rejects.toThrow(/recovery/);expect(f.write).not.toHaveBeenCalled();});
+ it('refuses a renamed/moved identity',async()=>{const f=fixture();f.set({identityHash:'new-product'});await expect(applySourcePriceReview([b],review(),f.port)).rejects.toThrow(/identity/);expect(f.write).not.toHaveBeenCalled();});
+ it('never accepts a sheet-draft as a source write',async()=>{const f=fixture();await expect(applySourcePriceReview([b],review([{...c,kind:'sheet-draft'}]),f.port)).rejects.toThrow();expect(f.write).not.toHaveBeenCalled();});
+ it('never changes an arbitrary range',async()=>{const f=fixture();await expect(applySourcePriceReview([b],review([{...c,range:"'Ceramic'!F19"}]),f.port)).rejects.toThrow();expect(f.write).not.toHaveBeenCalled();});
+ it('rejects a cost-column binding even if its hash is supplied',async()=>{const f=fixture(),bad={...b,column:'F'};await expect(applySourcePriceReview([bad],review([{...c,bindingHash:bindingHash(bad),range:"'Ceramic'!F19"}]),f.port)).rejects.toThrow();expect(f.write).not.toHaveBeenCalled();});
+ it('refuses a missing exclusive window',async()=>{const f=fixture();await expect(applySourcePriceReview([b],{...review(),exclusiveWindowId:''},f.port)).rejects.toThrow();});
+ it('refuses a changed pre-write snapshot',async()=>{const f=fixture();f.read.mockImplementationOnce(async()=>[{identityHash:b.identityHash,value:35000,formula:null}]).mockImplementationOnce(async()=>[{identityHash:b.identityHash,value:37000,formula:null}]);await expect(applySourcePriceReview([b],review(),f.port)).rejects.toThrow(/before write/);expect(f.write).not.toHaveBeenCalled();});
+ it('does not blind-retry an unknown write',async()=>{const f=fixture();f.write.mockRejectedValueOnce(Error('unknown outcome'));await expect(applySourcePriceReview([b],review(),f.port)).rejects.toThrow('unknown outcome');expect(f.write).toHaveBeenCalledTimes(1);});
+ it('marks bad readback for recovery, never rolls it back',async()=>{const f=fixture();f.write.mockResolvedValueOnce(undefined);await expect(applySourcePriceReview([b],review(),f.port)).rejects.toThrow(/not verified/);expect(f.write).toHaveBeenCalledTimes(1);});
+ it('rejects duplicate mappings',async()=>{const f=fixture();await expect(applySourcePriceReview([b,b],review(),f.port)).rejects.toThrow(/Unique/);expect(f.write).not.toHaveBeenCalled();});
+});
