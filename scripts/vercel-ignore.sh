@@ -1,4 +1,26 @@
 #!/usr/bin/env bash
+# Exact approved one-view protection popup. Only Customer main may build.
+case "${VERCEL_GIT_COMMIT_REF:-}" in
+ main|release/approved-protection-popup-20261125)
+ popup_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+ popup_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+ if [ "$popup_parent" = c0761a4f52768b6f9df0455b300fa2839349e831 ] && [ -n "$popup_root" ]; then
+  cd "$popup_root" || exit 0
+  popup_actual="$(git diff --name-only "$popup_parent" HEAD 2>/dev/null)" || exit 0
+  popup_expected=$(cat <<'EXACT_POPUP_PATHS'
+apps/customer/src/ui/services-experience/ExperienceView.tsx
+apps/customer/src/ui/services-experience/protection-one-view.render.test.tsx
+scripts/vercel-ignore.sh
+tests/vercel-protection-popup-release.test.mjs
+EXACT_POPUP_PATHS
+)
+  if [ "$popup_actual" = "$popup_expected" ]; then
+   if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$1" = customer ]; then exit 1; fi
+   exit 0
+  fi
+ fi ;;
+esac
+#!/usr/bin/env bash
 # Approved category label only. Customer builds from main; retain staff and Site.
 label_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
 case "${VERCEL_GIT_COMMIT_REF:-}" in
