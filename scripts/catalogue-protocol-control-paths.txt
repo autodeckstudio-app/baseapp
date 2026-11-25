@@ -1,0 +1,7 @@
+apps/admin/src/app/(admin)/services/catalogue-scope.render.test.tsx
+apps/admin/src/app/(admin)/services/page.tsx
+apps/admin/src/experience/CatalogueProtocolProbe.render.test.tsx
+apps/admin/src/experience/CatalogueProtocolProbe.tsx
+apps/admin/src/lib/catalogue-description.ts
+scripts/catalogue-protocol-control-paths.txt
+scripts/vercel-ignore.sh

@@ -1,4 +1,20 @@
 #!/usr/bin/env bash
+# Exact maintenance probe control. Only Admin main may build.
+case "${VERCEL_GIT_COMMIT_REF:-}" in
+ release/catalogue-protocol-control-20261125) exit 0 ;;
+ main)
+  probe_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  probe_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  if [ "$probe_parent" = f2c4999fba3e87a2b6291c25699ae2acba355919 ] && [ -n "$probe_root" ]; then
+   probe_actual="$(git -C "$probe_root" diff --name-only "$probe_parent" HEAD 2>/dev/null)" || exit 0
+   probe_expected="$(cat "$probe_root/scripts/catalogue-protocol-control-paths.txt" 2>/dev/null)" || exit 0
+   if [ "$probe_actual" = "$probe_expected" ]; then
+    if [ "$1" = admin ]; then exit 1; fi
+    exit 0
+   fi
+  fi ;;
+esac
+#!/usr/bin/env bash
 # Backend-only maintenance prerequisite, no app rollout.
 case "${VERCEL_GIT_COMMIT_REF:-}" in
  release/catalogue-maintenance-readiness-20261125) exit 0 ;;
