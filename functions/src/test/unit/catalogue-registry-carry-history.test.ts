@@ -1,0 +1,2 @@
+import{it,expect}from'vitest';import{readFileSync}from'node:fs';
+it('metadata carry checks exact mapped canonical IDs without counting or mutating stored history',()=>{const s=readFileSync('src/lib/native-description/registry-commit.mts','utf8');expect(s).toContain('canonicalIds.length!==74');expect(s).toContain("tx.get(db.collection('services').doc(id))");expect(s).not.toContain('services.size!==74');expect(s).not.toContain("where('tenantId'");expect(s).not.toMatch(/tx\.(set|update|delete)\([^\n]*services/)});
