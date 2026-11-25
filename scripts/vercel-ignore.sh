@@ -1,4 +1,20 @@
 #!/usr/bin/env bash
+# Read-only Admin connection qualification. No Customer/Studio/Site rollout.
+case "${VERCEL_GIT_COMMIT_REF:-}" in
+ release/catalogue-runtime-inspection-20261125) exit 0 ;;
+ main)
+  runtime_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  runtime_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  if [ "$runtime_parent" = 0ecbe4f0f18af74fe25521dc30c190b95e68aa6b ] && [ -n "$runtime_root" ]; then
+   runtime_actual="$(git -C "$runtime_root" diff --name-only "$runtime_parent" HEAD 2>/dev/null)" || exit 0
+   runtime_expected="$(cat "$runtime_root/scripts/catalogue-runtime-inspection-paths.txt" 2>/dev/null)" || exit 0
+   if [ "$runtime_actual" = "$runtime_expected" ]; then
+    if [ "$1" = admin ]; then exit 1; fi
+    exit 0
+   fi
+  fi ;;
+esac
+#!/usr/bin/env bash
 # Catalogue backend qualification batch. No app rollout from this source stage.
 # Main-first server deployment and runtime readiness are separately verified.
 case "${VERCEL_GIT_COMMIT_REF:-}" in

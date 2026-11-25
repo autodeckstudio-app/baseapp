@@ -1,0 +1,9 @@
+apps/admin/src/app/(admin)/services/catalogue-scope.render.test.tsx
+apps/admin/src/app/(admin)/services/page.tsx
+apps/admin/src/experience/CatalogueRuntimeInspection.render.test.tsx
+apps/admin/src/experience/CatalogueRuntimeInspection.tsx
+apps/admin/src/lib/catalogue-description.ts
+functions/src/functions/service/catalogueDescriptionRuntime.ts
+scripts/catalogue-runtime-inspection-paths.txt
+scripts/vercel-ignore.sh
+tests/vercel-catalogue-runtime-inspection.test.mjs
