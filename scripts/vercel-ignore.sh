@@ -1,4 +1,17 @@
 #!/usr/bin/env bash
+# Backend-only maintenance prerequisite, no app rollout.
+case "${VERCEL_GIT_COMMIT_REF:-}" in
+ release/catalogue-maintenance-readiness-20261125) exit 0 ;;
+ main)
+  maintenance_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  maintenance_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  if [ "$maintenance_parent" = 59613ea63c6251462e2cd40608712f5bfa79600a ] && [ -n "$maintenance_root" ]; then
+   maintenance_actual="$(git -C "$maintenance_root" diff --name-only "$maintenance_parent" HEAD 2>/dev/null)" || exit 0
+   maintenance_expected="$(cat "$maintenance_root/scripts/catalogue-maintenance-readiness-paths.txt" 2>/dev/null)" || exit 0
+   if [ "$maintenance_actual" = "$maintenance_expected" ]; then exit 0; fi
+  fi ;;
+esac
+#!/usr/bin/env bash
 # Read-only Admin connection qualification. No Customer/Studio/Site rollout.
 case "${VERCEL_GIT_COMMIT_REF:-}" in
  release/catalogue-runtime-inspection-20261125) exit 0 ;;

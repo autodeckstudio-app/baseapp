@@ -280,3 +280,6 @@ export {getVisitSeparateInvoicePdf} from './functions/visit/getVisitSeparateInvo
 
 // Staged catalogue description runtime. Held server qualification gates all effects.
 export{catalogueDescriptionResolver,catalogueDescriptionSourceWorker,reviewCatalogueDescription,publishCatalogueDescription,getCatalogueDescriptionStatus,inspectCatalogueDescriptionRuntime}from'./functions/service/catalogueDescriptionRuntime.js';
+
+// Exact existing numeric source identity/endpoint, reconciled with accepted registry.
+export{cataloguePriceSourceWorker}from'./functions/service/cataloguePriceWorker.candidate.js';

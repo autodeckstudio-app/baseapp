@@ -1,0 +1,7 @@
+docs/releases/catalogue-maintenance-qualification.md
+functions/src/functions/service/cataloguePriceWorker.candidate.ts
+functions/src/index.ts
+functions/src/test/unit/catalogue-maintenance-worker-export.test.ts
+functions/src/test/unit/price-list-activation.test.ts
+scripts/catalogue-maintenance-readiness-paths.txt
+scripts/vercel-ignore.sh
