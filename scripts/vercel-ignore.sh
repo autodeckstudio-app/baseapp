@@ -1,4 +1,18 @@
 #!/usr/bin/env bash
+# Catalogue backend qualification batch. No app rollout from this source stage.
+# Main-first server deployment and runtime readiness are separately verified.
+case "${VERCEL_GIT_COMMIT_REF:-}" in
+ release/catalogue-description-qualification-20261125) exit 0 ;;
+ main)
+  description_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  description_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  if [ "$description_parent" = 0c5a1b2af07f32245778ba5dfa2294926a96ca15 ] && [ -n "$description_root" ]; then
+   description_actual="$(git -C "$description_root" diff --name-only "$description_parent" HEAD 2>/dev/null)" || exit 0
+   description_expected="$(cat "$description_root/scripts/catalogue-description-qualification-paths.txt" 2>/dev/null)" || exit 0
+   if [ "$description_actual" = "$description_expected" ]; then exit 0; fi
+  fi ;;
+esac
+#!/usr/bin/env bash
 # Exact approved one-view protection popup. Only Customer main may build.
 case "${VERCEL_GIT_COMMIT_REF:-}" in
  main|release/approved-protection-popup-20261125)

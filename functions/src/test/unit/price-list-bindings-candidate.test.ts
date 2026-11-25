@@ -1,0 +1,10 @@
+import{readFileSync}from'node:fs';import{resolve}from'node:path';import{describe,it,expect}from'vitest';
+import{priceListGoogleTransport,PRICE_SOURCE_WRITER,type PriceTransportBinding}from'../../lib/price-list-google-sheets.js';
+const candidate=JSON.parse(readFileSync(resolve(__dirname,'../../../../sheet-panel/price-list-bindings.candidate.json'),'utf8'));
+describe('approved full-catalogue Price List mapping',()=>{
+ it('contains 74 unique identities and explicit approved activation',()=>{expect(candidate.active).toBe(true);expect(candidate.bindings).toHaveLength(74);expect(new Set(candidate.bindings.map((b:any)=>b.serviceId)).size).toBe(74);});
+ it('validates identity/header anchors for all 64 mapped fixed-price offerings without network calls',()=>{const mapped=candidate.bindings.filter((b:any)=>b.policy==='fixed'&&b.tab)as PriceTransportBinding[];expect(mapped).toHaveLength(64);const noNetwork=()=>{throw Error('Unexpected network request');};expect(()=>priceListGoogleTransport({principal:PRICE_SOURCE_WRITER,getAccessToken:async()=>null},mapped,noNetwork as typeof fetch)).not.toThrow();});
+ it('binds the explicitly approved PPC price and current PPS selling-price column',()=>{expect(candidate.bindings.filter((b:any)=>b.status==='reconciliation-required')).toEqual([]);const ppc=candidate.bindings.find((b:any)=>b.name==='Keramic PPC');expect(ppc).toMatchObject({tab:'Ceramic',column:'I',row:19,sourceValue:40000});const pps=candidate.bindings.find((b:any)=>b.name==='Standard PPS');expect(pps).toMatchObject({tab:'PPS',sheetId:299515585,row:2,column:'I',sourceValue:40000});});
+ it('does not mistake inspection-only figures for customer-price cells',()=>{const inspection=candidate.bindings.filter((b:any)=>b.policy==='inspection');expect(inspection).toHaveLength(10);expect(inspection.every((b:any)=>b.column===null)).toBe(true);});
+ it('keeps Garware Plus one offering and does not overwrite its internal roll row',()=>{const plus=candidate.bindings.filter((b:any)=>b.name==='Garware Plus');expect(plus).toHaveLength(1);expect(plus[0]).toMatchObject({row:24,column:'L',sourceRows:[23,24],sourceValue:95000});});
+});

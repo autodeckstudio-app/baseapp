@@ -28,6 +28,7 @@ export const getServiceCatalogue = onCall({ region: "asia-south1" , enforceAppCh
     const published=await readPublicCatalogue(user.claims.tenantId);
     return {services:published.services,references:published.references,cataloguePublication:{publishId:published.publishId,hash:published.hash}};
   }
+  if(data.staffPublication&&user.claims.tenantId==='automodz'){const published=await readPublicCatalogue(user.claims.tenantId);return{services:published.services.filter(s=>data.category===undefined||s.category===data.category),references:published.references,cataloguePublication:{publishId:published.publishId,hash:published.hash}};}
   if(data.includeInactive && !isAdmin) throw new HttpsError("permission-denied", "Staff catalogue access required");
   // Preserve existing indexed query shapes; no new tenant+order-only index is assumed.
   const queryFor=(active:boolean)=>{
