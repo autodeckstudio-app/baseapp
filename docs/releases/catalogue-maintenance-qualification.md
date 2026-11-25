@@ -23,3 +23,12 @@ This source batch does not establish runtime readiness. Do not deploy the numeri
 9. Verify original workbook descriptions, all source structural invariants, public projection, canonical services and routed Customer/Studio/Admin/Site acceptance. Names, prices, images and approved display headings stay unchanged. Native-device acceptance is separate.
 
 Gift setup/release/qualification remains paused and outside this transition.
+
+## Concrete qualification and rollback ports
+
+- cataloguePlatformReadPorts supplies fixed-project read-only transport for GitHub main/checks, Functions source/config, Cloud Run serving traffic/IAM, versioned source archive downloads and old-revision request logs. A denied or incomplete read is a blocker, never an instruction to add a role.
+- catalogueDeploymentVerifier compares a fixed manifest built from validated main and preserved preflight. All15 targets must serve the inspected source with exact saved identity/config/IAM. An empty old-request query plus exclusive new serving traffic and the elapsed longest timeout establishes the bounded drain check. It is not a promise that external spreadsheet editors are locked out.
+- Call descriptionQualificationLifecycle.prepare with that verifier and a fresh source reader while maintenance is held. Invoke qualifyCatalogueDescriptionProtocol deliberately under existing Admin/AppCheck with only the returned qualificationId. It stores a no-effect receipt and returns runtimeReady:false. The existing connection inspector is unchanged and read-only.
+- Reopen is a separate operator-only call, reading the stored receipt and verifying platform/source/baselines/locks again. No callable can prepare or reopen. qualifyAndReopen remains available only to a fully composed server/operator path whose probe is the real authenticated source route.
+- prepareCatalogueMaintenanceRollback verifies all13 original archive bytes before preparing exact original-generation build/config requests. It never executes the requests, restores money, resets publication history or opens the gate. Metadata-carried and pre-carry rollback are distinct. A successful request-planning rehearsal is not an executed platform rollback. Validate actual restored serving revisions/IAM/config and wait out replaced request timeouts before returning to the original numeric path.
+- The new qualification callable requires the same Admin/AppCheck callable ingress convention. Its platform ingress and private routes must be read back after main deployment. Do not change private writer/controller invokers.

@@ -279,7 +279,7 @@ export{recordVisitCancellationCharge}from'./functions/visit/recordVisitCancellat
 export {getVisitSeparateInvoicePdf} from './functions/visit/getVisitSeparateInvoicePdf.js';
 
 // Staged catalogue description runtime. Held server qualification gates all effects.
-export{catalogueDescriptionResolver,catalogueDescriptionSourceWorker,reviewCatalogueDescription,publishCatalogueDescription,getCatalogueDescriptionStatus,inspectCatalogueDescriptionRuntime}from'./functions/service/catalogueDescriptionRuntime.js';
+export{catalogueDescriptionResolver,catalogueDescriptionSourceWorker,reviewCatalogueDescription,publishCatalogueDescription,getCatalogueDescriptionStatus,inspectCatalogueDescriptionRuntime,qualifyCatalogueDescriptionProtocol}from'./functions/service/catalogueDescriptionRuntime.js';
 
 // Exact existing numeric source identity/endpoint, reconciled with accepted registry.
 export{cataloguePriceSourceWorker}from'./functions/service/cataloguePriceWorker.candidate.js';
