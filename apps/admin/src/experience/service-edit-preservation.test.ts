@@ -70,3 +70,9 @@ it("meaningful description edits remain visible; unedited fixed-mode notes survi
   expect(changed.customerMenu?.priceNote).toBe("Accepted note");
   expect(changed.customerMenu?.family).toBe("Updated wash family");
 });
+
+it("description edits preserve stored currency and activation without inventing absent values",()=>{
+ const live={...source,currency:"INR",active:true};const d=draftFromService(live);d.description="Reviewed wording";const converted=toServicePayload(d);if(!converted.ok)throw Error();const payload=preserveUneditedServiceFields(converted.payload,live);expect(payload.currency).toBe("INR");expect(payload.active).toBe(true);expect(Object.entries(payload).filter(([k,v])=>JSON.stringify(v)!==JSON.stringify(live[k]))).toEqual([["description","Reviewed wording"]]);
+ const original=preserveUneditedServiceFields(converted.payload,source);expect(Object.hasOwn(original,"currency")).toBe(false);expect(Object.hasOwn(original,"active")).toBe(false);
+ const inactive=preserveUneditedServiceFields(converted.payload,{...live,active:false});expect(inactive.active).toBe(false);
+});
