@@ -47,7 +47,7 @@ export function preserveUneditedServiceFields(
     return candidate;
   }
   return Object.fromEntries(
-    Object.entries(next)
+    Object.entries({...next,...(source.currency!==undefined?{currency:source.currency}:{}),...(source.active!==undefined?{active:source.active}:{})})
       .map(([k, v]) => [
         k,
         retain(

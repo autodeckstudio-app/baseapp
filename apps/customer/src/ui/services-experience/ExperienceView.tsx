@@ -81,12 +81,14 @@ const choiceCSS=`
 .services-experience .choice-copy p{font-size:11px;line-height:16px;color:var(--muted);margin:0}
 .services-experience .choice-details{grid-column:-2;grid-row:1;width:44px;min-width:44px;height:44px;min-height:44px;display:grid;place-items:center;border:0;background:transparent;color:var(--muted);padding:0;margin:-5px 0 0}
 .services-experience .choice-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;margin-left:0;flex-wrap:wrap}
-.services-experience .choice-actions{display:flex;align-items:center;justify-content:flex-start;gap:7px;min-width:0;flex-wrap:wrap}
+.services-experience .choice-actions{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-width:0;flex-wrap:wrap}
 .services-experience .choice-actions button{width:auto;min-width:max-content;max-width:none;min-height:44px;font-size:11px;padding:6px 10px;white-space:nowrap;line-height:18px;flex-shrink:0}
 .services-experience .choice-price{font-size:13px;line-height:18px;color:var(--accent);text-align:right;flex-shrink:0;max-width:100%;margin-left:auto}
 .services-experience .choice-product{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 .services-experience .choice-brand{display:flex;width:46px;min-height:23px;padding:2px;align-items:center;justify-content:center;border-radius:4px;box-sizing:border-box}
 .services-experience .choice-brand img{width:42px;height:19px;object-fit:contain}
+.services-experience .choice-has-image .choice-brand{width:68px;flex:0 0 68px}
+.services-experience .choice-has-image .choice-brand img{width:58px;height:24px}
 .services-experience .scope-limits{font-size:12px;line-height:18px;color:var(--muted);margin:12px 0}
 .services-experience .product-brand-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}.services-experience .product-brand-heading h2{margin:0}.services-experience .product-brand-heading label{font-size:14px;line-height:20px;font-weight:650;color:var(--ink);flex-shrink:0}
 .services-experience .choice-brand-filter{display:flex;flex-direction:column;gap:8px}.services-experience .choice-brand-filter>span{font-size:14px;line-height:20px;font-weight:650;color:var(--ink)}.services-experience .choice-brand-filter select{min-height:44px;font-size:13px;font-weight:500;border:1px solid var(--muted);cursor:pointer}

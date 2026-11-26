@@ -1,0 +1,7 @@
+apps/admin/src/experience/service-edit-preservation.test.ts
+apps/admin/src/experience/service-edit-preservation.ts
+apps/admin/src/experience/services-draft.ts
+apps/customer/src/ui/services-experience/ExperienceView.tsx
+scripts/approved-alignment-preservation-paths.txt
+scripts/vercel-ignore.sh
+tests/vercel-approved-alignment-preservation.test.mjs

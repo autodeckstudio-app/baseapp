@@ -70,6 +70,8 @@ export function draftFromService(s: Service): ServiceDraft {
 }
 
 export interface ServicePayload {
+  currency?: string;
+  active?: boolean;
   catalogueEntryKind?:'enquiry';referenceKey?:string;referenceGroup?:'ppf'|'coatings';referenceSurface?:string;
   priceEstimate?:boolean;
   customerMenu?:NonNullable<Service["customerMenu"]>;

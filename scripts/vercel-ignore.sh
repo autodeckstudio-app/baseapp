@@ -1,4 +1,20 @@
 #!/usr/bin/env bash
+# Approved alignment and preservation repair. Main only, Customer and Admin only.
+case "${VERCEL_GIT_COMMIT_REF:-}" in
+ release/approved-alignment-preservation-20261126) exit 0 ;;
+ main)
+  approved_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  approved_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  if [ "$approved_parent" = 40a9abb1046be51991b778c6e5f8c2cad8f243d4 ] && [ -n "$approved_root" ]; then
+   approved_actual="$(git -C "$approved_root" diff --name-only "$approved_parent" HEAD 2>/dev/null)" || exit 0
+   approved_expected="$(cat "$approved_root/scripts/approved-alignment-preservation-paths.txt" 2>/dev/null)" || exit 0
+   if [ "$approved_actual" = "$approved_expected" ]; then
+    case "$1" in customer|admin) exit 1 ;; *) exit 0 ;; esac
+   fi
+   exit 0
+  fi ;;
+esac
+#!/usr/bin/env bash
 # Exact maintenance probe control. Only Admin main may build.
 case "${VERCEL_GIT_COMMIT_REF:-}" in
  release/catalogue-protocol-control-20261125) exit 0 ;;
