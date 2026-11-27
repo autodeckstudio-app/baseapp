@@ -59,6 +59,10 @@ export const createServiceSchema = z.object({
   vehicleCategoryPricing: z.array(vehicleCategoryPricingSchema).max(6).optional(),
   requiredBayType: bayTypeEnum.optional(),
   membershipWashEligible: z.boolean().optional(),
+  // Duplicate-wash prompt flags, set per service by Admin. Absent = false. Never derived from category or name,
+  // and never a resource or duration: preparation is staff-managed outside the application.
+  standaloneExteriorWash: z.boolean().optional(),
+  includesExteriorWash: z.boolean().optional(),
   priceOnRequest: z.boolean().optional(),
   coverageLevel: coverageLevelEnum.nullable().optional(),
   priceFrom: z.boolean().optional(),
@@ -83,6 +87,8 @@ export const updateServiceSchema = z.object({
   vehicleCategoryPricing: z.array(vehicleCategoryPricingSchema).max(6).optional(),
   requiredBayType: bayTypeEnum.optional(),
   membershipWashEligible: z.boolean().optional(),
+  standaloneExteriorWash: z.boolean().optional(),
+  includesExteriorWash: z.boolean().optional(),
   priceOnRequest: z.boolean().optional(),
   coverageLevel: coverageLevelEnum.nullable().optional(),
   priceFrom: z.boolean().optional(),
@@ -108,6 +114,10 @@ export const getServiceCatalogueSchema = z.object({
 export const calculatePriceSchema = z.object({
   serviceId: z.string().min(1),
   vehicleCategory: vehicleCategoryEnum,
+  /** More services in the same booking (same limit as createBooking); priced with createBooking's own rules. */
+  extraServiceIds: z.array(z.string().min(1)).max(4).optional(),
+  /** The booking studio: its tax and currency are used, exactly as createBooking does. */
+  studioId: z.string().min(1).optional(),
 }).strict();
 
 export type CreateServiceInput = z.infer<typeof createServiceSchema>;

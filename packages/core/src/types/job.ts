@@ -45,6 +45,13 @@ export interface ServiceJob {
   lines?: Array<{ serviceId: string; name: string; price: number; durationMinutes: number }>;
   /** Explicit unfinished-work pause for one physical shared-visit move. */
   visitBayPause?:{at:string;by:string;fromBayId:string}|null;
+  /** Mixed-bay booking: ids of its bayReservations (one per scheduled stage). While the car has not arrived, its planned
+   *  occupancy is these reservations only (see isReservationBackedPending). */
+  bayReservationIds?: string[];
+  /** The booking was cancelled while the car was physically in its bay: the bay stays held (heldAfterCancel === true)
+   *  until staff explicitly release it. Equality-queryable flag; heldAfterCancelAt records when. */
+  heldAfterCancel?: boolean;
+  heldAfterCancelAt?: string | null;
   bayReleasedAt?: string;
   bayReleasedBy?: string;
   bayId: string; // empty while on standby

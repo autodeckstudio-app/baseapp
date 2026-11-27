@@ -5,7 +5,7 @@ import{pickupRoadKmForDisplay}from'@autodeck/core';
 import { freezeConsultQuoteApproval } from "../../lib/consult-approval-binding.js";
 import {acceptedServiceQuote,acceptedQuoteBreakdown} from "../../lib/accepted-service-quote.js";
 import type {QuoteJourney} from "@autodeck/core";
-import {hasReleasedBay} from "@autodeck/core";
+import {hasReleasedBay, isReservationBackedPending} from "@autodeck/core";
 import { customerServiceName } from "@autodeck/core";
 import { bookingStartState } from "../../lib/booking-hold.js";
 import { advancePaymentEnabled } from "../../lib/advance-payment.js";
@@ -38,6 +38,9 @@ import {
   hasConflict,
   type OccupiedInterval,
 } from "../../lib/availability.js";
+import { readBayTypeLocks, writeBayTypeLocks, physicallyHeldBayIds, runCapacityTransaction } from "../../lib/bay-type-lock.js";
+import { activeReservationsForBays, createBayReservations } from "../../lib/bay-reservations.js";
+import { planStages, reservationsFromPlan, visitStages, type BayReservation } from "@autodeck/core";
 import { hashGiftCode } from "../../lib/gift-code.js";
 import { findGiftByHash, giftBlockReason } from "../../lib/gift-store.js";
 import { addExtrasToBreakdown, extrasProblem, priceExtras, totalMinutes, type BookingLine } from "../../lib/booking-lines.js";
@@ -113,6 +116,8 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
 
   // More services in the same visit. All checks are server side; the app only mirrors them.
   let extraLines: BookingLine[] = [];
+  // The cart in the customer's order (approved: execution order = cart order; 0 transfer minutes between stages).
+  const cartExtras: Service[] = [];
   // Categories of the whole visit, saved on the booking so the cancel band cannot change if a service is edited later.
   const cancelCategories: string[] = [String((service as { category?: string }).category ?? "")];
   if (data.extraServiceIds?.length) {
@@ -122,9 +127,15 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
     if (extras.some((e) => e.tenantId !== user.claims.tenantId)) throw new HttpsError("permission-denied", "Cross-tenant access denied.");
     const problem = extrasProblem({ ...service, id: serviceSnap.id }, extras, { gift: data.giftCode !== undefined });
     if (problem) throw new HttpsError("failed-precondition", problem);
+    cartExtras.push(...extras);
     for (const e of extras) cancelCategories.push(String((e as { category?: string }).category ?? ""));
     extraLines = priceExtras(extras, { vehicleCategory: data.vehicleCategory, tax: taxFor(config), currency: config.currency });
   }
+  // Mixed-bay visit: services needing different bay types in one booking, held through one reservation per stage.
+  const cartTypes = [...new Set([service.requiredBayType, ...cartExtras.map((e) => e.requiredBayType)])].sort();
+  const mixedVisit = cartTypes.length > 1;
+  const candidateBays = mixedVisit ? config.bays.filter((b) => b.active && cartTypes.includes(b.bayType)) : compatibleBays;
+  if (mixedVisit && cartTypes.some((t) => !candidateBays.some((b) => b.bayType === t))) throw new HttpsError("failed-precondition", "No bays available for this service type.");
   const quoteRef=data.quoteJourneyId?db.collection("serviceQuoteJourneys").doc(data.quoteJourneyId):null;
   const quoteBefore=quoteRef?(await quoteRef.get()).data() as QuoteJourney|undefined:undefined;
   const quoteInput={tenantId:user.claims.tenantId,customerId:customerDocId,studioId:data.studioId,serviceId:data.serviceId,vehicleId:data.vehicleId,revision:data.quoteRevision??0,termsVersion:data.quoteTermsVersion??""};
@@ -209,7 +220,8 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
 
   const transportRef=data.combinedReview?.transport?db.collection(COLLECTIONS.pickupQuotes()).doc(data.combinedReview.transport.quoteId):null;
   const combinedIdentity=data.combinedReview?JSON.stringify([combinedReviewIdentity(data.combinedReview),giftHash,data.membershipId??null]):null;
-  const result = await db.runTransaction(async (tx) => {
+  // Capacity transaction: a closed-before-commit transaction under lock contention is retried fresh (bay-type-lock.ts).
+  const result = await runCapacityTransaction(db, async (tx) => {
     // Idempotency check
     const intentSnap = await tx.get(intentRef);
     if (intentSnap.exists) {
@@ -257,6 +269,22 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
         }
       }
     }
+    // Consistent mappings: the studio bays and the service's Admin bay type are re-read inside this transaction.
+    // A concurrent Admin change aborts the booking instead of allocating against a stale mapping.
+    const txService = (await tx.get(db.collection(COLLECTIONS.services()).doc(data.serviceId))).data() as Service | undefined;
+    const txConfig = (await tx.get(db.collection(COLLECTIONS.studioConfig()).doc(data.studioId))).data() as StudioConfig | undefined;
+    for (const e of cartExtras) {
+      const txExtra = (await tx.get(db.collection(COLLECTIONS.services()).doc(e.id))).data() as Service | undefined;
+      if (txExtra?.requiredBayType !== e.requiredBayType) throw new HttpsError("aborted", "Studio bays or the service's bay type changed. Please choose a time again.");
+    }
+    const txBayIds = (txConfig?.bays ?? []).filter((b) => b.active && cartTypes.includes(b.bayType)).map((b) => b.id).sort();
+    if (txService?.requiredBayType !== service.requiredBayType || txBayIds.join("|") !== candidateBays.map((b) => b.id).sort().join("|")) {
+      throw new HttpsError("aborted", "Studio bays or the service's bay type changed. Please choose a time again.");
+    }
+    // Type lock first (before any occupancy read), then physical holds: a vehicle still in a bay keeps it whatever
+    // its estimate says, so that bay is not a candidate.
+    const typeLocks = await readBayTypeLocks(tx, db, user.claims.tenantId, data.studioId, cartTypes);
+    const heldBays = await physicallyHeldBayIds((q) => tx.get(q), db, data.studioId, candidateBays.map((b) => b.id));
     // Re-validate availability inside the transaction to prevent race conditions.
     // Query all active jobs for compatible bays across a MAX_SERVICE_SPAN_DAYS-
     // wide window around the requested date — a same-day-only query would miss
@@ -265,7 +293,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
     const rangeStartDate = addDays(data.scheduledDate, -MAX_SERVICE_SPAN_DAYS);
     const rangeEndDate = addDays(data.scheduledDate, MAX_SERVICE_SPAN_DAYS);
     const bayOccupancy = new Map<string, OccupiedInterval[]>();
-    for (const bay of compatibleBays) {
+    for (const bay of candidateBays) {
       const jobsSnap = await tx.get(
         db
           .collection(COLLECTIONS.jobs())
@@ -277,17 +305,37 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       const intervals: OccupiedInterval[] = [];
       for (const doc of jobsSnap.docs) {
         const job = doc.data() as ServiceJob;
-        if (hasReleasedBay(job)||job.status === "CANCELLED" || job.status === "DELIVERED") continue;
+        if (hasReleasedBay(job)||job.status === "CANCELLED" || job.status === "DELIVERED" || isReservationBackedPending(job)) continue;
         intervals.push(buildOccupiedInterval(job.scheduledAt, job.estimatedEndAt));
       }
       bayOccupancy.set(bay.id, intervals);
     }
 
+    // Bays held by other bookings' stage reservations (bayReservations) are planned occupancy too.
+    const reservedByBay = await activeReservationsForBays((q) => tx.get(q), db, data.studioId, candidateBays.map((b) => b.id));
+    for (const [reservedBayId, list] of reservedByBay) bayOccupancy.set(reservedBayId, [...(bayOccupancy.get(reservedBayId) ?? []), ...list]);
+
     // Find the least-loaded available bay
     let assignedBayId: string | null = null;
     let minJobs = Infinity;
 
-    for (const bay of compatibleBays) {
+    let stageReservations: BayReservation[] = [];
+    if (mixedVisit) {
+      const ordered = [{ ...service, id: serviceSnap.id }, ...cartExtras];
+      const stages = visitStages(ordered).flat();
+      const allocations = planStages({
+        startAt: requestedStart, stages, occupied: bayOccupancy, transferMinutes: 0,
+        bays: candidateBays.filter((b) => !heldBays.has(b.id)).map((b) => ({ id: b.id, bayType: b.bayType, active: b.active })),
+        workEnd: (start, minutes) => computeScheduleEnd(start, minutes, config.operatingHours, config.holidays, config.timezone),
+      });
+      if (!allocations) throw new HttpsError("resource-exhausted", "No bays available for the requested time slot. Please choose another time.");
+      if (allocations.at(-1)!.endAt !== estimatedEndAt.toISOString()) throw new HttpsError("failed-precondition", "This visit could not be scheduled exactly. Please choose another time.");
+      assignedBayId = allocations[0]!.bayId;
+      const lines = ordered.map((s, i) => ({ serviceId: s.id, name: s.name, stages: [allocations[i]!], estimatedCompletionAt: allocations[i]!.endAt }));
+      stageReservations = reservationsFromPlan({ arrivalAt: requestedStart.toISOString(), lines, collectionEstimateAt: allocations.at(-1)!.endAt }, { tenantId: user.claims.tenantId, studioId: data.studioId, bookingId: bookingRef.id, jobId: jobRef.id, createdAt: nowIso });
+    }
+    for (const bay of mixedVisit ? [] : compatibleBays) {
+      if (heldBays.has(bay.id)) continue;
       const occupied = bayOccupancy.get(bay.id) ?? [];
       if (!hasConflict(requestedStart, estimatedEndAt, occupied)) {
         if (occupied.length < minJobs) {
@@ -314,6 +362,9 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
     // with the corresponding write alongside the other writes below.
     const bayLockRef = db.collection(COLLECTIONS.bayLocks()).doc(`${user.claims.tenantId}__${data.studioId}__${assignedBayId}`);
     await tx.get(bayLockRef);
+    // Mixed visit: the per-bay locks of the other stage bays too, in sorted order (type locks were taken first).
+    const stageBayLocks = [...new Set(stageReservations.map((r) => r.bayId))].filter((id) => id !== assignedBayId).sort().map((id) => db.collection(COLLECTIONS.bayLocks()).doc(`${user.claims.tenantId}__${data.studioId}__${id}`));
+    for (const l of stageBayLocks) await tx.get(l);
 
     // Gift: one transaction checks it is unused, unexpired, not void, bound to this account and for this service, and
     // marks it used together with the booking below. A second booking with the same code fails here.
@@ -457,6 +508,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       estimatedEndTime: utcToLocalTime(estimatedEndAt, config.timezone),
       durationMinutes: visitMinutes,
       bayId: assignedBayId,
+      ...(stageReservations.length ? { bayReservationIds: stageReservations.map((r) => r.id) } : {}),
       assignedEmployeeId: null,
       status: start.status,
       payMode: combined?(combined.payment.choice==='advance20'?'studio':'online'):data.payMode ?? "studio",
@@ -492,6 +544,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       vehicleId: data.vehicleId,
       serviceId: data.serviceId,
       bayId: assignedBayId,
+      ...(stageReservations.length ? { bayReservationIds: stageReservations.map((r) => r.id) } : {}),
       assignedEmployeeId: null,
       status: "PENDING_VEHICLE",
       statusHistory: [
@@ -556,6 +609,10 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
     // bay, so its retry re-evaluates occupancy against this job's now-
     // committed data instead of stale empty data.
     tx.set(bayLockRef, { lastAssignedAt: nowIso });
+    writeBayTypeLocks(tx, typeLocks, nowIso);
+    for (const l of stageBayLocks) tx.set(l, { lastAssignedAt: nowIso });
+    // Every stage reservation is created in this same commit: all of them with the booking and job, or none.
+    createBayReservations(tx, db, stageReservations);
     writeAuditLog(tx, {
       action: "booking.created",
       entityType: "Booking",

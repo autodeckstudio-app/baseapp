@@ -69,6 +69,8 @@ export interface Booking {
   bayReleasedAt?: string;
   bayReleasedBy?: string;
   bayId: string; // assigned at booking creation
+  /** Mixed-bay booking: ids of its bayReservations (one per scheduled stage). */
+  bayReservationIds?: string[];
   assignedEmployeeId: string | null;
   status: BookingStatus;
   priceBreakdown: PriceBreakdown;

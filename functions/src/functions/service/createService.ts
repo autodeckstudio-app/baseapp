@@ -46,6 +46,8 @@ export const createService = onCall({ region: "asia-south1", enforceAppCheck: sh
     vehicleCategoryPricing,
     requiredBayType: data.requiredBayType ?? "general",
     membershipWashEligible: data.membershipWashEligible ?? false,
+    standaloneExteriorWash: data.standaloneExteriorWash ?? false,
+    includesExteriorWash: data.includesExteriorWash ?? false,
     active: true,
     priceOnRequest: data.priceOnRequest ?? false,
     coverageLevel: data.coverageLevel ?? null,

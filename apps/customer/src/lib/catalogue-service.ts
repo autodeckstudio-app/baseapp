@@ -143,13 +143,15 @@ export async function calculateServicePrice(
   serviceId: string,
   vehicleCategory: VehicleCategory,
   extraServiceIds:string[]=[],
+  /** The booking studio: the server then prices with that studio's tax and currency, exactly as createBooking does. */
+  studioId?:string,
 ): Promise<{ breakdown: PriceBreakdown; snapshot: PriceSnapshot;durationMinutes?:number }> {
   const fn = httpsCallable<
-    { serviceId: string; vehicleCategory: VehicleCategory;extraServiceIds?:string[] },
+    { serviceId: string; vehicleCategory: VehicleCategory;extraServiceIds?:string[];studioId?:string },
     { breakdown: PriceBreakdown; snapshot: PriceSnapshot;durationMinutes?:number }
   >(functions, "calculateServicePrice");
-  const result = await fn({ serviceId, vehicleCategory,...(extraServiceIds.length?{extraServiceIds}:{}) });
-  if(!extraServiceIds.length)priceCache.set(auth.currentUser?.uid ?? null, serviceId, vehicleCategory, result.data.breakdown.total);
+  const result = await fn({ serviceId, vehicleCategory,...(extraServiceIds.length?{extraServiceIds}:{}),...(studioId?{studioId}:{}) });
+  if(!extraServiceIds.length&&!studioId)priceCache.set(auth.currentUser?.uid ?? null, serviceId, vehicleCategory, result.data.breakdown.total);
   return result.data;
 }
 

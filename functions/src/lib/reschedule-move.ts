@@ -1,4 +1,4 @@
-import {hasReleasedBay} from "@autodeck/core";
+import {hasReleasedBay, isReservationBackedPending} from "@autodeck/core";
 // Shared transactional reschedule move (basket item 6, stage 2).
 // Extracted from rescheduleBooking so the premium approve path moves the
 // booking with the SAME capacity, freshness and money semantics - not a
@@ -16,6 +16,8 @@ import { COLLECTIONS } from "@autodeck/database";
 import { writeAuditLog } from "../middleware/audit.js";
 import { buildOccupiedInterval, generateDaySlots, type OccupiedInterval } from "./availability.js";
 import { utcToLocalDate, utcToLocalTime, addDays } from "./schedule.js";
+import { readBayTypeLocks, writeBayTypeLocks, physicallyHeldBayIds } from "./bay-type-lock.js";
+import { activeReservationsForBays } from "./bay-reservations.js";
 
 export type RescheduleMoveParams = {
   bookingId: string;
@@ -53,6 +55,8 @@ export async function runRescheduleMove(
       throw new HttpsError("failed-precondition", "Booking changed. Reload it before rescheduling.");
     }
     if(freshBooking.visitId)throw new HttpsError('failed-precondition','Move this visit with the studio so its services stay together.');
+    // Mixed-bay booking (several bays held by stage reservations): no partial reschedule or replanning in this stage.
+    if(freshBooking.bayReservationIds?.length)throw new HttpsError("failed-precondition","This visit uses more than one bay. The studio will coordinate any change to it.");
     params.extraFreshnessCheck?.(freshBooking);
 
     const jobsSnap = await tx.get(
@@ -63,6 +67,24 @@ export async function runRescheduleMove(
       throw new HttpsError("failed-precondition", "The vehicle has already arrived. Reload the job.");
     }
 
+    // The booked resource decision is preserved: a booking is only moved within the bay type it was booked in. If
+    // Admin has since mapped the service to a different bay type, nothing is reassigned automatically; staff review.
+    const requestedType = compatibleBays[0]?.bayType;
+    const bookedType = config.bays.find((b) => b.id === freshBooking.bayId)?.bayType;
+    // Only a KNOWN booked bay type that differs is refused; a booking with no recorded bay (older or missed
+    // bookings) keeps the existing behaviour.
+    if (requestedType && bookedType !== undefined && bookedType !== requestedType) {
+      throw new HttpsError("failed-precondition", "This booking's bay type no longer matches the service's current bay mapping. The studio must review it before it can be moved.");
+    }
+    // Consistent mappings: re-read the studio bays inside this transaction; a concurrent Admin change aborts the move.
+    const txConfig = (await tx.get(db.collection(COLLECTIONS.studioConfig()).doc(booking.studioId))).data() as StudioConfig | undefined;
+    const txBayIds = (txConfig?.bays ?? []).filter((b) => b.active && b.bayType === requestedType).map((b) => b.id).sort();
+    if (txBayIds.join("|") !== compatibleBays.map((b) => b.id).sort().join("|") || txConfig?.bays.find((b) => b.id === freshBooking.bayId)?.bayType !== bookedType) {
+      throw new HttpsError("aborted", "Studio bays changed. Reload before rescheduling.");
+    }
+    // Type lock before any occupancy read; a bay a vehicle is physically in is not a candidate.
+    const typeLocks = await readBayTypeLocks(tx, db, booking.tenantId, booking.studioId, requestedType ? [requestedType] : []);
+    const heldBays = await physicallyHeldBayIds((q) => tx.get(q), db, booking.studioId, compatibleBays.map((b) => b.id), jobDoc ? [jobDoc.id] : []);
     // Re-validate availability for the new slot inside the transaction,
     // widened to a MAX_SERVICE_SPAN_DAYS range for multi-day jobs.
     const rangeStartDate = addDays(params.newDate, -MAX_SERVICE_SPAN_DAYS);
@@ -82,15 +104,19 @@ export async function runRescheduleMove(
         const j = doc.data() as ServiceJob;
         // Exclude the current booking's own job from conflict check
         if (j.bookingId === params.bookingId) continue;
-        if (hasReleasedBay(j)||j.status === "CANCELLED" || j.status === "DELIVERED") continue;
+        if (hasReleasedBay(j)||j.status === "CANCELLED" || j.status === "DELIVERED" || isReservationBackedPending(j)) continue;
         intervals.push(buildOccupiedInterval(j.scheduledAt, j.estimatedEndAt));
       }
       bayOccupancy.set(bay.id, intervals);
     }
 
+    // Other bookings' stage reservations are planned occupancy; this booking's own are being moved.
+    const reservedByBay = await activeReservationsForBays((q) => tx.get(q), db, booking.studioId, compatibleBays.map((b) => b.id), params.bookingId);
+    for (const [reservedBayId, list] of reservedByBay) bayOccupancy.set(reservedBayId, [...(bayOccupancy.get(reservedBayId) ?? []), ...list]);
     let assignedBayId: string | null = null;
     let minJobs = Infinity;
     for (const bay of compatibleBays) {
+      if (heldBays.has(bay.id)) continue;
       const occupied = bayOccupancy.get(bay.id) ?? [];
       const localDay = new Date(`${params.newDate}T12:00:00Z`).getUTCDay();
       const hours = config.operatingHours.find(h => h.dayOfWeek === localDay);
@@ -130,6 +156,7 @@ export async function runRescheduleMove(
       ...params.extraBookingUpdates,
     };
 
+    writeBayTypeLocks(tx, typeLocks, now);
     tx.update(db.collection(COLLECTIONS.bookings()).doc(params.bookingId), bookingUpdates);
 
     if (jobDoc) {

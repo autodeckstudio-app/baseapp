@@ -4,6 +4,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import type { Booking, ServiceJob } from "@autodeck/core";
 import { cancellationTerms } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
+import { heldAfterCancelFields } from "../../lib/bay-type-lock.js";
 import { extractCustomerUser, extractUser, assertTenant, assertStudio } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
@@ -124,6 +125,8 @@ export const cancelBooking = onCall({ region: "asia-south1", secrets: ["RAZORPAY
     });
     if (jobDoc && job) {
       tx.update(jobDoc.ref, {
+        // A car already in its bay keeps the bay until staff explicitly release it; cancelling never frees it.
+        ...heldAfterCancelFields(job, now),
         status: "CANCELLED",
         statusHistory: [...job.statusHistory, { status: "CANCELLED", changedAt: now, changedBy: user.uid, notes: `Booking cancelled: ${data.reason}` }],
         updatedAt: now,

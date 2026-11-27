@@ -1,3 +1,4 @@
+import{heldAfterCancelFields}from'./bay-type-lock.js';
 import {checkVisitCancellation} from './visit-cancellation.js';
 import {HttpsError} from 'firebase-functions/v2/https';
 import {getFirestore} from 'firebase-admin/firestore';
@@ -43,7 +44,7 @@ export async function cancelOfflineVisit(user:AuthorizedUser,data:{bookingId:str
   const totalReturn=settlement.officeReturnDuePaise+plan.refundPaise;if(!Number.isSafeInteger(totalReturn))throw new HttpsError('failed-precondition','Return total needs office review.');
   writeCancelRestores(tx,reads,b,b.id,user,now,'Receipt-funded cancellation');
   if(plan.refundPaise>0)tx.create(obligation,{id:obligation.id,kind:'cancellation',tenantId:job.tenantId,studioId:job.studioId,jobId:job.id,bookingId:b.id,customerId:job.customerId,amountPaise:plan.refundPaise,status:'due',createdAt:now});
-  tx.update(doc.ref,{status:'CANCELLED',statusHistory:[...(job.statusHistory??[]),{status:'CANCELLED',changedAt:now,changedBy:user.uid,notes:data.reason}],offlineSettlement:{...settlement,officeReturnDuePaise:totalReturn},updatedAt:now});
+  tx.update(doc.ref,{...heldAfterCancelFields(job,now),status:'CANCELLED',statusHistory:[...(job.statusHistory??[]),{status:'CANCELLED',changedAt:now,changedBy:user.uid,notes:data.reason}],offlineSettlement:{...settlement,officeReturnDuePaise:totalReturn},updatedAt:now});
   tx.update(ref,{status:'CANCELLED',cancelledAt:now,cancelledBy:actor,cancellationReason:data.reason,cancellationFeePaise:plan.feePaise,cancellationFeeStatus:plan.feeStatus,offlineCancellation:true,manualRefundDuePaise:plan.refundPaise,refundedPaise:0,updatedAt:now});
   writeAuditLog(tx,{action:'booking.cancelled',entityType:'Booking',entityId:b.id,user,studioId:b.studioId,after:{...summary,offlineReceipts:true}});
   return{success:true,...summary};

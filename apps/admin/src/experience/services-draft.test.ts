@@ -54,3 +54,23 @@ it('explicit enquiry promotion strips enquiry bindings from the draft only',()=>
 it('fixed selling prices and inspection mode clear a legacy estimate flag in the submitted draft',()=>{for(const priceMode of ['fixed','inspection']as const){const r=toServicePayload({...base,priceEstimate:true,priceMode,...(priceMode==='inspection'?{priceRupees:'0',minutes:'0',customerMenu:{home:'garage' as const,family:'Inspection',priceMode:'inspection' as const,priceNote:'',priceCondition:''}}:{})});expect(r.ok).toBe(true);if(r.ok)expect(r.payload.priceEstimate).toBe(false)}});
 
 it.each(['walk_in','coordination']as const)('retains %s booking semantics in ordinary draft edits',bookingMode=>{const source={...base,vehicleCategoryPricing:[],careTips:[],membershipWashEligible:false,priceOnRequest:false,brand:null,warrantyLabel:null,warrantyDurationUnit:null,warrantyDurationValue:null,requiredBayType:'general',displayOrder:0,id:'mode',tenantId:'automodz',active:true,createdAt:'now',updatedAt:'now',currency:'INR',basePrice:bookingMode==='walk_in'?0:180000,estimatedDurationMinutes:0,customerMenu:{home:'garage',family:'Assessment',priceMode:'fixed',priceNote:'',priceCondition:'',bookingMode}}as any;const d=draftFromService(source);const r=toServicePayload({...d,name:'Updated name',description:'Updated scope'});expect(r.ok).toBe(true);if(r.ok){expect(r.payload.customerMenu?.bookingMode).toBe(bookingMode);expect(r.payload.estimatedDurationMinutes).toBe(0);expect(r.payload.basePrice).toBe(source.basePrice)}});
+
+describe("duplicate-wash flags", () => {
+  const stored = (() => { const r = toServicePayload(base); if (!r.ok) throw Error(r.problem); const rest: any = { ...r.payload }; delete rest.standaloneExteriorWash; delete rest.includesExteriorWash; return { ...rest, id: "svc-ceramic", tenantId: "automodz", currency: "INR", active: true, createdAt: "t", updatedAt: "t" } as any; })();
+  it("a new service starts with both flags off and the payload carries them explicitly", () => {
+    expect([EMPTY_SERVICE.standaloneExteriorWash, EMPTY_SERVICE.includesExteriorWash]).toEqual([false, false]);
+    const r = toServicePayload(base);
+    expect(r.ok && [r.payload.standaloneExteriorWash, r.payload.includesExteriorWash]).toEqual([false, false]);
+  });
+  it("absent stored flags read as false; set flags round-trip individually", () => {
+    expect(draftFromService(stored)).toMatchObject({ standaloneExteriorWash: false, includesExteriorWash: false });
+    const d = draftFromService({ ...stored, includesExteriorWash: true });
+    expect(d).toMatchObject({ standaloneExteriorWash: false, includesExteriorWash: true });
+    const r = toServicePayload({ ...d, standaloneExteriorWash: true });
+    expect(r.ok && [r.payload.standaloneExteriorWash, r.payload.includesExteriorWash]).toEqual([true, true]);
+  });
+  it("flags are never derived from the service category or name", () => {
+    expect(draftFromService({ ...stored, category: "ppf", name: "PPF with Exterior Wash" })).toMatchObject({ standaloneExteriorWash: false, includesExteriorWash: false });
+    expect(draftFromService({ ...stored, category: "washing", name: "Exterior Wash", requiredBayType: "wash" })).toMatchObject({ standaloneExteriorWash: false, includesExteriorWash: false });
+  });
+});

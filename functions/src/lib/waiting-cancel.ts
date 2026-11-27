@@ -1,3 +1,4 @@
+import { heldAfterCancelFields } from "./bay-type-lock.js";
 import {isDeepStrictEqual} from 'node:util';
 import {checkedCombinedPayment} from '@autodeck/core';
 // LOCAL waiting-cancel workflow. No provider call. Private operational facts never live on readable booking docs.
@@ -120,7 +121,7 @@ export async function resolveWaitingCancel(tx: Transaction, db: Firestore, p: Pa
   const resolution = paid ? "captured_refund_reserved" : "link_terminal_no_refund";
   tx.update(iRef, { state: next.state, resolution, ...(requestId ? { refundRequestId: requestId } : {}) });
   tx.update(bRef, { cancelIntent: publicIntent(next), status: "CANCELLED", cancelledAt: now, cancellationReason: "Cancellation request resolved", ...(paid ? { paymentStatus: "paid", refundStatus: "reserved" } : {}), updatedAt: now });
-  if(jRef&&j)tx.update(jRef, { status: "CANCELLED", ...(paid ? { paymentStatus: "paid" } : {}), statusHistory: [...(j.statusHistory ?? []), { status: "CANCELLED", changedAt: now, changedBy: "system", notes: "Waiting cancellation resolved" }], updatedAt: now });
+  if(jRef&&j)tx.update(jRef, { ...heldAfterCancelFields(j, now), status: "CANCELLED", ...(paid ? { paymentStatus: "paid" } : {}), statusHistory: [...(j.statusHistory ?? []), { status: "CANCELLED", changedAt: now, changedBy: "system", notes: "Waiting cancellation resolved" }], updatedAt: now });
   if (!paid) tx.update(pRef, { status: "cancelled", linkTerminal: ev.eventType === "payment_link.expired" ? "link_expired" : "link_cancelled", cancelledAt: now, updatedAt: now });
   writeCancelRestores(tx, reads, b, b.id, actor(i.tenantId), now, "Waiting cancellation resolved");
   tx.set(db.collection("auditLog").doc(), { tenantId: i.tenantId, studioId: i.studioId, action: "booking.cancel_resolved", entityType: "Booking", entityId: b.id, performedBy: "system", createdAt: now, after: { resolution } });

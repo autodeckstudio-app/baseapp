@@ -41,7 +41,8 @@ describe("booking lines", () => {
     expect(out.total).toBe(236000);
   });
   it("rejects what cannot share a slot", () => {
-    expect(extrasProblem(main, [svc("a", 1, 1, { requiredBayType: "garage" as never })], { gift: false })).toMatch(/different bays/);
+    // Approved: services needing different bay types may share one booking (one reservation per stage).
+    expect(extrasProblem(main, [svc("a", 1, 1, { requiredBayType: "general" })], { gift: false })).toBeNull();
     expect(extrasProblem(main, [svc("a", 1, 1, { priceOnRequest: true })], { gift: false })).toMatch(/after inspection/);
     expect(extrasProblem(main, [svc("a", 1, 1)], { gift: true })).toMatch(/gift/);
     expect(extrasProblem(main, [svc("wash", 1, 1)], { gift: false })).toMatch(/once/);

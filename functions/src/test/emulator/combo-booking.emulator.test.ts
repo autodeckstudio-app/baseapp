@@ -52,7 +52,7 @@ describe("combo booking through createBooking", () => {
 describe("Ceramic coating + Full detail wash under current rules", () => {
   const CER = "menu-coat-fireball-1", FULL = "menu-wash-full";
   async function realSeed() {
-    const x = await seed(["combo-unused"], "real");
+    const x = await seed(["combo-unused"], uid("real")); // its own studio: these tests now book, so they must not share bays
     for (const id of [CER, FULL]) {
       const m = MENU_SEED.find((e) => e.id === id)!; const now = new Date().toISOString();
       await db.collection("services").doc(id).set({ id, tenantId: T, name: m.name, category: m.category, brand: m.brand, description: m.description, basePrice: m.rupees * 100, currency: "INR", estimatedDurationMinutes: m.minutes, warrantyLabel: null, warrantyDurationValue: null, warrantyDurationUnit: null, vehicleCategoryPricing: [], requiredBayType: m.bay, membershipWashEligible: false, active: true, displayOrder: 0, createdAt: now, updatedAt: now });
@@ -61,20 +61,27 @@ describe("Ceramic coating + Full detail wash under current rules", () => {
     await cfg.update({ bays: [{ ...c.bays[0], id: `${x.studio}-w`, bayType: "wash" }, { ...c.bays[1], id: `${x.studio}-p`, bayType: "protection" }] });
     return x;
   }
-  const MSG = "These services use different bays. Book them separately.";
   it("catalogue: Ceramic is 480 min on a protection bay, Full detail is 300 min on a wash bay", () => {
     expect(MENU_SEED.find((e) => e.id === CER)).toMatchObject({ minutes: 480, bay: "protection" });
     expect(MENU_SEED.find((e) => e.id === FULL)).toMatchObject({ minutes: 300, bay: "wash" });
   });
+  // Approved: services needing different bay types share ONE booking; each stage holds its own bay through a reservation,
+  // in cart order with 0 transfer minutes. (Previously refused with "These services use different bays".)
   for (const [main, extra] of [[CER, FULL], [FULL, CER]] as const) {
-    it(`getAvailability and createBooking both refuse ${main} + ${extra} (different bays), no combined duration, no writes`, async () => {
+    it(`${main} + ${extra} (different bays) is offered and books as ONE booking and ONE job with one reservation per stage, in cart order`, async () => {
       const x = await realSeed();
-      await expect(getAvailability.run({ data: { serviceId: main, extraServiceIds: [extra], studioId: x.studio, startDate: monday }, auth: { uid: x.cust, token: { role: "customer", tenantId: T, studioId: null } } } as never)).rejects.toMatchObject({ code: "failed-precondition", message: MSG });
-      await expect(book(x, main, [extra])).rejects.toMatchObject({ code: "failed-precondition", message: MSG });
-      expect(await count(x.cust)).toEqual({ bookings: 0, jobs: 0 });
+      const avail = (await getAvailability.run({ data: { serviceId: main, extraServiceIds: [extra], studioId: x.studio, startDate: monday }, auth: { uid: x.cust, token: { role: "customer", tenantId: T, studioId: null } } } as never)) as { slots: Array<{ date: string; startTime: string }> };
+      expect(avail.slots.some((s) => s.date === monday)).toBe(true);
+      const { booking } = (await book(x, main, [extra])) as { booking: { id: string; bayReservationIds?: string[] } };
+      expect(await count(x.cust)).toEqual({ bookings: 1, jobs: 1 });
+      const reservations = (await db.collection("bayReservations").where("bookingId", "==", booking.id).get()).docs.map((d) => d.data()).sort((a, b) => String(a["startAt"]).localeCompare(String(b["startAt"])));
+      expect(reservations.map((r) => r["serviceId"])).toEqual([main, extra]);
+      expect(reservations.map((r) => r["bayId"]).sort()).toEqual([`${x.studio}-p`, `${x.studio}-w`].sort());
+      expect(reservations.every((r) => r["status"] === "active")).toBe(true);
+      expect([...(booking.bayReservationIds ?? [])].sort()).toEqual(reservations.map((r) => r["id"]).sort());
     });
   }
-  it("each service alone books: the visit is one service, so no 780 min combined slot exists", async () => {
+  it("each service can still be booked alone, as its own single-service booking", async () => {
     const x = await realSeed();
     const a = await book(x, CER, []); const b = await book(x, FULL, []);
     expect(a.booking.estimatedEndTime).not.toBe(b.booking.estimatedEndTime);

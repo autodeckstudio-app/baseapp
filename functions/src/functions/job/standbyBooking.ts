@@ -12,6 +12,9 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { standbyBookingSchema } from "../../schemas/job.js";
 import { buildOccupiedInterval, hasConflict } from "../../lib/availability.js";
 import { computeScheduleEnd, utcToLocalDate, utcToLocalTime, getDayOfWeek } from "../../lib/schedule.js";
+import { readBayTypeLocks, writeBayTypeLocks } from "../../lib/bay-type-lock.js";
+import { isReservationBackedPending } from "@autodeck/core";
+import { activeReservationsForBays } from "../../lib/bay-reservations.js";
 
 // A standby car owns neither a slot nor a bay until admission. The common
 // studio lock serializes FIFO admission; bay locks also serialize bookings.
@@ -55,17 +58,18 @@ export const standbyBooking = onCall({ region: "asia-south1", enforceAppCheck: s
     if(job.visitId)throw new HttpsError('failed-precondition','Review the shared car and its service bays before admission.');
     if (job.status !== "STANDBY" || booking.status !== "ACTIVE") throw new HttpsError("failed-precondition", "This car is not waiting on standby.");
     if (!data.bayId) throw new HttpsError("invalid-argument", "Choose an available compatible bay.");
-    const [configSnap, serviceSnap, allJobs] = await Promise.all([
-      tx.get(db.collection(COLLECTIONS.studioConfig()).doc(job.studioId)),
-      tx.get(db.collection(COLLECTIONS.services()).doc(job.serviceId)),
-      tx.get(db.collection(COLLECTIONS.jobs()).where("tenantId", "==", job.tenantId).where("studioId", "==", job.studioId)),
-    ]);
+    // Config and mapping first (inside the transaction), then the type lock, then occupancy: lock before any
+    // occupancy read, one read at a time (lib/bay-type-lock.ts).
+    const configSnap = await tx.get(db.collection(COLLECTIONS.studioConfig()).doc(job.studioId));
+    const serviceSnap = await tx.get(db.collection(COLLECTIONS.services()).doc(job.serviceId));
     if (!configSnap.exists || !serviceSnap.exists) throw new HttpsError("not-found", "Studio or service not found.");
     const config = configSnap.data() as StudioConfig;
     const service = serviceSnap.data() as Service;
     assertTenant(user, config.tenantId); assertTenant(user, service.tenantId);
     const bay = config.bays.find(b => b.id === data.bayId && b.active && b.bayType === service.requiredBayType);
     if (!bay || !service.active || service.catalogueEntryKind==='enquiry') throw new HttpsError("failed-precondition", "Choose an active bay compatible with this service.");
+    const typeLocks = await readBayTypeLocks(tx, db, job.tenantId, job.studioId, [bay.bayType]);
+    const allJobs = await tx.get(db.collection(COLLECTIONS.jobs()).where("tenantId", "==", job.tenantId).where("studioId", "==", job.studioId));
     const date = utcToLocalDate(nowDate, config.timezone);
     const time = utcToLocalTime(nowDate, config.timezone);
     const hours = config.operatingHours.find(h => h.dayOfWeek === getDayOfWeek(date));
@@ -81,13 +85,16 @@ export const standbyBooking = onCall({ region: "asia-south1", enforceAppCheck: s
     const bayLock = db.collection(COLLECTIONS.bayLocks()).doc(`${job.tenantId}__${job.studioId}__${bay.id}`);
     await tx.get(bayLock);
     const end = computeScheduleEnd(nowDate, job.estimatedDurationMinutes, config.operatingHours, config.holidays, config.timezone);
-    const occupants = jobs.filter(j => !hasReleasedBay(j)&&j.id !== job.id && j.bayId === bay.id && !["DELIVERED", "CANCELLED", "STANDBY"].includes(j.status) && !(j.status === "PENDING_VEHICLE" && !jobHoldsBay(j, nowDate.getTime())));
+    const occupants = jobs.filter(j => !hasReleasedBay(j)&&j.id !== job.id && j.bayId === bay.id && !["DELIVERED", "CANCELLED", "STANDBY"].includes(j.status) && !(j.status === "PENDING_VEHICLE" && !jobHoldsBay(j, nowDate.getTime())) && !isReservationBackedPending(j));
+    // Other bookings' stage reservations on this bay are planned occupancy too.
+    const standbyReserved = (await activeReservationsForBays((q) => tx.get(q), db, job.studioId, [bay.id], job.bookingId ?? undefined)).get(bay.id) ?? [];
+    if (jobs.some((j) => j.id !== job.id && j.bayId === bay.id && j.heldAfterCancel === true)) throw new HttpsError("resource-exhausted", "Bay is occupied or reserved during this service. Wait or choose another bay.");
     // Physically present cars occupy the bay until handover even past estimate.
-    if (occupants.some(j => j.status !== "PENDING_VEHICLE" && Date.parse(j.scheduledAt) <= nowDate.getTime()) || hasConflict(nowDate, end, occupants.map(j => buildOccupiedInterval(j.scheduledAt, j.estimatedEndAt)))) throw new HttpsError("resource-exhausted", "Bay is occupied or reserved during this service. Wait or choose another compatible bay.");
+    if (occupants.some(j => j.status !== "PENDING_VEHICLE" && Date.parse(j.scheduledAt) <= nowDate.getTime()) || hasConflict(nowDate, end, [...occupants.map(j => buildOccupiedInterval(j.scheduledAt, j.estimatedEndAt)), ...standbyReserved])) throw new HttpsError("resource-exhausted", "Bay is occupied or reserved during this service. Wait or choose another compatible bay.");
     const schedule = { bayId: bay.id, scheduledAt: now, scheduledDate: date, estimatedEndAt: end.toISOString(), estimatedEndDate: utcToLocalDate(end, config.timezone), standbyAdmittedAt: now, updatedAt: now };
     tx.update(ref, { ...schedule, status: "VEHICLE_RECEIVED", statusHistory: [...job.statusHistory, { status: "VEHICLE_RECEIVED", changedAt: now, changedBy: user.uid, notes: "Admitted from standby into an available bay." }] });
     tx.update(bookingRef, { ...schedule, scheduledTime: time, estimatedEndTime: utcToLocalTime(end, config.timezone), missedAt: null, missedForScheduledAt: null });
-    tx.set(lockRef, { lastAssignedAt: now }); tx.set(bayLock, { lastAssignedAt: now });
+    tx.set(lockRef, { lastAssignedAt: now }); tx.set(bayLock, { lastAssignedAt: now }); writeBayTypeLocks(tx, typeLocks, now);
     writeAuditLog(tx, { action: "job.status_advanced", entityType: "ServiceJob", entityId: job.id, user, studioId: job.studioId, before: { status: "STANDBY" }, after: { status: "VEHICLE_RECEIVED", bayId: bay.id, scheduledAt: now } });
     return { jobId: job.id, status: "VEHICLE_RECEIVED", bayId: bay.id };
   }, { maxAttempts: 10 });

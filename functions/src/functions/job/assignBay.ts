@@ -16,6 +16,9 @@ import {
   type OccupiedInterval,
 } from "../../lib/availability.js";
 import { computeScheduleEnd } from "../../lib/schedule.js";
+import { readBayTypeLocks, writeBayTypeLocks, cancelledHeldJobIds } from "../../lib/bay-type-lock.js";
+import { isReservationBackedPending } from "@autodeck/core";
+import { activeReservationsForBays } from "../../lib/bay-reservations.js";
 import { addDays } from "../../lib/schedule.js";
 
 export const assignBay = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
@@ -81,6 +84,12 @@ export const assignBay = onCall({ region: "asia-south1", enforceAppCheck: should
 
     // Deterministic-document touch for the target bay — same bayLocks
     // pattern as createBooking.ts/createWalkinJob.ts (Phase 5B fix).
+    // Consistent mapping inside the transaction: the target bay must still be active and of the same type.
+    const txConfig = (await tx.get(db.collection(COLLECTIONS.studioConfig()).doc(job.studioId))).data() as StudioConfig | undefined;
+    const txBay = txConfig?.bays.find((b) => b.id === data.bayId);
+    if (!txBay || !txBay.active || txBay.bayType !== bay.bayType) throw new HttpsError("aborted", "Studio bays changed. Reload before assigning a bay.");
+    // Type lock before any occupancy read (consistent order; see lib/bay-type-lock.ts).
+    const typeLocks = await readBayTypeLocks(tx, db, job.tenantId, job.studioId, [bay.bayType]);
     const bayLockRef = db
       .collection(COLLECTIONS.bayLocks())
       .doc(`${job.tenantId}__${job.studioId}__${data.bayId}`);
@@ -117,11 +126,15 @@ export const assignBay = onCall({ region: "asia-south1", enforceAppCheck: should
     for (const doc of activeJobsSnap.docs) {
       if (doc.id === data.jobId) continue; // the job being reassigned never conflicts with itself
       const otherJob = doc.data() as ServiceJob;
-      if (hasReleasedBay(otherJob)||otherJob.status === "CANCELLED" || otherJob.status === "DELIVERED") continue;
+      if (hasReleasedBay(otherJob)||otherJob.status === "CANCELLED" || otherJob.status === "DELIVERED" || isReservationBackedPending(otherJob)) continue;
       if(targetPresent&&otherJob.status==="PENDING_VEHICLE"&&Date.parse(otherJob.estimatedEndAt)<=nowMs)continue;
       occupied.push(buildOccupiedInterval(otherJob.scheduledAt, otherJob.estimatedEndAt));
     }
 
+    // A car whose booking was cancelled while in the target bay still occupies it.
+    if ((await cancelledHeldJobIds((q) => tx.get(q), db, job.studioId, data.bayId)).some((id) => id !== data.jobId)) throw new HttpsError("resource-exhausted", "Target bay is still occupied. Close that job or select a different bay.");
+    // Other bookings' stage reservations on the target bay are planned occupancy too.
+    for (const i of (await activeReservationsForBays((q) => tx.get(q), db, job.studioId, [data.bayId], job.bookingId ?? undefined)).get(data.bayId) ?? []) occupied.push(i);
     if (hasConflict(actualStart,actualEnd,occupied)) {
       throw new HttpsError(
         "resource-exhausted",
@@ -145,6 +158,7 @@ export const assignBay = onCall({ region: "asia-south1", enforceAppCheck: should
     // Write the bay lock read above — forces Firestore to detect a conflict
     // and retry a genuinely concurrent second caller racing for this bay.
     tx.set(bayLockRef, { lastAssignedAt: now });
+    writeBayTypeLocks(tx, typeLocks, now);
 
     writeAuditLog(tx, {
       action: "job.bay_reassigned",

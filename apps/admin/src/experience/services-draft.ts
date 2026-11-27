@@ -27,6 +27,9 @@ export interface ServiceDraft {
   bay: BayType;
   displayOrder: string;
   washEligible: boolean;
+  /** Duplicate-wash prompt flags, set per service. Absent on a stored service = false. No resource or duration. */
+  standaloneExteriorWash: boolean;
+  includesExteriorWash: boolean;
   sizes: SizeRuleDraft[];
   imageUrl: string;
   imageChanged?: boolean;
@@ -36,7 +39,7 @@ export interface ServiceDraft {
 
 export const EMPTY_SERVICE: ServiceDraft = {
   serviceId: null, name: "", category: "washing", brand: "", description: "", internalNotes: "", priceRupees: "", minutes: "60",
-  warrantyLabel: "", careTips: [], warrantyUnit: "", warrantyValue: "", bay: "wash", displayOrder: "0", washEligible: false, sizes: [], imageUrl: "", coverageLevel: "", priceMode: "fixed",
+  warrantyLabel: "", careTips: [], warrantyUnit: "", warrantyValue: "", bay: "wash", displayOrder: "0", washEligible: false, standaloneExteriorWash: false, includesExteriorWash: false, sizes: [], imageUrl: "", coverageLevel: "", priceMode: "fixed",
 };
 
 export function draftFromService(s: Service): ServiceDraft {
@@ -62,6 +65,8 @@ export function draftFromService(s: Service): ServiceDraft {
     bay: s.requiredBayType,
     displayOrder: String(s.displayOrder),
     washEligible: s.membershipWashEligible,
+    standaloneExteriorWash: s.standaloneExteriorWash === true,
+    includesExteriorWash: s.includesExteriorWash === true,
     imageUrl: s.imageUrl ?? "",
     coverageLevel: s.coverageLevel ?? "",
     priceMode: s.customerMenu?.priceMode==='inspection'?'inspection':s.priceOnRequest === true ? "consult" : s.priceFrom === true ? "from" : "fixed",
@@ -87,6 +92,10 @@ export interface ServicePayload {
   requiredBayType: BayType;
   displayOrder: number;
   membershipWashEligible: boolean;
+  // Always produced by toServicePayload; preserveUneditedServiceFields omits them again when unchanged and absent on
+  // the stored service, so an untouched checkbox never writes a new field.
+  standaloneExteriorWash?: boolean;
+  includesExteriorWash?: boolean;
   vehicleCategoryPricing: VehicleCategoryPricing[];
   // Only sent once a photo has been uploaded, so saves from before the photo feature stay unchanged.
   imageUrl?: string | null;
@@ -154,6 +163,8 @@ export function toServicePayload(d: ServiceDraft): { ok: true; payload: ServiceP
       requiredBayType: d.bay,
       displayOrder: order,
       membershipWashEligible: d.washEligible,
+      standaloneExteriorWash: d.standaloneExteriorWash,
+      includesExteriorWash: d.includesExteriorWash,
       vehicleCategoryPricing,
       coverageLevel: d.coverageLevel || null,
       priceFrom: d.priceMode === "from",

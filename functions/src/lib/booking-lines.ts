@@ -22,7 +22,7 @@ export function extrasProblem(primary: Service, extras: Service[], opts: { gift:
   if (new Set(extras.map((e) => e.id)).size !== extras.length || extras.some((e) => e.id === primary.id)) return "Each service can be added once.";
   if (primary.priceOnRequest === true || extras.some((e) => e.priceOnRequest === true)) return "Services priced after inspection cannot be combined. Book them separately.";
   if (extras.some((e) => !e.active||e.catalogueEntryKind==='enquiry')) return "One of the services is not available right now.";
-  if (extras.some((e) => e.requiredBayType !== primary.requiredBayType)) return "These services use different bays. Book them separately.";
+  // Services needing different bay types may share one booking: each stage holds its own bay (bayReservations).
   const all = [primary, ...extras];
   const up = bundleFor(all.map((x) => x.id));
   if (up) return `${all.filter((x) => (SERVICE_INCLUDES[up] ?? []).includes(x.id)).map((x) => x.name).join(" and ")} together is the Full detail wash. Choose ${up === "menu-wash-full" ? "Full detail wash" : "the bundle"} instead.`;

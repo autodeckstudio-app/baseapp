@@ -1,6 +1,7 @@
 // Shared cancel rules for cancelBooking, adminCancelBooking and the close-time auto-cancel.
 // Pure arithmetic first (unit tested), then the transaction helpers: every read happens in readCancelReads,
 // every write in writeCancelRestores, so callers keep Firestore's reads-before-writes rule.
+import { activeReservationRefsForBooking, releaseReservations } from "./bay-reservations.js";
 import type { Firestore, Transaction, DocumentReference, DocumentSnapshot } from "firebase-admin/firestore";
 import type { Booking, Membership } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -33,6 +34,8 @@ export interface CancelReads {
   giftPayment: { ref: DocumentReference; snap: DocumentSnapshot } | null;
   pickup: { ref: DocumentReference; snap: DocumentSnapshot };
   pickupMembership: { ref: DocumentReference; snap: DocumentSnapshot } | null;
+  /** The booking's active stage reservations (mixed-bay bookings only), released with the whole booking. */
+  reservations?: DocumentReference[];
 }
 
 export async function readCancelReads(tx: Transaction, db: Firestore, booking: Booking & { id?: string }, bookingId: string): Promise<CancelReads> {
@@ -53,14 +56,19 @@ export async function readCancelReads(tx: Transaction, db: Firestore, booking: B
   const pickupMembership = heldId && heldId !== booking.membershipId
     ? await read(db.collection(COLLECTIONS.memberships()).doc(heldId))
     : null;
-  return { membership, gift, giftPayment, pickup: { ref: pRef, snap: pSnap }, pickupMembership };
+  // Approved: a mixed-bay booking's stage reservations end with the booking. Read here, in every caller's read phase; a
+  // single-bay booking has no bayReservationIds and adds no read.
+  const reservations = booking.bayReservationIds?.length ? await activeReservationRefsForBooking(tx, db, bookingId) : [];
+  return { membership, gift, giftPayment, pickup: { ref: pRef, snap: pSnap }, pickupMembership, reservations };
 }
 
 /**
- * Gives back everything a cancelled booking was holding: the membership wash, the member's free pickup, the redeemed gift.
+ * Gives back everything a cancelled booking was holding: the membership wash, the member's free pickup, the redeemed gift,
+ * and its stage reservations (no fee or refund logic is involved in that release).
  * Closes any open pickup request. Each restore is tied to a stored marker on the booking/pickup/gift, so a second call changes nothing.
  */
 export function writeCancelRestores(tx: Transaction, reads: CancelReads, booking: Booking, bookingId: string, user: AuthorizedUser, now: string, note: string, audit = true): void {
+  releaseReservations(tx, reads.reservations ?? [], user.uid, now);
   const memberUpdates = new Map<string, { ref: DocumentReference; m: Membership; washes: number; pickups: number }>();
   const bump = (ref: DocumentReference, snap: DocumentSnapshot | undefined) => {
     if (!snap?.exists) return null;

@@ -1,3 +1,4 @@
+import { heldAfterCancelFields } from "./bay-type-lock.js";
 import { getPaymentProvider } from "./razorpay-provider.js";
 import { unresolvedCancel, reviewWaitingCancels } from "./waiting-cancel.js";
 // Pay-online bookings hold their slot for HOLD_MINUTES. Pure rules here, the sweep below.
@@ -59,7 +60,7 @@ export async function sweepExpiredBookingHolds(db: Firestore, nowMs = Date.now()
       tx.update(bRef, { status: "EXPIRED", updatedAt: now });
       if (jobDoc) {
         const j = jobDoc.data() as ServiceJob;
-        tx.update(jobDoc.ref, { status: "CANCELLED", statusHistory: [...j.statusHistory, { status: "CANCELLED", changedAt: now, changedBy: "system", notes: "Payment not completed in time" }], updatedAt: now });
+        tx.update(jobDoc.ref, { ...heldAfterCancelFields(j, now), status: "CANCELLED", statusHistory: [...j.statusHistory, { status: "CANCELLED", changedAt: now, changedBy: "system", notes: "Payment not completed in time" }], updatedAt: now });
       }
       writeAuditLog(tx, { action: "booking.expired", entityType: "Booking", entityId: b.id, user: systemUser(b.tenantId), studioId: b.studioId, before: { status: "PENDING" }, after: { status: "EXPIRED" } });
       return true;

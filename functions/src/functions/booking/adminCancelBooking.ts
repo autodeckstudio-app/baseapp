@@ -1,3 +1,4 @@
+import { heldAfterCancelFields } from "../../lib/bay-type-lock.js";
 import {checkVisitCancellation} from '../../lib/visit-cancellation.js';
 import {requestCombinedWaitingCancel} from '../../lib/combined-waiting-cancel.js';
 import {decideCombinedReturn} from '../../lib/combined-return.js';
@@ -374,6 +375,8 @@ export async function runCancel(
       // credit-note treatment stays an accountant hold).
       if (jobDoc && j) {
         tx.update(jobDoc.ref, {
+          // A car already in its bay keeps it until staff explicitly release it; cancelling never frees it.
+          ...heldAfterCancelFields(j, now),
           status: "CANCELLED",
           statusHistory: [...j.statusHistory, { status: "CANCELLED", changedAt: now, changedBy: user.uid, notes: `Booking cancelled by admin: ${data.reason}` }],
           updatedAt: now,

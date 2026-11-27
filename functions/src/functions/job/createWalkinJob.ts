@@ -15,6 +15,9 @@ import {
   type OccupiedInterval,
 } from "../../lib/availability.js";
 import { utcToLocalDate, utcToLocalTime, addDays, computeScheduleEnd } from "../../lib/schedule.js";
+import { readBayTypeLocks, writeBayTypeLocks, runCapacityTransaction, cancelledHeldJobIds } from "../../lib/bay-type-lock.js";
+import { isReservationBackedPending } from "@autodeck/core";
+import { activeReservationsForBays } from "../../lib/bay-reservations.js";
 import { calculatePrice, taxFor } from "../../lib/pricing.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
@@ -101,7 +104,9 @@ export const createWalkinJob = onCall({ region: "asia-south1" , enforceAppCheck:
   const jobRef = db.collection(COLLECTIONS.jobs()).doc();
   const quoteBookingRef=service.priceOnRequest?db.collection(COLLECTIONS.bookings()).doc():null;
 
-  await db.runTransaction(async (tx) => {
+  // Capacity transaction: a closed-before-commit transaction under lock contention is retried fresh
+  // (lib/bay-type-lock.ts runCapacityTransaction), so a losing concurrent walk-in still gets the clear occupied error.
+  await runCapacityTransaction(db, async (tx) => {
     const currentVehicleSnap=await tx.get(db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId));
     if(!currentVehicleSnap.exists)throw new HttpsError("not-found","Vehicle not found.");
     const currentVehicle=currentVehicleSnap.data() as Vehicle;
@@ -113,6 +118,10 @@ export const createWalkinJob = onCall({ region: "asia-south1" , enforceAppCheck:
     // tested limitation (measurably reduces but does NOT fully eliminate the
     // bay race). Same pattern as createBooking.ts (Phase 5B fix — this file
     // previously had no mitigation at all for the identical race).
+    // Consistent mapping inside the transaction, then the type lock before any occupancy read (lib/bay-type-lock.ts).
+    const txBay = ((await tx.get(db.collection(COLLECTIONS.studioConfig()).doc(data.studioId))).data() as StudioConfig | undefined)?.bays.find((b) => b.id === data.bayId);
+    if (!txBay || !txBay.active || txBay.bayType !== bay.bayType) throw new HttpsError("aborted", "Studio bays changed. Reload before registering the walk-in.");
+    const typeLocks = await readBayTypeLocks(tx, db, user.claims.tenantId, data.studioId, [bay.bayType]);
     const bayLockRef = db
       .collection(COLLECTIONS.bayLocks())
       .doc(`${user.claims.tenantId}__${data.studioId}__${data.bayId}`);
@@ -146,11 +155,15 @@ export const createWalkinJob = onCall({ region: "asia-south1" , enforceAppCheck:
     const occupied: OccupiedInterval[] = [];
     for (const job of bayJobs) {
       // A booked car that never came and whose slot has ended no longer holds the bay.
-      if (job.status === "PENDING_VEHICLE" && jobHoldsBay(job, now.getTime())) {
+      if (job.status === "PENDING_VEHICLE" && jobHoldsBay(job, now.getTime()) && !isReservationBackedPending(job)) {
         occupied.push(buildOccupiedInterval(job.scheduledAt, job.estimatedEndAt));
       }
     }
 
+    const heldCancelled = await cancelledHeldJobIds((q) => tx.get(q), db, data.studioId, data.bayId);
+    if (heldCancelled.length) throw new HttpsError("resource-exhausted", `Bay is still occupied by job ${heldCancelled[0]} (cancelled, car still in the bay). Release that bay or select a different bay.`);
+    // Bookings' stage reservations on this bay are planned occupancy too.
+    for (const i of (await activeReservationsForBays((q) => tx.get(q), db, data.studioId, [data.bayId])).get(data.bayId) ?? []) occupied.push(i);
     if (hasConflict(now, estimatedEndAt, occupied)) {
       throw new HttpsError(
         "resource-exhausted",
@@ -198,6 +211,7 @@ export const createWalkinJob = onCall({ region: "asia-south1" , enforceAppCheck:
     // Write the bay lock read above — forces Firestore to detect a conflict
     // and retry a genuinely concurrent second caller racing for this bay.
     tx.set(bayLockRef, { lastAssignedAt: nowIso });
+    writeBayTypeLocks(tx, typeLocks, nowIso);
     writeAuditLog(tx, {
       action: "job.walkin_created",
       entityType: "ServiceJob",

@@ -38,6 +38,9 @@ import {
 } from "../../lib/protection-effects.js";
 import { readConsultPaymentBinding } from "../../lib/consult-payment.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import { readBayTypeLocks, writeBayTypeLocks, cancelledHeldJobIds } from "../../lib/bay-type-lock.js";
+import { isReservationBackedPending } from "@autodeck/core";
+import { activeReservationsForBays } from "../../lib/bay-reservations.js";
 
 export const advanceJobStatus = onCall(
   { region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() },
@@ -226,6 +229,11 @@ export const advanceJobStatus = onCall(
         // the other's committed holder. Same documented honesty as
         // COLLECTIONS.bayLocks: this measurably reduces, and for same-bay
         // check-ins closes, the race window; it is not a general admission lock.
+        // Arrival turns a reservation into a physical hold: take the bay-type lock first (lib/bay-type-lock.ts),
+        // in the same type-then-per-bay order as every other allocation path. A bay missing from the config keeps
+        // the existing per-bay-only behaviour.
+        const arrivalBayType = ((await tx.get(db.collection(COLLECTIONS.studioConfig()).doc(freshJob.studioId))).data() as StudioConfig | undefined)?.bays.find((b) => b.id === freshJob.bayId)?.bayType;
+        const arrivalTypeLocks = arrivalBayType ? await readBayTypeLocks(tx, db, freshJob.tenantId, freshJob.studioId, [arrivalBayType]) : [];
         const bayLockRef = db
           .collection(COLLECTIONS.bayLocks())
           .doc(`${freshJob.tenantId}__${freshJob.studioId}__${freshJob.bayId}`);
@@ -271,7 +279,7 @@ export const advanceJobStatus = onCall(
         const holder = bayJobsSnap.docs
           .map((d) => ({ ...(d.data() as ServiceJob), id: d.id }))
           .find((other) => {
-            if (other.id === data.jobId||hasReleasedBay(other)) return false;
+            if (other.id === data.jobId||hasReleasedBay(other)||isReservationBackedPending(other)) return false;
             // Defensive: only the queried live statuses can ever hold the bay
             // (keeps the rule correct even if the query's status filter widens).
             if (
@@ -296,6 +304,13 @@ export const advanceJobStatus = onCall(
               buildOccupiedInterval(other.scheduledAt, other.estimatedEndAt),
             ]);
           });
+        const cancelledHeld = (await cancelledHeldJobIds((q) => tx.get(q), db, freshJob.studioId, freshJob.bayId)).filter((id) => id !== data.jobId);
+        if (cancelledHeld.length) throw new HttpsError("failed-precondition", `Bay is still held by job ${cancelledHeld[0]} (cancelled, car still in the bay). Release that bay or reassign a bay before checking this vehicle in.`);
+        // Another booking's stage reservation on this bay during this visit also blocks the check-in.
+        const arrivalReserved = ((await activeReservationsForBays((q) => tx.get(q), db, freshJob.studioId, [freshJob.bayId], freshJob.bookingId ?? undefined)).get(freshJob.bayId) ?? []).filter((i) => i.endAt.getTime() > nowMs);
+        if (!holder && hasConflict(new Date(now), effectiveEnd, arrivalReserved)) {
+          throw new HttpsError("failed-precondition", "This bay is reserved for another booking during this visit. Assign a different bay before checking this vehicle in.");
+        }
         if (holder) {
           throw new HttpsError(
             "failed-precondition",
@@ -307,6 +322,7 @@ export const advanceJobStatus = onCall(
           { lastCheckInAt: now, lastJobId: data.jobId },
           { merge: true },
         );
+        writeBayTypeLocks(tx, arrivalTypeLocks, now);
       }
 
       const newHistoryEntry = {

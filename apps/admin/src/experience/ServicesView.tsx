@@ -242,6 +242,9 @@ export function ServicesView(p: {
               <label className="ax-form-row"><span>Menu position</span><input inputMode="numeric" value={draft.displayOrder} onChange={(e) => set({ displayOrder: e.target.value })} /></label>
             </div>
             <label className="ax-check"><input type="checkbox" checked={draft.washEligible} onChange={(e) => set({ washEligible: e.target.checked })} /> Included member wash</label>
+            <label className="ax-check"><input type="checkbox" checked={draft.standaloneExteriorWash} onChange={(e) => set({ standaloneExteriorWash: e.target.checked })} /> Standalone Exterior Wash service</label>
+            <label className="ax-check"><input type="checkbox" checked={draft.includesExteriorWash} onChange={(e) => set({ includesExteriorWash: e.target.checked })} /> Already includes Exterior Wash</label>
+            <p className="ax-note">These two only help ask customers about a duplicate Wash. They reserve no bay or time.</p>
 
             {result && !result.ok && draft.name && <p className="ax-note" style={{ color: "var(--ad-warning)" }}>{result.problem}</p>}
             <div className="ax-panel-actions">

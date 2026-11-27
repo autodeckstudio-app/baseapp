@@ -1,6 +1,6 @@
 import type {JobStatus} from './types/job';
 export type SharedVisit={activeHandoverId?:string;id:string;tenantId:string;studioId:string;customerId:string;vehicleId:string;jobIds:string[];transportJobId:string|null;revision:number;createdAt:string;createdBy:string;updatedAt:string;updatedBy:string};
-export type VisitMember={id:string;tenantId:string;studioId:string;customerId:string;vehicleId:string;visitId?:string;status:JobStatus;updatedAt:string;totalAmount:number;paymentStatus:string;scheduledDate:string;pickupFee:number;dropFee:number;transportRequested:boolean;paymentInFlight:boolean;cancellationPending?:boolean;quotePending:boolean};
+export type VisitMember={id:string;tenantId:string;studioId:string;customerId:string;vehicleId:string;visitId?:string;status:JobStatus;updatedAt:string;totalAmount:number;paymentStatus:string;scheduledDate:string;pickupFee:number;dropFee:number;transportRequested:boolean;paymentInFlight:boolean;cancellationPending?:boolean;quotePending:boolean;/** The booking holds stage reservations (a mixed-bay booking): it is never joined to a shared visit. */stageReservations?:boolean};
 export type SharedVisitState='expected'|'working'|'ready'|'handover_incomplete'|'delivered'|'cancelled'|'needs_review';
 /** Grouping is explicit only. The caller supplies exactly the member IDs
  * stored in the visit, never cars matched by plate, date or customer name. */
@@ -19,7 +19,9 @@ export function sharedVisitState(visit:SharedVisit,members:readonly VisitMember[
 export function visitServiceLabel(status:JobStatus):string{
  return ({PENDING_VEHICLE:'Not started',STANDBY:'Waiting for bay',VEHICLE_RECEIVED:'Car received',IN_PROGRESS:'In progress',QUALITY_CHECK:'QC',READY_FOR_DELIVERY:'Work complete',DELIVERED:'Work complete',CANCELLED:'Cancelled'} as const)[status];
 }
-export type VisitJoinProblem='scope_changed'|'terminal_member'|'already_joined'|'payment_in_flight'|'transport_conflict'|'invalid_amount'|'schedule_review'|'duplicate_member'|'cancellation_pending';
+export type VisitJoinProblem='scope_changed'|'terminal_member'|'already_joined'|'payment_in_flight'|'transport_conflict'|'invalid_amount'|'schedule_review'|'duplicate_member'|'cancellation_pending'|'stage_reservations';
+/** Approved: shown when a booking with stage reservations is offered for a shared visit. */
+export const VISIT_JOIN_STAGE_RESERVATIONS_MESSAGE='This booking uses more than one bay, so it cannot join a shared visit. The studio must coordinate it separately.';
 /** Joining never edits amounts, approvals, payment allocations or issued
  * invoices. A conflict is for staff review, never an automatic adjustment. */
 export function visitJoinProblem(members:readonly VisitMember[],existingVisitId?:string):VisitJoinProblem|null{
@@ -29,6 +31,8 @@ export function visitJoinProblem(members:readonly VisitMember[],existingVisitId?
  if(members.some(j=>!['PENDING_VEHICLE','STANDBY','VEHICLE_RECEIVED','IN_PROGRESS','QUALITY_CHECK','READY_FOR_DELIVERY','DELIVERED','CANCELLED'].includes(j.status)))return 'scope_changed';
  if(members.some(j=>['DELIVERED','CANCELLED'].includes(j.status)))return 'terminal_member';
  if(members.some(j=>j.visitId&&j.visitId!==existingVisitId))return 'already_joined';
+ // Approved: visit flows do not move or release a mixed-bay booking's stage reservations, so it never joins.
+ if(members.some(j=>j.stageReservations===true))return 'stage_reservations';
  if(members.some(j=>j.cancellationPending))return 'cancellation_pending';
  if(members.some(j=>j.paymentInFlight))return 'payment_in_flight';
  if(members.some(j=>![j.totalAmount,j.pickupFee,j.dropFee].every(n=>Number.isSafeInteger(n)&&n>=0)))return 'invalid_amount';

@@ -1,3 +1,4 @@
+import{heldAfterCancelFields}from'./bay-type-lock.js';
 import {isDeepStrictEqual} from 'node:util';
 import {HttpsError} from 'firebase-functions/v2/https';
 import type {Firestore,Transaction} from 'firebase-admin/firestore';
@@ -54,7 +55,7 @@ export async function decideCombinedReturn(db:Firestore,user:AuthorizedUser,data
   if(waiting){tx.update(intentRef,{state:'resolved',resolution:'combined_cancel_reviewed',resolvedAt:now,resolvedBy:user.uid,paymentCheckNote:data.paymentCheck!.note,paymentCheckBy:user.uid,paymentCheckedAt:now});tx.update(ref,{cancelIntent:{state:'resolved',requestedAt:intent!['requestedAt']}});}
   if(reads)writeCancelRestores(tx,reads,b,b.id,user,now,'Combined booking cancelled');
   tx.update(ref,{combinedReturn:plan,...(kind==='cancellation'?{status:'CANCELLED',cancelledAt:now,cancelledBy:actor,cancellationReason:data.reason,cancellationFeePaise:financial.feePaise,cancellationFeeStatus:financial.feeStatus}:{noShowResolution:data.feeAction==='waive'?'waive':'charge',noShowChargePaise:financial.feePaise,noShowResolvedAt:now,noShowResolvedBy:user.uid,noShowReason:data.reason}),manualRefundDuePaise:entries.filter(e=>e.method!=='razorpay_payment_link').reduce((n,e)=>n+e.returnPaise,0),refundedPaise:0,refundStatus:financial.refundPaise>0?'awaiting_approval':'none',updatedAt:now});
-  if(kind==='cancellation')tx.update(f.jobDoc.ref,{status:'CANCELLED',statusHistory:[...(f.j.statusHistory??[]),{status:'CANCELLED',changedAt:now,changedBy:user.uid,notes:data.reason}],updatedAt:now});
+  if(kind==='cancellation')tx.update(f.jobDoc.ref,{...heldAfterCancelFields(f.j,now),status:'CANCELLED',statusHistory:[...(f.j.statusHistory??[]),{status:'CANCELLED',changedAt:now,changedBy:user.uid,notes:data.reason}],updatedAt:now});
   writeAuditLog(tx,{action:kind==='no_show'?'booking.noshow_resolved':'booking.cancelled',entityType:'Booking',entityId:b.id,user,studioId:b.studioId,after:{feePaise:financial.feePaise,refundReviewPaise:financial.refundPaise,originalMethods:true}});
   return{success:true,resolved:kind==='no_show',resolution:data.feeAction==='waive'?'waive':'charge',chargePaise:financial.feePaise,refundRequestId:null,...summary};
  });

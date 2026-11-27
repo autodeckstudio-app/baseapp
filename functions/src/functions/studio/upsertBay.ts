@@ -1,7 +1,9 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
-import { getFirestore } from "firebase-admin/firestore";
-import type { Bay, StudioConfig } from "@autodeck/core";
+import { getFirestore, type DocumentReference } from "firebase-admin/firestore";
+import type { Bay, ServiceJob, StudioConfig } from "@autodeck/core";
+import { physicallyHeldBayIds, readBayTypeLocks, writeBayTypeLocks } from "../../lib/bay-type-lock.js";
+import { activeReservationsForBays } from "../../lib/bay-reservations.js";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -34,6 +36,7 @@ export const upsertBay = onCall({ region: "asia-south1", enforceAppCheck: should
     let bayId: string;
     let change: "resource.created" | "resource.updated";
     let before: Record<string, unknown> | null = null;
+    let typeLockRefs: DocumentReference[] = [];
 
     if (data.bayId) {
       const index = existing.bays.findIndex((b) => b.id === data.bayId);
@@ -51,6 +54,21 @@ export const upsertBay = onCall({ region: "asia-south1", enforceAppCheck: should
       bays[index] = updatedBay;
       bayId = data.bayId;
       change = "resource.updated";
+      // Capacity guard for a retype or deactivation. Lock the old and new bay types (sorted, before any occupancy
+      // read), then refuse while the bay has an upcoming booking or a vehicle physically in it. Existing bookings
+      // are never reassigned silently; staff move or complete them first.
+      const retyped = existingBay.bayType !== data.bayType;
+      const deactivated = existingBay.active === true && data.active === false;
+      if (retyped || deactivated) {
+        typeLockRefs = await readBayTypeLocks(tx, db, existing.tenantId, data.studioId, [existingBay.bayType, data.bayType]);
+        const held = await physicallyHeldBayIds((q) => tx.get(q), db, data.studioId, [data.bayId]);
+        const pending = await tx.get(db.collection(COLLECTIONS.jobs()).where("studioId", "==", data.studioId).where("bayId", "==", data.bayId).where("status", "==", "PENDING_VEHICLE"));
+        const upcoming = pending.docs.some((d) => { const end = Date.parse((d.data() as ServiceJob).estimatedEndAt); return !Number.isFinite(end) || end > Date.now(); });
+        const reservedAhead = ((await activeReservationsForBays((q) => tx.get(q), db, data.studioId, [data.bayId])).get(data.bayId) ?? []).some((i) => i.endAt.getTime() > Date.now());
+        if (held.size > 0 || upcoming || reservedAhead) {
+          throw new HttpsError("failed-precondition", "This bay has an upcoming booking or a vehicle in it. Move or complete them before changing its type or deactivating it.");
+        }
+      }
     } else {
       const newRef = db.collection(COLLECTIONS.studioConfig()).doc();
       const newBay: Bay = {
@@ -66,7 +84,9 @@ export const upsertBay = onCall({ region: "asia-south1", enforceAppCheck: should
       change = "resource.created";
     }
 
-    tx.update(ref, { bays, updatedAt: new Date().toISOString() });
+    const updatedAt = new Date().toISOString();
+    tx.update(ref, { bays, updatedAt });
+    writeBayTypeLocks(tx, typeLockRefs, updatedAt);
 
     writeAuditLog(tx, {
       action: "studio.config_updated",

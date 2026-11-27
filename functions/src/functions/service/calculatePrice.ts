@@ -1,13 +1,14 @@
 import { customerServiceName } from "@autodeck/core";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import type { Service, PriceSnapshot } from "@autodeck/core";
+import type { Service, PriceSnapshot, StudioConfig } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { calculatePriceSchema } from "../../schemas/service.js";
 import { calculatePrice, taxFor } from "../../lib/pricing.js";
+import { addExtrasToBreakdown, extrasProblem, priceExtras, totalMinutes } from "../../lib/booking-lines.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Server-authoritative price calculation.
@@ -42,14 +43,40 @@ export const calculateServicePrice = onCall({ region: "asia-south1" , enforceApp
     throw new HttpsError("failed-precondition", "Service is not currently available.");
   }
 
-  const breakdown = calculatePrice({
+  // With a studio, price with that studio's tax and currency, exactly as createBooking does.
+  let studio: StudioConfig | null = null;
+  if (data.studioId) {
+    const cfg = (await db.collection(COLLECTIONS.studioConfig()).doc(data.studioId).get()).data() as StudioConfig | undefined;
+    if (!cfg) throw new HttpsError("not-found", "Studio not found.");
+    assertTenant(user, cfg.tenantId);
+    studio = cfg;
+  }
+  const tax = taxFor(studio);
+  const currency = studio ? studio.currency : service.currency;
+  const primary = calculatePrice({
     basePrice: service.basePrice,
     serviceCategory: service.category,
     vehicleCategory: data.vehicleCategory,
     vehicleCategoryPricing: service.vehicleCategoryPricing,
-    currency: service.currency,
-    ...taxFor(null),
+    currency,
+    ...tax,
   });
+  // A multi-service booking (including services needing different bay types) is priced as ONE booking with the same
+  // helpers createBooking uses: the same combination rules, priceExtras and addExtrasToBreakdown. Membership, gift,
+  // quote and transport options are chosen later at confirmation and are not part of this preview.
+  let breakdown = primary;
+  let durationMinutes = service.estimatedDurationMinutes;
+  if (data.extraServiceIds?.length) {
+    const extraSnaps = await Promise.all(data.extraServiceIds.map((id) => db.collection(COLLECTIONS.services()).doc(id).get()));
+    if (extraSnaps.some((x) => !x.exists)) throw new HttpsError("not-found", "Service not found.");
+    const extras = extraSnaps.map((x) => ({ ...(x.data() as Service), id: x.id }));
+    for (const e of extras) assertTenant(user, e.tenantId);
+    const problem = extrasProblem({ ...service, id: snap.id }, extras, { gift: false });
+    if (problem) throw new HttpsError("failed-precondition", problem);
+    const lines = priceExtras(extras, { vehicleCategory: data.vehicleCategory, tax, currency });
+    breakdown = addExtrasToBreakdown(primary, lines);
+    durationMinutes = totalMinutes(service.estimatedDurationMinutes, lines);
+  }
 
   // PriceSnapshot — immutable record of this calculation; written into bookings at creation.
   const snapshot: PriceSnapshot = {
@@ -57,16 +84,17 @@ export const calculateServicePrice = onCall({ region: "asia-south1" , enforceApp
     serviceName: customerServiceName(service.name),
     serviceCategory: service.category,
     vehicleCategory: data.vehicleCategory,
-    basePrice: breakdown.basePrice,
-    vehicleCategoryAdjustment: breakdown.scopeAdjustment,
-    subtotal: breakdown.subtotal,
-    taxRatePercent: breakdown.taxRatePercent,
-    taxDescription: breakdown.taxDescription,
-    tax: breakdown.tax,
-    total: breakdown.total,
-    currency: breakdown.currency,
+    basePrice: primary.basePrice,
+    vehicleCategoryAdjustment: primary.scopeAdjustment,
+    subtotal: primary.subtotal,
+    taxRatePercent: primary.taxRatePercent,
+    taxDescription: primary.taxDescription,
+    tax: primary.tax,
+    total: primary.total,
+    currency: primary.currency,
     snapshotAt: new Date().toISOString(),
   };
 
-  return { breakdown, snapshot };
+  // breakdown = the whole booking; snapshot = the main service alone (unchanged meaning).
+  return { breakdown, snapshot, ...(data.extraServiceIds?.length ? { durationMinutes } : {}) };
 });

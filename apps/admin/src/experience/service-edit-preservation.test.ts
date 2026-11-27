@@ -70,3 +70,27 @@ it("meaningful description edits remain visible; unedited fixed-mode notes survi
   expect(changed.customerMenu?.priceNote).toBe("Accepted note");
   expect(changed.customerMenu?.family).toBe("Updated wash family");
 });
+
+it("untouched duplicate-wash flags stay absent; a checked flag is saved and shown in review; an unchecked stored flag saves false", () => {
+  const d = draftFromService(source);
+  d.priceRupees = "650";
+  const priceOnly = toServicePayload(d);
+  if (!priceOnly.ok) throw Error();
+  const kept = preserveUneditedServiceFields(priceOnly.payload, source);
+  expect(Object.hasOwn(kept, "standaloneExteriorWash")).toBe(false);
+  expect(Object.hasOwn(kept, "includesExteriorWash")).toBe(false);
+
+  const checked = toServicePayload({ ...draftFromService(source), includesExteriorWash: true });
+  if (!checked.ok) throw Error();
+  const withFlag = preserveUneditedServiceFields(checked.payload, source);
+  expect(withFlag.includesExteriorWash).toBe(true);
+  expect(Object.hasOwn(withFlag, "standaloneExteriorWash")).toBe(false);
+  expect(catalogueChangeLines({ payload: withFlag } as any, source)).toEqual(["Includes Exterior Wash: None → Yes"]);
+
+  const storedTrue = { ...source, standaloneExteriorWash: true };
+  const unchecked = toServicePayload({ ...draftFromService(storedTrue), standaloneExteriorWash: false });
+  if (!unchecked.ok) throw Error();
+  const cleared = preserveUneditedServiceFields(unchecked.payload, storedTrue);
+  expect(cleared.standaloneExteriorWash).toBe(false);
+  expect(catalogueChangeLines({ payload: cleared } as any, storedTrue)).toEqual(["Standalone Exterior Wash: Yes → No"]);
+});

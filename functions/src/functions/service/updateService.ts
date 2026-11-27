@@ -50,6 +50,8 @@ export const updateService = onCall({ region: "asia-south1", enforceAppCheck: sh
     if (data.vehicleCategoryPricing !== undefined) updates["vehicleCategoryPricing"] = data.vehicleCategoryPricing;
     if (data.requiredBayType !== undefined) updates["requiredBayType"] = data.requiredBayType;
     if (data.membershipWashEligible !== undefined) updates["membershipWashEligible"] = data.membershipWashEligible;
+    if (data.standaloneExteriorWash !== undefined) updates["standaloneExteriorWash"] = data.standaloneExteriorWash;
+    if (data.includesExteriorWash !== undefined) updates["includesExteriorWash"] = data.includesExteriorWash;
     if (data.priceOnRequest !== undefined) updates["priceOnRequest"] = data.priceOnRequest;
     if (data.coverageLevel !== undefined) updates["coverageLevel"] = data.coverageLevel;
     if (data.priceFrom !== undefined) updates["priceFrom"] = data.priceFrom;

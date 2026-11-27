@@ -10,7 +10,7 @@ vi.mock('../../lib/priority-access.js',()=>({assertNotPriorityHeld:async()=>{}})
 vi.mock('firebase-admin/firestore',()=>{
  const snap=(path:string)=>({id:path.split('/').pop(),exists:path in h.docs,data:()=>h.docs[path]});
  const ref=(path:string):any=>({id:path.split('/').pop(),path,doc:(id?:string)=>ref(path+'/'+(id??'new'+(++h.counter))),get:async()=>snap(path),where:()=>ref(path),limit:()=>ref(path)});
- const tx={get:async(r:any)=>r.path.endsWith('jobs')?{docs:h.occupants.map(x=>({id:x.id,data:()=>x}))}:snap(r.path),set:(r:any,v:any)=>h.writes.push({path:r.path,value:v}),update:(r:any,v:any)=>h.writes.push({path:r.path,value:v})};
+ const tx={get:async(r:any)=>r.path.endsWith('jobs')?{docs:h.occupants.map(x=>({id:x.id,data:()=>x}))}:r.path.endsWith('bayReservations')?{empty:true,docs:[]}:snap(r.path),set:(r:any,v:any)=>h.writes.push({path:r.path,value:v}),update:(r:any,v:any)=>h.writes.push({path:r.path,value:v})};
  return {getFirestore:()=>({collection:(s:string)=>ref(s),runTransaction:async(fn:any)=>fn(tx)})};
 });
 import {createWalkinJob} from '../../functions/job/createWalkinJob';

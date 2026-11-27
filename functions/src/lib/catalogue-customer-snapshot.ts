@@ -6,7 +6,9 @@ import {catalogueReviewHash} from './catalogue-draft.js';
 export interface CustomerCatalogueSnapshot {tenantId:string;publishId:string;hash:string;publishedAt:string|null;services:Service[];sourceIds?:string[];references:typeof BRAND_ENQUIRIES}
 // An explicit allowlist, never a spread of service data: staff-only metadata must
 // not cross the anonymous website or customer boundary, now or after new fields.
-const fields=['id','tenantId','name','category','brand','description','basePrice','currency','estimatedDurationMinutes','warrantyLabel','careTips','warrantyDurationValue','warrantyDurationUnit','vehicleCategoryPricing','requiredBayType','membershipWashEligible','priceOnRequest','productKey','ppfWork','coverageLevel','priceFrom','priceEstimate','imageUrl','active','displayOrder','createdAt','updatedAt','catalogueVersion','customerMenu','catalogueEntryKind','referenceKey','referenceGroup','referenceSurface'] as const;
+// standaloneExteriorWash/includesExteriorWash are customer-visible catalogue facts for the duplicate-wash prompt.
+// A field absent on a row stays absent, so rows without them keep their exact snapshot contents and hash.
+const fields=['id','tenantId','name','category','brand','description','basePrice','currency','estimatedDurationMinutes','warrantyLabel','careTips','warrantyDurationValue','warrantyDurationUnit','vehicleCategoryPricing','requiredBayType','membershipWashEligible','standaloneExteriorWash','includesExteriorWash','priceOnRequest','productKey','ppfWork','coverageLevel','priceFrom','priceEstimate','imageUrl','active','displayOrder','createdAt','updatedAt','catalogueVersion','customerMenu','catalogueEntryKind','referenceKey','referenceGroup','referenceSurface'] as const;
 export function safeCustomerService(row:Service):Service{return Object.fromEntries(fields.filter(k=>(row as any)[k]!==undefined).map(k=>[k,(row as any)[k]])) as unknown as Service;}
 export function currentCustomerMenu(row:Service):NonNullable<Service['customerMenu']>{
  if(row.customerMenu)return row.customerMenu;

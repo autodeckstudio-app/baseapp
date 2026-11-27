@@ -78,6 +78,13 @@ export interface Service {
   warrantyDurationUnit: WarrantyDurationUnit | null;
   vehicleCategoryPricing: VehicleCategoryPricing[]; // inline array; max 6 entries
   requiredBayType: BayType;
+  // Duplicate-wash prompt flags only (see service-stages.ts duplicateWash). No resource, no duration and no
+  // scheduled stage: preparation such as a PPF/Ceramic prep wash is staff-managed outside the application.
+  // Absent = false.
+  /** The service is itself a standalone exterior wash product (Regular Wash, Premium Wash, ...). */
+  standaloneExteriorWash?: boolean;
+  /** The service's own staff-managed workflow already includes an exterior wash (e.g. PPF/Ceramic preparation). */
+  includesExteriorWash?: boolean;
   membershipWashEligible: boolean;
   // true = no fixed price; booking is created as a quote request and the studio sets the price.
   priceOnRequest?: boolean;

@@ -22,14 +22,18 @@ export const releaseCompletedBay=onCall({region:'asia-south1',enforceAppCheck: s
   const job=snap.data() as ServiceJob;assertTenant(user,job.tenantId);
   if(user.claims.role==='studio'&&user.claims.studioId!==job.studioId)throw new HttpsError('permission-denied','Job belongs to another studio.');
   if(job.visitId)throw new HttpsError('failed-precondition','Review all attached visit services before releasing the empty bay.');
-  if(job.status!=='READY_FOR_DELIVERY'||!job.bayId)throw new HttpsError('failed-precondition','Only completed work waiting for pickup can release an empty bay.');
+  // Also an explicit release of a bay still held by a car whose booking was cancelled after it arrived.
+  const cancelledHeld=job.status==='CANCELLED'&&job.heldAfterCancel===true;
+  // A repeat of a cancelled-held release staff already made returns that receipt, as for completed work (hasReleasedBay covers READY_FOR_DELIVERY only).
+  if(job.status==='CANCELLED'&&job.heldAfterCancel===false&&typeof job.heldAfterCancelAt==='string'&&typeof job.bayReleasedBy==='string'&&job.bayReleasedBy.length>0)return {jobId:data.jobId,released:true,alreadyReleased:true,bayReleasedAt:job.bayReleasedAt};
+  if((job.status!=='READY_FOR_DELIVERY'&&!cancelledHeld)||!job.bayId)throw new HttpsError('failed-precondition','Only completed work waiting for pickup can release an empty bay.');
   if(hasReleasedBay(job))return {jobId:data.jobId,released:true,alreadyReleased:true,bayReleasedAt:job.bayReleasedAt};
   const lock=db.collection(COLLECTIONS.bayLocks()).doc(`${job.tenantId}__${job.studioId}__${job.bayId}`);await tx.get(lock);
   const bookingRef=job.bookingId?db.collection(COLLECTIONS.bookings()).doc(job.bookingId):null;
   if(bookingRef){const b=(await tx.get(bookingRef)).data() as Booking|undefined;if(!b||b.tenantId!==job.tenantId||b.studioId!==job.studioId||b.customerId!==job.customerId||b.bayId!==job.bayId)throw new HttpsError('failed-precondition','Linked booking changed. Reload before releasing the bay.');}
   const now=new Date().toISOString(),receipt={bayReleasedAt:now,bayReleasedBy:user.uid,updatedAt:now};
-  tx.update(ref,receipt);if(bookingRef)tx.update(bookingRef,receipt);tx.set(lock,{lastAssignedAt:now});
-  writeAuditLog(tx,{action:'job.bay_released',entityType:'ServiceJob',entityId:data.jobId,user,studioId:job.studioId,before:{bayId:job.bayId},after:{bayId:job.bayId,bayReleasedAt:now,workCompleteAndBayEmpty:true},metadata:{operation:'release_completed_empty_bay'}});
+  tx.update(ref,cancelledHeld?{...receipt,heldAfterCancel:false}:receipt);if(bookingRef)tx.update(bookingRef,receipt);tx.set(lock,{lastAssignedAt:now});
+  writeAuditLog(tx,{action:'job.bay_released',entityType:'ServiceJob',entityId:data.jobId,user,studioId:job.studioId,before:{bayId:job.bayId},after:{bayId:job.bayId,bayReleasedAt:now,workCompleteAndBayEmpty:true},metadata:{operation:cancelledHeld?'release_cancelled_held_bay':'release_completed_empty_bay'}});
   return {jobId:data.jobId,released:true,bayReleasedAt:now};
  },{maxAttempts:10});
 });
